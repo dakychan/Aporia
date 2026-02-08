@@ -5,12 +5,13 @@ import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.client.MinecraftClient;
 import org.lwjgl.glfw.GLFW;
-import ru.event.EventSystem;
-import ru.event.KeyPressEvent;
+import ru.event.impl.EventSystemImpl;
+import ru.event.impl.KeyPressEvent;
 import ru.gui.GuiManager;
-import ru.input.Keyboard;
-import ru.input.KeyInputHandler;
-import ru.mixin.IGlGpuBuffer;
+import ru.input.api.KeyboardKeys;
+import ru.input.api.KeyBindings;
+import ru.input.impl.UnifiedInputHandler;
+import ru.mixin.render.IGlGpuBuffer;
 
 public class Aporia implements ClientModInitializer {
 
@@ -21,7 +22,12 @@ public class Aporia implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        KeyInputHandler.register();
+        // Initialize unified input handler
+        UnifiedInputHandler.init();
+        
+        // Register key bindings
+        KeyBindings.register();
+        
         setupKeyBindings();
     }
 

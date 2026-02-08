@@ -1,4 +1,4 @@
-package ru.ui;
+package ru.ui.hud;
 
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor;
 import com.ferra13671.cometrenderer.plugins.minecraft.drawer.impl.RoundedRectDrawer;

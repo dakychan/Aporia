@@ -1,4 +1,4 @@
-package ru.ui;
+package ru.ui.clickgui;
 
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import com.ferra13671.cometrenderer.plugins.minecraft.RectColors;

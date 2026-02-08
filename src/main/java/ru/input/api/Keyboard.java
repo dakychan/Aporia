@@ -1,4 +1,4 @@
-package ru.input;
+package ru.input.api;
 
 import java.util.HashMap;
 import java.util.Map;

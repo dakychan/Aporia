@@ -1,4 +1,4 @@
-package ru.mixin;
+package ru.mixin.render;
 
 import com.ferra13671.cometrenderer.plugins.minecraft.AbstractMinecraftPlugin;
 import com.mojang.blaze3d.opengl.GlStateManager;

@@ -6,10 +6,10 @@
   "mixins": [
   ],
   "client": [
-    "GameRendererMixin",
-    "IGlGpuBuffer",
-    "RenderSystemMixin",
-    "ScreenKeyPressMixin"
+    "render.GameRendererMixin",
+    "render.IGlGpuBuffer",
+    "render.RenderSystemMixin",
+    "gui.ScreenKeyPressMixin"
   ],
   "injectors": {
     "defaultRequire": 1

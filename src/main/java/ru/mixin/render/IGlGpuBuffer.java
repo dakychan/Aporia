@@ -1,4 +1,4 @@
-package ru.mixin;
+package ru.mixin.render;
 
 import net.minecraft.client.gl.GlGpuBuffer;
 import org.spongepowered.asm.mixin.Mixin;

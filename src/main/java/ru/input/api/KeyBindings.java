@@ -1,4 +1,4 @@
-package ru.input;
+package ru.input.api;
 
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.option.KeyBinding;
