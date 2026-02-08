@@ -17,13 +17,26 @@ public class NotificationRenderer {
     private static final int START_Y = 20;
     
     private static MsdfTextRenderer textRenderer;
+    private static boolean initialized = false;
     
-    public static void init(MsdfTextRenderer renderer) {
-        textRenderer = renderer;
+    private static void ensureInitialized() {
+        if (initialized) return;
+        try {
+            ru.render.MsdfFont font = new ru.render.MsdfFont(
+                "assets/aporia/fonts/Inter_Medium.json",
+                "assets/aporia/fonts/Inter_Medium.png"
+            );
+            textRenderer = new MsdfTextRenderer(font);
+            initialized = true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     
     public static void render(DrawContext context) {
         if (context == null) return;
+        MinecraftPlugin.getInstance().bindMainFramebuffer(true);
+        ensureInitialized();
         
         NotificationManager manager = NotificationManager.getInstance();
         manager.update();

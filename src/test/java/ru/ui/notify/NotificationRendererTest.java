@@ -1,22 +1,10 @@
 package ru.ui.notify;
 
 import org.junit.jupiter.api.Test;
-import ru.render.MsdfTextRenderer;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class NotificationRendererTest {
-
-    @Test
-    void testInitWithNullRenderer() {
-        assertDoesNotThrow(() -> NotificationRenderer.init(null));
-    }
-
-    @Test
-    void testInitWithValidRenderer() {
-        MsdfTextRenderer mockRenderer = null;
-        assertDoesNotThrow(() -> NotificationRenderer.init(mockRenderer));
-    }
 
     @Test
     void testRenderWithNoNotifications() {

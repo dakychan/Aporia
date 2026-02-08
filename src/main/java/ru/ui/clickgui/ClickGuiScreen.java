@@ -91,7 +91,6 @@ public class ClickGuiScreen extends Screen {
         int windowHeight = MinecraftPlugin.getInstance().getMainFramebufferHeight();
         
         float baseScale = (float) this.client.getWindow().getScaleFactor();
-        float guiScale = baseScale / 1.5f;
         
         int scaledMouseX = (int)(mouseX * baseScale);
         int scaledMouseY = (int)(mouseY * baseScale);
@@ -99,36 +98,36 @@ public class ClickGuiScreen extends Screen {
         hoveredModule = null;
         
         for (CategoryPanel panel : categoryPanels.values()) {
-            renderCategory(panel, scaledMouseX, scaledMouseY, guiScale);
+            renderCategory(panel, scaledMouseX, scaledMouseY, 1.0f);
         }
     }
     
     private void renderCategory(CategoryPanel panel, int mouseX, int mouseY, float scale) {
         int x = panel.getX();
         int y = panel.getY();
-        int width = (int)(panel.getWidth() * scale);
-        int height = (int)(panel.getHeight() * scale);
+        int width = panel.getWidth();
+        int height = panel.getHeight();
         
-        renderRect(x, y, width, height, 8 * scale, RenderColor.of(20, 20, 25, 230));
+        renderRect(x, y, width, height, 8, RenderColor.of(20, 20, 25, 230));
         
-        renderRect(x, y, width, (int)(HEADER_HEIGHT * scale), 8 * scale, RenderColor.of(30, 30, 38, 255));
+        renderRect(x, y, width, HEADER_HEIGHT, 8, RenderColor.of(30, 30, 38, 255));
         
         if (textRenderer != null) {
-            textRenderer.drawText(x + (int)(10 * scale), y + (int)(11 * scale), 13 * scale, 
+            textRenderer.drawText(x + 10, y + 11, 13, 
                 panel.getCategory().getDisplayName(), RenderColor.WHITE);
         }
         
         List<Module> modules = ModuleManager.getInstance().getModulesByCategory(panel.getCategory());
-        int moduleY = y + (int)(HEADER_HEIGHT * scale) + (int)(5 * scale);
+        int moduleY = y + HEADER_HEIGHT + 5;
         
         for (Module module : modules) {
-            if (moduleY + (int)(MODULE_HEIGHT * scale) > y + height - (int)(5 * scale)) {
+            if (moduleY + MODULE_HEIGHT > y + height - 5) {
                 break;
             }
             
-            renderModule(module, x + (int)(5 * scale), moduleY, width - (int)(10 * scale), 
-                (int)(MODULE_HEIGHT * scale), mouseX, mouseY, scale);
-            moduleY += (int)((MODULE_HEIGHT + MODULE_SPACING) * scale);
+            renderModule(module, x + 5, moduleY, width - 10, 
+                MODULE_HEIGHT, mouseX, mouseY, scale);
+            moduleY += MODULE_HEIGHT + MODULE_SPACING;
         }
     }
     
@@ -140,7 +139,6 @@ public class ClickGuiScreen extends Screen {
             hoveredModule = module;
         }
         
-        // Determine colors
         RenderColor bgColor;
         RenderColor textColor;
         
@@ -152,12 +150,10 @@ public class ClickGuiScreen extends Screen {
             textColor = RenderColor.of(180, 180, 190, 255);
         }
         
-        // Render module background
-        renderRect(x, y, width, height, 5 * scale, bgColor);
+        renderRect(x, y, width, height, 5, bgColor);
         
-        // Render module name (text 3px lower)
         if (textRenderer != null) {
-            textRenderer.drawText(x + (int)(8 * scale), y + (int)(11 * scale), 11 * scale, module.getName(), textColor);
+            textRenderer.drawText(x + 8, y + 11, 11, module.getName(), textColor);
         }
     }
 
@@ -355,42 +351,32 @@ public class ClickGuiScreen extends Screen {
         }
         
         public boolean isHeaderHovered(int mouseX, int mouseY) {
-            float scale = (float) net.minecraft.client.MinecraftClient.getInstance().getWindow().getScaleFactor() / 1.5f;
-            int scaledWidth = (int)(width * scale);
-            int scaledHeaderHeight = (int)(HEADER_HEIGHT * scale);
-            return mouseX >= x && mouseX <= x + scaledWidth &&
-                   mouseY >= y && mouseY <= y + scaledHeaderHeight;
+            return mouseX >= x && mouseX <= x + width &&
+                   mouseY >= y && mouseY <= y + HEADER_HEIGHT;
         }
         
         public Module getHoveredModule(int mouseX, int mouseY) {
             if (!isInBounds(mouseX, mouseY)) return null;
             
-            float scale = (float) net.minecraft.client.MinecraftClient.getInstance().getWindow().getScaleFactor() / 1.5f;
             List<Module> modules = ModuleManager.getInstance().getModulesByCategory(category);
-            int moduleY = y + (int)(HEADER_HEIGHT * scale) + (int)(5 * scale);
-            int scaledModuleHeight = (int)(MODULE_HEIGHT * scale);
-            int scaledModuleSpacing = (int)(MODULE_SPACING * scale);
-            int scaledWidth = (int)(width * scale);
-            int moduleX = x + (int)(5 * scale);
-            int moduleWidth = scaledWidth - (int)(10 * scale);
+            int moduleY = y + HEADER_HEIGHT + 5;
+            int moduleX = x + 5;
+            int moduleWidth = width - 10;
             
             for (Module module : modules) {
                 if (mouseX >= moduleX && mouseX <= moduleX + moduleWidth &&
-                    mouseY >= moduleY && mouseY <= moduleY + scaledModuleHeight) {
+                    mouseY >= moduleY && mouseY <= moduleY + MODULE_HEIGHT) {
                     return module;
                 }
-                moduleY += scaledModuleHeight + scaledModuleSpacing;
+                moduleY += MODULE_HEIGHT + MODULE_SPACING;
             }
             
             return null;
         }
         
         public boolean isInBounds(int mouseX, int mouseY) {
-            float scale = (float) net.minecraft.client.MinecraftClient.getInstance().getWindow().getScaleFactor() / 1.5f;
-            int scaledWidth = (int)(width * scale);
-            int scaledHeight = (int)(height * scale);
-            return mouseX >= x && mouseX <= x + scaledWidth &&
-                   mouseY >= y && mouseY <= y + scaledHeight;
+            return mouseX >= x && mouseX <= x + width &&
+                   mouseY >= y && mouseY <= y + height;
         }
         
         public void setPosition(int x, int y) {
