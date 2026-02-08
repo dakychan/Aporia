@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "sorray",
+  "version": "${version}",
+  "name": "Sorray",
+  "description": "IDK",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/sorray/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "ru.Aporia"
+    ]
+  },
+  "mixins": [
+    "mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
