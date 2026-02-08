@@ -6,9 +6,9 @@
 
 *Современный Minecraft клиент с продвинутыми возможностями* 🚀
 
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.21-brightgreen.svg)](https://minecraft.net)
-[![Fabric](https://img.shields.io/badge/Fabric-Latest-orange.svg)](https://fabricmc.net)
-[![Java](https://img.shields.io/badge/Java-21-blue.svg)](https://openjdk.org)
+[![Minecraft](https://img.shields.io/badge/Minecraft-1.21.11-red)](https://www.minecraft.net/ru-ru/about-minecraft)
+[![Fabric](https://img.shields.io/badge/Fabric-0.18.4-yellow.svg)](https://fabricmc.net)
+[![Java](https://img.shields.io/badge/Java-25-green.svg)](https://openjdk.org)
 
 </div>
 
@@ -56,7 +56,7 @@
 
 ## 📦 Установка
 
-1. Установи [Fabric Loader](https://fabricmc.net/use/)
+1. Установи [Fabric 1.18.4](https://fabricmc.net/use/installer//)
 2. Скачай последнюю версию Aporia
 3. Помести `.jar` в папку `mods`
 4. Запускай и наслаждайся! 🎉
