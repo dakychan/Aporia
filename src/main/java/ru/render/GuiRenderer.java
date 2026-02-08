@@ -58,7 +58,6 @@ public class GuiRenderer {
         animationSystem.update(delta);
         
         // Bind the main framebuffer for rendering
-        MinecraftPlugin.getInstance().bindMainFramebuffer(true);
         
         // Apply blur effect if BlurRenderer is initialized
         if (BlurRenderer.isInitialized()) {

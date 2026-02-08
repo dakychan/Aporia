@@ -1,5 +1,6 @@
 package ru.ui;
 
+import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import com.ferra13671.cometrenderer.plugins.minecraft.RectColors;
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor;
 import com.ferra13671.cometrenderer.plugins.minecraft.drawer.impl.RoundedRectDrawer;
@@ -7,6 +8,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 import ru.module.Module;
 import ru.module.ModuleManager;
+import ru.render.BlurRenderer;
 import ru.render.MsdfFont;
 import ru.render.MsdfTextRenderer;
 
@@ -14,21 +16,13 @@ import java.util.List;
 
 /**
  * Modern ClickGUI with column-based category layout.
- * Each category is a column with modules displayed as rounded rectangles.
+ * Each category is a separate column with modules displayed as rounded rectangles.
  */
 public class ClickGuiScreen extends Screen {
     private static MsdfFont font;
     private static MsdfTextRenderer textRenderer;
     private static boolean initialized = false;
-
-    private int guiX;
-    private int guiY;
-    private final int guiWidth;
-    private final int guiHeight;
-    
-    private boolean isDragging = false;
-    private double dragOffsetX = 0;
-    private double dragOffsetY = 0;
+    private static BlurRenderer blurRenderer;
     
     private Module hoveredModule = null;
     
@@ -37,20 +31,14 @@ public class ClickGuiScreen extends Screen {
     private static final int CATEGORY_SPACING = 10;
     private static final int MODULE_HEIGHT = 28;
     private static final int MODULE_SPACING = 6;
-    private static final int PADDING = 15;
-    private static final int HEADER_HEIGHT = 35;
+    private static final int HEADER_HEIGHT = 30;
 
     public ClickGuiScreen(int width, int height) {
         super(Text.literal("Click GUI"));
-        
-        // Calculate GUI size based on categories
-        Module.Category[] categories = Module.Category.values();
-        this.guiWidth = PADDING * 2 + (CATEGORY_WIDTH * categories.length) + (CATEGORY_SPACING * (categories.length - 1));
-        this.guiHeight = 500;
-        this.guiX = (width - this.guiWidth) / 2;
-        this.guiY = (height - this.guiHeight) / 2;
-        
         initFont();
+        if (blurRenderer == null) {
+            blurRenderer = new BlurRenderer();
+        }
     }
 
     private static void initFont() {
@@ -70,47 +58,49 @@ public class ClickGuiScreen extends Screen {
     @Override
     public void render(net.minecraft.client.gui.DrawContext context, int mouseX, int mouseY, float delta) {
         if (!initialized) return;
+        
+        // Bind framebuffer ONCE at the start
         MinecraftPlugin.getInstance().bindMainFramebuffer(true);
-        // Render main GUI background
-        renderRect(guiX, guiY, guiWidth, guiHeight, 8, RenderColor.of(25, 25, 30, 240));
         
-        // Render header
-        renderRect(guiX, guiY, guiWidth, HEADER_HEIGHT, 8, RenderColor.of(35, 35, 45, 255));
+        // Get actual window dimensions
+        int windowWidth = this.client.getWindow().getScaledWidth();
+        int windowHeight = this.client.getWindow().getScaledHeight();
         
-        // Render title
-        if (textRenderer != null) {
-            textRenderer.drawText(guiX + PADDING, guiY + 10, 16, "Aporia Client", RenderColor.WHITE);
+        // Apply blur to background
+        if (blurRenderer != null) {
+            blurRenderer.applyBlur(windowWidth, windowHeight);
         }
         
-        // Render categories
+        // Render categories as separate columns (no main background)
         Module.Category[] categories = Module.Category.values();
-        int categoryX = guiX + PADDING;
-        int categoryY = guiY + HEADER_HEIGHT + PADDING;
-        int categoryHeight = guiHeight - HEADER_HEIGHT - PADDING * 2;
+        int totalWidth = (CATEGORY_WIDTH * categories.length) + (CATEGORY_SPACING * (categories.length - 1));
+        int startX = (windowWidth - totalWidth) / 2;
+        int startY = 50;
         
         hoveredModule = null;
         
+        int categoryX = startX;
         for (Module.Category category : categories) {
-            renderCategory(category, categoryX, categoryY, CATEGORY_WIDTH, categoryHeight, mouseX, mouseY);
+            renderCategory(category, categoryX, startY, CATEGORY_WIDTH, 400, mouseX, mouseY);
             categoryX += CATEGORY_WIDTH + CATEGORY_SPACING;
         }
     }
     
     private void renderCategory(Module.Category category, int x, int y, int width, int height, int mouseX, int mouseY) {
         // Render category background
-        renderRect(x, y, width, height, 6, RenderColor.of(30, 30, 38, 200));
+        renderRect(x, y, width, height, 8, RenderColor.of(20, 20, 25, 230));
         
         // Render category header
-        renderRect(x, y, width, HEADER_HEIGHT - 5, 6, RenderColor.of(40, 40, 50, 255));
+        renderRect(x, y, width, HEADER_HEIGHT, 8, RenderColor.of(30, 30, 38, 255));
         
         // Render category name
         if (textRenderer != null) {
-            textRenderer.drawText(x + 10, y + 8, 14, category.getDisplayName(), RenderColor.WHITE);
+            textRenderer.drawText(x + 10, y + 8, 13, category.getDisplayName(), RenderColor.WHITE);
         }
         
         // Render modules
         List<Module> modules = ModuleManager.getInstance().getModulesByCategory(category);
-        int moduleY = y + HEADER_HEIGHT;
+        int moduleY = y + HEADER_HEIGHT + 5;
         
         for (Module module : modules) {
             if (moduleY + MODULE_HEIGHT > y + height - 5) {
@@ -143,11 +133,11 @@ public class ClickGuiScreen extends Screen {
         }
         
         // Render module background
-        renderRect(x, y, width, height, 4, bgColor);
+        renderRect(x, y, width, height, 5, bgColor);
         
         // Render module name
         if (textRenderer != null) {
-            textRenderer.drawText(x + 8, y + 8, 12, module.getName(), textColor);
+            textRenderer.drawText(x + 8, y + 8, 11, module.getName(), textColor);
         }
     }
 
@@ -170,14 +160,6 @@ public class ClickGuiScreen extends Screen {
     public boolean mouseClicked(double x, double y, int button) {
         if (button != 0) return false;
         
-        // Check if title bar was clicked for dragging
-        if (x >= guiX && x <= guiX + guiWidth && y >= guiY && y <= guiY + HEADER_HEIGHT) {
-            isDragging = true;
-            dragOffsetX = x - guiX;
-            dragOffsetY = y - guiY;
-            return true;
-        }
-        
         // Check if a module was clicked
         if (hoveredModule != null) {
             hoveredModule.toggle();
@@ -188,24 +170,16 @@ public class ClickGuiScreen extends Screen {
     }
 
     public boolean mouseReleased(double x, double y, int button) {
-        if (button == 0) {
-            isDragging = false;
-        }
         return false;
     }
 
     public boolean mouseDragged(double x, double y, int button, double dragX, double dragY) {
-        if (isDragging) {
-            guiX = (int) (x - dragOffsetX);
-            guiY = (int) (y - dragOffsetY);
-            return true;
-        }
         return false;
     }
 
     @Override
     public void renderBackground(net.minecraft.client.gui.DrawContext context, int mouseX, int mouseY, float delta) {
-        // Override to prevent default background blur
+        // Override to prevent default background
     }
 
     @Override

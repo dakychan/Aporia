@@ -71,9 +71,9 @@ public class MsdfTextRenderer {
         msdfProgram.getUniform("ColorModulator", UniformType.VEC4)
                 .set(color.toVector4f());
         
-        // Вычисляем pxRange
+        // Вычисляем pxRange - увеличиваем для лучшего качества
         float scale = size / Math.max(1e-6f, font.getEmSize());
-        float pxRange = font.getDistanceRange() * scale;
+        float pxRange = font.getDistanceRange() * scale * 2.0f; // Увеличиваем в 2 раза
         msdfProgram.getUniform("pxRange", UniformType.FLOAT).set(pxRange);
 
         float lineHeight = font.getLineHeight() * scale;
