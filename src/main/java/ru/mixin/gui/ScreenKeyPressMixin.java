@@ -9,6 +9,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import ru.module.ModuleManager;
 import ru.ui.clickgui.ClickGuiScreen;
+import ru.ui.notify.NotificationRenderer;
 
 @Mixin(InGameHud.class)
 public class ScreenKeyPressMixin {
@@ -17,8 +18,9 @@ public class ScreenKeyPressMixin {
     private void onHudRender(net.minecraft.client.gui.DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
         MinecraftClient mc = MinecraftClient.getInstance();
         
-        // Tick all enabled modules
         ModuleManager.getInstance().onTick();
+        
+        NotificationRenderer.render(context);
         
         if (mc.currentScreen == null) {
             if (org.lwjgl.glfw.GLFW.glfwGetKey(mc.getWindow().getHandle(), 96) == org.lwjgl.glfw.GLFW.GLFW_PRESS) {

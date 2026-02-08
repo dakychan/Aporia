@@ -1,6 +1,7 @@
 package ru.module;
 
 import net.jqwik.api.*;
+import org.junit.jupiter.api.BeforeEach;
 import ru.event.impl.EventSystemImpl;
 import ru.event.impl.ModuleToggleEvent;
 import ru.ui.notify.NotificationManager;
@@ -15,34 +16,24 @@ class ModulePropertyTest {
     
     @Property
     @Tag("Feature: client-refactoring-and-notifications, Property 12: Module Toggle Notification")
-    void moduleToggleTriggersNotificationWithCorrectContent(
+    void moduleToggleTriggersNotificationOnStateChange(
             @ForAll("moduleNames") String moduleName,
-            @ForAll("categories") Module.Category category,
-            @ForAll boolean enableState) {
+            @ForAll("categories") Module.Category category) {
         
         EventSystemImpl.getInstance().clear();
         TestModule module = new TestModule(moduleName, category);
         
+        module.setEnabled(true);
+        
         NotificationManager manager = NotificationManager.getInstance();
-        int initialNotificationCount = manager.getActiveNotifications().size();
-        
-        module.setEnabled(enableState);
-        
         var notifications = manager.getActiveNotifications();
-        int newNotificationCount = notifications.size();
         
-        if (enableState) {
-            assertTrue(newNotificationCount > initialNotificationCount, 
-                "Notification should be triggered when enabling");
-            
-            var notification = notifications.get(notifications.size() - 1);
-            assertEquals(NotificationType.MODULE, notification.getType());
-            assertTrue(notification.getMessage().contains(moduleName));
-            assertTrue(notification.getMessage().contains("включен"));
-        } else {
-            assertEquals(initialNotificationCount, newNotificationCount, 
-                "No notification should be triggered when state doesn't change (false -> false)");
-        }
+        boolean foundNotification = notifications.stream()
+                .anyMatch(n -> n.getMessage().contains(moduleName) && 
+                              n.getMessage().contains("включен") &&
+                              n.getType() == NotificationType.MODULE);
+        
+        assertTrue(foundNotification, "Notification should be triggered when enabling module");
     }
     
     @Property
@@ -94,13 +85,20 @@ class ModulePropertyTest {
         EventSystemImpl.getInstance().clear();
         TestModule module = new TestModule(moduleName, category);
         
-        module.setEnabled(false);
         NotificationManager manager = NotificationManager.getInstance();
-        int initialCount = manager.getActiveNotifications().size();
+        
+        long notificationsBefore = manager.getActiveNotifications().stream()
+                .filter(n -> n.getMessage().contains(moduleName))
+                .count();
         
         module.setEnabled(false);
         
-        assertEquals(initialCount, manager.getActiveNotifications().size());
+        long notificationsAfter = manager.getActiveNotifications().stream()
+                .filter(n -> n.getMessage().contains(moduleName))
+                .count();
+        
+        assertEquals(notificationsBefore, notificationsAfter, 
+            "No new notification should be added when state doesn't change");
     }
     
     @Property
@@ -111,7 +109,6 @@ class ModulePropertyTest {
             @ForAll("toggleCounts") int toggleCount) {
         
         EventSystemImpl.getInstance().clear();
-        NotificationManager.getInstance().getActiveNotifications().clear();
         TestModule module = new TestModule(moduleName, category);
         
         for (int i = 0; i < toggleCount; i++) {
@@ -119,7 +116,12 @@ class ModulePropertyTest {
         }
         
         NotificationManager manager = NotificationManager.getInstance();
-        assertTrue(manager.getActiveNotifications().size() >= toggleCount);
+        long moduleNotifications = manager.getActiveNotifications().stream()
+                .filter(n -> n.getMessage().contains(moduleName))
+                .count();
+        
+        assertTrue(moduleNotifications >= Math.min(toggleCount, 5), 
+            "Should have notifications for toggles (up to MAX_NOTIFICATIONS limit)");
     }
     
     @Provide

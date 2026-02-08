@@ -12,7 +12,12 @@ import ru.input.api.KeyboardKeys;
 import ru.input.api.KeyBindings;
 import ru.input.impl.UnifiedInputHandler;
 import ru.input.impl.bind.KeybindListener;
+import ru.input.impl.bind.KeybindManager;
 import ru.mixin.render.IGlGpuBuffer;
+import ru.render.MsdfFont;
+import ru.render.MsdfTextRenderer;
+import ru.ui.notify.NotificationManager;
+import ru.ui.notify.NotificationRenderer;
 
 public class Aporia implements ClientModInitializer {
 
@@ -23,20 +28,35 @@ public class Aporia implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        // Initialize unified input handler
         UnifiedInputHandler.init();
         
-        // Initialize keybind listener
+        KeybindManager.getInstance().loadKeybinds();
+        
         KeybindListener.init();
         
-        // Register key bindings
+        NotificationManager.getInstance();
+        
+        initNotificationRenderer();
+        
         KeyBindings.register();
         
         setupKeyBindings();
     }
 
+    private static void initNotificationRenderer() {
+        try {
+            MsdfFont font = new MsdfFont(
+                "assets/aporia/fonts/Inter_Medium.json",
+                "assets/aporia/fonts/Inter_Medium.png"
+            );
+            MsdfTextRenderer textRenderer = new MsdfTextRenderer(font);
+            NotificationRenderer.init(textRenderer);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private static void setupKeyBindings() {
-        // Биндинг обрабатывается через ScreenKeyPressMixin
     }
 
     public static void render() {

@@ -1,5 +1,7 @@
 package ru.module;
 
+import ru.input.api.bind.Keybind;
+import ru.input.impl.bind.KeybindManager;
 import ru.module.impl.TestChat;
 
 import java.util.ArrayList;
@@ -29,6 +31,12 @@ public class ModuleManager {
         
         // Add more dummy modules for testing GUI
         registerDummyModules();
+        
+        // Register keybinds for all modules
+        registerModuleKeybinds();
+        
+        // Load saved keybinds
+        KeybindManager.getInstance().loadKeybinds();
     }
     
     private void registerModule(Module module) {
@@ -82,6 +90,16 @@ public class ModuleManager {
             if (module.isEnabled()) {
                 module.onTick();
             }
+        }
+    }
+    
+    private void registerModuleKeybinds() {
+        KeybindManager manager = KeybindManager.getInstance();
+        
+        for (Module module : modules) {
+            String keybindId = "module." + module.getName().toLowerCase() + ".toggle";
+            Keybind keybind = new Keybind(keybindId, -1, module::toggle);
+            manager.registerKeybind(keybind);
         }
     }
     
