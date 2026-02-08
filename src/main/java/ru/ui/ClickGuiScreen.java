@@ -62,57 +62,61 @@ public class ClickGuiScreen extends Screen {
         // Bind framebuffer ONCE at the start
         MinecraftPlugin.getInstance().bindMainFramebuffer(true);
         
-        // Get actual window dimensions
-        int windowWidth = this.client.getWindow().getScaledWidth();
-        int windowHeight = this.client.getWindow().getScaledHeight();
+        // Get REAL window dimensions (not scaled)
+        int windowWidth = MinecraftPlugin.getInstance().getMainFramebufferWidth();
+        int windowHeight = MinecraftPlugin.getInstance().getMainFramebufferHeight();
         
-        // Apply blur to background
-        if (blurRenderer != null) {
-            blurRenderer.applyBlur(windowWidth, windowHeight);
-        }
+        // Calculate scale factor and reduce by 1.5x
+        float baseScale = (float) this.client.getWindow().getScaleFactor();
+        float guiScale = baseScale / 1.5f;
+        
+        // Scale mouse coordinates properly
+        int scaledMouseX = (int)(mouseX * baseScale);
+        int scaledMouseY = (int)(mouseY * baseScale);
         
         // Render categories as separate columns (no main background)
         Module.Category[] categories = Module.Category.values();
-        int totalWidth = (CATEGORY_WIDTH * categories.length) + (CATEGORY_SPACING * (categories.length - 1));
+        int totalWidth = (int)((CATEGORY_WIDTH * categories.length) + (CATEGORY_SPACING * (categories.length - 1)) * guiScale);
         int startX = (windowWidth - totalWidth) / 2;
-        int startY = 50;
+        int startY = (int)(50 * guiScale);
         
         hoveredModule = null;
         
         int categoryX = startX;
         for (Module.Category category : categories) {
-            renderCategory(category, categoryX, startY, CATEGORY_WIDTH, 400, mouseX, mouseY);
-            categoryX += CATEGORY_WIDTH + CATEGORY_SPACING;
+            renderCategory(category, categoryX, startY, (int)(CATEGORY_WIDTH * guiScale), (int)(400 * guiScale), 
+                          scaledMouseX, scaledMouseY, guiScale);
+            categoryX += (int)((CATEGORY_WIDTH + CATEGORY_SPACING) * guiScale);
         }
     }
     
-    private void renderCategory(Module.Category category, int x, int y, int width, int height, int mouseX, int mouseY) {
+    private void renderCategory(Module.Category category, int x, int y, int width, int height, int mouseX, int mouseY, float scale) {
         // Render category background
-        renderRect(x, y, width, height, 8, RenderColor.of(20, 20, 25, 230));
+        renderRect(x, y, width, height, 8 * scale, RenderColor.of(20, 20, 25, 230));
         
         // Render category header
-        renderRect(x, y, width, HEADER_HEIGHT, 8, RenderColor.of(30, 30, 38, 255));
+        renderRect(x, y, width, (int)(HEADER_HEIGHT * scale), 8 * scale, RenderColor.of(30, 30, 38, 255));
         
-        // Render category name
+        // Render category name (text 3px lower)
         if (textRenderer != null) {
-            textRenderer.drawText(x + 10, y + 8, 13, category.getDisplayName(), RenderColor.WHITE);
+            textRenderer.drawText(x + (int)(10 * scale), y + (int)(11 * scale), 13 * scale, category.getDisplayName(), RenderColor.WHITE);
         }
         
         // Render modules
         List<Module> modules = ModuleManager.getInstance().getModulesByCategory(category);
-        int moduleY = y + HEADER_HEIGHT + 5;
+        int moduleY = y + (int)(HEADER_HEIGHT * scale) + (int)(5 * scale);
         
         for (Module module : modules) {
-            if (moduleY + MODULE_HEIGHT > y + height - 5) {
+            if (moduleY + (int)(MODULE_HEIGHT * scale) > y + height - (int)(5 * scale)) {
                 break; // Don't render modules that would overflow
             }
             
-            renderModule(module, x + 5, moduleY, width - 10, MODULE_HEIGHT, mouseX, mouseY);
-            moduleY += MODULE_HEIGHT + MODULE_SPACING;
+            renderModule(module, x + (int)(5 * scale), moduleY, width - (int)(10 * scale), (int)(MODULE_HEIGHT * scale), mouseX, mouseY, scale);
+            moduleY += (int)((MODULE_HEIGHT + MODULE_SPACING) * scale);
         }
     }
     
-    private void renderModule(Module module, int x, int y, int width, int height, int mouseX, int mouseY) {
+    private void renderModule(Module module, int x, int y, int width, int height, int mouseX, int mouseY, float scale) {
         boolean isHovered = mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
         boolean isEnabled = module.isEnabled();
         
@@ -133,11 +137,11 @@ public class ClickGuiScreen extends Screen {
         }
         
         // Render module background
-        renderRect(x, y, width, height, 5, bgColor);
+        renderRect(x, y, width, height, 5 * scale, bgColor);
         
-        // Render module name
+        // Render module name (text 3px lower)
         if (textRenderer != null) {
-            textRenderer.drawText(x + 8, y + 8, 11, module.getName(), textColor);
+            textRenderer.drawText(x + (int)(8 * scale), y + (int)(11 * scale), 11 * scale, module.getName(), textColor);
         }
     }
 
