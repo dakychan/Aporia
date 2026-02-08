@@ -1,5 +1,11 @@
 package ru.module;
 
+import ru.event.impl.EventSystemImpl;
+import ru.event.impl.ModuleToggleEvent;
+import ru.ui.notify.NotificationManager;
+import ru.ui.notify.NotificationMessages;
+import ru.ui.notify.NotificationType;
+
 /**
  * Base class for all modules in the client.
  */
@@ -37,11 +43,22 @@ public abstract class Module {
     }
     
     public void setEnabled(boolean enabled) {
+        boolean wasEnabled = this.enabled;
         this.enabled = enabled;
+        
         if (enabled) {
             onEnable();
         } else {
             onDisable();
+        }
+        
+        EventSystemImpl.getInstance().fire(new ModuleToggleEvent(this, enabled));
+        
+        if (wasEnabled != enabled) {
+            NotificationManager.getInstance().showNotification(
+                NotificationMessages.moduleToggled(name, enabled),
+                NotificationType.MODULE
+            );
         }
     }
     

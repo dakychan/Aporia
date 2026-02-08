@@ -11,6 +11,7 @@ import ru.gui.GuiManager;
 import ru.input.api.KeyboardKeys;
 import ru.input.api.KeyBindings;
 import ru.input.impl.UnifiedInputHandler;
+import ru.input.impl.bind.KeybindListener;
 import ru.mixin.render.IGlGpuBuffer;
 
 public class Aporia implements ClientModInitializer {
@@ -24,6 +25,9 @@ public class Aporia implements ClientModInitializer {
     public void onInitializeClient() {
         // Initialize unified input handler
         UnifiedInputHandler.init();
+        
+        // Initialize keybind listener
+        KeybindListener.init();
         
         // Register key bindings
         KeyBindings.register();

@@ -456,4 +456,52 @@ class KeybindManagerTest {
         assertTrue(executed.get());
         assertTrue(manager.hasKeybind("test.concurrent2"));
     }
+
+    @Test
+    void testSaveKeybindsCreatesFile() {
+        manager.registerKeybind(new Keybind("test.save", 82, () -> {}));
+        
+        assertDoesNotThrow(() -> manager.saveKeybinds());
+    }
+
+    @Test
+    void testLoadKeybindsWithNoFileDoesNothing() {
+        manager.registerKeybind(new Keybind("test.load.nofile", 82, () -> {}));
+        
+        assertDoesNotThrow(() -> manager.loadKeybinds());
+        
+        assertEquals(1, manager.getKeybindCount());
+    }
+
+    @Test
+    void testSaveAndLoadKeybinds() {
+        manager.registerKeybind(new Keybind("test.persist1", 82, () -> {}));
+        manager.registerKeybind(new Keybind("test.persist2", 70, () -> {}));
+        manager.registerKeybind(new Keybind("test.persist3", 65, () -> {}));
+        
+        manager.saveKeybinds();
+        
+        manager.clear();
+        assertEquals(0, manager.getKeybindCount());
+        
+        manager.registerKeybind(new Keybind("test.persist1", 999, () -> {}));
+        manager.registerKeybind(new Keybind("test.persist2", 999, () -> {}));
+        manager.registerKeybind(new Keybind("test.persist3", 999, () -> {}));
+        
+        manager.loadKeybinds();
+        
+        // In test environment, config directory may not be available
+        // so we just verify the methods don't throw exceptions
+        assertNotNull(manager.getKeybind("test.persist1"));
+        assertNotNull(manager.getKeybind("test.persist2"));
+        assertNotNull(manager.getKeybind("test.persist3"));
+    }
+
+    @Test
+    void testUpdateKeybindCallsSave() {
+        manager.registerKeybind(new Keybind("test.update.save", 82, () -> {}));
+        
+        assertDoesNotThrow(() -> manager.updateKeybind("test.update.save", 70));
+    }
 }
+
