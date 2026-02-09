@@ -1,0 +1,54 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "zenith.zov.utility.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "accessors.ItemStackAccessor",
+    "client.ClientWorldMixin",
+    "client.EntityMixin",
+    "client.PlayerEntityMixin",
+    "client.ScoreboarMixin",
+    "minecraft.entity.FireworkRocketEntityMixin",
+    "minecraft.entity.LivingEntityMixin",
+    "minecraft.entity.PlayerEntityMixin",
+    "minecraft.network.ClientConnectionMixin",
+    "minecraft.text.TextVisitFactoryMixin"
+  ],
+  "client": [
+    "accessors.DrawContextAccessor",
+    "accessors.HandledScreenAccessor",
+    "accessors.InGameHudAccessor",
+    "accessors.ShaderProgramAccessor",
+    "client.BackGroundRendererMixin",
+    "client.CameraMixin",
+    "client.ChatInputSuggestorMixin",
+    "client.ClientPlayerEntityMixin",
+    "client.ClientPlayerInteractionManagerMixin",
+    "client.HandledScreenMixin",
+    "client.HeldItemRendererMixin",
+    "client.KeyboardInputMixin",
+    "client.KeyboardMixin",
+    "client.LightmapTextureManagerMixin",
+    "client.MinecraftClientMixin",
+    "client.MouseMixin",
+    "client.render.LivingEntityRendererMixin",
+    "client.render.ScreenMixin",
+    "client.render.WindowMixin",
+    "client.render.gui.hud.GameOverlayRendererMixin",
+    "client.render.gui.hud.InGameHudMixin",
+    "client.render.gui.screen.ChatScreenMixin",
+    "client.render.gui.screen.HandledScreenMixin",
+    "minecraft.network.ClientPlayNetworkHandlerMixin",
+    "minecraft.render.ClientWorldPropertiesMixin",
+    "minecraft.render.FeatureRendererMixin",
+    "minecraft.render.MixinGameRenderer",
+    "minecraft.render.PlayerEntityRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}
