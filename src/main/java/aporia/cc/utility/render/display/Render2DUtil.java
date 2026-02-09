@@ -60,26 +60,6 @@ public class Render2DUtil implements IMinecraft {
 
     public static void drawBlurredShadow(Matrix3x2fStack matrices, float x, float y, float width, float height, int blurRadius, Color color) {
 
-//        width = width + blurRadius * 2;
-//        height = height + blurRadius * 2;
-//        x = x - blurRadius;
-//        y = y - blurRadius;
-//
-//        int identifier = (int) ( blurRadius);
-//        if (glowCache.containsKey(identifier)) {
-//
-//            DrawUtility.drawTexture(matrices, glowCache.get(identifier).id.getId(),x,y,width,height,new ColorRGBA(color));
-//        } else {
-//            BufferedImage original = new BufferedImage((int) width, (int) height, BufferedImage.TYPE_INT_ARGB);
-//            Graphics g = original.getGraphics();
-//            g.setColor(new Color(-1));
-//            g.fillRect(blurRadius, blurRadius, (int) (width - blurRadius * 2), (int) (height - blurRadius * 2));
-//            g.dispose();
-//            GaussianFilter op = new GaussianFilter(blurRadius);
-//            BufferedImage blurred = op.filter(original, null);
-//            glowCache.put(identifier, new GlowRect(blurred));
-//            return;
-//        }
 
     }
     private final List<Quad> QUAD = new ArrayList<>();
@@ -257,30 +237,9 @@ public class Render2DUtil implements IMinecraft {
     }
 
     public static void drawTracerPointer(Matrix3x2fStack matrices, float x, float y, float size, float tracerWidth, float downHeight, boolean down, boolean glow, int color) {
-//        switch (HudEditor.arrowsStyle.getValue()) {
-//            case Default -> drawDefaultArrow(matrices, x, y, size, tracerWidth, downHeight, down, glow, color);
-//            case New -> drawNewArrow(matrices, x, y, size + 8, new Color(color));
-//        }
     }
 
     public static void drawNewArrow(Matrix3x2fStack matrices, float x, float y, float size, Color color) {
-//        RenderSystem.setShaderTexture(0, TextureStorage.arrow);
-//        setupRender();
-//        RenderSystem.setShaderColor(color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f, color.getAlpha() / 255f);
-//        RenderSystem.disableDepthTest();
-//        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE);
-//        Matrix4f matrix = matrices.peek().getPositionMatrix();
-//        RenderSystem.setShader(ShaderProgramKeys.getPositionTexProgram);
-//        BufferBuilder bufferBuilder = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE);
-//        bufferBuilder.vertex(matrix, x - (size / 2f), y + size, 0).texture(0f, 1f);
-//        bufferBuilder.vertex(matrix, x + size / 2f, y + size, 0).texture(1f, 1f);
-//        bufferBuilder.vertex(matrix, x + size / 2f, y, 0).texture(1f, 0);
-//        bufferBuilder.vertex(matrix, x - (size / 2f), y, 0).texture(0, 0);
-//        BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
-//        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-//        RenderSystem.defaultBlendFunc();
-//        RenderSystem.enableDepthTest();
-//        endRender();
     }
 
     public static void drawDefaultArrow(Matrix3x2fStack matrices, float x, float y, float size, float tracerWidth, float downHeight, boolean down, boolean glow, int color) {
@@ -449,66 +408,7 @@ public class Render2DUtil implements IMinecraft {
         buffer.vertex(matrix, x1, y, 0);
     }
 
-//    public static void drawOrbiz(MatrixStack matrices, float z, final double r, Color c) {
-//        Matrix4f matrix = matrices.peek().getPositionMatrix();
-//        setupRender();
-//        RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
-//        BufferBuilder bufferBuilder = Tessellator.getInstance().begin(VertexFormat.DrawMode.TRIANGLE_FAN, VertexFormats.POSITION_COLOR);
-//        for (int i = 0; i <= 20; i++) {
-//            final float x2 = (float) (Math.sin(((i * 56.548656f) / 180f)) * r);
-//            final float y2 = (float) (Math.cos(((i * 56.548656f) / 180f)) * r);
-//            bufferBuilder.vertex(matrix, x2, y2, z).color(c.getRed() / 255f, c.getGreen() / 255f, c.getBlue() / 255f, 0.4f);
-//        }
-//        BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
-//        endRender();
-//    }
-//
-//    public static void drawStar(MatrixStack matrices, Color c, float scale) {
-//        setupRender();
-//        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE);
-//        RenderSystem.setShaderTexture(0, TextureStorage.star);
-//        RenderSystem.setShaderColor(c.getRed() / 255f, c.getGreen() / 255f, c.getBlue() / 255f, c.getAlpha() / 255f);
-//        Render2DEngine.renderGradientTexture(matrices, 0, 0, scale, scale, 0, 0, 128, 128, 128, 128, c, c, c, c);
-//        endRender();
-//    }
-//
-//    public static void drawHeart(MatrixStack matrices, Color c, float scale) {
-//        setupRender();
-//        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE);
-//        RenderSystem.setShaderTexture(0, TextureStorage.heart);
-//        RenderSystem.setShaderColor(c.getRed() / 255f, c.getGreen() / 255f, c.getBlue() / 255f, c.getAlpha() / 255f);
-//        Render2DEngine.renderGradientTexture(matrices, 0, 0, scale, scale, 0, 0, 128, 128, 128, 128, c, c, c, c);
-//        endRender();
-//    }
-//
-//    public static void drawBloom(MatrixStack matrices, Color c, float scale) {
-//        setupRender();
-//        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE);
-//        RenderSystem.setShaderTexture(0, TextureStorage.firefly);
-//        RenderSystem.setShaderColor(c.getRed() / 255f, c.getGreen() / 255f, c.getBlue() / 255f, c.getAlpha() / 255f);
-//        Render2DEngine.renderGradientTexture(matrices, 0, 0, scale, scale, 0, 0, 128, 128, 128, 128, c, c, c, c);
-//        endRender();
-//    }
-//
-//    public static void drawBubble(MatrixStack matrices, float angle, float factor) {
-//        setupRender();
-//        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE);
-//        RenderSystem.setShaderTexture(0, TextureStorage.bubble);
-//        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(angle));
-//        float scale = factor * 2f;
-//        Render2DEngine.renderGradientTexture(matrices, -scale / 2, -scale / 2, scale, scale, 0, 0, 128, 128, 128, 128, applyOpacity(HudEditor.getColor(270), 1f - factor), applyOpacity(HudEditor.getColor(0), 1f - factor), applyOpacity(HudEditor.getColor(180), 1f - factor), applyOpacity(HudEditor.getColor(90), 1f - factor));
-//        endRender();
-//    }
-//
-//    public static void drawLine(float x, float y, float x1, float y1, int color) {
-//        RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
-//        BufferBuilder bufferBuilder = Tessellator.getInstance().begin(VertexFormat.DrawMode.DEBUG_LINE_STRIP, VertexFormats.POSITION_COLOR);
-//        bufferBuilder.vertex(x, y, 0f).color(color);
-//        bufferBuilder.vertex(x1, y1, 0f).color(color);
-//        BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
-//    }
 
-    //http://www.java2s.com/example/java/2d-graphics/check-if-a-color-is-more-dark-than-light.html
     public static boolean isDark(Color color) {
         return isDark(color.getRed() / 255.0f, color.getGreen() / 255.0f, color.getBlue() / 255.0f);
     }
@@ -599,3 +499,4 @@ public class Render2DUtil implements IMinecraft {
         }
     }
 }
+

@@ -12,3 +12,4 @@ public final class EventChatSend extends EventCancellable {
     @Setter
     private String message;
 }
+

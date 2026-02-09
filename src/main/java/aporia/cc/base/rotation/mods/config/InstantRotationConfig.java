@@ -10,3 +10,4 @@ public class InstantRotationConfig extends RotationConfig {
         return RotationModeType.INSTANT;
     }
 }
+

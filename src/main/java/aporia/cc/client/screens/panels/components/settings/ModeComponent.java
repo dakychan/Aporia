@@ -61,7 +61,6 @@ public class ModeComponent extends PanelComponent {
             float selectValue = selectAnimations.get(value).update(selected ? 1f : 0f);
             float hoverValue = hoverAnimations.get(value).update(hovered ? 1f : 0f);
 
-            // Цвета чипа
             ColorRGBA chipInactive = theme.getForegroundDark();
             ColorRGBA chipActive = theme.getColor();
             ColorRGBA chipHover = theme.getWhite().withAlpha(15);
@@ -71,7 +70,6 @@ public class ModeComponent extends PanelComponent {
                 chipColor = chipColor.mix(chipHover, hoverValue);
             }
 
-            // Градиент для объёма
             Gradient chipGradient = Gradient.of(
                     chipColor.brighter(0.1f).mulAlpha(alpha),
                     chipColor.brighter(0.1f).mulAlpha(alpha),
@@ -83,7 +81,6 @@ public class ModeComponent extends PanelComponent {
             float chipY = y + 2 + heightOffset;
             ctx.drawRoundedRect(chipX, chipY, textWidth, chipHeight, BorderRadius.all(3), chipGradient);
 
-            // Текст
             ColorRGBA textColor = theme.getGrayLight().mix(theme.getWhite(), selectValue).mulAlpha(alpha);
             ctx.drawText(valueFont, text, chipX + 4, chipY + 2f, textColor);
 
@@ -132,3 +129,4 @@ public class ModeComponent extends PanelComponent {
         return setting.isVisible();
     }
 }
+

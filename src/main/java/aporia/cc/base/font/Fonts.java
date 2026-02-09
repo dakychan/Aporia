@@ -5,7 +5,6 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class Fonts {
 
-    // voice:.idea/1746466857699.wav
 
     public final MsdfFont BOLD = MsdfFont.builder().atlas("bold").data("bold").build();
     public final MsdfFont MEDIUM = MsdfFont.builder().atlas("medium").data("medium").build();
@@ -16,3 +15,4 @@ public class Fonts {
     public final MsdfFont ICONS = MsdfFont.builder().atlas("icons").data("icons").build();
 
 }
+

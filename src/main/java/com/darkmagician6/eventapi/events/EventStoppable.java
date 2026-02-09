@@ -16,3 +16,4 @@ public abstract class EventStoppable implements Event {
     }
 
 }
+

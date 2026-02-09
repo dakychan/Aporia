@@ -85,7 +85,6 @@ public class MathUtil implements IMinecraft {
 
     public float interpolate(double oldValue, double newValue, double interpolationValue){
         return (float) (oldValue + (newValue - oldValue) * interpolationValue);
-        //  MathHelper.lerp(interpolationValue, oldValue, newValue);
     }
 
     public float goodSubtract(float value1, float value2) {
@@ -157,3 +156,4 @@ public class MathUtil implements IMinecraft {
         return MathHelper.sqrt((float) (deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ));
     }
 }
+

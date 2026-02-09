@@ -50,3 +50,4 @@ public class FriendCommand extends CommandAbstract {
     }
 
 }
+

@@ -18,3 +18,4 @@ public class EventCamera extends EventCancellable {
     float distance;
     Rotation angle;
 }
+

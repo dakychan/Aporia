@@ -89,7 +89,6 @@ public class ModuleComponent extends PanelComponent {
     public void render(UIContext ctx, float mouseX, float mouseY, float alpha) {
         Theme theme = Aporia.getInstance().getThemeManager().getCurrentTheme();
         
-        // Обновляем hover состояние
         hovered = MathUtil.isHovered(mouseX, mouseY, x, y, width, HEADER_HEIGHT);
         
         float openValue = openAnimation.update(opened ? 1f : 0f);
@@ -107,12 +106,10 @@ public class ModuleComponent extends PanelComponent {
 
         height = HEADER_HEIGHT + extraHeight * openValue;
 
-        // Градиентный фон с учётом состояния
         ColorRGBA baseTop = theme.getForegroundLight();
         ColorRGBA baseBottom = theme.getForegroundColor();
         ColorRGBA activeColor = theme.getColor();
         
-        // Подсветка при hover
         ColorRGBA hoverTint = theme.getWhite().withAlpha(15);
         
         ColorRGBA bgTop = baseTop.mix(activeColor, toggleValue * 0.3f).mulAlpha(alpha);
@@ -123,11 +120,9 @@ public class ModuleComponent extends PanelComponent {
             bgBottom = bgBottom.mix(hoverTint, hoverValue * 0.3f);
         }
 
-        // Основной фон с градиентом
         Gradient bgGradient = Gradient.of(bgTop, bgTop, bgBottom, bgBottom);
         ctx.drawRoundedRect(x, y, width, height, BorderRadius.all(5), bgGradient);
 
-        // Акцентная полоска слева при включённом модуле
         if (toggleValue > 0.01f) {
             ColorRGBA accentTop = activeColor.mulAlpha(alpha * toggleValue);
             ColorRGBA accentBottom = activeColor.darker(0.3f).mulAlpha(alpha * toggleValue);
@@ -135,7 +130,6 @@ public class ModuleComponent extends PanelComponent {
             ctx.drawRoundedRect(x, y, 2.5f, HEADER_HEIGHT, BorderRadius.left(5, 5), accentGradient);
         }
 
-        // Свечение при hover
         if (hoverValue > 0.01f) {
             DrawUtil.drawShadow(ctx.getMatrices(), x - 2, y - 2, width + 4, height + 4, 
                     8f * hoverValue, BorderRadius.all(6), theme.getColor().withAlpha((int)(30 * hoverValue * alpha)));
@@ -144,7 +138,6 @@ public class ModuleComponent extends PanelComponent {
         Font font = Fonts.MEDIUM.getFont(7);
         ColorRGBA textColor = theme.getWhite().mulAlpha(alpha);
         
-        // Текст с плавным переходом при binding
         String keyName = module.getKeyCode() == -1 ? "None" : Keyboard.getKeyName(module.getKeyCode());
         if (keyName.length() > 6) {
             keyName = keyName.substring(0, 6) + "..";
@@ -157,7 +150,6 @@ public class ModuleComponent extends PanelComponent {
         ctx.drawText(font, module.getName(), x + 10, y + 6.5f, textColor.mulAlpha(textAlpha));
         ctx.drawText(font, bindingText, x + 10, y + 6.5f, theme.getColor().mulAlpha(bindTextAlpha * alpha));
 
-        // Анимированная стрелка
         boolean hasComponents = components.stream().anyMatch(PanelComponent::isVisible);
         if (hasComponents) {
             ctx.pushMatrix();
@@ -172,7 +164,6 @@ public class ModuleComponent extends PanelComponent {
             ctx.popMatrix();
         }
 
-        // Рендер компонентов настроек
         if (openValue > 0.01f) {
             float offset = HEADER_HEIGHT + 4;
             for (PanelComponent component : components) {
@@ -206,11 +197,9 @@ public class ModuleComponent extends PanelComponent {
         float tooltipWidth = textWidth + padding * 2;
         float tooltipHeight = textHeight + padding * 2;
         
-        // Тень для тултипа
         DrawUtil.drawShadow(ctx.getMatrices(), tooltipX - 2, tooltipY - 2, tooltipWidth + 4, tooltipHeight + 4, 
                 12f, BorderRadius.all(4), new ColorRGBA(0, 0, 0, (int)(80 * alpha)));
         
-        // Фон тултипа с градиентом
         Gradient tooltipGradient = Gradient.of(
                 theme.getForegroundLight().mulAlpha(alpha),
                 theme.getForegroundLight().mulAlpha(alpha),
@@ -219,7 +208,6 @@ public class ModuleComponent extends PanelComponent {
         );
         ctx.drawRoundedRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight, BorderRadius.all(4), tooltipGradient);
         
-        // Акцентная полоска
         ctx.drawRoundedRect(tooltipX, tooltipY, 2f, tooltipHeight, BorderRadius.left(4, 4), theme.getColor().mulAlpha(alpha));
         
         ctx.drawText(font, text, tooltipX + padding + 2, tooltipY + padding, theme.getWhite().mulAlpha(alpha));
@@ -291,4 +279,5 @@ public class ModuleComponent extends PanelComponent {
         return handled;
     }
 }
+
 

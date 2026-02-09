@@ -27,3 +27,4 @@ public class EventPacket extends EventCancellable {
         SENT, RECEIVE
     }
 }
+

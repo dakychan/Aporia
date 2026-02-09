@@ -5,3 +5,4 @@ public enum CompileType {
     MUTATION,
     ULTRA
 }
+

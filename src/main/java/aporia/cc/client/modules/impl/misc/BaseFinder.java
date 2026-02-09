@@ -53,48 +53,6 @@ public final class BaseFinder extends Module {
 
         }
 
-//        for (BlockPos pos : blockPos) {
-//
-//            Block block = mc.world.getBlockState(pos).getBlock();
-//
-//
-//            if (itemSelectSetting.contains(block)) {
-//                if ((block == Blocks.DIAMOND_ORE || block == Blocks.DEEPSLATE_DIAMOND_ORE)) {
-//                    drawBox(pos, Color.cyan.getRGB());
-//                } else if ((block == Blocks.GOLD_ORE || block == Blocks.DEEPSLATE_GOLD_ORE)) {
-//                    drawBox(pos, 0xFFFFD700);
-//                } else if (block == Blocks.NETHER_GOLD_ORE) {
-//                    drawBox(pos, 0xFFFFD700);
-//                } else if ((block == Blocks.EMERALD_ORE || block == Blocks.DEEPSLATE_EMERALD_ORE)) {
-//                    drawBox(pos, 0xFF00FF4D);
-//                } // (0, 255, 77)
-//
-//
-//                else if ((block == Blocks.IRON_ORE || block == Blocks.DEEPSLATE_IRON_ORE)) {
-//                    drawBox(pos, 0xFFD5D5D5);
-//                } // (213, 213, 213)
-//
-//
-//                else if ((block == Blocks.REDSTONE_ORE || block == Blocks.DEEPSLATE_REDSTONE_ORE)) {
-//                    drawBox(pos, 0xFFFF0000);
-//                } // (255, 0, 0)
-//
-//
-//                else if (block == Blocks.ANCIENT_DEBRIS) {
-//                    drawBox(pos, 0xFFFFFFFF);
-//                } // (255, 255, 255)}
-//                else {
-//                    MapColor color = block.getDefaultMapColor();
-//                    int rgb =new Color(color.color).getRGB();
-//
-//                    drawBox(pos,rgb);
-//
-//                }
-//
-//
-//            }
-//
-//        }
 
 
     }
@@ -135,8 +93,8 @@ public final class BaseFinder extends Module {
                 }
             }
         }
-       // this.blockPos = blocks;
         isStarted = true;
     }
 
 }
+

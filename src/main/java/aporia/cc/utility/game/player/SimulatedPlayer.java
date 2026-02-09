@@ -788,7 +788,6 @@ public class SimulatedPlayer implements IClient {
         return player.getWorld().getBlockState(pos);
     }
 
-    // Вложенный класс для имитации ввода игрока
     public static class SimulatedPlayerInput extends Input {
         public boolean forceSafeWalk = false;
         public float movementForward;
@@ -844,3 +843,4 @@ public class SimulatedPlayer implements IClient {
         }
     }
 }
+

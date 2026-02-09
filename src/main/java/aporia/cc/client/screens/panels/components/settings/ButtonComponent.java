@@ -46,3 +46,4 @@ public class ButtonComponent extends PanelComponent {
         return setting.isVisible();
     }
 }
+

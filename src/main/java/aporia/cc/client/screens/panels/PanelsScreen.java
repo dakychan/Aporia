@@ -170,7 +170,6 @@ public class PanelsScreen extends CustomScreen {
             }
         }
         
-        // Скролл для панели под курсором
         for (Panel panel : panels) {
             if (panel.isHovered()) {
                 panel.scroll(verticalAmount);
@@ -213,4 +212,5 @@ public class PanelsScreen extends CustomScreen {
         return handled || super.charTyped(chr, modifiers);
     }
 }
+
 

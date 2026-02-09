@@ -56,3 +56,4 @@ public final class Menu extends Module {
     }
 
 }
+

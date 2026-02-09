@@ -36,3 +36,4 @@ public class EnchantCustom extends Enchant {
         return false;
     }
 }
+

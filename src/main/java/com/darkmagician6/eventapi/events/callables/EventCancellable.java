@@ -22,3 +22,4 @@ public abstract class EventCancellable implements Event, Cancellable {
     }
 
 }
+

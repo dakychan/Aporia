@@ -36,3 +36,4 @@ public class KawaseBlurProgram extends GlProgram implements IWindow {
         super.setup();
     }
 }
+

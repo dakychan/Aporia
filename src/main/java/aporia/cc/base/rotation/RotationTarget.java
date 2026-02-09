@@ -10,3 +10,4 @@ import java.util.function.Supplier;
 
 public record RotationTarget(Rotation targetRotation, Supplier<Rotation> rotation, RotationConfig rotationConfigBack) {
 }
+

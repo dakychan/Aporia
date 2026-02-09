@@ -71,3 +71,4 @@ public class RaytracingUtil implements IClient {
         return box.contains(cameraVec) || box.raycast(cameraVec,cameraVec.add(clientVec.multiply(range))).isPresent();
     }
 }
+

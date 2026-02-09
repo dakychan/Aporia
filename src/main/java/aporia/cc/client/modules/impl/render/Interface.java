@@ -12,7 +12,7 @@ import aporia.cc.base.events.impl.other.EventWindowResize;
 import aporia.cc.base.events.impl.player.EventUpdate;
 import aporia.cc.base.events.impl.render.EventHudRender;
 import aporia.cc.base.events.impl.input.EventMouse;
-import Aporia.zov.client.hud.elements.component.*;
+import aporia.cc.client.hud.elements.component.*;
 import aporia.cc.client.hud.elements.draggable.DraggableHudElement;
 import aporia.cc.client.modules.api.Category;
 import aporia.cc.client.modules.api.Module;
@@ -69,7 +69,6 @@ public final class Interface extends Module {
     private Interface() {
 
 
-        // Элементы (порядок соответствует MultiBooleanSetting)
         addElement(new WatermarkComponent("Watermark", 0.0f, 0.0f, 960.0f, 495.5f, 10.0f, 10.0f, DraggableHudElement.Align.TOP_LEFT));         // 0 - Ватермарка
         addElement(new PotionsComponent("Potions", 0.0f, 0.0f, 960.0f, 495.5f, 119.15234f, 73.0f, DraggableHudElement.Align.TOP_LEFT));       // 1 - Эффекты
         addElement(new StaffComponent("Staff", 0.0f, 0.0f, 960.0f, 495.5f, 10.0f, 73.0f, DraggableHudElement.Align.TOP_LEFT));                // 2 - Стафф
@@ -324,7 +323,6 @@ public final class Interface extends Module {
         for (DraggableHudElement draggableHudElement : elements) {
             draggableHudElement.tick();
         }
-        //draggableHudElement.tick();
 
         ;
     }
@@ -351,3 +349,4 @@ public final class Interface extends Module {
         return (int) 10;
     }
 }
+

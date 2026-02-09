@@ -2,7 +2,7 @@
 
 #moj_import <dynamictransforms.glsl>
 #moj_import <projection.glsl>
-#moj_import <zenith:common.glsl>
+#moj_import <aporia:common.glsl>
 
 in vec3 Position;
 in vec2 UV0;

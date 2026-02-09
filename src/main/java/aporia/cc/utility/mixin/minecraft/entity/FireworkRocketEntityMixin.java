@@ -69,3 +69,4 @@ public abstract class FireworkRocketEntityMixin extends ProjectileEntity {
         return new Vec3d(i * j, -k, h * j);
     }
 } 
+

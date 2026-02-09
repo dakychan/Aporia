@@ -162,7 +162,6 @@ public class MusicInfoComponent extends DraggableHudElement {
         }
     }
 
-    //honey pasting inc.
     private void renderScrollingText(CustomDrawContext ctx, Font font, String text, float x, float y, ColorRGBA color, float maxWidth) {
         float textW = font.width(text);
         float scroll = 0f;
@@ -205,5 +204,6 @@ public class MusicInfoComponent extends DraggableHudElement {
 
 
 }
+
 
 

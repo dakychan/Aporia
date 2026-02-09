@@ -11,3 +11,4 @@ public final class NoInteract extends Module {
     private NoInteract() {
     }
 }
+

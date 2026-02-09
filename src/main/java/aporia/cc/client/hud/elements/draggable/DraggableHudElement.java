@@ -129,7 +129,6 @@ public abstract class DraggableHudElement implements IMinecraft {
     public void windowResized(float newWindowWidth, float newWindowHeight) {
         if (newWindowHeight <= 0 || newWindowWidth <= 0) return;
 
-        //if (windowWidth != newWindowWidth || windowHeight != newWindowHeight) {
         float baseX = alignToX(align, newWindowWidth);
         float baseY = alignToY(align, newWindowHeight);
 
@@ -139,7 +138,6 @@ public abstract class DraggableHudElement implements IMinecraft {
         this.windowHeight = newWindowHeight;
 
         update(newWindowWidth, newWindowHeight);
-        // }
     }
 
     public void update(float widthScreen, float heightScreen) {
@@ -263,3 +261,4 @@ public abstract class DraggableHudElement implements IMinecraft {
     }
 
 }
+

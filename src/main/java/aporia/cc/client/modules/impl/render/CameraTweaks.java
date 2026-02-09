@@ -9,7 +9,7 @@ import net.minecraft.util.math.MathHelper;
 import aporia.cc.base.events.impl.input.EventKey;
 import aporia.cc.base.events.impl.input.EventHotBarScroll;
 import aporia.cc.base.events.impl.input.EventMouseRotation;
-import Aporia.zov.base.events.impl.render.*;
+import aporia.cc.base.events.impl.render.*;
 import aporia.cc.client.modules.api.Category;
 import aporia.cc.client.modules.api.Module;
 import aporia.cc.client.modules.api.ModuleAnnotation;
@@ -123,3 +123,4 @@ public class CameraTweaks extends Module {
         }
     }
 }
+

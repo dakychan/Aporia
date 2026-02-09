@@ -37,3 +37,4 @@ public class CommandArgumentType implements ArgumentType<String> {
         return EXAMPLES;
     }
 }
+

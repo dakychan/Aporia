@@ -52,7 +52,7 @@ public final class FreeCam extends Module {
     
     @EventTarget
     public void onWorldRender(EventRender3D e) {
-        Render3DUtil.drawBox(mc.player.getBoundingBox().offset(MathUtil.interpolate(mc.player).subtract(mc.player.getPos())), Aporia.getThemeManager().getClientColor(90).getRGB(), 1);
+        Render3DUtil.drawBox(mc.player.getBoundingBox().offset(MathUtil.interpolate(mc.player).subtract(mc.player.getPos())), aporia.getThemeManager().getClientColor(90).getRGB(), 1);
     }
 
     
@@ -83,3 +83,4 @@ public final class FreeCam extends Module {
         mc.options.setPerspective(Perspective.FIRST_PERSON);
     }
 }
+

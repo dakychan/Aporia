@@ -58,3 +58,4 @@ public class ItemSelectComponent extends PanelComponent {
         return setting.isVisible();
     }
 }
+

@@ -12,3 +12,4 @@ public interface ItemStackAccessor {
     @Accessor("components")
     MergedComponentMap getComponents();
 }
+

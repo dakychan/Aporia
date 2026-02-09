@@ -108,3 +108,4 @@ public final class AutoDuels extends Module {
         super.onEnable();
     }
 }
+

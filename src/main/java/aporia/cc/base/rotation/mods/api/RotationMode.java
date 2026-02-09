@@ -5,3 +5,4 @@ import aporia.cc.utility.interfaces.IClient;
 
 public abstract class RotationMode  implements IClient {
 }
+

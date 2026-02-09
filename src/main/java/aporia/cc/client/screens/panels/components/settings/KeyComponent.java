@@ -74,3 +74,4 @@ public class KeyComponent extends PanelComponent {
         return setting.isVisible();
     }
 }
+

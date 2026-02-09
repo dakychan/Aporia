@@ -81,3 +81,4 @@ public final class AutoArmor extends Module implements IMinecraft {
         };
     }
 }
+

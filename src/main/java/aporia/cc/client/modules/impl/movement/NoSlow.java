@@ -47,18 +47,14 @@ public final class NoSlow extends Module {
 
     }
 
-//  так называемы мега зако обход
     @EventTarget
     public void update(EventUpdate tickEvent) {
         if (mc.player.isUsingItem() &&mc.player.isOnGround()) {
-//           mc.player.setSprinting(true);
-//           mc.player.sendSprintingPacket();
-//           mc.player.jump();
-         //  ticks = 1;
         }else {
             ticks=0;
         }
     }
 }
+
 
 

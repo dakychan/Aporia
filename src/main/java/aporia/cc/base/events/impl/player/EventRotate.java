@@ -11,3 +11,4 @@ import aporia.cc.base.events.callables.EventCancellable;
 @AllArgsConstructor
 public class EventRotate extends EventCancellable {
 }
+

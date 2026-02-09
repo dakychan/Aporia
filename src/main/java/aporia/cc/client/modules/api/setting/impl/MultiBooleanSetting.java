@@ -127,3 +127,4 @@ public class MultiBooleanSetting extends Setting {
 
     }
 }
+

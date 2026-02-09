@@ -6,7 +6,7 @@ import com.google.gson.*;
 
 import aporia.cc.base.events.impl.other.EventModuleToggle;
 import aporia.cc.client.modules.api.setting.Setting;
-import Aporia.zov.client.modules.api.setting.impl.*;
+import aporia.cc.client.modules.api.setting.impl.*;
 
 import lombok.Data;
 import org.jetbrains.annotations.NotNull;
@@ -134,3 +134,4 @@ public class Module implements IClient,Comparable<Module> {
         return o.getName().compareTo(this.name);
     }
 }
+

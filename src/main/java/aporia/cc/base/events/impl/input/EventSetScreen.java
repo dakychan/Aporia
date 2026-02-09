@@ -10,3 +10,4 @@ import net.minecraft.client.gui.screen.Screen;
 public class EventSetScreen implements Event {
     private Screen screen;
 }
+

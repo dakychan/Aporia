@@ -10,3 +10,4 @@ import lombok.Getter;
 public final class EventRenderName extends EventCancellable {
 
 }
+

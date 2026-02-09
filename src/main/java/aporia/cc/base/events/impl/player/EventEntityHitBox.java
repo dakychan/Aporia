@@ -12,3 +12,4 @@ public class EventEntityHitBox implements Event {
     private Entity entity;
     private float size;
 }
+

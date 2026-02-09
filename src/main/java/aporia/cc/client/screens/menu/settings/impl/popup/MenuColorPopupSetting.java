@@ -15,7 +15,7 @@ import aporia.cc.client.screens.menu.settings.api.MenuPopupSetting;
 import aporia.cc.utility.game.other.MouseButton;
 import aporia.cc.utility.math.MathUtil;
 import aporia.cc.utility.render.display.TextBox;
-import Aporia.zov.utility.render.display.base.*;
+import aporia.cc.utility.render.display.base.*;
 import aporia.cc.utility.render.display.base.color.ColorRGBA;
 import aporia.cc.utility.render.display.base.color.ColorUtil;
 import aporia.cc.utility.render.display.shader.DrawUtil;
@@ -106,10 +106,7 @@ public class MenuColorPopupSetting extends MenuPopupSetting {
 
         bounds.setHeight(18+padding+colorHeight+padding+6+padding+6+padding+18+padding);
 
-//            RenderUtil.renderRect(matrix, x, y, 180, 234, GuiConfig.bg, 6, 1);
-//            RenderUtil.renderBorder(matrix, x, y, 180, 234, GuiConfig.bg, 6, 0.5f, 1, 1);
 
-//        Fonts.INTER.render(matrix, setting.getName(), 12, x, y + 10, 0.05f, 0.3f, 0, GuiConfig.colorTextNotEnable);
 
 
 
@@ -123,21 +120,17 @@ public class MenuColorPopupSetting extends MenuPopupSetting {
         ColorRGBA colorA = new ColorRGBA(Color.getHSBColor(hue, 0.0F, 1.0F)).mulAlpha(alphas), colorB =  new ColorRGBA(Color.getHSBColor(hue, 1.0F, 1.0F)).mulAlpha(alphas);
 
         ColorRGBA colorC =new ColorRGBA( new Color(0, 0, 0, 0)), colorD = new ColorRGBA(new Color(0, 0, 0));
-        //bg для колора
         ctx.drawRoundedRect( (colorX), colorY, colorWidth, colorHeight,BorderRadius.all(4), Gradient.of(colorA,colorA,colorB,colorB));
         ctx.drawRoundedRect( (colorX), colorY, colorWidth, colorHeight,BorderRadius.all(4),Gradient.of(colorC, colorD, colorC, colorD));
         ctx.drawRoundedBorder( (colorX), colorY, colorWidth, colorHeight,0.1f,BorderRadius.all(4),ColorRGBA.WHITE.mulAlpha(alphas));
 
         ctx.drawRoundedRect( spos -2, bpos - 2, 6, 6,BorderRadius.all(2),ColorRGBA.WHITE.mulAlpha(alphas));
         BorderRadius round = BorderRadius.all(1);
-//        //хуе лгбт
         DrawUtil.drawRoundedTexture(ctx.getMatrices(),Aporia.id("icons/sliderhue.png"), colorX, colorY + colorHeight + padding, colorWidth, 4,round,ColorRGBA.WHITE.mulAlpha(alphas));
-//        //ползунок
 
         ctx.drawRoundedRect(  colorX + hpos - 2, colorY + colorHeight + padding-1, 6, 6,BorderRadius.all(2),ColorRGBA.WHITE.mulAlpha(alphas));
 
 
-//        //алфа
 
         DrawUtil.drawRoundedTexture(ctx.getMatrices(),Aporia.id("icons/slidertransparent.png"), colorX, colorY + colorHeight + padding+6+padding, colorWidth, 4,round,ColorRGBA.WHITE.mulAlpha(alphas));
         ColorRGBA fullAlpha =setting.getColor().withAlpha(255).mulAlpha(alphas);
@@ -147,11 +140,9 @@ public class MenuColorPopupSetting extends MenuPopupSetting {
 
 
 
-        //text
 
         ctx.drawRoundedRect(colorX, colorY + colorHeight + padding+6+padding+6+padding, colorWidth, 14,round,theme.getForegroundLight().mulAlpha(alphas));
         ctx.pushMatrix();
-        //  ctx.getMatrices().translate(colorX, colorY + colorHeight + padding+6+padding+6+padding);
         ctx.drawText(font,"#",colorX+padding, colorY + colorHeight + padding+6+padding+6+padding+4,theme.getGray());
         this.colorString.render( ctx, colorX+padding+font.width("#")+1f, colorY + colorHeight + padding+6+padding+6+padding+4.5f,theme.getWhite().mulAlpha(alphas),theme.getGray().mulAlpha(alphas));
         this.colorString.setWidth( colorWidth-20);
@@ -175,7 +166,6 @@ public class MenuColorPopupSetting extends MenuPopupSetting {
 
             setColor(new ColorRGBA(value.getRed(), value.getGreen(), value.getBlue(), alpha));
         }
-//
         if (afocused) {
             alpha = (int) (MathHelper.clamp((mouseX - x) / colorWidth, 0f, 1f) * 255);
 
@@ -193,16 +183,6 @@ public class MenuColorPopupSetting extends MenuPopupSetting {
 
 
 
-//        //text
-//        RenderUtil.renderRect(matrix, x, y + height + 18 + 5 + 8 + 10, 126, 26, GuiConfig.bg, 6, 1);
-//        RenderUtil.renderBorder(matrix, x, y + height + 18 + 5 + 8 + 10, 126, 26, GuiConfig.bg, 6, 0.5f, 1, 1);
-//        int color16 = themeManager.getStart(0.16f);
-//        RenderUtil.renderRect(matrix, x + 126 + 5, y + height + 18 + 5 + 8 + 10, 26, 26, color16, 6, 1);
-//        RenderUtil.renderBorder(matrix, x + 126 + 5, y + height + 18 + 5 + 8 + 10, 26, 26, color16, 6, 0.5f, 1, 1);
-//        Fonts.ICON.render(matrix, "5", 12, x + 126 + 5+6, y + height + 18 + 5 + 8 + 10+6.4f, 0.05f, 0.4f, 0, themeManager.getStart(1f));
-//        if(MathUtil.isHovered(mouseX,mouseY,x + 126 + 5, y + height + 18 + 5 + 8 + 10, 26, 26,xMax,yMax) &&ImGui.isMouseClicked(0)){
-//            this.setting.reset();
-//        }
         ctx.popMatrix();
     }
 
@@ -300,4 +280,5 @@ public class MenuColorPopupSetting extends MenuPopupSetting {
 
     }
 }
+
 

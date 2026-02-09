@@ -42,3 +42,4 @@ public class FriendArgumentType implements ArgumentType<String> {
         return EXAMPLES;
     }
 }
+

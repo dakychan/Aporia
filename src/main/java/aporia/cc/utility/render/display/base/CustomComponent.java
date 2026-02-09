@@ -66,3 +66,4 @@ public abstract class CustomComponent implements IMinecraft {
         return isHovered(context.getMouseX(), context.getMouseY());
     }
 }
+

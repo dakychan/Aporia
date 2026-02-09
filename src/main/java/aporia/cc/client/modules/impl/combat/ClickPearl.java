@@ -21,3 +21,4 @@ public final class ClickPearl extends Module {
         this.toggle();
     }
 }
+

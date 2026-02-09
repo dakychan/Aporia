@@ -9,3 +9,4 @@ import lombok.Data;
 public class EventDirection implements Event {
     private float yaw,pitch;
 }
+

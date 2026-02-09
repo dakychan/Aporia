@@ -60,14 +60,11 @@ public class ScoreBoardComponent extends DraggableHudElement {
         public Text score()      { return score; }
         public int scoreWidth()  { return scoreWidth; }
     }
-    //deobfuscation by Chatgpt
     private void renderScoreboardSidebar(DrawContext ctx, ScoreboardObjective objective) {
-        // == источники данных ==
         final Scoreboard sb = objective.getScoreboard();
         final TextRenderer tr = mc.textRenderer;
         final NumberFormat numberFormat = objective.getNumberFormatOr(StyledNumberFormat.RED);
 
-        // == собираем строки (макс. 15, скрытые исключаем, сортируем как в исходнике) ==
         List<SidebarRow> rows = sb.getScoreboardEntries(objective).stream()
                 .filter(score -> !score.hidden())
                 .sorted(SCOREBOARD_ENTRY_COMPARATOR)
@@ -81,14 +78,11 @@ public class ScoreBoardComponent extends DraggableHudElement {
                 })
                 .collect(Collectors.toList());
 
-        // == заголовок ==
         Text title = objective.getDisplayName();
         int titleWidth = tr.getWidth(title);
 
-        // ширина ": " используется в расчёте общей ширины, как и в оригинале
         int colonWidth = tr.getWidth(": ");
 
-        // максимальная ширина контента (имя + ": " + счёт) или ширина заголовка
         int contentWidth = titleWidth;
         for (SidebarRow row : rows) {
             int nameW = tr.getWidth(row.name());
@@ -96,20 +90,16 @@ public class ScoreBoardComponent extends DraggableHudElement {
             contentWidth = Math.max(contentWidth, rowW);
         }
 
-        // == геометрия ==
         int count = rows.size();
         int totalHeight = count * 9;
         int headerBaseY = (int) y;
-        // высота списка (по 9px на строку)
         int boxBottomY = (int) (headerBaseY+totalHeight)+9; // как в исходнике: o
         int rightMargin = 3;                                         // отступ от правого края (p)
         int xLeft  = (int) (x+2 ); // q
         int xRight = (int) (x+contentWidth + rightMargin +1);            // r (W - 1), как было
-             // u
         this.width =+contentWidth + rightMargin+1 ;
         this.height = totalHeight+9;
 
-        // фоновые цвета (как в оригинале)
         int bodyBg   =mc.options.getTextBackgroundColor(0.3F); // s
         int headerBg =mc.options.getTextBackgroundColor(0.4F); // t
         Theme theme = Aporia.getInstance().getThemeManager().getCurrentTheme();
@@ -121,26 +111,18 @@ public class ScoreBoardComponent extends DraggableHudElement {
 
         }
         this.windowResized(ctx.getScaledWindowWidth(), ctx.getScaledWindowHeight());
-        // == фон заголовка и тела ==
-        // полоса под заголовком (u - 10 .. u - 1), x: (xLeft - 2 .. xRight)
-//        ctx.fill(xLeft - 2, headerBaseY , xRight, headerBaseY +14, headerBg);
-//        // тело (u - 1 .. bottom)
-//        ctx.fill(xLeft - 2, headerBaseY +14, xRight, boxBottomY, bodyBg);
 
-        // == заголовок ==
         int titleX = xLeft + contentWidth / 2 - titleWidth / 2;      // центрируем в блоке
         ctx.drawText(tr, title, titleX, headerBaseY+3 , 0xFFFFFFFF, false);
 
-        // == строки ==
         for (int i = 0; i < count; i++) {
             SidebarRow row = rows.get(i);
             int y = boxBottomY - (count - i) * 9; // w
 
-            // имя — слева
             ctx.drawText(tr, row.name(), xLeft, y, 0xFFFFFFFF, false);
 
-            // счёт — прижат к правой границе блока
         }
     }
 
 }
+

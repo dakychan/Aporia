@@ -97,7 +97,6 @@ public class InventoryComponent extends DraggableHudElement {
         ctx.getMatrices().translate(-(x + width / 2f), -(y + height / 2f));
         DrawUtil.drawBlurHud(ctx.getMatrices(),x, y, width,height,21,BorderRadius.all(4),ColorRGBA.WHITE);
 
-        //    ctx.drawRoundedRect(x,y,width,height, BorderRadius.all(4f), theme.getForegroundStroke());
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < columns; col++) {
                 int slotIndex = 9 + row * 9 + col;
@@ -125,7 +124,6 @@ public class InventoryComponent extends DraggableHudElement {
                 }
             }
         }
-      //  ctx.drawRoundedBorder(x, y, gridWidth, gridHeight,0.1f, BorderRadius.all(4f), theme.getForegroundStroke());
         ctx.drawRoundedBorder(x, y,gridWidth,gridHeight,0.1f,BorderRadius.all(4),theme.getForegroundStroke());
 
         DrawUtil.drawRoundedCorner(ctx.getMatrices(), x, y,gridWidth,gridHeight,0.1f,20f,theme.getColor(),BorderRadius.all(4));
@@ -136,5 +134,6 @@ public class InventoryComponent extends DraggableHudElement {
 
 
 }
+
 
 

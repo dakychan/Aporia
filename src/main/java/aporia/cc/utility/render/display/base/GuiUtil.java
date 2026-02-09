@@ -23,3 +23,4 @@ public class GuiUtil implements IMinecraft {
         return new Vector2f((float) (mc.mouse.getX() / customScale), (float) (mc.mouse.getY() /customScale));
     }
 }
+

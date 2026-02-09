@@ -30,3 +30,4 @@ public abstract class EventTyped implements Event, Typed {
     }
 
 }
+

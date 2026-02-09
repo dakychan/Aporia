@@ -15,7 +15,11 @@
   "license": "All-Rights-Reserved",
   "icon": "assets/aporia/icons/avatar.png",
   "environment": "client",
-  "entrypoints": {},
+  "entrypoints": {
+    "Main": [
+      "by.saskkeee.ZenithDLC"
+    ]
+  },
   "mixins": [
     "mixins.json"
   ],

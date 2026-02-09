@@ -10,3 +10,4 @@ import lombok.Setter;
 public class EventAspectRatio extends EventCancellable {
     private float ratio;
 }
+

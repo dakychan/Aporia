@@ -30,3 +30,4 @@ public final class ElytraBooster extends Module {
     }
 
 } 
+

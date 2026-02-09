@@ -13,7 +13,6 @@ import aporia.cc.utility.render.display.base.CustomDrawContext;
 import aporia.cc.utility.render.display.base.color.ColorRGBA;
 
 
-// ЕБАНЫЕ ОНАНИСТЫ
 @ModuleAnnotation(name = "Crosshair", category = Category.RENDER, description = "Кастомный прицел")
 public final class Crosshair extends Module {
     public static final Crosshair INSTANCE = new Crosshair();
@@ -62,19 +61,15 @@ public final class Crosshair extends Module {
         ColorRGBA color = useEntityColor.isEnabled() && mc.crosshairTarget != null && mc.crosshairTarget.getType() == HitResult.Type.ENTITY 
             ? entityColor 
             : new ColorRGBA(255, 255, 255, 255);
-        // вверхняя залупа
         drawLine(ctx, x - currentThickness / 2, y - currentGap - currentLength,
                 currentThickness, currentLength, color);
 
-        // нижняя залупа
         drawLine(ctx, x - currentThickness / 2, y + currentGap,
                 currentThickness, currentLength, color);
 
-        // левая залупа
         drawLine(ctx, x - currentGap - currentLength, y - currentThickness / 2,
                 currentLength, currentThickness, color);
 
-        // правая залупа
         drawLine(ctx, x + currentGap, y - currentThickness / 2,
                 currentLength, currentThickness, color);
     }
@@ -83,3 +78,4 @@ public final class Crosshair extends Module {
         ctx.drawRect(x, y, width, height, color);
     }
 }
+

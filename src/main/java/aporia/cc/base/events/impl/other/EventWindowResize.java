@@ -9,3 +9,4 @@ import lombok.Getter;
 public class EventWindowResize implements Event {
 
 }
+

@@ -1,6 +1,6 @@
 {
-  "vertex": "zenith:core/kawase_down/vertex",
-  "fragment": "zenith:core/kawase_down/fragment",
+  "vertex": "aporia:core/kawase_down/vertex",
+  "fragment": "aporia:core/kawase_down/fragment",
   "samplers": [
     {
       "name": "Sampler0"

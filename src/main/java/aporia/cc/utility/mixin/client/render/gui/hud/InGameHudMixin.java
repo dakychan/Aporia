@@ -59,7 +59,6 @@ public abstract class InGameHudMixin {
                 ci.cancel();
             }
         } catch (Exception e) {
-            // PIZDEC
         }
     }
 
@@ -119,3 +118,4 @@ public abstract class InGameHudMixin {
 
 
 }
+

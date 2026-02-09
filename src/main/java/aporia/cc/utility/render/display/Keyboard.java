@@ -159,3 +159,4 @@ public enum Keyboard {
         return InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), keyCode);
     }
 }
+

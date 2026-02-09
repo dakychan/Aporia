@@ -6,7 +6,6 @@ import aporia.cc.client.modules.api.Module;
 import aporia.cc.client.modules.api.ModuleAnnotation;
 import aporia.cc.client.modules.api.setting.impl.BooleanSetting;
 
-// ООО<<МИНЦЕТ ПАСТИНГ INC>>ООО
 @ModuleAnnotation(name = "NameProtect", category = Category.MISC, description = "Защищает имена игроков")
 public final class NameProtect extends Module {
     public static final NameProtect INSTANCE = new NameProtect();
@@ -44,3 +43,4 @@ public final class NameProtect extends Module {
         return originalName;
     }
 }
+

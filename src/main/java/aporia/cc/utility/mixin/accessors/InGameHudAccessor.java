@@ -13,3 +13,4 @@ public interface  InGameHudAccessor {
     @Invoker("renderStatusBars")
     void invokeRenderStatusBars(DrawContext context);
 }
+

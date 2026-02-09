@@ -18,3 +18,4 @@ public final class AutoSprint extends Module {
         mc.options.sprintKey.setPressed(true);
     }
 }
+

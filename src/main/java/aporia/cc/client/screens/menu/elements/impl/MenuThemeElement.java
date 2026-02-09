@@ -172,26 +172,6 @@ public class MenuThemeElement extends AbstractMenuElement {
         ctx.drawRoundedRect(keyBoxX, y, keyBoxWidth, moduleHeight,
                 hasSettings ? BorderRadius.topRight(8) : new BorderRadius(0, 6, 6, 0), badgeColor);
 
-//        String keyText = "n/a";
-//        int keyCode = module.getKeyCode();
-//        if (keyCode != -1 && keyCode != 0) {
-//            try {
-//                String name = GLFW.glfwGetKeyName(keyCode, -1);
-//                if (name != null && !name.isBlank()) {
-//                    keyText = name.toUpperCase();
-//                }
-//            } catch (Exception ignored) {
-//            }
-//        }
-//
-//        Font keyFont = Fonts.MEDIUM.getFont(7);
-//        float keyTextWidth = keyFont.width(keyText);
-//        float keyTextX = keyBoxX + (keyBoxWidth - keyTextWidth) / 2f;
-//        float keyTextY = y + (moduleHeight - keyFont.height()) / 2f;
-//
-//        ctx.drawText(keyFont, keyText, keyTextX, keyTextY,
-//                keyCode != -1 ? theme.getGrayLight().mix(theme.getWhite(), animation.getValue()).mulAlpha(alpha)
-//                        : theme.getGray().mulAlpha(alpha));
 
         float padding = 8;
         float startY = y + moduleHeight + padding;
@@ -212,7 +192,6 @@ public class MenuThemeElement extends AbstractMenuElement {
         if (this.theme == Theme.CUSTOM_THEME) {
             this.theme.setColor(color.getColor());
             this.theme.setSecondColor(secondColor.getColor());
-//            System.out.println(theme.getName());
             this.theme.setGray(gray.getColor());
             this.theme.setGrayLight(grayLight.getColor());
             this.theme.setForegroundLight(foregroundLight.getColor());
@@ -281,3 +260,4 @@ public class MenuThemeElement extends AbstractMenuElement {
         return theme.getName();
     }
 }
+

@@ -76,7 +76,6 @@ public final class MsdfFont implements IMinecraft {
 				c='А';
 
 			}
-			//System.out.println(text);
 			if (skipNext) {
 				skipNext = false;
 				continue;
@@ -188,10 +187,6 @@ public float getWidth(String text, float size) {
     float width = 0.0f;
     boolean skipNext = false;
 
-//    NameProtect nameProtectModule = Rockstar.getInstance().getModuleManager().getModule(NameProtect.class);
-//    if (nameProtectModule.isEnabled()) {
-//        text = nameProtectModule.patchName(text);
-//    }
 
     for (int i = 0; i < text.length(); i++) {
         char c = text.charAt(i);
@@ -292,3 +287,4 @@ public float getWidth(String text, float size) {
 
 	}
 }
+

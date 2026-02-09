@@ -17,7 +17,7 @@ public class InterpolationRotationMode extends RotationMode {
     public Rotation process(InterpolationRotationConfig config, Rotation modelOut, Rotation targetRotation
     ) {
 
-        Pair<Float, Float> pair = calculateFactors(Aporia.getRotationManager().getCurrentRotation(), targetRotation,config.getHorizontalSpeedSetting(),config.getVerticalSpeedSetting(),config.getDirectionChangeFactor(),config.getMidPoint());
+        Pair<Float, Float> pair = calculateFactors(aporia.getRotationManager().getCurrentRotation(), targetRotation,config.getHorizontalSpeedSetting(),config.getVerticalSpeedSetting(),config.getDirectionChangeFactor(),config.getMidPoint());
         return modelOut.towardsLinear(targetRotation, pair.getFirst(), pair.getSecond());
     }
 
@@ -34,8 +34,8 @@ public class InterpolationRotationMode extends RotationMode {
 
 
         float directionChange = 0f;
-        if (targetRotation != null && Aporia.getRotationManager().getPreviousRotationTarget() != null) {
-            directionChange = Aporia.getRotationManager().getPreviousRotationTarget().targetRotation()
+        if (targetRotation != null && aporia.getRotationManager().getPreviousRotationTarget() != null) {
+            directionChange = aporia.getRotationManager().getPreviousRotationTarget().targetRotation()
                     .angleTo(targetRotation);
             directionChange = MathHelper.clamp(directionChange, 0f, 1f);
             directionChange *= directionChangeFactor.random() / 100.0f;
@@ -78,3 +78,4 @@ public class InterpolationRotationMode extends RotationMode {
         }
     }
 }
+

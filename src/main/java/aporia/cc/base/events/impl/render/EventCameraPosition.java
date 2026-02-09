@@ -16,3 +16,4 @@ import net.minecraft.util.math.Vec3d;
 public class EventCameraPosition implements Event {
     Vec3d pos;
 }
+

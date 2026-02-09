@@ -83,11 +83,6 @@ public class TextBox implements IMinecraft {
             context.drawText(font, visibleText, x, y, colorText);
 
 
-//            if (selected && System.currentTimeMillis() - lastInputTime > 200) {
-//                float cursorDrawX = x + font.width(text.substring(startIndex, cursor));
-//                context.drawRect(cursorDrawX, y - 1, 1, font.height() + 2,
-//                        colorText.mulAlpha(animation.update(animation.getValue()==0.2f?1:animation.getValue()==1?0.2f:animation.getTargetValue())));
-//            }
         }
 
 
@@ -261,3 +256,4 @@ public class TextBox implements IMinecraft {
 
 
 }
+

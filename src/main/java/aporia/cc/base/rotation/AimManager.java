@@ -1,6 +1,7 @@
 package aporia.cc.base.rotation;
 
 
+import aporia.cc.Aporia;
 import lombok.Getter;
 
 import net.minecraft.util.math.MathHelper;
@@ -29,7 +30,7 @@ public class AimManager implements IClient {
 
     public Rotation rotate(RotationConfig config, Rotation targetRotation) {
         if (config.getType() != RotationModeType.INSTANT) {
-            RotationDelta deltaToTarget = Aporia.getRotationManager().getCurrentRotation().rotationDeltaTo(targetRotation);
+            RotationDelta deltaToTarget = aporia.getRotationManager().getCurrentRotation().rotationDeltaTo(targetRotation);
             float maxInitialDiff = 270f; // 180 + 90
             float progress = MathHelper.clamp(1f - (Math.abs(deltaToTarget.getDeltaYaw()) + Math.abs(deltaToTarget.getDeltaPitch())) / maxInitialDiff, 0, 1);
 
@@ -42,13 +43,12 @@ public class AimManager implements IClient {
 
         switch (config.getType()) {
             case INSTANT -> newRotation = instantMod.process(targetRotation);
-            case INTERPOLATION -> newRotation = interpolationMod.process((InterpolationRotationConfig) config,Aporia.getRotationManager().getCurrentRotation(), targetRotation);
+            case INTERPOLATION -> newRotation = interpolationMod.process((InterpolationRotationConfig) config,aporia.getRotationManager().getCurrentRotation(), targetRotation);
             case AI -> newRotation = interpolationMod.process(((AiRotationConfig) config ).getInterpolationRotationConfig() ,smoothMod.process((AiRotationConfig) config ,targetRotation), targetRotation);
-            default -> newRotation = Aporia.getRotationManager().getCurrentRotation();
+            default -> newRotation = aporia.getRotationManager().getCurrentRotation();
         }
 
         if(config.getType()!= RotationModeType.AI) {
-           // smoothMod.resetLerp(targetRotation);
         }
         if(rotationManager.getCurrentRotation().equals(newRotation)) {
             return newRotation;
@@ -127,3 +127,4 @@ public class AimManager implements IClient {
 
 
 }
+

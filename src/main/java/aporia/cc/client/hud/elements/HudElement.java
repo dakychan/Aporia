@@ -38,14 +38,12 @@ public class HudElement {
 
         if (icon != null && text == null) {
             float centeredIconX = blockX + (this.width - iconSize) / 2f;
-            // ctx.drawTexture(icon., centeredIconX, iconY, iconSize, iconSize, iconColor);
         } else if (text != null) {
             float contentBlockWidth = (text != null) ? font.width(text.get()) + font.width(prefix) + (prefix.isEmpty() ? 0 : 1) : 0;
             contentBlockWidth += font.width(icon) + iconTextSpacing+iconTextSpacing/2;
             float contentX = blockX + (this.width - contentBlockWidth) / 2f;
 
             if (icon != null) {
-                //  ctx.drawTexture(icon, contentX, iconY, iconSize, iconSize, iconColor);
                 ctx.drawText(iconFont, icon, contentX, textY, iconColor);
                 contentX += iconSize + iconTextSpacing;
             }
@@ -56,3 +54,4 @@ public class HudElement {
 
 
 }
+

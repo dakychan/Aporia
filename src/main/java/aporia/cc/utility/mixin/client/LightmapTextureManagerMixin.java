@@ -18,3 +18,4 @@ public class LightmapTextureManagerMixin {
         return original;
     }
 }
+

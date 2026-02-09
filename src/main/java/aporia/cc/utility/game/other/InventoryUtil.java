@@ -99,7 +99,6 @@ public class InventoryUtil implements IMinecraft {
 
     public static void bypassSwap(int slot, int targetSlot) {
         if (slot == -1 || targetSlot == -1) return;
-        // bupass bude!
         swap(slot, targetSlot);
     }
 
@@ -116,3 +115,4 @@ public class InventoryUtil implements IMinecraft {
         }
     }
 } 
+

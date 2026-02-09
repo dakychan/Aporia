@@ -1,6 +1,6 @@
 {
-    "vertex": "zenith:core/msdf_font/vertex",
-    "fragment": "zenith:core/msdf_font/fragment",
+    "vertex": "aporia:core/msdf_font/vertex",
+    "fragment": "aporia:core/msdf_font/fragment",
     "samplers": [
         { "name": "Sampler0" }
     ],

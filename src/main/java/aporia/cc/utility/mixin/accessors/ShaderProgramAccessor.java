@@ -13,3 +13,4 @@ public interface ShaderProgramAccessor {
     @Accessor
     Map<String, GlUniform> getUniformsByName();
 }
+

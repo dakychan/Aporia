@@ -45,3 +45,4 @@ public abstract class MinecraftClientMixin {
         return event.getScreen();
     }
 }
+

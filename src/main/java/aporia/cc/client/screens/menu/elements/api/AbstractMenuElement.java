@@ -25,3 +25,4 @@ public abstract class AbstractMenuElement {
     public abstract Category getCategory();
     public abstract String getName();
 }
+

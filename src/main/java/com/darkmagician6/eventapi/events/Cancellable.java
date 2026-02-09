@@ -7,3 +7,4 @@ public interface Cancellable {
     void setCancelled(boolean state);
 
 }
+

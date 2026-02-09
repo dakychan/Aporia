@@ -58,15 +58,7 @@ public class MouseMixin {
     @Unique
     private boolean isAnim(){
         Screen screen = MinecraftClient.getInstance().currentScreen;
-//        if(screen instanceof InventoryScreen inventoryScreen){
-//            return inventoryScreen.isAnimationClose();
-//        }
-//        if(screen instanceof ContainerScreen containerScreen){
-//            return  containerScreen.isAnimationClose();
-//        }
-//        if(screen instanceof MenuScreen menuScreen){
-//            return menuScreen.isClosing();
-//        }
         return false;
     }
 }
+

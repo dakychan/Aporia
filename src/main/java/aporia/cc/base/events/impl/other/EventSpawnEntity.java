@@ -12,3 +12,4 @@ public class EventSpawnEntity implements Event {
     private Entity entity;
 
 }
+

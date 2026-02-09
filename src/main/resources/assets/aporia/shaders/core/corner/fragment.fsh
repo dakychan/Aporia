@@ -1,8 +1,8 @@
 #version 150
 
 #moj_import <dynamictransforms.glsl>
-#moj_import <zenith:uniforms.glsl>
-#moj_import <zenith:common.glsl>
+#moj_import <aporia:uniforms.glsl>
+#moj_import <aporia:common.glsl>
 
 in vec2 FragCoord; // normalized fragment coord relative to the primitive
 in vec4 FragColor;

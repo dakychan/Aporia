@@ -7,3 +7,4 @@ import aporia.cc.base.events.callables.EventCancellable;
 public class EventCloseScreen extends EventCancellable {
    private final Screen screen;
 }
+

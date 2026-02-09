@@ -39,7 +39,6 @@ public class MenuItemSetting extends MenuSetting {
         float textY = settingY + (8 - settingFont.height()) / 2 - 0.5f;
 
         ctx.drawText(settingFont, setting.getName(), x + 8 + 10, textY, textColor);
-        // ctx.drawText(descFont, setting.getDescription(), settingX + 15, textY + 10, theme.getWhite().mulAlpha(alpha));
 
 
 
@@ -49,17 +48,14 @@ public class MenuItemSetting extends MenuSetting {
         float iconSize = 6;
         float iconY = textY - 1;
         Font iconFont = Fonts.ICONS.getFont(6);
-       // ctx.drawRoundedRect(settingX, iconY, iconSize, iconSize, BorderRadius.all(1), themeColor);
 
         ctx.drawText(Fonts.ICONS.getFont(6), "V", settingX+1.5f, iconY + 1,themeColor);
-        // ctx.drawTexture(Aporia.id("icons/check.png"), settingX + 1.5f, iconY + 2f, 7, 7, Aporia.getInstance().getThemeManager().getCurrentTheme().getForegroundColor().mulAlpha(alpha));
 
         float toggleSize = 8;
         float toggleX = x + moduleWidth - toggleSize - 8;
         float toggleY = settingY;
 
         ctx.drawRoundedBorder(toggleX, toggleY, toggleSize, toggleSize,0.2f, BorderRadius.all(2), themeColor);
-          //  ctx.drawText(iconFont,"S",toggleX+2,toggleY+1,golochakaFinalColor);
         bounds = new Rect(toggleX, toggleY, toggleSize, toggleSize);
         boundsColor.setX(toggleX+20);
         boundsColor.setY(toggleY+toggleSize-boundsColor.getHeight()/2);
@@ -90,3 +86,4 @@ public class MenuItemSetting extends MenuSetting {
         return true;
     }
 }
+

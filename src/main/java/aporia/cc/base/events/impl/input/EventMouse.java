@@ -10,3 +10,4 @@ import lombok.Getter;
 public class EventMouse implements Event {
     private final int button, action;
 }
+

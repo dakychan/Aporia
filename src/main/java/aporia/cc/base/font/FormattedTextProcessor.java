@@ -44,3 +44,4 @@ public class FormattedTextProcessor {
                                   boolean strikethrough) {
     }
 }
+

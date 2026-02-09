@@ -17,7 +17,6 @@ import aporia.cc.utility.game.other.MessageUtil;
 import aporia.cc.utility.interfaces.IMinecraft;
 
 
-//POWERED BY H0NEY
 
 
 @ModuleAnnotation(name = "ClanUpgrade", category = Category.MISC, description = "Автоматическое улучшение клана")
@@ -112,3 +111,4 @@ public final class ClanUpgrade extends Module implements IMinecraft {
         }
     }
 }
+

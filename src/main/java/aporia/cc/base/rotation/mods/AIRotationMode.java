@@ -11,9 +11,9 @@ public class AIRotationMode extends RotationMode {
     private Rotation lerpTargetRotation = Rotation.ZERO;
     public Rotation process(AiRotationConfig config, Rotation targetRotation) {
 
-        RotationDelta prevDelta = Aporia.getRotationManager().getPreviousRotation().rotationDeltaTo(Aporia.getRotationManager().getCurrentRotation());
+        RotationDelta prevDelta = aporia.getRotationManager().getPreviousRotation().rotationDeltaTo(aporia.getRotationManager().getCurrentRotation());
 
-        Rotation currentRotation = Aporia.getRotationManager().getCurrentRotation();
+        Rotation currentRotation = aporia.getRotationManager().getCurrentRotation();
         if(Math.abs(targetRotation.rotationDeltaTo(lerpTargetRotation).getDeltaYaw())>80 ){
             lerpTargetRotation = targetRotation;
         }
@@ -32,22 +32,18 @@ public class AIRotationMode extends RotationMode {
     private Rotation process(AiRotationConfig config, Rotation currentRotation,Rotation targetRotation,RotationDelta prevDelta, boolean tickUpdate) {
 
 
-        MinaraiModel model = Aporia.getDeepLearningManager().getSlowModel();
+        MinaraiModel model = aporia.getDeepLearningManager().getSlowModel();
         try {
 
             RotationDelta deltaLerpTarget = currentRotation.rotationDeltaTo(lerpTargetRotation);
 
 
             if(Math.copySign(1,prevDelta.getDeltaYaw())!=Math.copySign(1, deltaLerpTarget.getDeltaYaw())) {
-              //  prevDelta = new RotationDelta(prevDelta.getDeltaYaw()*0.2f,prevDelta.getDeltaPitch()*0.2f);
-              //   prevDelta = new RotationDelta(MathUtil.lerp(prevDelta.getDeltaYaw(),deltaLerpTarget.getDeltaYaw(),0.1f),MathUtil.lerp(prevDelta.getDeltaPitch(),deltaLerpTarget.getDeltaPitch(),0.1f));
             }
 
 
-            //float[] input = new float[]{prevDeltaYaw2, prevDeltaPitch2, prevDeltaYaw, prevDeltaPitch, prevTargetDiffYaw, prevTargetDiffPitch, diffa, diffb};
             float[] input = new float[]{prevDelta.getDeltaYaw(), prevDelta.getDeltaPitch(), deltaLerpTarget.getDeltaYaw(), deltaLerpTarget.getDeltaPitch()};
 
-          //  prevTargetDelta = deltaLerpTarget;
             float[] result = model.predict(input);
 
 
@@ -72,3 +68,4 @@ public class AIRotationMode extends RotationMode {
         this.lerpTargetRotation = targetRotation;
     }
 }
+

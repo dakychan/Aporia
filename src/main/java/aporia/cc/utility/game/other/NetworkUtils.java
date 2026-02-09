@@ -27,3 +27,4 @@ public class NetworkUtils implements IMinecraft {
         silentPackets.clear();
     }
 } 
+

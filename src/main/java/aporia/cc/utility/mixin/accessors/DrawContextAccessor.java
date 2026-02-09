@@ -14,3 +14,4 @@ public interface DrawContextAccessor {
     @Invoker("drawCooldownProgress")
     void callDrawCooldownProgress(ItemStack stack, int x, int y);
 }
+

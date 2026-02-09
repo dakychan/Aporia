@@ -14,9 +14,9 @@ import aporia.cc.client.modules.api.Module;
 import aporia.cc.base.theme.Theme;
 import aporia.cc.client.screens.menu.elements.api.AbstractMenuElement;
 import aporia.cc.client.screens.menu.settings.api.MenuSetting;
-import Aporia.zov.client.screens.menu.settings.impl.*;
+import aporia.cc.client.screens.menu.settings.impl.*;
 import aporia.cc.client.modules.api.setting.Setting;
-import Aporia.zov.client.modules.api.setting.impl.*;
+import aporia.cc.client.modules.api.setting.impl.*;
 import aporia.cc.utility.game.other.MouseButton;
 import aporia.cc.utility.render.display.Keyboard;
 import aporia.cc.utility.render.display.base.BorderRadius;
@@ -179,7 +179,6 @@ public class MenuModuleElement extends AbstractMenuElement {
                     BorderRadius.all(8), theme.getForegroundStroke().mulAlpha(alpha));
         }
     }
-    //this sheet code 2023
     private void drawScrollingText(UIContext ctx, Font font, String text,
                                    float x, float y, float maxWidth, ColorRGBA color) {
         float textW = font.width(text);
@@ -305,3 +304,4 @@ public class MenuModuleElement extends AbstractMenuElement {
 
     }
 }
+

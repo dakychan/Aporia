@@ -353,10 +353,6 @@ public class DrawUtil implements IWindow {
 
         BufferBuilder builder = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
 
-        // color1 - верхний левый
-        // color2 - нижний левый
-        // color3 - нижний правый
-        // color4 - верхний правый
         builder.vertex(matrix4f, adjustedX, adjustedY, 0.0F).color(color1.getRGB());
         builder.vertex(matrix4f, adjustedX, adjustedY + adjustedHeight, 0.0F).color(color2.getRGB());
         builder.vertex(matrix4f, adjustedX + adjustedWidth, adjustedY + adjustedHeight, 0.0F).color(color3.getRGB());
@@ -419,7 +415,6 @@ public class DrawUtil implements IWindow {
 
     public void drawRoundedCorner(Matrix3x2fStack matrices, float x, float y, float width, float height, float borderThikenes, float delta, ColorRGBA color, BorderRadius radius) {
         if(!Interface.INSTANCE.isCorners()) return;
-        //знаю это пиздец но я проебался с тем что сразу не сделал метод у DragHud
         x-=0.3f;
         y-=0.3f;
         width+=0.3f*2;
@@ -487,7 +482,6 @@ public class DrawUtil implements IWindow {
 
         drawEnd();
 
-        // сбрасываем текстуру
         matrices.popMatrix();
     }
     public void drawTexture(Matrix3x2fStack matrices, Identifier identifier, float x, float y, float width, float height, Gradient textureColor) {
@@ -508,7 +502,6 @@ public class DrawUtil implements IWindow {
 
         drawEnd();
 
-        // сбрасываем текстуру
         matrices.popMatrix();
     }
 
@@ -516,8 +509,6 @@ public class DrawUtil implements IWindow {
         matrices.pushMatrix();
         int color = clor.getRGB();
 
-        // багчинг пошол нахуй
-        // не
 
         Matrix4f matrix4f = MatrixUtil.toMatrix4f(matrices);
 
@@ -535,7 +526,6 @@ public class DrawUtil implements IWindow {
 
         drawEnd();
 
-        // сбрасываем текстуру
         matrices.popMatrix();
     }
 
@@ -581,7 +571,6 @@ public class DrawUtil implements IWindow {
         RenderLayerUtil.drawCurrent(builder);
         drawEnd();
 
-        // сбрасываем текстуру
         matrices.popMatrix();
     }
 
@@ -722,7 +711,6 @@ public class DrawUtil implements IWindow {
             RenderLayerUtil.drawCurrent(builder);
             drawEnd();
 
-            // сбрасываем текстуру
             matrices.popMatrix();
         }
         if(glow){
@@ -775,7 +763,6 @@ public class DrawUtil implements IWindow {
         RenderLayerUtil.drawCurrent(builder);
         drawEnd();
 
-        // сбрасываем текстуру
         matrices.popMatrix();
 
     }
@@ -813,7 +800,6 @@ public class DrawUtil implements IWindow {
     }
 
     private void drawPlayerHatLayerWithRoundedShader(Matrix3x2fStack matrices, Identifier skinTexture, float x, float y, float size, BorderRadius borderRadius, ColorRGBA color) {
-        // Включаем блендинг для прозрачности hat layer
         drawRoundedTextureWithUV(matrices, skinTexture, x, y, size, size, borderRadius, color,
                 40.0f / 64.0f,  // u1 - левый край hat layer
                 8.0f / 64.0f,   // v1 - верхний край hat layer
@@ -851,7 +837,6 @@ public class DrawUtil implements IWindow {
 
         BufferBuilder builder = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
 
-        // Используем переданный цвет вместо жестко закодированного белого
         builder.vertex(matrix4f, adjustedX, adjustedY, 0.0F).texture(u1, v1).color(color.getRGB());
         builder.vertex(matrix4f, adjustedX, adjustedY + adjustedHeight, 0.0F).texture(u1, v2).color(color.getRGB());
         builder.vertex(matrix4f, adjustedX + adjustedWidth, adjustedY + adjustedHeight, 0.0F).texture(u2, v2).color(color.getRGB());
@@ -873,6 +858,7 @@ public class DrawUtil implements IWindow {
     record HeadUV(float u1, float v1, float uSize, float vSize) {
     }
 }
+
 
 
 

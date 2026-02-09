@@ -75,11 +75,8 @@ public class KeybindsComponent extends DraggableHudElement {
             ctx.drawText(font, "Keybinds", x + 8 + 8 + 2, y + (18 - font.height()) / 2, theme.getWhite());
 
         }
-        //   Fonts.INTER.render( "Keybinds", 12, x + 10, y + 8, 0.05f, 0.4f, 0, GuiConfig.textColor);
 
 
-      //  ctx.drawRoundedBorder(x + width - 50, y, 17, 17, 0.5f, radius6, color8);
-        //  Fonts.ICON.render( "o", 12, x+width-50+8, y + 10, 0.05f, 0.4f, 0, themeManager.getCurrentTheme().getStart().getRGB());
 
         if(animationVisible.getValue()==1){
             float kmY = y + 18;
@@ -169,15 +166,8 @@ public class KeybindsComponent extends DraggableHudElement {
 
 
 
-//            int color16 = themeManager.getStart(0.16f);
-//            RenderUtil.renderRect( x, y, keyTextWidth, 30,color16, 6, 1);
-//            RenderUtil.renderBorder(  x, y, keyTextWidth, 30, color16, 6, 0.5f, 1, 1);
             ctx.drawText(font, Keyboard.getKeyName(module.getKeyCode()), x +width-keyTextWidth, y +(18-font.height())/2, theme.getColor());
             ctx.popMatrix();
-//            int color16 = themeManager.getStart(0.16f);
-//            RenderUtil.renderRect( x+width-50, y, 30, 30,color16, 6, 1);
-//            RenderUtil.renderBorder(  x+width-50, y, 30, 30, color16, 6, 0.5f, 1, 1);
-//            Fonts.ICON.render( "o", 12, x+width-50+8, y + 10, 0.05f, 0.4f, 0, color.getIntColor());
 
         }
 
@@ -206,4 +196,5 @@ public class KeybindsComponent extends DraggableHudElement {
         }
     }
 }
+
 

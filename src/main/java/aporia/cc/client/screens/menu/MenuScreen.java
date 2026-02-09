@@ -154,7 +154,6 @@ public class MenuScreen extends CustomScreen {
 
     @Override
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
-        //  super.renderBackground(context, mouseX, mouseY, delta);
     }
 
     public boolean isFinish() {
@@ -192,23 +191,19 @@ public class MenuScreen extends CustomScreen {
         ColorRGBA selectedColor = theme.getWhite().mulAlpha(progress); // Цвет выбранного элемента и текста
         ColorRGBA textColor = theme.getWhite().mulAlpha(progress); // Цвет обычного текста
 
-        // ФОН
         if (Interface.INSTANCE.isBlur() ) {
             DrawUtil.drawBlur(ctx.getMatrices(), boxX, boxY, boxWidth, boxHeight, 20 * progress * progress, BorderRadius.all(9), ColorRGBA.WHITE.mulAlpha(progress*2));
         }
         ctx.drawRoundedRect(boxX, boxY, boxWidth, boxHeight, BorderRadius.all(9), baseBg);
         float widthScroll = 2;
-        // СЛАЙДБАР
         sidebarPanel.render(ctx, boxX, boxY, boxHeight, progress, theme, realSelectedCategory, primary, textColor, selectedColor);
 
-        //НАХОЖДЕНИЕ
         float sidebarWidth = 30f + (88f - 30f) * sidebarProgress;
         float contentStartX = boxX + 8f + sidebarWidth + 8f;
         float sidebarY = boxY + 8f;
         float contentY = boxY + 22f + 8f + 8f;
 
         headerPanel.render(ctx, contentStartX, sidebarY, boxX, columns, boxWidth, progress, theme, realSelectedCategory);
-        //рендер скролла
         float visibleHeight = boxHeight - (22f + 8f + 8f + 8f);
         float scrollProgress = scrollHandler.getMax() == 0 ? 0f : (float) (scrollHandler.getValue() / scrollHandler.getMax());
         float scrollHeight = Math.max(visibleHeight * (visibleHeight / (float) (visibleHeight + scrollHandler.getMax())), 20);
@@ -223,7 +218,6 @@ public class MenuScreen extends CustomScreen {
         }else ctx.drawRoundedRect(boxX + boxWidth - 8 - widthScroll, scrollY, widthScroll, (scrollHeight), BorderRadius.all(1f), theme.getForegroundStroke().mulAlpha(progress));
 
 
-        //Рендер модулей
         float contentWidth = boxX + (columns == 3 ? 530 : 461) - contentStartX - 8f;
 
 
@@ -232,7 +226,6 @@ public class MenuScreen extends CustomScreen {
         this.scaledScissorEndX = (int) (boxX + boxWidth);
         this.scaledScissorEndY = (int) ((int) boxY + boxHeight);
 
-        //-ScissorUtility.startScissor(scaledScissorX, scaledScissorY, scaledScissorWidth, scaledScissorHeight);
 
         ctx.enableScissor(this.scaledScissorX, this.scaledScissorY, this.scaledScissorEndX, this.scaledScissorEndY);
         animationChangeCategory.setEasing(Easing.QUAD_IN_OUT);
@@ -253,7 +246,6 @@ public class MenuScreen extends CustomScreen {
         if (animationChangeCategory.getValue() == 0) {
             selectedCategory = realSelectedCategory;
         }
-        //ScissorUtility.stopScissor();
 
         if (draggingScrollbar) {
             float scrollbarY = boxY + 22f + 8f + 8f;
@@ -306,7 +298,6 @@ public class MenuScreen extends CustomScreen {
                 return;
             }
         }
-        //чтобы все что обрезанно не нажималось
         if (!animationClose.isDone()) return;
         float scrollbarX = boxX + boxWidth - 8 - 2;
         float scrollbarY = boxY + 22f + 8f + 8f;
@@ -371,7 +362,6 @@ public class MenuScreen extends CustomScreen {
         if (returnCheck) {
             return true;
         }
-        //чтобы при отмене бинда или закрытия СЕРЧА ГУи -не закрывалась
         if (searchField.isSelected()) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 searchField.setSelected(false);
@@ -388,7 +378,6 @@ public class MenuScreen extends CustomScreen {
         if (result) {
             return true;
         }
-        // pfrhsnbt vty.irb
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && !closing) {
             onMouseReleased(0, 0, MouseButton.LEFT);
             onMouseReleased(0, 0, MouseButton.RIGHT);
@@ -508,3 +497,4 @@ public class MenuScreen extends CustomScreen {
     }
 
 }
+

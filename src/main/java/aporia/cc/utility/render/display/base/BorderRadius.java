@@ -52,3 +52,4 @@ public record BorderRadius(float topLeftRadius, float topRightRadius, float bott
                 '}';
     }
 }
+

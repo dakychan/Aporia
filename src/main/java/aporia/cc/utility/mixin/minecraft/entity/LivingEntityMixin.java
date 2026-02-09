@@ -10,7 +10,6 @@ import aporia.cc.utility.interfaces.IMinecraft;
 @Mixin(LivingEntity.class)
 public class LivingEntityMixin implements IMinecraft {
 
-    //ЛИКВИДБАБУНС ЧТО ДЕЛАЕТ????
     @Redirect(method = "jump", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;getYaw()F"))
     public float replaceMovePacketPitch(LivingEntity instance) {
         if ((Object) this != mc.player) {
@@ -26,3 +25,4 @@ public class LivingEntityMixin implements IMinecraft {
 
 
 }
+

@@ -42,7 +42,7 @@ public enum Aporia {
 
     public static final String NAME = "Aporia", VER = "2.0", TYPE = "DEV";
     private static final String MOD_ID = NAME.toLowerCase();
-    public static final File DIRECTORY = new File(MinecraftClient.getInstance().runDirectory, Aporia.NAME);
+    public static final File DIRECTORY = getConfigDirectory();
 
     private ModuleManager moduleManager;
 
@@ -63,9 +63,24 @@ public enum Aporia {
     private ConfigManager configManager;
     private RCTRepository rctRepository;
 
+    private static File getConfigDirectory() {
+        String os = System.getProperty("os.name").toLowerCase();
+        String userHome = System.getProperty("user.home");
+        
+        if (os.contains("win")) {
+            return new File(userHome, ".apr");
+        } else {
+            return new File(userHome, ".config/Aporia");
+        }
+    }
+
     @CompileToNative
     @VMProtect(type = CompileType.ULTRA)
     public void init() {
+
+        if (!DIRECTORY.exists()) {
+            DIRECTORY.mkdirs();
+        }
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> Aporia.getInstance().shutdown()));
 
@@ -128,6 +143,7 @@ public enum Aporia {
     }
 
 }
+
 
 
 

@@ -11,3 +11,4 @@ public class InstantRotationMode extends RotationMode {
         return rotationManager.getCurrentRotation().add(rotationManager.getCurrentRotation().rotationDeltaTo(target));
     }
 }
+

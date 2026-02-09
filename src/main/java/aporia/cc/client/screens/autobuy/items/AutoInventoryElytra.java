@@ -127,3 +127,4 @@ public class AutoInventoryElytra extends ExtendAutoInventoryItem {
         return obj;
     }
 }
+

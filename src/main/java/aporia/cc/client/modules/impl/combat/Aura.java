@@ -24,7 +24,7 @@ import aporia.cc.client.modules.api.setting.impl.BooleanSetting;
 import aporia.cc.client.modules.api.setting.impl.ModeSetting;
 import aporia.cc.client.modules.api.setting.impl.MultiBooleanSetting;
 import aporia.cc.client.modules.api.setting.impl.NumberSetting;
-import Aporia.zov.utility.game.player.*;
+import aporia.cc.utility.game.player.*;
 import aporia.cc.utility.game.player.rotation.Rotation;
 import aporia.cc.utility.game.player.rotation.RotationUtil;
 
@@ -38,43 +38,35 @@ public final class Aura extends Module {
     public static final Aura INSTANCE = new Aura();
     private Aura() {}
 
-    // Режимы ротации
     private final ModeSetting rotationMode = new ModeSetting("Ротация");
     private final ModeSetting.Value hvh = new ModeSetting.Value(rotationMode, "ХВХ");
     private final ModeSetting.Value hollyworld = new ModeSetting.Value(rotationMode, "HollyWorld").select();
 
-    // Режимы спринта
     private final ModeSetting sprintMode = new ModeSetting("Бег");
     private final ModeSetting.Value sprintHvh = new ModeSetting.Value(sprintMode, "ХВХ");
     private final ModeSetting.Value sprintNormal = new ModeSetting.Value(sprintMode, "Нормал").select();
     private final ModeSetting.Value sprintLegit = new ModeSetting.Value(sprintMode, "Легит");
     private final ModeSetting.Value sprintNone = new ModeSetting.Value(sprintMode, "Нет");
 
-    // Коррекция движения
     private final ModeSetting correction = new ModeSetting("Коррекция");
     private final ModeSetting.Value correctionFocus = new ModeSetting.Value(correction, "Фокус");
     private final ModeSetting.Value correctionGood = new ModeSetting.Value(correction, "Свободная").select();
     private final ModeSetting.Value correctionNone = new ModeSetting.Value(correction, "Нет");
 
-    // Дистанции
     private final NumberSetting distance = new NumberSetting("Дистанция", 3, 0.5f, 6, 0.1f, "Дистанция атаки");
     private final NumberSetting distanceRotation = new NumberSetting("Пре-дистанция", 0.1f, 0, 6, 0.1f);
 
-    // Прочие настройки
     private final MultiBooleanSetting settings = new MultiBooleanSetting("Настройки");
     private final MultiBooleanSetting.Value shieldBreak = new MultiBooleanSetting.Value(settings, "Ломать щит", true);
     private final MultiBooleanSetting.Value shielRealese = new MultiBooleanSetting.Value(settings, "Отжимать щит", true);
     private final MultiBooleanSetting.Value eatUseAttack = new MultiBooleanSetting.Value(settings, "Бить и есть", true);
     private final MultiBooleanSetting.Value attackIgnoreWals = new MultiBooleanSetting.Value(settings, "Бить через стены", true);
 
-    // Типы целей
     private final MultiBooleanSetting targetTypeSetting = MultiBooleanSetting.create("Атаковать", List.of("Игроков", "Враждебных", "Мирных"));
 
-    // Криты
     private final BooleanSetting onlyCrit = new BooleanSetting("Только криты", true);
     private final BooleanSetting smartCrit = new BooleanSetting("Умные криты", "Бьет критами если зажата кнопка прыжка", false, onlyCrit::isEnabled);
 
-    // private
     private final TargetSelector targetSelector = new TargetSelector();
     private final PointFinder pointFinder = new PointFinder();
     private LivingEntity target = null;
@@ -221,3 +213,4 @@ public final class Aura extends Module {
 
 
 }
+

@@ -1,6 +1,6 @@
 {
-    "vertex": "zenith:core/position_texture_color",
-    "fragment": "zenith:core/squircle_texture/fragment",
+    "vertex": "aporia:core/position_texture_color",
+    "fragment": "aporia:core/squircle_texture/fragment",
     "samplers": [
         { "name": "Sampler0" }
     ],

@@ -54,30 +54,7 @@ public class PlayerIntersectionUtil implements IClient {
         mc.getNetworkHandler().getConnection().send(packet, null);
     }
 
-  //  public String getHealthString(LivingEntity entity) {
-//        return getHealthString(getHealth(entity));
-//    }
-//
-//    public String getHealthString(float hp) {
-//        return String.format("%.1f", hp).replace(",",".").replace(".0","");
-//    }
 
-//    public float getHealth(LivingEntity entity) {
-//
-//        float hp = entity.getHealth() + entity.getAbsorptionAmount();
-//        if (entity instanceof PlayerEntity player) switch (ServerUtil.server) {
-//            case "FunTime", "ReallyWorld" -> {
-//                ScoreboardObjective scoreBoard = player.getScoreboard().getObjectiveForSlot(ScoreboardDisplaySlot.BELOW_NAME);
-//                if (scoreBoard != null) {
-//                    MutableText text2 = ReadableScoreboardScore.getFormattedScore(player.getScoreboard().getScore(player, scoreBoard), scoreBoard.getNumberFormatOr(StyledNumberFormat.EMPTY));
-//                    try {
-//                        hp = Float.parseFloat(ColorUtility.removeFormatting(text2.getString()));
-//                    } catch (NumberFormatException ignored) {}
-//                }
-//            }
-//        }
-//        return MathHelper.clamp(hp,0,entity.getMaxHealth());
-//    }
 
     public List<BlockPos> getCube(BlockPos center, float radius) {
         return getCube(center, radius,radius,true);
@@ -211,3 +188,4 @@ public class PlayerIntersectionUtil implements IClient {
         return String.format("%.1f", hp).replace(",",".").replace(".0","");
     }
 }
+

@@ -97,3 +97,4 @@ public class MultiBooleanComponent extends PanelComponent {
         return setting.isVisible();
     }
 }
+

@@ -29,3 +29,4 @@ public class ButtonSetting extends Setting {
 
     }
 }
+

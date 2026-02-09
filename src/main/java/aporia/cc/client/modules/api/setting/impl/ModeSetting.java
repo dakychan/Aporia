@@ -140,3 +140,4 @@ public class ModeSetting extends Setting {
         }
     }
 }
+

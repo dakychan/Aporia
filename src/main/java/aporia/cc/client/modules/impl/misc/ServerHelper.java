@@ -304,8 +304,6 @@ public final class ServerHelper extends Module {
             float padding = 2;
 
             if (ProjectionUtil.canSee(cons.vec) && cons.anarchy == Aporia.getInstance().getServerHandler().getAnarchy() && Aporia.getInstance().getServerHandler().getWorldType().equals(cons.world)) {
-//                blur.render(ShapeProperties.create(matrix, posX - padding, posY - padding, width + padding * 2, 10)
-//                        .round(1.5F).color(ColorUtil.HALF_BLACK).build());
                 DrawUtil.drawBlurHud(e.getContext().getMatrices(),posX - 4, posY - 4, (16 * 0.8f + 4 + font.width(text) + 8), 16 * 0.8f + 8,22,BorderRadius.all(4), ColorRGBA.WHITE);
                 e.getContext().drawRoundedRect(posX - 4, posY - 4, (16 * 0.8f + 4 + font.width(text) + 8), 16 * 0.8f + 8, BorderRadius.all(4), Aporia.getInstance().getThemeManager().getCurrentTheme().getForegroundLight());
                 DrawUtil.drawRoundedCorner(e.getContext().getMatrices(),posX - 4, posY - 4, (16 * 0.8f + 4 + font.width(text) + 8), 16 * 0.8f + 8,0.1f,10,Aporia.getInstance().getThemeManager().getCurrentTheme().getColor(),BorderRadius.all(4));
@@ -334,7 +332,6 @@ public final class ServerHelper extends Module {
                 if (event.owner != null) list.add("Призван: " + Formatting.GOLD + event.owner);
                 list.add(time);
                 if (event.lvl != null) list.add(event.lvl);
-                //    draw(matrix, Fonts.getSize(14), list, vec3d);
             }
         });
         structures.removeIf(cons -> cons.time - System.currentTimeMillis() <= 0);
@@ -599,5 +596,6 @@ public final class ServerHelper extends Module {
                               double timeOpen, double timeEnd) {
     }
 }
+
 
 

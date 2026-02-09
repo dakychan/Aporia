@@ -10,3 +10,4 @@ public class BooleanSettable {
 
     public BooleanSettable() {}
 }
+

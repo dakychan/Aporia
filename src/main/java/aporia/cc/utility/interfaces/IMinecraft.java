@@ -7,3 +7,4 @@ import net.minecraft.client.util.Window;
 public interface IMinecraft {
     MinecraftClient mc = MinecraftClient.getInstance();
 }
+

@@ -15,3 +15,4 @@ public class EventFog extends EventCancellable {
     float distance;
     int color;
 }
+

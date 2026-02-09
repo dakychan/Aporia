@@ -17,3 +17,4 @@ public final class EventAttack extends EventCancellable {
         PRE
     }
 }
+

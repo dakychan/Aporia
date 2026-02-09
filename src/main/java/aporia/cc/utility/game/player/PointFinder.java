@@ -20,7 +20,6 @@ import java.util.Random;
 
 @Getter
 public class PointFinder implements IMinecraft {
-    // Чем меньше — тем меньше фпс потому что виноват Большой
     private static final double MIN_GRID_SPACING = 0.15;
     private static final int MAX_STEPS_XZ = 14;
     private static final int STEPS_Y = 10;
@@ -231,3 +230,4 @@ public class PointFinder implements IMinecraft {
         return Math.max(2, steps);
     }
 }
+

@@ -51,7 +51,7 @@ public final class EntityESP extends Module {
 
     private final ModeSetting textMode = new ModeSetting("Шрифт");
     private final ModeSetting.Value mojo = new ModeSetting.Value(textMode, "Minecraft");
-    private final ModeSetting.Value Aporia = new ModeSetting.Value(textMode, "Aporia").select();
+    private final ModeSetting.Value aporia = new ModeSetting.Value(textMode, "Aporia").select();
 
     private final NumberSetting scale = new NumberSetting("Размер", 1.0f, 0.5f, 2.0f, 0.1f);
     private final BooleanSetting blur = new BooleanSetting("Блюр", "Требует хорошего пк", false, Interface.INSTANCE::isBlur);
@@ -515,5 +515,6 @@ public final class EntityESP extends Module {
 
 
 }
+
 
 

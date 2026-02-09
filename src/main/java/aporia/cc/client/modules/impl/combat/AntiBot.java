@@ -37,7 +37,6 @@ public final class AntiBot extends Module {
         for (PlayerEntity player : mc.world.getPlayers()) {
             if (player == null) continue;
             if (player == mc.player) continue;
-            //drugduck tech.
             if (armorCheck(player) && !bots.contains(player)) bots.add(player);
         }
     }
@@ -82,3 +81,4 @@ public final class AntiBot extends Module {
         return this.bots.contains(player);
     }
 }
+

@@ -13,3 +13,4 @@ import aporia.cc.base.events.callables.EventCancellable;
 public class EventFov extends EventCancellable {
     int fov;
 }
+

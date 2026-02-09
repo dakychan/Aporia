@@ -51,9 +51,6 @@ public class RotationManager implements IMinecraft {
     @EventTarget(Priority.LOW)
     public void update(EventUpdate event) {
 
-//        mc.player.prevHeadYaw = previousRotation.getYaw();
-//        mc.player.prevPitch = previousRotation.getPitch();
-//        mc.player.prevBodyYaw = previousRotation.getYaw();
 
         EventManager.call(new EventRotate());
 
@@ -109,15 +106,12 @@ public class RotationManager implements IMinecraft {
             }
         }
 
-        //  MessageUtil.displayMessage(MessageUtil.LogLevel.WARN, "valid " + (MathHelper.wrapDegrees(mc.player.getYaw()) + "  " + MathHelper.wrapDegrees(currentRotation.getYaw())));
 
         currentRotation = new Rotation(currentRotation.getYaw(), MathHelper.clamp(currentRotation.getPitch(), -90, 90));
 
 
         requestHandler.tick();
 
-//        mc.player.setYaw(currentRotation.getYaw());
-//        mc.player.setPitch(currentRotation.getPitch()
 
 
     }
@@ -160,3 +154,4 @@ public class RotationManager implements IMinecraft {
     }
 
 }
+

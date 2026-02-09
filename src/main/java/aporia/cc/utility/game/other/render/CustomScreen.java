@@ -19,7 +19,6 @@ public abstract class CustomScreen extends Screen implements IMinecraft {
     @Override
     public final void render(DrawContext context, int mouseX, int mouseY, float delta) {
 
-       // super.render(context, mouseX, mouseY, delta);
 
         UIContext uiContext = UIContext.of(context, mouseX, mouseY, delta);
 
@@ -71,3 +70,4 @@ public abstract class CustomScreen extends Screen implements IMinecraft {
 
     public void onMouseDragged(double mouseX, double mouseY, MouseButton button, double deltaX, double deltaY) {}
 }
+

@@ -36,7 +36,6 @@ public class MenuBooleanSetting extends MenuSetting {
         float textY = settingY + (8 - settingFont.height()) / 2 - 0.5f;
 
         ctx.drawText(settingFont, setting.getName(), x + 8 + 10, textY, textColor);
-        // ctx.drawText(descFont, setting.getDescription(), settingX + 15, textY + 10, theme.getWhite().mulAlpha(alpha));
 
         animation.animateTo(setting.isEnabled() ? 1.0f : 0.0f);
         float progress = animation.update();
@@ -50,7 +49,6 @@ public class MenuBooleanSetting extends MenuSetting {
         ctx.drawRoundedRect(settingX, iconY, iconSize, iconSize, BorderRadius.all(1), themeColor);
 
         ctx.drawText(Fonts.ICONS.getFont(5.5f), "S", settingX + 1.2f, iconY + 0.5f,theme.getForegroundDark().mulAlpha(alpha));
-        // ctx.drawTexture(Aporia.id("icons/check.png"), settingX + 1.5f, iconY + 2f, 7, 7, Aporia.getInstance().getThemeManager().getCurrentTheme().getForegroundColor().mulAlpha(alpha));
 
         float toggleSize = 8;
         float toggleX = x + moduleWidth - toggleSize - 8;
@@ -93,3 +91,4 @@ public class MenuBooleanSetting extends MenuSetting {
         return setting.getVisible().get();
     }
 }
+

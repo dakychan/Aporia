@@ -66,3 +66,4 @@ public class CustomRenderTarget extends Framebuffer implements IWindow {
         return this.textureWidth != mw.getWidth() || this.textureHeight != mw.getHeight();
     }
 }
+

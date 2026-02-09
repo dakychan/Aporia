@@ -19,3 +19,4 @@ public abstract class Enchant {
         return this.getClass().getSimpleName() + " [checked=" + checked + ", level=" + minLevel + "]";
     }
 }
+

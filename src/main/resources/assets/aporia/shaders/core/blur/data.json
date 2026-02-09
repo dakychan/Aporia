@@ -1,6 +1,6 @@
 {
-    "vertex": "zenith:core/blur/vertex",
-    "fragment": "zenith:core/blur/fragment",
+    "vertex": "aporia:core/blur/vertex",
+    "fragment": "aporia:core/blur/fragment",
     "samplers": [
         { "name": "Sampler0" }
     ],

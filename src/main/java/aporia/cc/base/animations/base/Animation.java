@@ -61,7 +61,6 @@ public class Animation {
             done = false;
         }
 
-        // Обновляем значение, если анимация активна
         long elapsed = currentTime - startTime;
         if (elapsed >= duration) {
             value = targetValue;
@@ -122,3 +121,4 @@ public class Animation {
 
     private boolean direction;
 }
+

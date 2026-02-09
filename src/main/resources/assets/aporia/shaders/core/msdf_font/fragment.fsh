@@ -1,7 +1,7 @@
 #version 150
 
 #moj_import <dynamictransforms.glsl>
-#moj_import <zenith:uniforms.glsl>
+#moj_import <aporia:uniforms.glsl>
 
 in vec2 TexCoord;
 in vec4 FragColor;

@@ -92,3 +92,4 @@ public final class AutoTotem extends Module {
                 && healthValue <= elytraHealth.getCurrent();
     }
 }
+

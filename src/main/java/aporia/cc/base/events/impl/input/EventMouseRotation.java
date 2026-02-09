@@ -12,3 +12,4 @@ import lombok.Setter;
 public class EventMouseRotation extends EventCancellable {
     float cursorDeltaX, cursorDeltaY;
 }
+

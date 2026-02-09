@@ -37,7 +37,6 @@ public class MenuKeySetting extends MenuSetting {
         float textY = settingY + (8 - settingFont.height()) / 2 - 0.5f;
 
         ctx.drawText(settingFont, setting.getName(), x + 8 + 10, textY, textColor);
-        // ctx.drawText(descFont, setting.getDescription(), settingX + 15, textY + 10, theme.getWhite().mulAlpha(alpha));
 
 
         float iconSize = 6;
@@ -45,7 +44,6 @@ public class MenuKeySetting extends MenuSetting {
         Font iconFont = Fonts.ICONS.getFont(6);
 
         ctx.drawText(Fonts.ICONS.getFont(5.5f), "L", settingX + 1.2f, iconY + 1.2f, theme.getGray().mix(theme.getColor(),animEnable).mulAlpha(alpha));
-        // ctx.drawTexture(Aporia.id("icons/check.png"), settingX + 1.5f, iconY + 2f, 7, 7, Aporia.getInstance().getThemeManager().getCurrentTheme().getForegroundColor().mulAlpha(alpha));
         String keyText = binding?"...":"n/a";
         int keyCode = setting.getKeyCode();
         if (keyCode != -1 && keyCode != 0 &&!binding) {
@@ -122,3 +120,4 @@ public class MenuKeySetting extends MenuSetting {
         return setting.getVisible().get();
     }
 }
+

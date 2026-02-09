@@ -19,9 +19,6 @@ public class ChatScreenMixin extends Screen implements IMinecraft {
     @Inject(method = "sendMessage(Ljava/lang/String;Z)V", at = @At("HEAD"), cancellable = false)
     private void onSendMessage(String text, boolean addToHistory, CallbackInfo ci) {
 
-//        if (Aporia.getInstance().getCommandManager().dispatch(text)) {
-//            mc.inGameHud.getChatHud().addToMessageHistory(text);
-//            ci.cancel();
-//        }
     }
 }
+

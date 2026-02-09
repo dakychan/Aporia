@@ -40,3 +40,4 @@ public class ScrollHandler implements IMinecraft {
         targetValue += amount * speed;
     }
 }
+

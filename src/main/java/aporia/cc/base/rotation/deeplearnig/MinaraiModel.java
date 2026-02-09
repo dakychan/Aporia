@@ -5,3 +5,4 @@ public class MinaraiModel extends ModelWrapper<float[], float[]> {
         super(name, new FloatArrayInAndOutTranslator(), 2);
     }
 }
+

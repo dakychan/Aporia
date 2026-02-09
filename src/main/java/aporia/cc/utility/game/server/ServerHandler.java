@@ -120,3 +120,4 @@ public class ServerHandler implements IMinecraft {
     public boolean isHolyWorld() {return server.equals("HolyWorld");}
     public boolean isVanilla() {return server.equals("Vanilla");}
 }
+

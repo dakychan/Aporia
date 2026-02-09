@@ -14,7 +14,7 @@ import aporia.cc.base.font.Fonts;
 import aporia.cc.base.theme.Theme;
 import aporia.cc.client.modules.api.Category;
 import aporia.cc.utility.math.MathUtil;
-import Aporia.zov.utility.render.display.base.*;
+import aporia.cc.utility.render.display.base.*;
 import aporia.cc.utility.render.display.base.color.ColorRGBA;
 import aporia.cc.utility.render.display.shader.DrawUtil;
 
@@ -58,7 +58,6 @@ public class SidebarPanel {
 
         categoryBounds.clear();
 
-        // --- СЛАЙДБАР ---
         ctx.drawRoundedRect(sidebarX, sidebarY, sidebarWidth, sidebarHeight, BorderRadius.all(7), sideBar);
         DrawUtil.drawRoundedBorder(
                 ctx.getMatrices(),
@@ -69,14 +68,12 @@ public class SidebarPanel {
                 theme.getForegroundStroke().mulAlpha(progress)
         );
 
-        // --- ИКОНКИ ---
         float logoSize = 14;
         float logoX = sidebarX + (collapsedSidebarWidth - logoSize) / 2f;
         float logoY = sidebarY + 8;
         ctx.drawText(Fonts.ICONS.getFont(11), "5", logoX + 2, logoY + 3, Aporia.getInstance().getThemeManager().getColorCycleIcon().toGradient().mulAlpha(progress));
 
 
-        //ctx.drawSprite(new CustomSprite("icons/logo.png"), logoX, logoY, logoSize, logoSize, primary);
         ctx.pushMatrix();
         ctx.enableScissor((int) sidebarX, (int) sidebarY,
                 (int) (sidebarX + sidebarWidth), (int) (sidebarY + sidebarHeight));
@@ -100,7 +97,6 @@ public class SidebarPanel {
 
 
         {
-            //render border+back active category
             int index = 0;
             for (SideBarCategory sideBarCategory : categories) {
                 if (selectedCategory == sideBarCategory.getCategory()) {
@@ -133,7 +129,6 @@ public class SidebarPanel {
             index++;
         }
 
-        // --- АВАТАР И КНОПКА СВОРАЧИВАНИЯ ---
         float avatarSize = 18;
         float avatarX = sidebarX + (collapsedSidebarWidth - avatarSize) / 2f;
         float avatarY = sidebarY + sidebarHeight - avatarSize - 8;
@@ -179,3 +174,4 @@ public class SidebarPanel {
         return false;
     }
 }
+

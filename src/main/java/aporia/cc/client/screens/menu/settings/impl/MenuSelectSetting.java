@@ -37,7 +37,6 @@ public class MenuSelectSetting extends MenuSetting {
         Font settingFont = Fonts.MEDIUM.getFont(7);
         Font optionFont = Fonts.MEDIUM.getFont(6);
         Font iconFont = Fonts.ICONS.getFont(6);
-        // ctx.drawSprite(new CustomSprite("icons/dropdown.png"), settingX, settingY , 7, 7, new ColorRGBA(181, 162, 255).mulAlpha(alpha));
 
         float nameX = x + 18;
         ctx.drawText(settingFont, setting.getName(), nameX, settingY + (13 - settingFont.height()) / 2f-0.5f , textColor);
@@ -55,7 +54,6 @@ public class MenuSelectSetting extends MenuSetting {
         String currentModeText = setting.getSelectedValues().isEmpty()?"----":setting.getSelectedValues().getFirst().getName()+(setting.getSelectedValues().size()>1?" +"+(setting.getSelectedValues().size()-1):"");
 
         ctx.drawText(optionFont, currentModeText, dropdownX + 6, settingY + (13 - optionFont.height()) / 2f, textColor);
-        // ctx.drawSprite(new CustomSprite("icons/next.png"), dropdownX + 8, dropdownY + (13 - optionFont.height()) / 2f, 4, 4, ColorRGBA.WHITE.mulAlpha(alpha));
 
         {
 
@@ -69,7 +67,6 @@ public class MenuSelectSetting extends MenuSetting {
             ctx.pushMatrix();
 
             {
-                //ctx.drawText(iconFont,"Q", (int) arrowX, (int) arrowY,color);
 
                 float endX = arrowX+iconFont.width("Q")/2-1 ;
                 float endY = arrowY +iconFont.height()/2-1;
@@ -114,7 +111,6 @@ public class MenuSelectSetting extends MenuSetting {
                 optionY += 13;
             }
         }
-//            totalHeight += optionsHeight;
 
 
         ctx.disableScissor();
@@ -158,4 +154,5 @@ public class MenuSelectSetting extends MenuSetting {
         return setting.getVisible().get();
     }
 }
+
 

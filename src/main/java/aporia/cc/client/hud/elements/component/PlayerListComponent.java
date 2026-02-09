@@ -96,7 +96,6 @@ public class PlayerListComponent extends DraggableHudElement {
     }
 
 
-    //deobfuscation by Chatgpt
     public void render(
             DrawContext context,
             int scaledWindowWidth,
@@ -104,16 +103,13 @@ public class PlayerListComponent extends DraggableHudElement {
             @Nullable ScoreboardObjective objective
     ) {
         float delta = animation.getValue();
-        // Собираем игроков и подготавливаем контейнер под строки счёта/отображения
         List<PlayerListEntry> players = mc.inGameHud.getPlayerListHud().collectPlayerEntries();
         List<PlayerListHud.ScoreDisplayEntry> scoreEntries = new ArrayList<>(players.size());
 
-        // Базовые измерения текста
         final int spaceWidth = mc.textRenderer.getWidth(" ");
         int nameColumnWidth = 0;   // максимальная ширина имени игрока
         int scoreColumnWidth = 0;  // дополнительная ширина под счёт/формат
 
-        // Заполняем данные для каждой строки таблицы
         for (PlayerListEntry entry : players) {
             Text nameText = mc.inGameHud.getPlayerListHud().getPlayerName(entry);
             nameColumnWidth = Math.max(nameColumnWidth, mc.textRenderer.getWidth(nameText));
@@ -123,7 +119,6 @@ public class PlayerListComponent extends DraggableHudElement {
             int formattedScoreWidth = 0;
 
             if (objective != null) {
-                // Достаём счёт для текущего objective
                 ScoreHolder holder = ScoreHolder.fromProfile(entry.getProfile());
                 ReadableScoreboardScore readableScore = scoreboard.getScore(holder, objective);
 
@@ -131,13 +126,11 @@ public class PlayerListComponent extends DraggableHudElement {
                     rawScore = readableScore.getScore();
                 }
 
-                // Для не-сердечных рендеров форматируем число и учитываем ширину колонки
                 if (objective.getRenderType() != ScoreboardCriterion.RenderType.HEARTS) {
                     NumberFormat fmt = objective.getNumberFormatOr(StyledNumberFormat.YELLOW);
                     formattedScoreText = ReadableScoreboardScore.getFormattedScore(readableScore, fmt);
                     formattedScoreWidth = mc.textRenderer.getWidth(formattedScoreText);
 
-                    // если есть что рисовать — добавляем отступ + ширину
                     scoreColumnWidth = Math.max(scoreColumnWidth, formattedScoreWidth > 0 ? spaceWidth + formattedScoreWidth : 0);
                 }
             }
@@ -145,7 +138,6 @@ public class PlayerListComponent extends DraggableHudElement {
             scoreEntries.add(new PlayerListHud.ScoreDisplayEntry(nameText, rawScore, formattedScoreText, formattedScoreWidth));
         }
 
-        // Чистим кеш сердец от игроков, которых уже нет в списке
         if (!mc.inGameHud.getPlayerListHud().hearts.isEmpty()) {
             Set<UUID> visibleIds = players.stream()
                     .map(p -> p.getProfile().getId())
@@ -153,7 +145,6 @@ public class PlayerListComponent extends DraggableHudElement {
             mc.inGameHud.getPlayerListHud().hearts.keySet().removeIf(id -> !visibleIds.contains(id));
         }
 
-        // Подсчёт колонок и строк (ограничение: максимум 20 строк в колонке)
         final int total = players.size();
         int rowsPerColumn = total;
         int columns = 1;
@@ -162,10 +153,8 @@ public class PlayerListComponent extends DraggableHudElement {
             rowsPerColumn = (total + columns - 1) / columns;
         }
 
-        // В одиночной игре или при зашифрованном соединении показываем мини-скин
         final boolean showHead = true||mc.isInSingleplayer() || mc.getNetworkHandler().getConnection().isEncrypted();
 
-        // Ширина доп. колонки для счёта/сердец
         final int extraColumnWidth;
         if (objective != null) {
             extraColumnWidth = (objective.getRenderType() == ScoreboardCriterion.RenderType.HEARTS) ? 90 : scoreColumnWidth;
@@ -173,18 +162,15 @@ public class PlayerListComponent extends DraggableHudElement {
             extraColumnWidth = 0;
         }
 
-        // Ширина одной колонки с учётом отступов и ограничений окна
         int columnWidth = Math.min(
                 columns * ((showHead ? 9 : 0) + nameColumnWidth + extraColumnWidth + 13),
                 scaledWindowWidth - 50
         ) / columns;
 
-        // Горизонтальные и вертикальные координаты начала отрисовки таблицы
         int leftX = scaledWindowWidth / 2 - (columnWidth * columns + (columns - 1) * 5) / 2;
         int yCursor = 10; // стартовый Y
         int contentWidth = columnWidth * columns + (columns - 1) * 5;
 
-        // Заголовок (header), переносим на строки и расширяем contentWidth при необходимости
         List<OrderedText> headerLines = null;
         if (mc.inGameHud.getPlayerListHud().header != null) {
             headerLines = mc.textRenderer.wrapLines(mc.inGameHud.getPlayerListHud().header, scaledWindowWidth - 50);
@@ -193,7 +179,6 @@ public class PlayerListComponent extends DraggableHudElement {
             }
         }
 
-        // Футер (footer), переносим на строки и расширяем contentWidth при необходимости
         List<OrderedText> footerLines = null;
         if (mc.inGameHud.getPlayerListHud().footer != null) {
             footerLines = mc.textRenderer.wrapLines(mc.inGameHud.getPlayerListHud().footer, scaledWindowWidth - 50);
@@ -210,15 +195,11 @@ public class PlayerListComponent extends DraggableHudElement {
 
         final int totalHeight = headerHeight + headerGap + tableHeight + footerGap + footerHeight;
 
-// ЦЕНТР СКЕЙЛА: по X — центр реального бокса (leftX + width/2),
-// по Y — от стартового Y (10) + половина общей высоты
         final float centerX =scaledWindowWidth / 2 - 1 ;
         final float centerY = 10 + totalHeight / 2.0f;
 
-// масштаб из delta (0..1). чутка клампим, чтобы не было 0
         final float scale = Math.max(0.0001f, delta);
 
-// применяем матрицу
         Matrix3x2fStack matrices = context.getMatrices();
         matrices.pushMatrix();
         matrices.translate(centerX, centerY);
@@ -226,9 +207,7 @@ public class PlayerListComponent extends DraggableHudElement {
         matrices.translate(-centerX, -centerY);
 
 
-        // ⬆⬆ SCALE
 
-        // Отрисовка заголовка (если есть)
         if (headerLines != null) {
             context.fill(
                     scaledWindowWidth / 2 - contentWidth / 2 - 1,
@@ -246,7 +225,6 @@ public class PlayerListComponent extends DraggableHudElement {
             yCursor++; // зазор после хедера
         }
 
-        // Фон под таблицу игроков
         context.fill(
                 scaledWindowWidth / 2 - contentWidth / 2 - 1,
                 yCursor - 1,
@@ -257,7 +235,6 @@ public class PlayerListComponent extends DraggableHudElement {
 
         final int rowBgColor =this.mc.options.getTextBackgroundColor(553648127);
 
-        // Рендер строк
         for (int index = 0; index < total; index++) {
             int col = index / rowsPerColumn;
             int row = index % rowsPerColumn;
@@ -306,7 +283,6 @@ public class PlayerListComponent extends DraggableHudElement {
             );
         }
 
-        // Футер
         if (footerLines != null) {
             yCursor += rowsPerColumn * 9 + 1;
             context.fill(
@@ -323,9 +299,9 @@ public class PlayerListComponent extends DraggableHudElement {
             }
         }
 
-        // Закрываем масштабирование
         matrices.popMatrix();
     }
 
 
 }
+

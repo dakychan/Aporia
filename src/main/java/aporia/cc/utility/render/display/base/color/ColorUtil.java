@@ -116,3 +116,4 @@ public class ColorUtil {
         return Aporia.getInstance().getThemeManager().getClientColor(index).getRGB();
     }
 }
+

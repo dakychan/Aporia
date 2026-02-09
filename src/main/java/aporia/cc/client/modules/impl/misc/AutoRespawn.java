@@ -24,3 +24,4 @@ public final class AutoRespawn extends Module {
         }
     }
 }
+

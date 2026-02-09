@@ -77,7 +77,7 @@ public final class ClickAction extends Module {
             Slot slot = PlayerInventoryUtil.getSlot(Items.EXPERIENCE_BOTTLE);
 
             if (slot == null) {
-                Aporia.getInstance().getNotifyManager().addNotification( "M", Text.of(Items.EXPERIENCE_BOTTLE.getName().copy().setStyle(Style.EMPTY.withColor(Aporia.getThemeManager().getCurrentTheme().getColor().getRGB())).append(Text.of("не найден").copy().setStyle(Style.EMPTY.withColor(Aporia.getThemeManager().getCurrentTheme().getWhite().getRGB())))));
+                Aporia.getInstance().getNotifyManager().addNotification( "M", Text.of(Items.EXPERIENCE_BOTTLE.getName().copy().setStyle(Style.EMPTY.withColor(aporia.getThemeManager().getCurrentTheme().getColor().getRGB())).append(Text.of("не найден").copy().setStyle(Style.EMPTY.withColor(aporia.getThemeManager().getCurrentTheme().getWhite().getRGB())))));
 
                 return;
             }
@@ -134,3 +134,4 @@ public final class ClickAction extends Module {
     public record KeyBind(Item item, KeySetting setting, BooleanSettable draw) {
     }
 }
+

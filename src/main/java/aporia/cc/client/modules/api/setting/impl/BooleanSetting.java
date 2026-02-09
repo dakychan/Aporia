@@ -66,3 +66,4 @@ public class BooleanSetting extends Setting {
     }
 }
 
+

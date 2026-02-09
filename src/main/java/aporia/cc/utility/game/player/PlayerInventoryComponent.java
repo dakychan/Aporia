@@ -113,7 +113,6 @@ public class PlayerInventoryComponent implements IMinecraft {
         if (mc.currentScreen instanceof AnvilScreen) return false;
         if (mc.currentScreen instanceof AbstractCommandBlockScreen) return false;
         if (mc.currentScreen instanceof StructureBlockScreen) return false;
-        // if (mc.currentScreen instanceof MenuScreen) return false;
         
         if (mc.player != null && mc.player.currentScreenHandler != null) {
             int slotCount = mc.player.currentScreenHandler.slots.size();
@@ -123,3 +122,4 @@ public class PlayerInventoryComponent implements IMinecraft {
         return false;
     }
 }
+

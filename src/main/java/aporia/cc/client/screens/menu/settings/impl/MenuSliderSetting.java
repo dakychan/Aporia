@@ -119,3 +119,4 @@ public class MenuSliderSetting extends MenuSetting {
         return setting.getVisible().get();
     }
 }
+

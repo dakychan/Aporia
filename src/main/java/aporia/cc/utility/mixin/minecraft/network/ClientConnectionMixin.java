@@ -50,3 +50,4 @@ public class ClientConnectionMixin implements IMinecraft {
         }
     }
 }
+

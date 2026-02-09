@@ -12,3 +12,4 @@ public abstract class ExtendAutoInventoryItem extends AutoInventoryItem {
     public abstract List<MenuSetting> getEnchants();
 
 }
+

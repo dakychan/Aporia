@@ -20,3 +20,4 @@ public class AiRotationConfig extends RotationConfig {
         return RotationModeType.AI;
     }
 }
+

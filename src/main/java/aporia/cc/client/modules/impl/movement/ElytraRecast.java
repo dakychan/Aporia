@@ -95,7 +95,6 @@ public final class ElytraRecast extends Module {
     @Override
     public void onDisable() {
         if (Aporia.getInstance().getServerHandler().isServerSprint() &&changed) {
-           // mc.player.networkHandler.sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.STOP_SPRINTING));
             mc.player.lastSprinting =true;
             mc.player.setSprinting(false);
         }
@@ -103,3 +102,4 @@ public final class ElytraRecast extends Module {
         super.onDisable();
     }
 }
+

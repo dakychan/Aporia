@@ -32,3 +32,4 @@ public class MacroArgumentType implements ArgumentType<String> {
         return EXAMPLES;
     }
 }
+

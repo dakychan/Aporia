@@ -1,6 +1,6 @@
 {
-    "vertex": "zenith:core/position_color",
-    "fragment": "zenith:core/gradient_rectangle/fragment",
+    "vertex": "aporia:core/position_color",
+    "fragment": "aporia:core/gradient_rectangle/fragment",
     "samplers": [],
     "uniforms": [
         { "name": "ModelViewMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },

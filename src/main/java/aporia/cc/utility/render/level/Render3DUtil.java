@@ -231,3 +231,4 @@ public class Render3DUtil implements IMinecraft {
     public record ShapeBoxes(VoxelShape shape, List<Box> boxes) {}
     public record ShapeOutline(VoxelShape shape, List<Line> lines, List<Box> boxes) {}
 }
+

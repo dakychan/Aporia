@@ -8,3 +8,4 @@ import aporia.cc.base.events.callables.EventCancellable;
 public class EventEntityColor extends EventCancellable {
     private int color;
 }
+

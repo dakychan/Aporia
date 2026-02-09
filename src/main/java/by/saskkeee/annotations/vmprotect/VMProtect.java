@@ -10,3 +10,4 @@ import java.lang.annotation.Target;
 public @interface VMProtect {
     CompileType type();
 }
+

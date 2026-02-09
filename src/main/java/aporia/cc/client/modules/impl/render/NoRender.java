@@ -28,3 +28,4 @@ public final class NoRender extends Module {
         return this.isEnabled() && settings.isEnable(1);
     }
 }
+

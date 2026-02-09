@@ -30,3 +30,4 @@ public abstract class MenuPopupSetting extends MenuSetting {
         return false;
     }
 }
+

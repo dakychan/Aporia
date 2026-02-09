@@ -303,3 +303,4 @@ public class AutoInventoryBuyScreen extends CustomScreen {
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
     }
 }
+

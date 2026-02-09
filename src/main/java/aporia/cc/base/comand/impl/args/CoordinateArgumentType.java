@@ -37,3 +37,4 @@ public class CoordinateArgumentType implements ArgumentType<Double> {
         return EXAMPLES;
     }
 }
+

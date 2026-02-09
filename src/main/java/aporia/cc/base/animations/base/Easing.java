@@ -7,7 +7,6 @@ import aporia.cc.utility.math.MathUtil;
 @SuppressWarnings("unused")
 public interface Easing {
 
-    // От кокстар клиента
     Easing BAKEK = Easing.generate(0.45f, 1.45f, 0.49f, 1.15f);
     Easing BAKEK_SMALLER = Easing.generate(0.45f, 1.45f, 0.43f, 0.91f);
     Easing BAKEK_PAGES = Easing.generate(0.1f, 1.07f, 0.34f, 1.04f);
@@ -36,7 +35,6 @@ public interface Easing {
      */
     Easing QUAD_IN = (t, b, c, d) -> c * (t /= d) * t + b;
 
-    ///////////// QUADRATIC EASING: t^2 ///////////////////
     /**
      * Quadratic easing out - decelerating to zero velocity.
      */
@@ -54,7 +52,6 @@ public interface Easing {
     Easing CUBIC_IN = (t, b, c, d) -> c * (t /= d) * t * t + b;
 
 
-    ///////////// CUBIC EASING: t^3 ///////////////////////
     /**
      * Cubic easing out - decelerating to zero velocity.
      */
@@ -71,7 +68,6 @@ public interface Easing {
      */
     Easing QUARTIC_IN = (t, b, c, d) -> c * (t /= d) * t * t * t + b;
 
-    ///////////// QUARTIC EASING: t^4 /////////////////////
     /**
      * Quartic easing out - decelerating to zero velocity.
      */
@@ -88,7 +84,6 @@ public interface Easing {
      */
     Easing QUINTIC_IN = (t, b, c, d) -> c * (t /= d) * t * t * t * t + b;
 
-    ///////////// QUINTIC EASING: t^5  ////////////////////
     /**
      * Quintic easing out - decelerating to zero velocity.
      */
@@ -106,7 +101,6 @@ public interface Easing {
     Easing SINE_IN = (t, b, c, d) -> - c * (float) MathUtil.cos(t / d * (Math.PI / 2)) + c + b;
 
 
-    ///////////// SINUSOIDAL EASING: sin(t) ///////////////
     /**
      * Sinusoidal easing out - decelerating to zero velocity.
      */
@@ -120,7 +114,6 @@ public interface Easing {
      */
     Easing EXPO_IN = (t, b, c, d) -> (t == 0) ? b : c * (float) Math.pow(2, 10 * (t / d - 1)) + b;
 
-    ///////////// EXPONENTIAL EASING: 2^t /////////////////
     /**
      * Exponential easing out - decelerating to zero velocity.
      */
@@ -140,7 +133,6 @@ public interface Easing {
     Easing CIRC_IN = (t, b, c, d) -> - c * ((float) Math.sqrt(1 - (t /= d) * t) - 1) + b;
 
 
-    /////////// CIRCULAR EASING: sqrt(1-t^2) //////////////
     /**
      * Circular easing out - decelerating to zero velocity.
      */
@@ -157,7 +149,6 @@ public interface Easing {
      */
     Elastic ELASTIC_IN = new ElasticIn();
 
-    /////////// ELASTIC EASING: exponentially decaying sine wave  //////////////
     /**
      * An ElasticOut instance using the default values.
      */
@@ -197,7 +188,6 @@ public interface Easing {
      */
     Easing BOUNCE_IN = (t, b, c, d) -> c - Easing.BOUNCE_OUT.ease(d - t, 0, c, d) + b;
 
-    /////////// BACK EASING: overshooting cubic easing: (s+1)*t^3 - s*t^2  //////////////
     /**
      * Bounce easing in/out.
      */
@@ -416,7 +406,6 @@ public interface Easing {
 
     }
 
-    /////////// BOUNCE EASING: exponentially decaying parabolic bounce  //////////////
 
     /**
      * Back easing in - backtracking slightly, then reversing direction and moving to target.
@@ -474,3 +463,4 @@ public interface Easing {
         }
     }
 }
+

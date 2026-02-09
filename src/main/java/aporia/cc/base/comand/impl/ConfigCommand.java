@@ -54,3 +54,4 @@ public class ConfigCommand extends CommandAbstract {
         }));
     }
 }
+

@@ -2,7 +2,7 @@
 
 #moj_import <dynamictransforms.glsl>
 #moj_import <projection.glsl>
-#moj_import <zenith:common.glsl>
+#moj_import <aporia:common.glsl>
 
 in vec3 Position; // POSITION_COLOR vertex attributes
 in vec4 Color;

@@ -81,31 +81,7 @@ public class MsdfRenderer {
         float spacing = 0;
         float textPosX = x - 0.75F;
         prepareShader(font, thickness, smoothness, enableFadeout, fadeoutStart, fadeoutEnd, maxWidth, textPosX);
-        // NameProtect nameProtectModule =
-        // Rockstar.getInstance().getModuleManager().getModule(NameProtect.class);
-        //
-        // if (nameProtectModule.isEnabled()) {
-        // text = nameProtectModule.patchName(text);
-        // }
 
-        // if (Batching.getActive() != null) {
-        // // Для батчинга пока оставляем стандартную отрисовку
-        // // TODO: Реализовать fadeout для батчинга
-        // font.applyGlyphs(
-        // matrix,
-        // Batching.getActive().getBuilder(),
-        // text,
-        // size,
-        // thickness * 0.5f * size,
-        // spacing,
-        // // Так называемый рокстарвский MAGIC VALUE
-        // x - 0.75F, // небольшой оффсет чтобы мы всегда были внутри краев
-        // y + (size * 0.7F),
-        // z,
-        // color
-        // );
-        // return;
-        // }
 
         RenderLayer layer = RenderLayerUtil.guiTextured(font.getAtlasIdentifier());
         BufferBuilder builder = RenderLayerUtil.begin(layer);
@@ -116,7 +92,6 @@ public class MsdfRenderer {
                 size,
                 thickness * 0.5f * size,
                 spacing,
-                // Так называемый рокстарвский MAGIC VALUE
                 x - 0.75F, // небольшой оффсет чтобы мы всегда были внутри краев
                 y + (size * 0.7F),
                 z,
@@ -185,7 +160,6 @@ public class MsdfRenderer {
                     size,
                     thickness * 0.5f * size,
                     spacing - 0.3F,
-                    // Так называемый рокстарвский MAGIC VALUE
                     currentX - 0.75F, // небольшой оффсет чтобы мы всегда были внутри краев
                     y + (size * 0.7F),
                     z,
@@ -244,31 +218,7 @@ public class MsdfRenderer {
         float spacing = 0;
         float textPosX = x - 0.75F;
         prepareShader(font, thickness, smoothness, enableFadeout, fadeoutStart, fadeoutEnd, maxWidth, textPosX);
-        // NameProtect nameProtectModule =
-        // Rockstar.getInstance().getModuleManager().getModule(NameProtect.class);
-        //
-        // if (nameProtectModule.isEnabled()) {
-        // text = nameProtectModule.patchName(text);
-        // }
 
-        // if (Batching.getActive() != null) {
-        // // Для батчинга пока оставляем стандартную отрисовку
-        // // TODO: Реализовать fadeout для батчинга
-        // font.applyGlyphs(
-        // matrix,
-        // Batching.getActive().getBuilder(),
-        // text,
-        // size,
-        // thickness * 0.5f * size,
-        // spacing,
-        // // Так называемый рокстарвский MAGIC VALUE
-        // x - 0.75F, // небольшой оффсет чтобы мы всегда были внутри краев
-        // y + (size * 0.7F),
-        // z,
-        // color
-        // );
-        // return;
-        // }
 
         RenderLayer layer = RenderLayerUtil.guiTextured(font.getAtlasIdentifier());
         BufferBuilder builder = RenderLayerUtil.begin(layer);
@@ -279,7 +229,6 @@ public class MsdfRenderer {
                 size,
                 thickness * 0.5f * size,
                 spacing,
-                // Так называемый рокстарвский MAGIC VALUE
                 x - 0.75F, // небольшой оффсет чтобы мы всегда были внутри краев
                 y + (size * 0.7F),
                 z,
@@ -304,3 +253,4 @@ public class MsdfRenderer {
     }
 
 }
+

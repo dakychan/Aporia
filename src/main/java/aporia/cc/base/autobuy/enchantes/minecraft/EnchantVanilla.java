@@ -27,3 +27,4 @@ public class EnchantVanilla extends Enchant {
         return false;
     }
 }
+

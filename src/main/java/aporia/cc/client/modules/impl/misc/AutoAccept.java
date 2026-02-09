@@ -11,7 +11,6 @@ import aporia.cc.client.modules.api.setting.impl.BooleanSetting;
 
 import java.util.Locale;
 
-//EXPENSIVE???
 @ModuleAnnotation(name = "AutoAccept", category = Category.MISC, description = "Автоматически принимает телепортацию")
 public final class AutoAccept extends Module {
     public static final AutoAccept INSTANCE = new AutoAccept();
@@ -47,3 +46,4 @@ public final class AutoAccept extends Module {
         }
     }
 }
+

@@ -134,3 +134,4 @@ public class MovingUtil implements IMinecraft {
         return getDirectionalInputForDegrees(input, dgs, 20.0F);
     }
 }
+

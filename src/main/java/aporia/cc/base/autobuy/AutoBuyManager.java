@@ -93,7 +93,6 @@ public class AutoBuyManager {
                     Optional.of(Potions.SWIFTNESS), Optional.of(new Color(164, 252, 76).getRGB()), List.of(), Optional.empty()
             ));
             NbtItemBuy kislota = new NbtItemBuy(kislotaStak, "Серная кислота", ItemBuy.Category.FUNTIME, "custom_potion_effects", "[{ambient:0b,amplifier:1b,duration:1000,id:\"minecraft:poison\",show_icon:1b,show_particles:1b},{ambient:0b,amplifier:3b,duration:1800,id:\"minecraft:slowness\",show_icon:1b,show_particles:1b},{ambient:0b,amplifier:2b,duration:1800,id:\"minecraft:weakness\",show_icon:1b,show_particles:1b},{ambient:0b,amplifier:4b,duration:600,id:\"minecraft:wither\",show_icon:1b,show_particles:1b}]");
-            //  NbtItemBuy silka3 = new NbtItemBuy(Items.POTION.getDefaultStack(), "Зелье силы","Зелье силы", ItemBuy.Category.FUNTIME,"custom_potion_effects","[{ambient:1b,amplifier:2b,duration:3600,id:\"minecraft:strength\",show_icon:1b,show_particles:1b},{ambient:1b,amplifier:2b,duration:3600,id:\"minecraft:speed\",show_icon:1b,show_particles:1b}]");
 
             ItemStack regenkaStak = Items.SPLASH_POTION.getDefaultStack();
             regenkaStak.set(DataComponentTypes.POTION_CONTENTS, new PotionContentsComponent(
@@ -250,7 +249,6 @@ public class AutoBuyManager {
             NbtItemBuy explosionTrapka = new NbtItemBuy(Items.PRISMARINE_SHARD.getDefaultStack(), "Взрывная Трапка", ItemBuy.Category.HOLLYWORLD, "pyrotechnic-item", "EXPLOSIVE_TRAP");
             NbtItemBuy stan = new NbtItemBuy(Items.NETHER_STAR.getDefaultStack(), "Стан", ItemBuy.Category.HOLLYWORLD, "pyrotechnic-item", "STUN_STAR");
             NbtItemBuy explosionBum = new NbtItemBuy(Items.FIRE_CHARGE.getDefaultStack(), "Взрывная штучка", ItemBuy.Category.HOLLYWORLD, "kringeItems", "ExplosiveStuff");
-         //   NbtItemBuy bogAura = new NbtItemBuy(Items.PHANTOM_MEMBRANE.getDefaultStack(), "Божья аура", ItemBuy.Category.HOLLYWORLD, "godsaura", "1b");
 
             hollyworld.add(eternityHELMET);
             hollyworld.add(eternityCHESTPLATE);
@@ -270,7 +268,6 @@ public class AutoBuyManager {
             hollyworld.add(explosionTrapka);
             hollyworld.add(stan);
             hollyworld.add(explosionBum);
-//            hollyworld.add(bogAura);
 
 
         }
@@ -280,3 +277,4 @@ public class AutoBuyManager {
 
 
 }
+

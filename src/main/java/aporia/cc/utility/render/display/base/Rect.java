@@ -7,3 +7,4 @@ public record Rect(float x, float y, float width, float height) {
         return MathUtil.isHovered(mx,my,x,y,width,height);
     }
 }
+

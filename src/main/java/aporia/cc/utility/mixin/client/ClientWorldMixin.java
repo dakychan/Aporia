@@ -17,3 +17,4 @@ public class ClientWorldMixin {
         EventManager.call(eventSpawnEntity);
     }
 }
+

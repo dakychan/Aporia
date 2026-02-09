@@ -30,3 +30,4 @@ public final class EventKey implements Event {
         return this.keyCode == key && action == 0 && screen;
     }
 }
+

@@ -26,3 +26,4 @@ public enum MouseButton {
         return MouseButton.LEFT;
     }
 }
+

@@ -24,7 +24,6 @@ public class MacroCommand extends CommandAbstract {
                 String bind = context.getArgument("bind", String.class);
                 String command = context.getArgument("command", String.class);
                 
-                // Aporia.getInstance().getMacroManager().addMacro(name, bind, command);
                 
                 MessageUtil.displayMessage(MessageUtil.LogLevel.INFO,
                     "§aМакрос " + name + " создан для клавиши " + bind + " с командой " + command);
@@ -46,3 +45,4 @@ public class MacroCommand extends CommandAbstract {
         }));
     }
 }
+

@@ -86,3 +86,4 @@ public class ManagerFileAbstract<T> {
         items.remove(item);
     }
 }
+

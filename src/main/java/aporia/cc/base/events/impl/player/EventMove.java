@@ -15,3 +15,4 @@ import lombok.Setter;
 public class EventMove extends EventCancellable {
     private Vec3d movePos;
 }
+

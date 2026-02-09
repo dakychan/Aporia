@@ -187,13 +187,8 @@ public class HeaderPanel {
         if (empty) {
             ctx.drawText(font, "Search", x + 8, ty, theme.getWhite().mulAlpha(progress * 0.5f));
         } else {
-            //ctx.drawText(font, txt, x + 8, ty, theme.getWhite().mulAlpha(progress));
             ctx.enableScissor((int) x+8,(int) ty-10,(int)Math.ceil( x+8+128),(int) Math.ceil(ty)+10);
             searchField.render(ctx,x+8,ty,theme.getWhite().mulAlpha(progress),theme.getWhite().mulAlpha(progress * 0.5f));
-//            if (searchField.isSelected() && (System.currentTimeMillis() / 500) % 2 == 0) {
-//                float tw = font.width(txt);
-//                ctx.drawRect(x + 8 + tw, y + 4, 1, h - 8, theme.getWhite().mulAlpha(progress));
-//            }
             ctx.disableScissor();
         }
     }
@@ -215,3 +210,4 @@ public class HeaderPanel {
         return searchBarBounds.contains(mouseX, mouseY);
     }
 }
+

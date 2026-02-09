@@ -16,3 +16,4 @@ public class FloatArrayInAndOutTranslator implements Translator<float[], float[]
         return list.get(0).toFloatArray();
     }
 }
+

@@ -61,7 +61,6 @@ public class InformationComponent extends DraggableHudElement {
         float currentX = x + cellPadding;
         float iconY = y + (totalHeight - iconSize) / 2f;
         float textY = y + (totalHeight - font.height()) / 2f;
-       // ctx.drawTexture(Aporia.id("icons/cord.png"), currentX, iconY, iconSize, iconSize, iconColor);
         Font iconFont =Fonts.ICONS.getFont(6);
         ctx.drawText(iconFont,"J",currentX,iconY,iconColor);
         currentX += iconSize + iconTextSpacing;
@@ -72,7 +71,6 @@ public class InformationComponent extends DraggableHudElement {
         currentX = x + coordsWidth + cellPadding;
         ctx.enableScissor((int) currentX, (int) y, (int) (currentX+speedWidth), (int) (y +height));
 
-       // ctx.drawTexture(Aporia.id("icons/bps.png"), currentX, iconY, iconSize, iconSize, iconColor);
 
         ctx.drawText(iconFont,"K", currentX, iconY, iconColor);
         currentX += iconSize + iconTextSpacing;
@@ -95,3 +93,4 @@ public class InformationComponent extends DraggableHudElement {
 
 
 }
+

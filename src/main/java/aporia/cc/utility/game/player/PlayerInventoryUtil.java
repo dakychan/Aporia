@@ -180,15 +180,13 @@ public class PlayerInventoryUtil implements IClient {
         if (cooldownProgress > 0) {
             String time = MathUtil.round(cooldownProgress, 0.1) + "с";
 
-           // Notifications.getInstance().addList(Formatting.RED + item.getName().getString() + Formatting.RESET + " - в кд еще " + time, 2000);
-            Aporia.getInstance().getNotifyManager().addNotification( "N",Text.of(item.getName().copy().setStyle(Style.EMPTY.withColor(Aporia.getThemeManager().getCurrentTheme().getColor().getRGB())).append(Text.of("находиться в кд").copy().setStyle(Style.EMPTY.withColor(Aporia.getThemeManager().getCurrentTheme().getWhite().getRGB())))));
+            Aporia.getInstance().getNotifyManager().addNotification( "N",Text.of(item.getName().copy().setStyle(Style.EMPTY.withColor(aporia.getThemeManager().getCurrentTheme().getColor().getRGB())).append(Text.of("находиться в кд").copy().setStyle(Style.EMPTY.withColor(aporia.getThemeManager().getCurrentTheme().getWhite().getRGB())))));
             return;
         }
 
         Slot slot = getSlot(item);
         if (slot == null) {
-          //  Notifications.getInstance().addList(Formatting.RED + item.getName().getString() + Formatting.RESET + " - не найден!", 2000);
-            Aporia.getInstance().getNotifyManager().addNotification( "M",Text.of(item.getName().copy().setStyle(Style.EMPTY.withColor(Aporia.getThemeManager().getCurrentTheme().getColor().getRGB())).append(Text.of("не найден").copy().setStyle(Style.EMPTY.withColor(Aporia.getThemeManager().getCurrentTheme().getWhite().getRGB())))));
+            Aporia.getInstance().getNotifyManager().addNotification( "M",Text.of(item.getName().copy().setStyle(Style.EMPTY.withColor(aporia.getThemeManager().getCurrentTheme().getColor().getRGB())).append(Text.of("не найден").copy().setStyle(Style.EMPTY.withColor(aporia.getThemeManager().getCurrentTheme().getWhite().getRGB())))));
 
             return;
         }
@@ -244,3 +242,4 @@ public class PlayerInventoryUtil implements IClient {
         if (updateInventory) updateSlots();
     }
 }
+

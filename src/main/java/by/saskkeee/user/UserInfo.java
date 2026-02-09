@@ -135,3 +135,4 @@ public final class UserInfo {
         System.out.println("Это разработчик? " + isDeveloper());
     }
 }
+

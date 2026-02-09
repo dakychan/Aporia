@@ -15,3 +15,4 @@ import lombok.experimental.FieldDefaults;
 public class EventHotBarScroll extends EventCancellable {
     private double horizontal, vertical;
 }
+

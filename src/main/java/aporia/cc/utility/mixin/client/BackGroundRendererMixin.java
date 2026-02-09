@@ -62,3 +62,4 @@ public class BackGroundRendererMixin {
         FOG_EVENT.remove();
     }
 }
+

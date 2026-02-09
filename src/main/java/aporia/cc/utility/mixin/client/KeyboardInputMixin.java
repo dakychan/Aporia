@@ -57,3 +57,4 @@ public abstract class KeyboardInputMixin extends Input {
         ci.cancel();
     }
 }
+

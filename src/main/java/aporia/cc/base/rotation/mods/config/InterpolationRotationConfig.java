@@ -21,3 +21,4 @@ public class InterpolationRotationConfig extends RotationConfig {
         return RotationModeType.INTERPOLATION;
     }
 }
+

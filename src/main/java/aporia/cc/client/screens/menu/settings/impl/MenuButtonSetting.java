@@ -53,3 +53,4 @@ public class MenuButtonSetting extends MenuSetting {
         return true;
     }
 }
+

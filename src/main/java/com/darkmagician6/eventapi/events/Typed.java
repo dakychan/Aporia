@@ -6,3 +6,4 @@ public interface Typed {
     byte getType();
 
 }
+

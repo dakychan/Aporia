@@ -14,3 +14,4 @@ public class EventHudRender implements Event {
     private final float tickDelta;
 
 }
+

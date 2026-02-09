@@ -50,3 +50,4 @@ public class CommandManager {
         this.commands.add(command);
     }
 }
+

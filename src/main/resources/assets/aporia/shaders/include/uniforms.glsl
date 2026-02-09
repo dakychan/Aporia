@@ -1,6 +1,6 @@
 #version 150
 
-layout(std140) uniform ZenithUniforms {
+layout(std140) uniform aporiaUniforms {
     vec2 Size;
     vec4 Radius;
     vec2 Smoothness;

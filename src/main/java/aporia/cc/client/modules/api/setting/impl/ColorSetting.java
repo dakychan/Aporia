@@ -90,3 +90,4 @@ public class ColorSetting extends Setting {
         ColorRGBA getDefaultColor();
     }
 }
+

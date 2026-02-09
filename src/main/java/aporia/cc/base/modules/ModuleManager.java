@@ -15,12 +15,12 @@ import org.lwjgl.glfw.GLFW;
 
 import aporia.cc.base.events.impl.input.EventKey;
 import aporia.cc.client.modules.api.Module;
-import Aporia.zov.client.modules.impl.combat.*;
-import Aporia.zov.client.modules.impl.misc.*;
-import Aporia.zov.client.modules.impl.movement.*;
+import aporia.cc.client.modules.impl.combat.*;
+import aporia.cc.client.modules.impl.misc.*;
+import aporia.cc.client.modules.impl.movement.*;
 import aporia.cc.client.modules.impl.player.FastBreak;
 import aporia.cc.client.modules.impl.player.NoDelay;
-import Aporia.zov.client.modules.impl.render.*;
+import aporia.cc.client.modules.impl.render.*;
 import aporia.cc.utility.interfaces.IMinecraft;
 import aporia.cc.client.modules.impl.player.AutoTool;
 import aporia.cc.client.modules.impl.player.AutoArmor;
@@ -140,3 +140,4 @@ public final class ModuleManager implements IMinecraft {
         }
     }
 }
+

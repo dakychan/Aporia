@@ -27,3 +27,4 @@ public class Timer {
         return System.currentTimeMillis() - this.millis;
     }
 }
+

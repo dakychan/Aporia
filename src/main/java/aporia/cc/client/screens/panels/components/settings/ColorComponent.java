@@ -55,3 +55,4 @@ public class ColorComponent extends PanelComponent {
         return setting.isVisible();
     }
 }
+

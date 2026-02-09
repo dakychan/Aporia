@@ -77,7 +77,6 @@ public class TargetHudComponent extends DraggableHudElement {
         ctx.getMatrices().translate(posX + width / 2f, posY + height / 2f);
         ctx.getMatrices().scale(animation, animation);
         ctx.getMatrices().translate(-(posX + width / 2f), -(posY + height / 2f));
-      //  ctx.enableScissor((int) (posX-1+width*(1-animation)), (int) (posY-1+height*(1-animation)), (int) (posX+2+width*animation), (int) (+posY+height*animation+2));
         DrawUtil.drawBlurHud(ctx.getMatrices(),x, y, width,height,21,BorderRadius.all(4),ColorRGBA.WHITE);
 
         ctx.drawRoundedRect(posX, posY, headSize + padding*2 , height, BorderRadius.left(4f, 4f), bgLeft);
@@ -99,9 +98,6 @@ public class TargetHudComponent extends DraggableHudElement {
         float headX = posX + padding;
         float headY = posY + (height - headSize) / 2f;
 
-        // лицо
-//        ctx.drawRoundedRect(posX , posY , headSize+padding , height,
-//                BorderRadius.all(1.5f), new ColorRGBA(255, 255, 255, 7));
 
         if (target instanceof PlayerEntity player) {
             DrawUtil.drawPlayerHeadWithRoundedShader(
@@ -116,7 +112,6 @@ public class TargetHudComponent extends DraggableHudElement {
                     headY + headSize / 2f - qFont.height() / 2f, ColorRGBA.WHITE);
         }
 
-        // хп
         Font nameFont = Fonts.MEDIUM.getFont(fontSize);
         String name = target.getName().getString();
 
@@ -139,7 +134,6 @@ public class TargetHudComponent extends DraggableHudElement {
             drawArmor(ctx, player, headX + headSize + padding *2, headY+fontSize, posX+width-(headX + headSize + padding *2), padding, fontSize);
         }
 
-        // хпбар
         float barX = headX  + headSize + padding*2;
         float barY = headY+headSize-2.5f;
         ColorRGBA barBg = bgRight.darker(0.2f);
@@ -151,7 +145,6 @@ public class TargetHudComponent extends DraggableHudElement {
         DrawUtil.drawRoundedCorner(ctx.getMatrices(),posX,posY,width, height,0.01f,20f,theme.getColor(),BorderRadius.all(4));
 
 
-//        ctx.disableScissor();
         ctx.getMatrices().popMatrix();
 
         this.width = width*0.8f;
@@ -225,5 +218,6 @@ public class TargetHudComponent extends DraggableHudElement {
 
     }
 }
+
 
 

@@ -11,3 +11,4 @@ public @interface EventTarget {
 
     byte value() default Priority.MEDIUM;
 }
+

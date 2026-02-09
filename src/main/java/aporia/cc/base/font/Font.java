@@ -12,7 +12,6 @@ public class Font {
     private float size;
 
     public float height() {
-        // Так называемый рокстарвский MAGIC VALUE
         return size * 0.7F;
     }
 
@@ -25,3 +24,4 @@ public class Font {
     }
 
 }
+

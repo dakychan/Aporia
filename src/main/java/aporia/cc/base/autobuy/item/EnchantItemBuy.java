@@ -36,3 +36,4 @@ public class EnchantItemBuy extends ItemBuy {
         return enchants;
     }
 }
+

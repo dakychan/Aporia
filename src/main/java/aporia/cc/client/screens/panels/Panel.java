@@ -67,12 +67,10 @@ public class Panel {
         
         drawPanelBackground(ctx, alpha);
         
-        // Включаем scissor для обрезки контента
         ctx.enableScissor((int) x, (int) (y + 28), (int) (x + width), (int) (y + height - 4));
         drawFunctions(ctx, mouseX, mouseY, alpha, scrollOffset);
         ctx.disableScissor();
         
-        // Обновляем максимальный скролл
         float maxScroll = Math.max(0, contentHeight - (height - 36));
         scrollHandler.setMax(maxScroll);
     }
@@ -131,11 +129,9 @@ public class Panel {
         }
         height = offset + 34f;
 
-        // Тень панели
         DrawUtil.drawShadow(ctx.getMatrices(), x - 4, y - 4, width + 8, height + 8, 
                 16f, BorderRadius.all(10), new ColorRGBA(0, 0, 0, (int)(60 * alpha)));
 
-        // Основной градиент фона
         Gradient gradient = Gradient.of(
                 theme.getForegroundLight().mulAlpha(alpha),
                 theme.getForegroundLight().mulAlpha(alpha),
@@ -144,7 +140,6 @@ public class Panel {
         );
         ctx.drawRoundedRect(x, y, width, height, BorderRadius.all(8), gradient);
 
-        // Заголовок панели
         float headerHeight = 24f;
         Gradient headerGradient = Gradient.of(
                 theme.getColor().mulAlpha(alpha * 0.9f),
@@ -154,15 +149,14 @@ public class Panel {
         );
         ctx.drawRoundedRect(x, y, width, headerHeight, BorderRadius.top(8, 8), headerGradient);
 
-        // Название категории
         Font font = Fonts.SEMIBOLD.getFont(8f);
         ColorRGBA titleColor = theme.getWhite().mulAlpha(alpha);
         String title = category.getName();
         float titleX = x + width / 2f - font.width(title) / 2f;
         ctx.drawText(font, title, titleX, y + 7, titleColor);
 
-        // Разделительная линия под заголовком
         ctx.drawRoundedRect(x + 8, y + headerHeight, width - 16, 1f, BorderRadius.all(0.5f), 
                 theme.getForegroundDark().mulAlpha(alpha * 0.5f));
     }
 }
+

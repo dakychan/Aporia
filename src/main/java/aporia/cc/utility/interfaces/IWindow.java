@@ -7,3 +7,4 @@ public interface IWindow extends IMinecraft {
     Window mw = mc.getWindow();
 
 }
+

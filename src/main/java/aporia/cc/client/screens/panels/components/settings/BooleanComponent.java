@@ -39,7 +39,6 @@ public class BooleanComponent extends PanelComponent {
         float boxX = x + 8;
         float boxY = y - 2;
 
-        // Фон чекбокса с градиентом
         ColorRGBA boxInactive = theme.getForegroundDark();
         ColorRGBA boxActive = theme.getColor();
         ColorRGBA boxHover = theme.getWhite().withAlpha(20);
@@ -49,7 +48,6 @@ public class BooleanComponent extends PanelComponent {
             boxColor = boxColor.mix(boxHover, hoverValue * 0.5f);
         }
         
-        // Градиент для объёма
         Gradient boxGradient = Gradient.of(
                 boxColor.brighter(0.1f).mulAlpha(alpha),
                 boxColor.brighter(0.1f).mulAlpha(alpha),
@@ -58,20 +56,16 @@ public class BooleanComponent extends PanelComponent {
         );
         ctx.drawRoundedRect(boxX, boxY, boxSize, boxSize, BorderRadius.all(3), boxGradient);
 
-        // Галочка с анимацией
         if (toggleValue > 0.01f) {
             Font checkFont = Fonts.MEDIUM.getFont(6f);
             ColorRGBA checkColor = theme.getWhite().mulAlpha(alpha * toggleValue);
             
-            // Рисуем галочку (можно заменить на иконку)
             ctx.drawText(checkFont, "✓", boxX + 2f, boxY + 1.5f, checkColor);
         } else {
-            // Крестик когда выключено
             Font xFont = Fonts.MEDIUM.getFont(5f);
             ctx.drawText(xFont, "×", boxX + 2.5f, boxY + 1.5f, theme.getGrayLight().mulAlpha(alpha * 0.5f));
         }
 
-        // Название настройки
         ColorRGBA textColor = theme.getWhite().mix(theme.getGrayLight(), 1f - toggleValue * 0.3f).mulAlpha(alpha);
         ctx.drawText(font, setting.getName(), x + 22, y - 0.5f, textColor);
         
@@ -90,3 +84,4 @@ public class BooleanComponent extends PanelComponent {
         return setting.isVisible();
     }
 }
+

@@ -12,7 +12,6 @@ public class Gradient {
     protected final ColorRGBA bottomLeftColor;
     protected final ColorRGBA topRightColor;
     protected final ColorRGBA bottomRightColor;
-                        //1- 0; //2- //3-4 //4 - 1
     protected Gradient(ColorRGBA topLeftColor, ColorRGBA bottomLeftColor,
                        ColorRGBA topRightColor, ColorRGBA bottomRightColor) {
         this.topLeftColor = topLeftColor;
@@ -26,10 +25,6 @@ public class Gradient {
             ColorRGBA topRightColor, ColorRGBA bottomRightColor) {
         return new Gradient(topLeftColor, bottomLeftColor, topRightColor, bottomRightColor);
     }
-    //targetColors.set(0, baseColors.get(2)); // TL = TR
-    //        targetColors.set(2, baseColors.get(3)); // TR = BR
-    //        targetColors.set(3, baseColors.get(1)); // BR = BL
-    //        targetColors.set(1, baseColors.get(0)); // BL = TL
     public static Gradient of(List<ColorRGBA> colors) {
         return new Gradient(colors.get(0), colors.get(1) ,  colors.get(2),colors.get(3));
     }
@@ -44,3 +39,4 @@ public class Gradient {
         return new Gradient(topLeftColor.mulAlpha(alphaMultiplier),bottomLeftColor.mulAlpha(alphaMultiplier),topRightColor.mulAlpha(alphaMultiplier),bottomRightColor.mulAlpha(alphaMultiplier));
     }
 }
+

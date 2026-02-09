@@ -59,7 +59,6 @@ public class AutoBuyUtil {
 
     public int getPrice(ItemStack itemStack) {
         String nbt = getNBT(itemStack);
-       // System.out.println(nbt);
         return getPrice(nbt);
 
     }
@@ -78,7 +77,6 @@ public class AutoBuyUtil {
               System.out.println(customData.getNbt().getKeys());
             System.out.println(itemStack.getItem());
             if (customData.getNbt().contains("kringeItems")) {
-                //  {"minecraft:don-item":"sphere-andromeda","minecraft:ftid":"sphere-andromeda","minecraft:s":[B;116B,110B,67B,104B,91B,-127B,74B,98B,-68B,8B,-116B,-80B,-61B,23B,-106B,37B],"minecraft:tslevel":3}
                 NbtElement customEnchants = customData.getNbt().get("kringeItems");
                 MinecraftClient.getInstance().keyboard.setClipboard(customEnchants.toString());
 
@@ -153,3 +151,4 @@ public class AutoBuyUtil {
     }
 
 }
+

@@ -62,3 +62,4 @@ public final class Blink extends Module {
         lastPos = null;
     }
 }
+

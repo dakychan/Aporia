@@ -24,17 +24,6 @@ public abstract class HeldItemRendererMixin {
     protected abstract void swingArm(float swingProgress, float equipProgress, MatrixStack matrices, int armX, Arm arm);
 
 
-//    @Inject(method = "renderFirstPersonItem(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/util/Hand;FLnet/minecraft/item/ItemStack;FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V", at = @At(value = "HEAD"), cancellable = true)
-//    private void onRenderItemHook(AbstractClientPlayerEntity player, float tickDelta, float pitch, Hand hand, float swingProgress, ItemStack item, float equipProgress, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
-//        if (!(item.isEmpty()) && !(item.getItem() instanceof FilledMapItem) ) {
-//            SwingAnimation swingAnimation = SwingAnimation.INSTANCE;
-//            if (swingAnimation.isEnabled() || ViewModel.INSTANCE.isEnabled()) { //мы не можем гарантировать что наш рендер предмета работать правильно с учетом
-//                ci.cancel();
-//                swingAnimation.renderFirstPersonItem(player, tickDelta, pitch, hand
-//                        , swingProgress, item, equipProgress, matrices, vertexConsumers, light);
-//            }
-//        }
-//    }
 
 
     @Inject(
@@ -111,19 +100,5 @@ public abstract class HeldItemRendererMixin {
         }
     }
 
-    //будем мечтать что фрик найдет середину для скейла правильного
-//    @Inject(method = "renderArmHoldingItem",at = @At(value = "INVOKE", target = "Lnet/minecraft/client/util/math/MatrixStack;translate(FFF)V",shift = At.Shift.AFTER,ordinal = 1))
-//    public void injectRenderArmHoldingItem(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, float equipProgress, float swingProgress, Arm arm, CallbackInfo ci){
-//        ViewModel viewModel = ViewModel.INSTANCE;
-//        if(MinecraftClient.getInstance().player!=null &&viewModel.isEnabled() ) {
-//            if(MinecraftClient.getInstance().player.getMainHandStack().getItem() instanceof FilledMapItem){
-//                return;
-//            }
-//            viewModel.applyHandPosition(matrices,arm);
-//            viewModel.applyHandScale(matrices,arm);
-//
-//
-//        }
-//
-//    }
 }
+

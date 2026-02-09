@@ -14,3 +14,4 @@ public class EventMoveInput extends EventCancellable {
     private PlayerInput input;
     private float forward, strafe;
 }
+

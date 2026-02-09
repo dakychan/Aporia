@@ -77,11 +77,9 @@ public class TargetSelector implements IClient {
         List<String> targetSettings;
 
         public boolean isValid(LivingEntity entity) {
-           // ElytraTarget module = ElytraTarget.getInstance();
             if (isLocalPlayer(entity)) return false;
             if (isInvalidHealth(entity)) return false;
             if (isBotPlayer(entity)) return false;
-           // if (module.isState() && module.getTarget() != null && module.getTarget() != entity) return false;
 
             return isValidEntityType(entity);
         }
@@ -120,3 +118,4 @@ public class TargetSelector implements IClient {
         }
     }
 }
+
