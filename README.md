@@ -1,6 +1,6 @@
 <div align="center">
 
-![Aporia](src/main/resources/assets/Aporia.png)
+![Aporia](src/main/resources/assets/aporia/Aporia.png)
 
 # ✨ Aporia Client ✨
 
