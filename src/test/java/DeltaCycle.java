@@ -1,5 +1,5 @@
-import zenith.zov.base.animations.base.Animation;
-import zenith.zov.base.animations.base.Easing;
+import aporia.cc.base.animations.base.Animation;
+import aporia.cc.base.animations.base.Easing;
 
 import java.util.Arrays;
 

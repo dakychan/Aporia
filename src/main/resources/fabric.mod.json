@@ -1,19 +1,25 @@
 {
   "schemaVersion": 1,
-  "id": "zenithdlc",
-  "version": "${version}",
-  "name": "ZenithDLC",
+  "id": "aporia",
+  "version": "0.2",
+  "name": "Aporia.cc",
   "description": "",
-  "authors": [],
-  "contact": {},
+  "authors": [
+    "DUsky2",
+    "Protect3ed"
+  ],
+  "contact": {
+    "discrod": "daky_chan",
+    "telegram": "@Protecte3d"
+  },
   "license": "All-Rights-Reserved",
-  "icon": "assets/zenith/icons/avatar.png",
+  "icon": "assets/aporia/icons/avatar.png",
   "environment": "client",
   "entrypoints": {},
   "mixins": [
-    "zenithdlc.mixins.json"
+    "mixins.json"
   ],
-  "accessWidener": "zenith.accesswidener",
+  "accessWidener": "aporia.accesswidener",
 
   "depends": {
     "fabricloader": ">=${loader_version}",

@@ -3,7 +3,6 @@ package com.darkmagician6.eventapi;
 import com.darkmagician6.eventapi.events.Event;
 import com.darkmagician6.eventapi.events.EventStoppable;
 import com.darkmagician6.eventapi.types.Priority;
-import zenith.zov.base.events.impl.server.EventPacket;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
