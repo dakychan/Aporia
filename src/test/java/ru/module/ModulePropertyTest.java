@@ -1,11 +1,8 @@
 package ru.module;
 
 import net.jqwik.api.*;
-import org.junit.jupiter.api.BeforeEach;
 import ru.event.impl.EventSystemImpl;
 import ru.event.impl.ModuleToggleEvent;
-import ru.ui.notify.NotificationManager;
-import ru.ui.notify.NotificationType;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -25,13 +22,13 @@ class ModulePropertyTest {
         
         module.setEnabled(true);
         
-        NotificationManager manager = NotificationManager.getInstance();
+        Notify.Manager manager = Notify.Manager.getInstance();
         var notifications = manager.getActiveNotifications();
         
         boolean foundNotification = notifications.stream()
                 .anyMatch(n -> n.getMessage().contains(moduleName) && 
                               n.getMessage().contains("включен") &&
-                              n.getType() == NotificationType.MODULE);
+                              n.getType() == Notify.NotificationType.MODULE);
         
         assertTrue(foundNotification, "Notification should be triggered when enabling module");
     }
@@ -85,7 +82,7 @@ class ModulePropertyTest {
         EventSystemImpl.getInstance().clear();
         TestModule module = new TestModule(moduleName, category);
         
-        NotificationManager manager = NotificationManager.getInstance();
+        Notify.Manager manager = Notify.Manager.getInstance();
         
         long notificationsBefore = manager.getActiveNotifications().stream()
                 .filter(n -> n.getMessage().contains(moduleName))
@@ -115,7 +112,7 @@ class ModulePropertyTest {
             module.toggle();
         }
         
-        NotificationManager manager = NotificationManager.getInstance();
+        Notify.Manager manager = Notify.Manager.getInstance();
         long moduleNotifications = manager.getActiveNotifications().stream()
                 .filter(n -> n.getMessage().contains(moduleName))
                 .count();
@@ -144,7 +141,7 @@ class ModulePropertyTest {
     
     static class TestModule extends Module {
         public TestModule(String name, Category category) {
-            super(name, category);
+            super(name, "Test description", category, -1);
         }
         
         @Override

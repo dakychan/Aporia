@@ -4,8 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ru.event.impl.EventSystemImpl;
 import ru.event.impl.ModuleToggleEvent;
-import ru.ui.notify.NotificationManager;
-import ru.ui.notify.NotificationType;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -64,20 +62,20 @@ class ModuleTest {
     void setEnabledTriggersNotificationOnStateChange() {
         module.setEnabled(true);
         
-        NotificationManager manager = NotificationManager.getInstance();
+        Notify.Manager manager = Notify.Manager.getInstance();
         assertFalse(manager.getActiveNotifications().isEmpty());
         
         var notification = manager.getActiveNotifications().get(0);
         assertTrue(notification.getMessage().contains("TestModule"));
         assertTrue(notification.getMessage().contains("включен"));
-        assertEquals(NotificationType.MODULE, notification.getType());
+        assertEquals(Notify.NotificationType.MODULE, notification.getType());
     }
     
     @Test
     void setEnabledDoesNotTriggerNotificationWhenStateUnchanged() {
         module.setEnabled(false);
         
-        NotificationManager manager = NotificationManager.getInstance();
+        Notify.Manager manager = Notify.Manager.getInstance();
         int initialCount = manager.getActiveNotifications().size();
         
         module.setEnabled(false);
@@ -117,7 +115,7 @@ class ModuleTest {
     void notificationContainsCorrectModuleName() {
         module.setEnabled(true);
         
-        var notification = NotificationManager.getInstance().getActiveNotifications().get(0);
+        var notification = Notify.Manager.getInstance().getActiveNotifications().get(0);
         assertTrue(notification.getMessage().contains("TestModule"));
     }
     
@@ -125,18 +123,18 @@ class ModuleTest {
     void notificationShowsCorrectStateForEnable() {
         module.setEnabled(true);
         
-        var notification = NotificationManager.getInstance().getActiveNotifications().get(0);
+        var notification = Notify.Manager.getInstance().getActiveNotifications().get(0);
         assertTrue(notification.getMessage().contains("включен"));
     }
     
     @Test
     void notificationShowsCorrectStateForDisable() {
         module.setEnabled(true);
-        NotificationManager.getInstance().getActiveNotifications().clear();
+        Notify.Manager.getInstance().getActiveNotifications().clear();
         
         module.setEnabled(false);
         
-        var notification = NotificationManager.getInstance().getActiveNotifications().get(0);
+        var notification = Notify.Manager.getInstance().getActiveNotifications().get(0);
         assertTrue(notification.getMessage().contains("выключен"));
     }
     
@@ -145,7 +143,7 @@ class ModuleTest {
         boolean onDisableCalled = false;
         
         public TestModule(String name, Category category) {
-            super(name, category);
+            super(name, "Test description", category, -1);
         }
         
         @Override
