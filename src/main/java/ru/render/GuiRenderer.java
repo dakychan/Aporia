@@ -55,7 +55,7 @@ public class GuiRenderer {
         }
         
         // Update all active animations
-        animationSystem.update(delta);
+        animationSystem.tick();
         
         // Bind the main framebuffer for rendering
         
@@ -73,8 +73,7 @@ public class GuiRenderer {
      * This should be called when the GUI is closed.
      */
     public void cleanup() {
-        // Clear all active animations
-        animationSystem.clear();
+        // AnimationSystem doesn't have a clear method, animations are managed individually
         initialized = false;
     }
     

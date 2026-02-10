@@ -1,4 +1,4 @@
-package ru.night.util.render.animation;
+package ru.render;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -12,11 +12,11 @@ public final class AnimationSystem {
    private static final float MAX_DELTA_SECONDS = 0.06666667F;
    private static final AnimationSystem INSTANCE = new AnimationSystem();
    private final Object lock = new Object();
-   private final List<AnimationSystem.Animated> animatedObjects = new ArrayList<>();
+   private final List<Animated> animatedObjects = new ArrayList<>();
    private long lastTickNanos = System.nanoTime();
    private float lastDeltaSeconds = 0.0F;
 
-   private AnimationSystem() {
+   public AnimationSystem() {
    }
 
    public static AnimationSystem getInstance() {
@@ -41,10 +41,10 @@ public final class AnimationSystem {
       this.lastDeltaSeconds = delta;
       synchronized (this.lock) {
          if (!this.animatedObjects.isEmpty()) {
-            Iterator<AnimationSystem.Animated> iterator = this.animatedObjects.iterator();
+            Iterator<Animated> iterator = this.animatedObjects.iterator();
 
             while (iterator.hasNext()) {
-               AnimationSystem.Animated animated = iterator.next();
+               Animated animated = iterator.next();
                boolean keepUpdating = animated.update(delta);
                if (!keepUpdating) {
                   iterator.remove();
@@ -58,7 +58,7 @@ public final class AnimationSystem {
       return this.lastDeltaSeconds;
    }
 
-   public void ensureRegistered(AnimationSystem.Animated animated) {
+   public void ensureRegistered(Animated animated) {
       if (animated != null) {
          synchronized (this.lock) {
             if (!this.animatedObjects.contains(animated)) {
@@ -68,7 +68,7 @@ public final class AnimationSystem {
       }
    }
 
-   public void unregister(AnimationSystem.Animated animated) {
+   public void unregister(Animated animated) {
       if (animated != null) {
          synchronized (this.lock) {
             this.animatedObjects.remove(animated);

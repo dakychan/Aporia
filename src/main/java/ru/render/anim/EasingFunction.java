@@ -1,4 +1,4 @@
-package ru.night.util.render.animation;
+package ru.render.anim;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
