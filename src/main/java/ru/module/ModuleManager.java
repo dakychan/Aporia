@@ -2,7 +2,7 @@ package ru.module;
 
 import ru.input.api.bind.Keybind;
 import ru.input.impl.bind.KeybindManager;
-import ru.module.impl.TestChat;
+import ru.module.impl.visuals.ClickGui;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,10 +27,7 @@ public class ModuleManager {
         }
         
         // Register modules
-        registerModule(new TestChat());
-        
-        // Add more dummy modules for testing GUI
-        registerDummyModules();
+        registerModules();
         
         // Register keybinds for all modules
         registerModuleKeybinds();
@@ -44,30 +41,9 @@ public class ModuleManager {
         modulesByCategory.get(module.getCategory()).add(module);
     }
     
-    private void registerDummyModules() {
-        // Combat
-        registerModule(new DummyModule("AntiBot", Module.Category.COMBAT));
-        registerModule(new DummyModule("Aura", Module.Category.COMBAT));
-        registerModule(new DummyModule("AutoCrystal", Module.Category.COMBAT));
-        registerModule(new DummyModule("Criticals", Module.Category.COMBAT));
-        
-        // Movement
-        registerModule(new DummyModule("Abilities Fly", Module.Category.MOVEMENT));
-        registerModule(new DummyModule("Air Jump", Module.Category.MOVEMENT));
-        registerModule(new DummyModule("Blink", Module.Category.MOVEMENT));
-        registerModule(new DummyModule("Elytra Fly", Module.Category.MOVEMENT));
-        
+    private void registerModules() {
         // Visuals
-        registerModule(new DummyModule("ClickGui", Module.Category.VISUALS));
-        registerModule(new DummyModule("Cross Hair", Module.Category.VISUALS));
-        registerModule(new DummyModule("Entity ESP", Module.Category.VISUALS));
-        registerModule(new DummyModule("No Render", Module.Category.VISUALS));
-        
-        // Player
-        registerModule(new DummyModule("Auto Armor", Module.Category.PLAYER));
-        registerModule(new DummyModule("Auto Tool", Module.Category.PLAYER));
-        registerModule(new DummyModule("FastBreak", Module.Category.PLAYER));
-        registerModule(new DummyModule("No Delay", Module.Category.PLAYER));
+        registerModule(new ClickGui());
     }
     
     public static ModuleManager getInstance() {
@@ -98,24 +74,9 @@ public class ModuleManager {
         
         for (Module module : modules) {
             String keybindId = "module." + module.getName().toLowerCase() + ".toggle";
-            Keybind keybind = new Keybind(keybindId, -1, module::toggle);
+            int defaultKey = module.getDefaultBind();
+            Keybind keybind = new Keybind(keybindId, defaultKey, module::toggle);
             manager.registerKeybind(keybind);
         }
-    }
-    
-    // Dummy module for testing
-    private static class DummyModule extends Module {
-        public DummyModule(String name, Category category) {
-            super(name, category);
-        }
-        
-        @Override
-        public void onEnable() {}
-        
-        @Override
-        public void onDisable() {}
-        
-        @Override
-        public void onTick() {}
     }
 }

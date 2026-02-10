@@ -2,9 +2,7 @@ package ru.ui.clickgui;
 
 import ru.event.impl.EventSystemImpl;
 import ru.event.impl.KeyPressEvent;
-import ru.ui.notify.NotificationManager;
-import ru.ui.notify.NotificationMessages;
-import ru.ui.notify.NotificationType;
+import ru.ui.notify.Notify;
 
 import java.util.function.Consumer;
 
@@ -24,12 +22,12 @@ public class KeybindUI {
         bindCallback = callback;
         
         String message = settingName != null ?
-            NotificationMessages.bindingModuleSetting(moduleName, settingName) :
-            NotificationMessages.bindingModule(moduleName);
+            Notify.Messages.bindingModuleSetting(moduleName, settingName) :
+            Notify.Messages.bindingModule(moduleName);
         
-        NotificationManager.getInstance().showNotification(
+        Notify.Manager.getInstance().showNotification(
             message,
-            NotificationType.INFO,
+            Notify.NotificationType.INFO,
             10000
         );
         
@@ -40,9 +38,9 @@ public class KeybindUI {
     private static void handleKeyPress(KeyPressEvent event) {
         if (!waitingForKey) return;
         
-        NotificationManager.getInstance().showNotification(
-            NotificationMessages.keyPressed(event.keyName),
-            NotificationType.INFO,
+        Notify.Manager.getInstance().showNotification(
+            Notify.Messages.keyPressed(event.keyName),
+            Notify.NotificationType.INFO,
             1000
         );
         

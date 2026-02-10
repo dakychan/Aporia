@@ -149,7 +149,7 @@ public class ClickGuiScreen extends Screen {
         
         // Рендерим текст заголовка
         if (textRenderer != null) {
-            textRenderer.drawText(x + 10, y + 16, 12, 
+            textRenderer.drawText(x + 10, y + 21, 16, 
                 panel.getCategory().getDisplayName(), RenderColor.WHITE);
         }
         
@@ -191,7 +191,7 @@ public class ClickGuiScreen extends Screen {
         
         // Рендерим текст модуля
         if (textRenderer != null) {
-            textRenderer.drawText(x + 8, y + 16, 11, module.getName(), textColor);
+            textRenderer.drawText(x + 8, y + 20, 15, module.getName(), textColor);
         }
     }
 

@@ -9,7 +9,7 @@ import ru.input.impl.UnifiedInputHandler;
 import ru.input.impl.bind.KeybindListener;
 import ru.input.impl.bind.KeybindManager;
 import ru.mixin.render.IGlGpuBuffer;
-import ru.ui.notify.NotificationManager;
+import ru.ui.notify.Notify;
 
 public class Aporia implements ClientModInitializer {
 
@@ -25,8 +25,8 @@ public class Aporia implements ClientModInitializer {
         KeybindManager.getInstance().loadKeybinds();
         
         KeybindListener.init();
-        
-        NotificationManager.getInstance();
+
+        Notify.Manager.getInstance();
         
         KeyBindings.register();
         
