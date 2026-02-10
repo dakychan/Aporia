@@ -21,7 +21,7 @@ public final class RenderLayerUtil {
             "Aporia_position_color_no_depth",
             256,
             RenderPipeline.builder(RenderPipelines.POSITION_COLOR_SNIPPET)
-                    .withLocation(Identifier.of("Aporia", "pipeline/position_color_no_depth"))
+                    .withLocation(Identifier.of("aporia", "pipeline/position_color_no_depth"))
                     .withCull(false)
                     .withDepthWrite(false)
                     .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
@@ -31,7 +31,7 @@ public final class RenderLayerUtil {
             "Aporia_position_color_depth",
             256,
             RenderPipeline.builder(RenderPipelines.POSITION_COLOR_SNIPPET)
-                    .withLocation(Identifier.of("Aporia", "pipeline/position_color_depth"))
+                    .withLocation(Identifier.of("aporia", "pipeline/position_color_depth"))
                     .withCull(false)
                     .withDepthTestFunction(DepthTestFunction.LEQUAL_DEPTH_TEST)
                     .build(),
@@ -40,7 +40,7 @@ public final class RenderLayerUtil {
             "Aporia_lines_no_depth",
             256,
             RenderPipeline.builder(RenderPipelines.RENDERTYPE_LINES_SNIPPET)
-                    .withLocation(Identifier.of("Aporia", "pipeline/lines_no_depth"))
+                    .withLocation(Identifier.of("aporia", "pipeline/lines_no_depth"))
                     .withDepthWrite(false)
                     .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
                     .build(),
@@ -49,7 +49,7 @@ public final class RenderLayerUtil {
             "Aporia_lines_depth_no_write",
             256,
             RenderPipeline.builder(RenderPipelines.RENDERTYPE_LINES_SNIPPET)
-                    .withLocation(Identifier.of("Aporia", "pipeline/lines_depth_no_write"))
+                    .withLocation(Identifier.of("aporia", "pipeline/lines_depth_no_write"))
                     .withDepthWrite(false)
                     .withDepthTestFunction(DepthTestFunction.LEQUAL_DEPTH_TEST)
                     .build(),
@@ -87,7 +87,7 @@ public final class RenderLayerUtil {
     public static RenderLayer guiTextured(Identifier texture) {
         return GUI_TEXTURED.computeIfAbsent(texture, id -> {
             RenderLayer layer = RenderLayer.of(
-                    "Aporia_gui_texture_" + id,
+                    "aporia_gui_texture_" + id,
                     256,
                     RenderPipelines.GUI_TEXTURED,
                     RenderLayer.MultiPhaseParameters.builder()
