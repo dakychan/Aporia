@@ -51,13 +51,13 @@ public class MsdfFont {
             float descenderValue = metrics.has("descender") ? metrics.get("descender").getAsFloat() : 0.0f;
             this.descender = Math.abs(descenderValue);
             
-            // Загружаем текстуру
+            // Загружаем текстуру с правильной фильтрацией для MSDF
             FileEntry fontTextureEntry = new FileEntry(texturePath, PathMode.INSIDE_JAR);
             GLTexture fontTexture = TextureLoaders.FILE_ENTRY.createTextureBuilder()
                     .name("msdf-font-" + System.nanoTime())
                     .info(fontTextureEntry)
-                    .filtering(com.ferra13671.gltextureutils.TextureFiltering.SMOOTH)
-                    .wrapping(com.ferra13671.gltextureutils.TextureWrapping.DEFAULT)
+                    .filtering(TextureFiltering.SMOOTH) // LINEAR фильтрация для MSDF
+                    .wrapping(TextureWrapping.DEFAULT) // CLAMP чтобы избежать артефактов на краях
                     .build();
             
             // Создаем атлас с одной текстурой

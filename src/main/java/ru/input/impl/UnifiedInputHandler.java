@@ -44,15 +44,29 @@ public class UnifiedInputHandler {
         
         long window = client.getWindow().getHandle();
         
-        // Poll all possible key codes
-        for (int keyCode = 0; keyCode < 512; keyCode++) {
+        // Poll only valid GLFW key codes from KeyboardKeys enum
+        for (KeyboardKeys key : KeyboardKeys.values()) {
+            // Skip mouse buttons and special keys
+            if (key == KeyboardKeys.KEY_NONE || key.getKeyCode() < 0) {
+                continue;
+            }
+            
+            // Skip mouse button entries (they're handled in pollMouse)
+            if (key.name().startsWith("MOUSE_")) {
+                continue;
+            }
+            
+            int keyCode = key.getKeyCode();
+            if (keyCode >= keyStates.length) {
+                continue;
+            }
+            
             boolean isPressed = GLFW.glfwGetKey(window, keyCode) == GLFW.GLFW_PRESS;
             
             // Fire event only on state change
             if (isPressed && !keyStates[keyCode]) {
                 // Key was just pressed
-                KeyboardKeys key = KeyboardKeys.findByKeyCode(keyCode);
-                String keyName = key != KeyboardKeys.KEY_NONE ? key.getName() : "UNKNOWN";
+                String keyName = key.getName();
                 
                 // If GUI is open, route to GUI manager, otherwise fire event
                 if (GuiManager.isScreenOpen()) {
@@ -62,8 +76,7 @@ public class UnifiedInputHandler {
                 }
             } else if (!isPressed && keyStates[keyCode]) {
                 // Key was just released
-                KeyboardKeys key = KeyboardKeys.findByKeyCode(keyCode);
-                String keyName = key != KeyboardKeys.KEY_NONE ? key.getName() : "UNKNOWN";
+                String keyName = key.getName();
                 
                 // If GUI is open, route to GUI manager, otherwise fire event
                 if (GuiManager.isScreenOpen()) {

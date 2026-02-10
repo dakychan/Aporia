@@ -71,9 +71,11 @@ public class MsdfTextRenderer {
         msdfProgram.getUniform("ColorModulator", UniformType.VEC4)
                 .set(color.toVector4f());
         
-        // Вычисляем pxRange - увеличиваем для лучшего качества
+        // Правильный расчет pxRange для MSDF
+        // scale = размер на экране / размер в метриках
         float scale = size / Math.max(1e-6f, font.getEmSize());
-        float pxRange = font.getDistanceRange() * scale * 2.0f; // Увеличиваем в 2 раза
+        // pxRange должен быть просто distanceRange (уже в пикселях атласа)
+        float pxRange = font.getDistanceRange();
         msdfProgram.getUniform("pxRange", UniformType.FLOAT).set(pxRange);
 
         float lineHeight = font.getLineHeight() * scale;
