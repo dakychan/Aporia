@@ -9,7 +9,8 @@
     "render.GameRendererMixin",
     "render.IGlGpuBuffer",
     "render.RenderSystemMixin",
-    "gui.ScreenKeyPressMixin"
+    "gui.ScreenKeyPressMixin",
+    "chat.ChatMessageMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -31,6 +31,8 @@ public class ClickGuiScreen extends Screen {
     private static BlurRenderer blurRenderer;
     
     private Module hoveredModule = null;
+    private Module expandedModule = null;
+    private final Map<Module, Float> settingsAnimations = new HashMap<>();
     
     private final Map<Module.Category, CategoryPanel> categoryPanels = new HashMap<>();
     private CategoryPanel draggingPanel = null;
@@ -42,6 +44,8 @@ public class ClickGuiScreen extends Screen {
     private static final int MODULE_HEIGHT = 32;
     private static final int MODULE_SPACING = 8;
     private static final int HEADER_HEIGHT = 38;
+    private static final int SETTINGS_HEIGHT = 100; // Высота раскрытых настроек
+    private static final float ANIMATION_SPEED = 0.15f;
 
     public ClickGuiScreen(int width, int height) {
         super(Text.literal("Click GUI"));
@@ -129,6 +133,9 @@ public class ClickGuiScreen extends Screen {
         
         hoveredModule = null;
         
+        // Обновляем анимации настроек
+        updateSettingsAnimations();
+        
         // Рендерим все панели с framebuffer координатами мыши
         for (CategoryPanel panel : categoryPanels.values()) {
             renderCategory(panel, fbMouseX, fbMouseY);
@@ -162,15 +169,27 @@ public class ClickGuiScreen extends Screen {
                 break;
             }
             
+            // Получаем прогресс анимации настроек
+            float settingsProgress = settingsAnimations.getOrDefault(module, 0f);
+            int settingsHeight = (int)(SETTINGS_HEIGHT * settingsProgress);
+            
             renderModule(module, x + 5, moduleY, width - 10, 
                 MODULE_HEIGHT, mouseX, mouseY);
-            moduleY += MODULE_HEIGHT + MODULE_SPACING;
+            
+            // Рендерим настройки если они раскрыты
+            if (settingsProgress > 0.01f) {
+                renderModuleSettings(module, x + 5, moduleY + MODULE_HEIGHT, 
+                    width - 10, settingsHeight, settingsProgress);
+            }
+            
+            moduleY += MODULE_HEIGHT + MODULE_SPACING + settingsHeight;
         }
     }
     
     private void renderModule(Module module, int x, int y, int width, int height, int mouseX, int mouseY) {
         boolean isHovered = mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
         boolean isEnabled = module.isEnabled();
+        boolean isExpanded = module == expandedModule;
         
         if (isHovered) {
             hoveredModule = module;
@@ -187,11 +206,52 @@ public class ClickGuiScreen extends Screen {
             textColor = RenderColor.of(180, 180, 190, 255);
         }
         
-        renderRect(x, y, width, height, 5, bgColor);
+        // Если настройки раскрыты, рисуем только верхнюю часть закругленной
+        float radius = isExpanded && settingsAnimations.getOrDefault(module, 0f) > 0.01f ? 5 : 5;
+        renderRect(x, y, width, height, radius, bgColor);
         
         // Рендерим текст модуля
         if (textRenderer != null) {
             textRenderer.drawText(x + 8, y + 20, 15, module.getName(), textColor);
+        }
+        
+        // Рендерим индикатор раскрытия (стрелка)
+        if (textRenderer != null && isExpanded) {
+            String arrow = settingsAnimations.getOrDefault(module, 0f) > 0.5f ? "▼" : "▶";
+            float arrowWidth = textRenderer.measureWidth(arrow, 12);
+            textRenderer.drawText(x + width - arrowWidth - 8, y + 19, 12, arrow, textColor);
+        }
+    }
+    
+    private void renderModuleSettings(Module module, int x, int y, int width, int height, float alpha) {
+        if (height <= 0) return;
+        
+        // Фон настроек с прозрачностью
+        int alphaValue = (int)(200 * alpha);
+        RenderColor bgColor = RenderColor.of(35, 35, 45, alphaValue);
+        renderRect(x, y, width, height, 5, bgColor);
+        
+        // Текст настроек (пока заглушка)
+        if (textRenderer != null && alpha > 0.3f) {
+            textRenderer.drawText(x + 10, y + 15, 13, 
+                "Настройки модуля", RenderColor.of(150, 150, 160, (int)(255 * alpha)));
+            textRenderer.drawText(x + 10, y + 35, 11, 
+                module.getDescription(), RenderColor.of(120, 120, 130, (int)(255 * alpha)));
+        }
+    }
+    
+    private void updateSettingsAnimations() {
+        // Обновляем анимации для всех модулей
+        for (Module module : ModuleManager.getInstance().getModules()) {
+            float current = settingsAnimations.getOrDefault(module, 0f);
+            float target = (module == expandedModule) ? 1f : 0f;
+            
+            if (Math.abs(current - target) > 0.01f) {
+                float newValue = current + (target - current) * ANIMATION_SPEED;
+                settingsAnimations.put(module, newValue);
+            } else {
+                settingsAnimations.put(module, target);
+            }
         }
     }
 
@@ -248,12 +308,15 @@ public class ClickGuiScreen extends Screen {
                     return true;
                 }
             }
-        } else if (button == 1) {
-            // Правый клик для настроек
+        } else if (button == 1) { // ПКМ - открыть/закрыть настройки
             for (CategoryPanel panel : categoryPanels.values()) {
                 Module module = panel.getHoveredModule(mouseX, mouseY);
                 if (module != null) {
-                    openModuleSettings(module);
+                    if (expandedModule == module) {
+                        expandedModule = null;
+                    } else {
+                        expandedModule = module;
+                    }
                     return true;
                 }
             }
@@ -290,10 +353,6 @@ public class ClickGuiScreen extends Screen {
             return true;
         }
         return false;
-    }
-
-    private void openModuleSettings(Module module) {
-        // TODO: Implement settings panel
     }
 
     @Override

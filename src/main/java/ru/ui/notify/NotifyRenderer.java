@@ -9,7 +9,7 @@ import ru.render.RectRenderer;
 import java.util.List;
 
 /**
- * Рендерер нотификаций
+ * Минимальный рендерер нотификаций
  */
 public class NotifyRenderer {
     private static MsdfTextRenderer textRenderer;
@@ -18,11 +18,9 @@ public class NotifyRenderer {
     private static final int NOTIFICATION_WIDTH = 250;
     private static final int NOTIFICATION_HEIGHT = 40;
     private static final int NOTIFICATION_SPACING = 8;
-    private static final int PROGRESS_LINE_HEIGHT = 1;
     private static final int START_Y = 20;
     
     private static final RenderColor BG_COLOR = RenderColor.of(20, 20, 25, 230);
-    private static final RenderColor PROGRESS_COLOR = RenderColor.of(60, 120, 245, 200);
     
     public static void render(DrawContext context) {
         if (context == null) return;
@@ -52,21 +50,13 @@ public class NotifyRenderer {
     }
     
     private static void renderNotification(Notify.Notification n, int x, int y) {
-        // Фон
-        RectRenderer.drawRoundedRect(x, y, NOTIFICATION_WIDTH, NOTIFICATION_HEIGHT, 6, BG_COLOR);
+        // Фон - закругленный со всех 4 сторон
+        RectRenderer.drawRoundedRect(x, y, NOTIFICATION_WIDTH, NOTIFICATION_HEIGHT, 8, BG_COLOR);
         
-        // Текст
+        // Текст по центру
         if (textRenderer != null) {
             textRenderer.drawText(x + 10, y + 16, 11, n.getMessage(), RenderColor.WHITE);
         }
-        
-        // Полоска прогресса
-        float progress = n.getProgress();
-        int progressWidth = (int)(NOTIFICATION_WIDTH * progress);
-        RectRenderer.drawRoundedRect(
-            x, y + NOTIFICATION_HEIGHT - PROGRESS_LINE_HEIGHT, 
-            progressWidth, PROGRESS_LINE_HEIGHT, 0, PROGRESS_COLOR
-        );
     }
     
     private static void ensureInitialized() {

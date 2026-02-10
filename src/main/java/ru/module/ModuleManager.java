@@ -44,6 +44,9 @@ public class ModuleManager {
     private void registerModules() {
         // Visuals
         registerModule(new ClickGui());
+        
+        // Misc
+        registerModule(new ru.module.impl.misc.AutoFlyMe());
     }
     
     public static ModuleManager getInstance() {

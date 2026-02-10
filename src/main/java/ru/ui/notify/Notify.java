@@ -3,8 +3,8 @@ package ru.ui.notify;
 import java.util.ArrayList;
 import java.util.List;
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor;
-import ru.render.Animation;
-import ru.render.EasingFunction;
+import ru.render.anim.Animation;
+import ru.render.anim.Easings;
 
 public class Notify {
 
@@ -42,8 +42,8 @@ public class Notify {
             this.createdTime = System.currentTimeMillis();
             this.duration = duration;
 
-            this.slideAnimation = new Animation(SLIDE_DURATION_MS / 1000.0f);
-            this.progressAnimation = new Animation(duration / 1000.0f);
+            this.slideAnimation = new Animation();
+            this.progressAnimation = new Animation();
         }
 
         public boolean isExpired() {
@@ -53,13 +53,13 @@ public class Notify {
         public float getProgress() {
             long elapsed = System.currentTimeMillis() - createdTime;
             float normalizedTime = Math.min((float) elapsed / duration, 1.0f);
-            return EasingFunction.LINEAR.apply(normalizedTime);
+            return (float) Easings.LINEAR.ease(normalizedTime);
         }
 
         public float getSlideOffset() {
             long elapsed = System.currentTimeMillis() - createdTime;
             float normalizedTime = Math.min((float) elapsed / SLIDE_DURATION_MS, 1.0f);
-            return EasingFunction.EASE_IN_OUT_CUBIC.apply(normalizedTime);
+            return (float) Easings.CUBIC_IN_OUT.ease(normalizedTime);
         }
 
         public void dismiss() {

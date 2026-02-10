@@ -1,0 +1,155 @@
+package ru.ui.clickgui.comp;
+
+import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor;
+import ru.render.MsdfTextRenderer;
+import ru.render.RectRenderer;
+import ru.render.anim.Animation;
+import ru.render.anim.Easings;
+import ru.util.math.MathHelper;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MultiListButton {
+    private String name;
+    private List<String> options;
+    private List<Boolean> selected;
+    private boolean expanded = false;
+    private int x, y, width, height;
+    private Animation expandAnimation = new Animation();
+    private Animation hoverAnimation = new Animation();
+    private int hoveredIndex = -1;
+    
+    // Unicode для стрелки вниз из icons.json (код 86 = V)
+    private static final String ARROW_DOWN = "V";
+    
+    public MultiListButton(String name, String... options) {
+        this.name = name;
+        this.options = new ArrayList<>();
+        this.selected = new ArrayList<>();
+        for (String option : options) {
+            this.options.add(option);
+            this.selected.add(false);
+        }
+        this.height = 25;
+    }
+    
+    public void render(int x, int y, int width, MsdfTextRenderer textRenderer, int mouseX, int mouseY) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        
+        expandAnimation.run(expanded ? 1.0 : 0.0, 0.3, Easings.CUBIC_OUT, false);
+        expandAnimation.update();
+        
+        float expandProgress = expandAnimation.get();
+        
+        // Заголовок
+        boolean headerHovered = mouseX >= x && mouseX <= x + width && 
+                               mouseY >= y && mouseY <= y + 25;
+        
+        hoverAnimation.run(headerHovered ? 1.0 : 0.0, 0.2, Easings.CUBIC_OUT, false);
+        hoverAnimation.update();
+        
+        float hoverProgress = hoverAnimation.get();
+        
+        RenderColor headerColor = RenderColor.of(
+            (int) MathHelper.lerp(50, 60, hoverProgress),
+            (int) MathHelper.lerp(50, 60, hoverProgress),
+            (int) MathHelper.lerp(60, 70, hoverProgress),
+            200
+        );
+        RectRenderer.drawRoundedRect(x, y, width, 25, 5, headerColor);
+        
+        // Текст заголовка
+        if (textRenderer != null) {
+            String headerText = expanded ? name : "Нажми, чтобы открыть";
+            textRenderer.drawText(x + 8, y + 8, 12, headerText, RenderColor.WHITE);
+            
+            // Иконка стрелки
+            float arrowRotation = expandProgress * 180; // Поворот на 180 градусов
+            textRenderer.drawText(x + width - 20, y + 8, 12, ARROW_DOWN, 
+                RenderColor.of(180, 180, 190, 255));
+        }
+        
+        // Список опций
+        if (expandProgress > 0.01f) {
+            int listHeight = (int) (options.size() * 22 * expandProgress);
+            int optionY = y + 27;
+            hoveredIndex = -1;
+            
+            for (int i = 0; i < options.size(); i++) {
+                float itemAlpha = Math.min(1.0f, expandProgress * 2 - i * 0.1f);
+                if (itemAlpha <= 0) continue;
+                
+                boolean hovered = mouseX >= x && mouseX <= x + width && 
+                                mouseY >= optionY && mouseY <= optionY + 20;
+                
+                if (hovered && expanded) {
+                    hoveredIndex = i;
+                }
+                
+                boolean isSelected = selected.get(i);
+                
+                // Фон опции
+                RenderColor optionColor = RenderColor.of(
+                    isSelected ? 60 : (hovered ? 50 : 40),
+                    isSelected ? 120 : (hovered ? 50 : 40),
+                    isSelected ? 245 : (hovered ? 60 : 50),
+                    (int) (itemAlpha * (isSelected ? 200 : 160))
+                );
+                RectRenderer.drawRoundedRect(x + 5, optionY, width - 10, 20, 4, optionColor);
+                
+                // Чекбокс
+                RenderColor checkColor = isSelected 
+                    ? RenderColor.of(80, 200, 120, (int) (itemAlpha * 255)) 
+                    : RenderColor.of(100, 100, 110, (int) (itemAlpha * 200));
+                RectRenderer.drawRoundedRect(x + 10, optionY + 5, 10, 10, 2, checkColor);
+                
+                // Текст опции
+                if (textRenderer != null) {
+                    RenderColor textColor = RenderColor.of(255, 255, 255, (int) (itemAlpha * 255));
+                    textRenderer.drawText(x + 25, optionY + 5, 11, options.get(i), textColor);
+                }
+                
+                optionY += 22;
+            }
+            
+            this.height = (int) (25 + listHeight + 2);
+        } else {
+            this.height = 25;
+        }
+    }
+    
+    public boolean mouseClicked(int mouseX, int mouseY, int button) {
+        if (button != 0) return false;
+        
+        // Клик по заголовку
+        if (mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + 25) {
+            expanded = !expanded;
+            return true;
+        }
+        
+        // Клик по опции
+        if (expanded && hoveredIndex >= 0) {
+            selected.set(hoveredIndex, !selected.get(hoveredIndex));
+            return true;
+        }
+        
+        return false;
+    }
+    
+    public int getHeight() {
+        return height;
+    }
+    
+    public List<Boolean> getSelected() {
+        return new ArrayList<>(selected);
+    }
+    
+    public void setSelected(int index, boolean value) {
+        if (index >= 0 && index < selected.size()) {
+            selected.set(index, value);
+        }
+    }
+}
