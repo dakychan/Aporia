@@ -3,10 +3,6 @@ package ru.input.api;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Unit tests for KeyboardKeys enum.
- * Validates that the enum contains all required keys and lookup methods work correctly.
- */
 class KeyboardKeysTest {
 
     @Test
@@ -97,18 +93,18 @@ class KeyboardKeysTest {
         assertEquals("F25", KeyboardKeys.getKeyName(314));
         assertEquals("NUMPAD0", KeyboardKeys.getKeyName(320));
         assertEquals("ESCAPE", KeyboardKeys.getKeyName(256));
-        assertEquals("NONE", KeyboardKeys.getKeyName(999)); // Invalid key code
+        assertEquals("NONE", KeyboardKeys.getKeyName(999));
     }
 
     @Test
     void testGetKeyCodeReturnsCorrectCode() {
         assertEquals(32, KeyboardKeys.getKeyCode("SPACE"));
-        assertEquals(32, KeyboardKeys.getKeyCode("space")); // Case insensitive
+        assertEquals(32, KeyboardKeys.getKeyCode("space"));
         assertEquals(302, KeyboardKeys.getKeyCode("F13"));
         assertEquals(314, KeyboardKeys.getKeyCode("F25"));
         assertEquals(320, KeyboardKeys.getKeyCode("NUMPAD0"));
         assertEquals(256, KeyboardKeys.getKeyCode("ESCAPE"));
-        assertEquals(-1, KeyboardKeys.getKeyCode("INVALID")); // Invalid key name
+        assertEquals(-1, KeyboardKeys.getKeyCode("INVALID"));
     }
 
     @Test
@@ -118,18 +114,18 @@ class KeyboardKeysTest {
         assertEquals(KeyboardKeys.KEY_F25, KeyboardKeys.findByKeyCode(314));
         assertEquals(KeyboardKeys.KEY_KP_0, KeyboardKeys.findByKeyCode(320));
         assertEquals(KeyboardKeys.KEY_ESCAPE, KeyboardKeys.findByKeyCode(256));
-        assertEquals(KeyboardKeys.KEY_NONE, KeyboardKeys.findByKeyCode(999)); // Invalid key code
+        assertEquals(KeyboardKeys.KEY_NONE, KeyboardKeys.findByKeyCode(999));
     }
 
     @Test
     void testFindByNameReturnsCorrectEnum() {
         assertEquals(KeyboardKeys.KEY_SPACE, KeyboardKeys.findByName("SPACE"));
-        assertEquals(KeyboardKeys.KEY_SPACE, KeyboardKeys.findByName("space")); // Case insensitive
+        assertEquals(KeyboardKeys.KEY_SPACE, KeyboardKeys.findByName("space"));
         assertEquals(KeyboardKeys.KEY_F13, KeyboardKeys.findByName("F13"));
         assertEquals(KeyboardKeys.KEY_F25, KeyboardKeys.findByName("F25"));
         assertEquals(KeyboardKeys.KEY_KP_0, KeyboardKeys.findByName("NUMPAD0"));
         assertEquals(KeyboardKeys.KEY_ESCAPE, KeyboardKeys.findByName("ESCAPE"));
-        assertEquals(KeyboardKeys.KEY_NONE, KeyboardKeys.findByName("INVALID")); // Invalid key name
+        assertEquals(KeyboardKeys.KEY_NONE, KeyboardKeys.findByName("INVALID"));
     }
 
     @Test
@@ -194,12 +190,8 @@ class KeyboardKeysTest {
 
     @Test
     void testKeyCodesAreUnique() {
-        // This test verifies that the static initialization properly handles duplicate key codes
-        // (like MOUSE_1 and MOUSE_LEFT both having code 0)
-        // The last one in the enum should win in the BY_CODE map
         KeyboardKeys mouseKey = KeyboardKeys.findByKeyCode(0);
         assertNotNull(mouseKey);
-        // Should be one of the mouse keys with code 0
         assertTrue(mouseKey == KeyboardKeys.MOUSE_1 || 
                    mouseKey == KeyboardKeys.MOUSE_LEFT,
                    "Key code 0 should map to a mouse button");
