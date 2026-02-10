@@ -9,9 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-/**
- * Реализация системы событий
- */
 public class EventSystemImpl implements EventBus {
     private static final Map<Class<?>, List<Consumer<?>>> listeners = new HashMap<>();
     private static EventSystemImpl instance;
@@ -19,10 +16,6 @@ public class EventSystemImpl implements EventBus {
     private EventSystemImpl() {
     }
 
-    /**
-     * Получает единственный экземпляр системы событий
-     * @return экземпляр EventSystemImpl
-     */
     public static EventSystemImpl getInstance() {
         if (instance == null) {
             instance = new EventSystemImpl();
@@ -54,9 +47,6 @@ public class EventSystemImpl implements EventBus {
         }
     }
 
-    /**
-     * Очищает все подписки на события
-     */
     public void clear() {
         listeners.clear();
     }

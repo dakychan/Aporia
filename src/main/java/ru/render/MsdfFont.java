@@ -17,9 +17,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Arrays;
 
-/**
- * MSDF шрифт с поддержкой JSON метрик и TextureAtlas
- */
 public class MsdfFont {
     private final Map<Integer, Glyph> glyphs;
     private final Map<Long, Float> kerning;
@@ -33,38 +30,27 @@ public class MsdfFont {
 
     public MsdfFont(String jsonPath, String texturePath) {
         try {
-            // Загружаем JSON метрики
             String json = readJsonFile(jsonPath);
             JsonObject root = JsonParser.parseString(json).getAsJsonObject();
-            
-            // Парсим atlas
             JsonObject atlasObj = root.getAsJsonObject("atlas");
             int atlasWidth = atlasObj.get("width").getAsInt();
             int atlasHeight = atlasObj.get("height").getAsInt();
             this.distanceRange = atlasObj.has("distanceRange") ? atlasObj.get("distanceRange").getAsFloat() : 6.0f;
-            
-            // Парсим metrics
             JsonObject metrics = root.getAsJsonObject("metrics");
             this.emSize = metrics.has("emSize") ? metrics.get("emSize").getAsFloat() : 1.0f;
             this.lineHeight = metrics.has("lineHeight") ? metrics.get("lineHeight").getAsFloat() : emSize;
             this.ascender = metrics.has("ascender") ? metrics.get("ascender").getAsFloat() : lineHeight;
             float descenderValue = metrics.has("descender") ? metrics.get("descender").getAsFloat() : 0.0f;
             this.descender = Math.abs(descenderValue);
-            
-            // Загружаем текстуру с правильной фильтрацией для MSDF
             FileEntry fontTextureEntry = new FileEntry(texturePath, PathMode.INSIDE_JAR);
             GLTexture fontTexture = TextureLoaders.FILE_ENTRY.createTextureBuilder()
                     .name("msdf-font-" + System.nanoTime())
                     .info(fontTextureEntry)
-                    .filtering(TextureFiltering.SMOOTH) // LINEAR фильтрация для MSDF
-                    .wrapping(TextureWrapping.DEFAULT) // CLAMP чтобы избежать артефактов на краях
+                    .filtering(TextureFiltering.SMOOTH)
+                    .wrapping(TextureWrapping.DEFAULT)
                     .build();
-            
-            // Создаем атлас с одной текстурой
             this.atlas = new TextureAtlas("msdf-font-atlas", Arrays.asList(fontTexture));
             this.texture = fontTexture;
-            
-            // Парсим глифы
             this.glyphs = new HashMap<>();
             JsonArray glyphArray = root.getAsJsonArray("glyphs");
             if (glyphArray != null) {
@@ -73,46 +59,35 @@ public class MsdfFont {
                 float borderV1 = border.getV1();
                 float borderU2 = border.getU2();
                 float borderV2 = border.getV2();
-                
                 for (JsonElement element : glyphArray) {
                     JsonObject glyphObj = element.getAsJsonObject();
                     int codepoint = glyphObj.get("unicode").getAsInt();
                     float advance = glyphObj.has("advance") ? glyphObj.get("advance").getAsFloat() : 0.0f;
-                    
                     JsonObject planeBounds = glyphObj.has("planeBounds") ? glyphObj.getAsJsonObject("planeBounds") : null;
                     JsonObject atlasBounds = glyphObj.has("atlasBounds") ? glyphObj.getAsJsonObject("atlasBounds") : null;
-                    
                     Glyph glyph;
                     if (planeBounds != null && atlasBounds != null) {
                         float planeLeft = planeBounds.get("left").getAsFloat();
                         float planeBottom = planeBounds.get("bottom").getAsFloat();
                         float planeRight = planeBounds.get("right").getAsFloat();
                         float planeTop = planeBounds.get("top").getAsFloat();
-                        
                         float atlasLeft = atlasBounds.get("left").getAsFloat();
                         float atlasBottom = atlasBounds.get("bottom").getAsFloat();
                         float atlasRight = atlasBounds.get("right").getAsFloat();
                         float atlasTop = atlasBounds.get("top").getAsFloat();
-                        
-                        // Нормализуем координаты в пределах исходной текстуры
                         float u0 = atlasLeft / atlasWidth;
                         float v0 = atlasBottom / atlasHeight;
                         float u1 = atlasRight / atlasWidth;
                         float v1 = atlasTop / atlasHeight;
-                        
-                        // Добавляем padding (1 пиксель) чтобы избежать артефактов от соседних глифов
                         float padding = 0.0f / atlasWidth;
                         u0 += padding;
                         u1 -= padding;
                         v0 += padding;
                         v1 -= padding;
-                        
-                        // Масштабируем координаты в пределы атласа
                         float atlasU0 = borderU1 + (u0 * (borderU2 - borderU1));
                         float atlasV0 = borderV1 + (v0 * (borderV2 - borderV1));
                         float atlasU1 = borderU1 + (u1 * (borderU2 - borderU1));
                         float atlasV1 = borderV1 + (v1 * (borderV2 - borderV1));
-                        
                         glyph = new Glyph(
                             advance, planeLeft, planeBottom, planeRight, planeTop,
                             atlasU0, 1.0f - atlasV1, atlasU1, 1.0f - atlasV0
@@ -120,12 +95,9 @@ public class MsdfFont {
                     } else {
                         glyph = new Glyph(advance);
                     }
-                    
                     glyphs.put(codepoint, glyph);
                 }
             }
-            
-            // Парсим kerning
             this.kerning = new HashMap<>();
             JsonArray kerningArray = root.getAsJsonArray("kerning");
             if (kerningArray != null) {
@@ -137,7 +109,6 @@ public class MsdfFont {
                     kerning.put(pairKey(left, right), advance);
                 }
             }
-            
         } catch (Exception e) {
             throw new RuntimeException("Failed to load MSDF font: " + jsonPath, e);
         }

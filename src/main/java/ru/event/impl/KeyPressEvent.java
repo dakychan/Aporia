@@ -3,9 +3,6 @@ package ru.event.impl;
 import ru.event.api.Event;
 import ru.input.api.KeyboardKeys;
 
-/**
- * Событие нажатия клавиши
- */
 public class KeyPressEvent extends Event {
     public final KeyboardKeys key;
     public final int keyCode;

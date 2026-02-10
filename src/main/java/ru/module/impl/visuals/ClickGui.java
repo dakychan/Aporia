@@ -7,7 +7,7 @@ import ru.ui.clickgui.ClickGuiScreen;
 public class ClickGui extends Module {
     
     public ClickGui() {
-        super("ClickGui", "Гуи чита", C.VISUALS, 96); // GRAVE key
+        super("ClickGui", "Гуи чита", C.VISUALS, 96);
     }
     
     @Override

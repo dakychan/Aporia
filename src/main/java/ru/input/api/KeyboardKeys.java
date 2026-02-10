@@ -5,13 +5,6 @@ import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 
-/**
- * Comprehensive keyboard key enumeration supporting all GLFW keys including
- * F13-F25, numpad keys, special keys, and mouse buttons.
- * 
- * This enum provides static lookup methods for key code to name mapping and
- * vice versa, enabling the keybind system to support all keyboard keys.
- */
 @Environment(EnvType.CLIENT)
 public enum KeyboardKeys {
     KEY_SPACE("SPACE", 32),
@@ -159,27 +152,14 @@ public enum KeyboardKeys {
         this.keyCode = keyCode;
     }
 
-    /**
-     * Get the human-readable name of this key.
-     * @return The key name (e.g., "SPACE", "F13", "NUMPAD0")
-     */
     public String getName() {
         return this.name;
     }
 
-    /**
-     * Get the GLFW key code for this key.
-     * @return The key code
-     */
     public int getKeyCode() {
         return this.keyCode;
     }
 
-    /**
-     * Check if this key matches the given key code.
-     * @param keyCode The key code to check
-     * @return true if this key's code matches the given code
-     */
     public boolean isKey(int keyCode) {
         return keyCode == this.keyCode;
     }
@@ -189,45 +169,24 @@ public enum KeyboardKeys {
         return this.name;
     }
 
-    /**
-     * Get the key name for a given key code.
-     * @param keyCode The GLFW key code
-     * @return The key name, or "NONE" if not found
-     */
     public static String getKeyName(int keyCode) {
         KeyboardKeys key = BY_CODE.getOrDefault(keyCode, KEY_NONE);
         return key.name;
     }
 
-    /**
-     * Get the key code for a given key name.
-     * @param keyName The key name (case-insensitive)
-     * @return The key code, or -1 if not found
-     */
     public static int getKeyCode(String keyName) {
         KeyboardKeys key = BY_NAME.getOrDefault(keyName.toLowerCase(), KEY_NONE);
         return key.keyCode;
     }
 
-    /**
-     * Find a KeyboardKeys enum value by its key code.
-     * @param keyCode The GLFW key code
-     * @return The KeyboardKeys enum value, or KEY_NONE if not found
-     */
     public static KeyboardKeys findByKeyCode(int keyCode) {
         return BY_CODE.getOrDefault(keyCode, KEY_NONE);
     }
 
-    /**
-     * Find a KeyboardKeys enum value by its name.
-     * @param keyName The key name (case-insensitive)
-     * @return The KeyboardKeys enum value, or KEY_NONE if not found
-     */
     public static KeyboardKeys findByName(String keyName) {
         return BY_NAME.getOrDefault(keyName.toLowerCase(), KEY_NONE);
     }
 
-    // Static initialization block to populate lookup maps
     static {
         for (KeyboardKeys key : values()) {
             BY_CODE.put(key.keyCode, key);

@@ -155,7 +155,7 @@ public class TextField {
     
     public boolean charTyped(char chr, int modifiers) {
         if (!focused) return false;
-  
+
         if (chr >= 32 && chr != 127) {
             text = text.substring(0, cursorPosition) + chr + text.substring(cursorPosition);
             cursorPosition++;

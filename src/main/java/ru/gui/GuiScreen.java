@@ -1,8 +1,5 @@
 package ru.gui;
 
-/**
- * Базовый класс для GUI экранов
- */
 public abstract class GuiScreen {
     protected int width;
     protected int height;

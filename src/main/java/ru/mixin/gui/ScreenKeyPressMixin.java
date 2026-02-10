@@ -17,11 +17,8 @@ public class ScreenKeyPressMixin {
     @Inject(method = "render", at = @At("TAIL"))
     private void onHudRender(net.minecraft.client.gui.DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
         MinecraftClient mc = MinecraftClient.getInstance();
-        
         ModuleManager.getInstance().onTick();
-        
         NotifyRenderer.render(context);
-        
         if (mc.currentScreen == null) {
             if (org.lwjgl.glfw.GLFW.glfwGetKey(mc.getWindow().getHandle(), 96) == org.lwjgl.glfw.GLFW.GLFW_PRESS) {
                 mc.setScreen(new ClickGuiScreen(mc.getWindow().getWidth(), mc.getWindow().getHeight()));

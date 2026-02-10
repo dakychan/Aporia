@@ -6,42 +6,27 @@ public final class Easings {
     public static final double c3 = 2.70158;
     public static final double c4 = Math.PI * 2.0 / 3.0;
     public static final double c5 = Math.PI * 4.0 / 9.0;
-
     public static final Easing LINEAR = value -> value;
-    
-    // Quad
     public static final Easing QUAD_IN = powIn(2);
     public static final Easing QUAD_OUT = powOut(2);
     public static final Easing QUAD_IN_OUT = powInOut(2.0);
-    
-    // Cubic
     public static final Easing CUBIC_IN = powIn(3);
     public static final Easing CUBIC_OUT = powOut(3);
     public static final Easing CUBIC_IN_OUT = powInOut(3.0);
-    
-    // Quart
     public static final Easing QUART_IN = powIn(4);
     public static final Easing QUART_OUT = powOut(4);
     public static final Easing QUART_IN_OUT = powInOut(4.0);
-    
-    // Quint
     public static final Easing QUINT_IN = powIn(5);
     public static final Easing QUINT_OUT = powOut(5);
     public static final Easing QUINT_IN_OUT = powInOut(5.0);
-    
-    // Sine
     public static final Easing SINE_IN = value -> 1.0 - Math.cos(value * Math.PI / 2.0);
     public static final Easing SINE_OUT = value -> Math.sin(value * Math.PI / 2.0);
     public static final Easing SINE_IN_OUT = value -> -(Math.cos(Math.PI * value) - 1.0) / 2.0;
-    
-    // Circ
     public static final Easing CIRC_IN = value -> 1.0 - Math.sqrt(1.0 - Math.pow(value, 2.0));
     public static final Easing CIRC_OUT = value -> Math.sqrt(1.0 - Math.pow(value - 1.0, 2.0));
     public static final Easing CIRC_IN_OUT = value -> value < 0.5
         ? (1.0 - Math.sqrt(1.0 - Math.pow(2.0 * value, 2.0))) / 2.0
         : (Math.sqrt(1.0 - Math.pow(-2.0 * value + 2.0, 2.0)) + 1.0) / 2.0;
-    
-    // Elastic
     public static final Easing ELASTIC_IN = value -> value != 0.0 && value != 1.0
         ? Math.pow(-2.0, 10.0 * value - 10.0) * Math.sin((value * 10.0 - 10.75) * c4)
         : value;
@@ -57,8 +42,6 @@ public final class Easings {
             return value;
         }
     };
-    
-    // Expo
     public static final Easing EXPO_IN = value -> value != 0.0 ? Math.pow(2.0, 10.0 * value - 10.0) : value;
     public static final Easing EXPO_OUT = value -> value != 1.0 ? 1.0 - Math.pow(2.0, -10.0 * value) : value;
     public static final Easing EXPO_IN_OUT = value -> {
@@ -70,15 +53,11 @@ public final class Easings {
             return value;
         }
     };
-    
-    // Back
     public static final Easing BACK_IN = value -> c3 * Math.pow(value, 3.0) - c1 * Math.pow(value, 2.0);
     public static final Easing BACK_OUT = value -> 1.0 + c3 * Math.pow(value - 1.0, 3.0) + c1 * Math.pow(value - 1.0, 2.0);
     public static final Easing BACK_IN_OUT = value -> value < 0.5
         ? Math.pow(2.0 * value, 2.0) * (7.189819 * value - c2) / 2.0
         : (Math.pow(2.0 * value - 2.0, 2.0) * (3.5949095 * (value * 2.0 - 2.0) + c2) + 2.0) / 2.0;
-    
-    // Bounce
     public static final Easing BOUNCE_OUT = x -> {
         double n1 = 7.5625;
         double d1 = 2.75;

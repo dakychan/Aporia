@@ -4,17 +4,13 @@ import ru.event.impl.EventSystemImpl;
 import ru.event.impl.ModuleToggleEvent;
 import ru.ui.notify.Notify;
 
-/**
- * Base class for all modules in the client.
- */
 public abstract class Module {
     private final String name;
     private final String description;
     private final Category category;
     private final int defaultBind;
     private boolean enabled;
-    
-    // Алиас для удобства
+
     public static class C {
         public static final Category COMBAT = Category.COMBAT;
         public static final Category MOVEMENT = Category.MOVEMENT;
@@ -58,7 +54,7 @@ public abstract class Module {
     }
     
     public void setEnabled(boolean enabled) {
-        if (this.enabled == enabled) return; // Предотвращаем двойной вызов
+        if (this.enabled == enabled) return;
         
         this.enabled = enabled;
         
@@ -69,8 +65,7 @@ public abstract class Module {
         }
         
         EventSystemImpl.getInstance().fire(new ModuleToggleEvent(this, enabled));
-        
-        // Показываем нотификацию
+
         ru.ui.notify.Notify.Manager.getInstance().showNotification(
             name + (enabled ? " включен" : " выключен"),
             ru.ui.notify.Notify.NotificationType.MODULE

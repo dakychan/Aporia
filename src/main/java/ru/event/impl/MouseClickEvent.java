@@ -2,9 +2,6 @@ package ru.event.impl;
 
 import ru.event.api.Event;
 
-/**
- * Событие клика мыши
- */
 public class MouseClickEvent extends Event {
     public final double x;
     public final double y;

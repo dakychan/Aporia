@@ -8,10 +8,6 @@ import com.ferra13671.cometrenderer.glsl.uniform.UniformType;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 
-/**
- * Renderer for applying Gaussian blur effects using CometRenderer.
- * Supports black and white color tinting.
- */
 public class BlurRenderer {
     private static GlProgram BLUR_PROGRAM;
     private static boolean initialized = false;
@@ -66,46 +62,22 @@ public class BlurRenderer {
             e.printStackTrace();
         }
     }
-    
-    /**
-     * Toggles blur color between BLACK and WHITE.
-     */
+
     public void toggleColor() {
         currentColor = (currentColor == BlurColor.BLACK) ? BlurColor.WHITE : BlurColor.BLACK;
     }
-    
-    /**
-     * Sets the blur color.
-     */
     public void setBlurColor(BlurColor color) {
         this.currentColor = color;
     }
-    
-    /**
-     * Gets the current blur color.
-     */
     public BlurColor getCurrentColor() {
         return currentColor;
     }
-    
-    /**
-     * Sets the blur radius.
-     */
     public void setBlurRadius(float radius) {
         this.blurRadius = Math.max(0.0f, radius);
     }
-    
-    /**
-     * Gets the blur radius.
-     */
     public float getBlurRadius() {
         return blurRadius;
     }
-    
-    /**
-     * Applies blur effect to the current framebuffer.
-     * This should be called during rendering.
-     */
     public void applyBlur(int width, int height) {
         if (!initialized) {
             CometRenderer.getLogger().warn("BlurRenderer: Shader not initialized!");
@@ -114,19 +86,14 @@ public class BlurRenderer {
         
         GlProgram previousProgram = CometRenderer.getGlobalProgram();
         CometRenderer.setGlobalProgram(BLUR_PROGRAM);
-        
-        // Set uniforms
+
         BLUR_PROGRAM.getUniform("Radius", UniformType.FLOAT).set(blurRadius);
         BLUR_PROGRAM.getUniform("ColorTint", UniformType.VEC4)
                 .set(currentColor.toVector4f(0.3f));
-        
-        // Horizontal pass
+
         BLUR_PROGRAM.getUniform("BlurDir", UniformType.VEC2).set(new Vector2f(1.0f / width, 0.0f));
-        // Render full-screen quad here
-        
-        // Vertical pass
+
         BLUR_PROGRAM.getUniform("BlurDir", UniformType.VEC2).set(new Vector2f(0.0f, 1.0f / height));
-        // Render full-screen quad here
         
         CometRenderer.setGlobalProgram(previousProgram);
     }

@@ -9,30 +9,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Manages all modules in the client.
- */
 public class ModuleManager {
     private static ModuleManager instance;
     private final List<Module> modules;
     private final Map<Module.Category, List<Module>> modulesByCategory;
-    
+
     private ModuleManager() {
         modules = new ArrayList<>();
         modulesByCategory = new HashMap<>();
-        
-        // Initialize categories
+
         for (Module.Category category : Module.Category.values()) {
             modulesByCategory.put(category, new ArrayList<>());
         }
-        
-        // Register modules
+
         registerModules();
-        
-        // Register keybinds for all modules
         registerModuleKeybinds();
-        
-        // Load saved keybinds
         KeybindManager.getInstance().loadKeybinds();
     }
     

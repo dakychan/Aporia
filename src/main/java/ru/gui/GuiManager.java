@@ -1,8 +1,5 @@
 package ru.gui;
 
-/**
- * Менеджер GUI
- */
 public class GuiManager {
     private static GuiScreen currentScreen = null;
 

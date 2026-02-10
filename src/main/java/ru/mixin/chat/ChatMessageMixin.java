@@ -14,7 +14,6 @@ public class ChatMessageMixin {
     
     @Inject(method = "addMessage(Lnet/minecraft/text/Text;)V", at = @At("HEAD"))
     private void onChatMessage(Text message, CallbackInfo ci) {
-        // Передаем сообщение в AutoFlyMe модуль
         ModuleManager.getInstance().getModules().stream()
             .filter(module -> module instanceof AutoFlyMe && module.isEnabled())
             .forEach(module -> ((AutoFlyMe) module).onChatMessage(message));
