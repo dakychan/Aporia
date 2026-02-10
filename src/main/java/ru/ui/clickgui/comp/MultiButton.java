@@ -33,16 +33,14 @@ public class MultiButton {
         this.x = x;
         this.y = y;
         this.width = width;
-        
-        // Заголовок
+
         RenderColor headerColor = RenderColor.of(50, 50, 60, 200);
         RectRenderer.drawRoundedRect(x, y, width, 25, 5, headerColor);
         
         if (textRenderer != null) {
             textRenderer.drawText(x + 8, y + 8, 12, name, RenderColor.WHITE);
         }
-        
-        // Опции
+
         int optionY = y + 27;
         hoveredIndex = -1;
         
@@ -59,8 +57,7 @@ public class MultiButton {
             
             float hoverProgress = hovered ? hoverAnimation.get() : 0;
             boolean isSelected = selected.get(i);
-            
-            // Фон опции
+
             RenderColor optionColor = RenderColor.of(
                 (int) MathHelper.lerp(isSelected ? 60 : 40, isSelected ? 80 : 60, hoverProgress),
                 (int) MathHelper.lerp(isSelected ? 120 : 40, isSelected ? 140 : 60, hoverProgress),
@@ -68,14 +65,12 @@ public class MultiButton {
                 (int) MathHelper.lerp(isSelected ? 200 : 160, isSelected ? 230 : 180, hoverProgress)
             );
             RectRenderer.drawRoundedRect(x + 5, optionY, width - 10, 20, 4, optionColor);
-            
-            // Чекбокс
+
             RenderColor checkColor = isSelected 
                 ? RenderColor.of(80, 200, 120, 255) 
                 : RenderColor.of(100, 100, 110, 200);
             RectRenderer.drawRoundedRect(x + 10, optionY + 5, 10, 10, 2, checkColor);
-            
-            // Текст опции
+
             if (textRenderer != null) {
                 textRenderer.drawText(x + 25, optionY + 5, 11, options.get(i), RenderColor.WHITE);
             }

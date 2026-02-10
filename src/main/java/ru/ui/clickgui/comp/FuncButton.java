@@ -29,8 +29,7 @@ public class FuncButton {
         hoverAnimation.update();
         
         float hoverProgress = hoverAnimation.get();
-        
-        // Фон
+
         RenderColor bgColor = RenderColor.of(
             (int) MathHelper.lerp(50, 70, hoverProgress),
             (int) MathHelper.lerp(50, 70, hoverProgress),
@@ -38,8 +37,6 @@ public class FuncButton {
             (int) MathHelper.lerp(180, 220, hoverProgress)
         );
         RectRenderer.drawRoundedRect(x, y, width, height, 5, bgColor);
-        
-        // Текст по центру
         if (textRenderer != null) {
             float textWidth = textRenderer.measureWidth(name, 12);
             textRenderer.drawText(x + (width - textWidth) / 2, y + 8, 12, name, RenderColor.WHITE);

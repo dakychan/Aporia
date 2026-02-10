@@ -34,8 +34,7 @@ public class Slider {
         hoverAnimation.update();
         
         float hoverProgress = hoverAnimation.get();
-        
-        // Фон
+
         RenderColor bgColor = RenderColor.of(
             (int) MathHelper.lerp(40, 50, hoverProgress),
             (int) MathHelper.lerp(40, 50, hoverProgress),
@@ -43,8 +42,7 @@ public class Slider {
             180
         );
         RectRenderer.drawRoundedRect(x, y, width, height, 5, bgColor);
-        
-        // Прогресс бар
+
         float percentage = (value - min) / (max - min);
         float barWidth = (width - 10) * percentage;
         
@@ -52,13 +50,11 @@ public class Slider {
         if (barWidth > 0) {
             RectRenderer.drawRoundedRect(x + 5, y + height - 8, barWidth, 3, 1.5f, barColor);
         }
-        
-        // Текст названия
+
         if (textRenderer != null) {
             textRenderer.drawText(x + 8, y + 6, 12, name, RenderColor.WHITE);
         }
-        
-        // Значение справа
+
         if (textRenderer != null) {
             String valueText = String.format("%.1f", value);
             float textWidth = textRenderer.measureWidth(valueText, 12);

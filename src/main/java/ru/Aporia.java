@@ -21,15 +21,10 @@ public class Aporia implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         UnifiedInputHandler.init();
-        
         KeybindManager.getInstance().loadKeybinds();
-        
         KeybindListener.init();
-
         Notify.Manager.getInstance();
-        
         KeyBindings.register();
-        
         setupKeyBindings();
     }
 

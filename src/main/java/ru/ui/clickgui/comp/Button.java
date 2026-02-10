@@ -39,8 +39,7 @@ public class Button {
         
         float hoverProgress = hoverAnimation.get();
         float toggleProgress = toggleAnimation.get();
-        
-        // Фон
+
         RenderColor bgColor = RenderColor.of(
             (int) MathHelper.lerp(40, 60, toggleProgress),
             (int) MathHelper.lerp(40, 120, toggleProgress),
@@ -48,13 +47,11 @@ public class Button {
             (int) MathHelper.lerp(180, 230, hoverProgress)
         );
         RectRenderer.drawRoundedRect(x, y, width, height, 5, bgColor);
-        
-        // Текст названия
+
         if (textRenderer != null) {
             textRenderer.drawText(x + 8, y + 8, 12, name, RenderColor.WHITE);
         }
-        
-        // Статус справа
+
         if (textRenderer != null) {
             String status = enabled ? "Да" : "Нет";
             RenderColor statusColor = enabled 

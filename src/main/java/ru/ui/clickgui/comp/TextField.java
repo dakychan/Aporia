@@ -41,8 +41,7 @@ public class TextField {
         
         float hoverProgress = hoverAnimation.get();
         float focusProgress = focusAnimation.get();
-        
-        // Фон
+
         RenderColor bgColor = RenderColor.of(
             (int) MathHelper.lerp(40, 50, Math.max(hoverProgress, focusProgress)),
             (int) MathHelper.lerp(40, 50, Math.max(hoverProgress, focusProgress)),
@@ -50,47 +49,40 @@ public class TextField {
             180
         );
         RectRenderer.drawRoundedRect(x, y, width, height, 5, bgColor);
-        
-        // Название поля
+
         if (textRenderer != null) {
             textRenderer.drawText(x + 8, y + 6, 11, name, 
                 RenderColor.of(180, 180, 190, 255));
         }
-        
-        // Поле ввода
+
         int fieldY = y + 22;
         int fieldHeight = 18;
         
         RenderColor fieldColor = RenderColor.of(30, 30, 38, 200);
         RectRenderer.drawRoundedRect(x + 5, fieldY, width - 10, fieldHeight, 4, fieldColor);
-        
-        // Граница при фокусе
+
         if (focusProgress > 0.01f) {
             RenderColor borderColor = RenderColor.of(60, 120, 245, (int) (focusProgress * 200));
             RectRenderer.drawRoundedRect(x + 5, fieldY, width - 10, fieldHeight, 4, borderColor);
             RectRenderer.drawRoundedRect(x + 6, fieldY + 1, width - 12, fieldHeight - 2, 3, fieldColor);
         }
-        
-        // Текст или placeholder
+
         if (textRenderer != null) {
             String displayText = text.isEmpty() ? placeholder : text;
             RenderColor textColor = text.isEmpty() 
                 ? RenderColor.of(100, 100, 110, 200) 
                 : RenderColor.WHITE;
-            
-            // Обрезаем текст если не влезает
+
             float maxWidth = width - 20;
             float textWidth = textRenderer.measureWidth(displayText, 11);
             
             if (textWidth > maxWidth) {
-                // Показываем конец текста при вводе
                 int startIndex = Math.max(0, displayText.length() - 20);
                 displayText = displayText.substring(startIndex);
             }
             
             textRenderer.drawText(x + 10, fieldY + 4, 11, displayText, textColor);
-            
-            // Курсор
+
             if (focused && cursorVisible) {
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastBlinkTime > 500) {
@@ -115,7 +107,6 @@ public class TextField {
             focused = wasInside;
             
             if (focused) {
-                // Устанавливаем позицию курсора по клику
                 cursorPosition = text.length();
             }
             
@@ -164,8 +155,7 @@ public class TextField {
     
     public boolean charTyped(char chr, int modifiers) {
         if (!focused) return false;
-        
-        // Фильтруем недопустимые символы
+  
         if (chr >= 32 && chr != 127) {
             text = text.substring(0, cursorPosition) + chr + text.substring(cursorPosition);
             cursorPosition++;

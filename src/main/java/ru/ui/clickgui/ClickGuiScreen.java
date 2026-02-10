@@ -44,7 +44,7 @@ public class ClickGuiScreen extends Screen {
     private static final int MODULE_HEIGHT = 32;
     private static final int MODULE_SPACING = 8;
     private static final int HEADER_HEIGHT = 38;
-    private static final int SETTINGS_HEIGHT = 100; // Высота раскрытых настроек
+    private static final int SETTINGS_HEIGHT = 100;
     private static final float ANIMATION_SPEED = 0.15f;
 
     public ClickGuiScreen(int width, int height) {
@@ -73,8 +73,7 @@ public class ClickGuiScreen extends Screen {
     
     private void initializeCategoryPanels() {
         Module.Category[] categories = Module.Category.values();
-        
-        // Временные позиции, реальные вычислим в render()
+
         int startX = 100;
         int startY = 50;
         int categoryX = startX;
@@ -94,8 +93,7 @@ public class ClickGuiScreen extends Screen {
         Module.Category[] categories = Module.Category.values();
         int totalWidth = (CATEGORY_WIDTH * categories.length) + (CATEGORY_SPACING * (categories.length - 1));
         int panelHeight = 385;
-        
-        // Центрируем по X и Y в FRAMEBUFFER координатах
+
         int startX = (fbWidth - totalWidth) / 2;
         int startY = (fbHeight - panelHeight) / 2;
         int categoryX = startX;
@@ -114,29 +112,23 @@ public class ClickGuiScreen extends Screen {
     @Override
     public void render(net.minecraft.client.gui.DrawContext context, int mouseX, int mouseY, float delta) {
         if (!initialized) return;
-        
-        // Биндим framebuffer для рендеринга
+
         MinecraftPlugin plugin = MinecraftPlugin.getInstance();
         plugin.bindMainFramebuffer(true);
-        
-        // Работаем в FRAMEBUFFER координатах
+
         int fbWidth = plugin.getMainFramebufferWidth();
         int fbHeight = plugin.getMainFramebufferHeight();
-        
-        // Конвертируем мышь из GUI в framebuffer координаты
+
         double scale = (double) fbWidth / this.width;
         int fbMouseX = (int)(mouseX * scale);
         int fbMouseY = (int)(mouseY * scale);
-        
-        // Центрируем панели при первом рендере
+
         centerPanels(fbWidth, fbHeight);
         
         hoveredModule = null;
-        
-        // Обновляем анимации настроек
+
         updateSettingsAnimations();
-        
-        // Рендерим все панели с framebuffer координатами мыши
+
         for (CategoryPanel panel : categoryPanels.values()) {
             renderCategory(panel, fbMouseX, fbMouseY);
         }
@@ -147,20 +139,16 @@ public class ClickGuiScreen extends Screen {
         int y = panel.getY();
         int width = panel.getWidth();
         int height = panel.getHeight();
-        
-        // Рендерим фон панели
+
         renderRect(x, y, width, height, 8, RenderColor.of(20, 20, 25, 230));
-        
-        // Рендерим заголовок
+
         renderRect(x, y, width, HEADER_HEIGHT, 8, RenderColor.of(30, 30, 38, 255));
-        
-        // Рендерим текст заголовка
+
         if (textRenderer != null) {
             textRenderer.drawText(x + 10, y + 21, 16, 
                 panel.getCategory().getDisplayName(), RenderColor.WHITE);
         }
-        
-        // Рендерим модули
+
         List<Module> modules = ModuleManager.getInstance().getModulesByCategory(panel.getCategory());
         int moduleY = y + HEADER_HEIGHT + 5;
         
@@ -168,15 +156,13 @@ public class ClickGuiScreen extends Screen {
             if (moduleY + MODULE_HEIGHT > y + height - 5) {
                 break;
             }
-            
-            // Получаем прогресс анимации настроек
+
             float settingsProgress = settingsAnimations.getOrDefault(module, 0f);
             int settingsHeight = (int)(SETTINGS_HEIGHT * settingsProgress);
             
             renderModule(module, x + 5, moduleY, width - 10, 
                 MODULE_HEIGHT, mouseX, mouseY);
-            
-            // Рендерим настройки если они раскрыты
+
             if (settingsProgress > 0.01f) {
                 renderModuleSettings(module, x + 5, moduleY + MODULE_HEIGHT, 
                     width - 10, settingsHeight, settingsProgress);
@@ -205,17 +191,14 @@ public class ClickGuiScreen extends Screen {
             bgColor = isHovered ? RenderColor.of(50, 50, 60, 200) : RenderColor.of(40, 40, 50, 180);
             textColor = RenderColor.of(180, 180, 190, 255);
         }
-        
-        // Если настройки раскрыты, рисуем только верхнюю часть закругленной
+
         float radius = isExpanded && settingsAnimations.getOrDefault(module, 0f) > 0.01f ? 5 : 5;
         renderRect(x, y, width, height, radius, bgColor);
-        
-        // Рендерим текст модуля
+
         if (textRenderer != null) {
             textRenderer.drawText(x + 8, y + 20, 15, module.getName(), textColor);
         }
-        
-        // Рендерим индикатор раскрытия (стрелка)
+
         if (textRenderer != null && isExpanded) {
             String arrow = settingsAnimations.getOrDefault(module, 0f) > 0.5f ? "▼" : "▶";
             float arrowWidth = textRenderer.measureWidth(arrow, 12);
@@ -225,13 +208,11 @@ public class ClickGuiScreen extends Screen {
     
     private void renderModuleSettings(Module module, int x, int y, int width, int height, float alpha) {
         if (height <= 0) return;
-        
-        // Фон настроек с прозрачностью
+
         int alphaValue = (int)(200 * alpha);
         RenderColor bgColor = RenderColor.of(35, 35, 45, alphaValue);
         renderRect(x, y, width, height, 5, bgColor);
-        
-        // Текст настроек (пока заглушка)
+
         if (textRenderer != null && alpha > 0.3f) {
             textRenderer.drawText(x + 10, y + 15, 13, 
                 "Настройки модуля", RenderColor.of(150, 150, 160, (int)(255 * alpha)));
@@ -241,7 +222,6 @@ public class ClickGuiScreen extends Screen {
     }
     
     private void updateSettingsAnimations() {
-        // Обновляем анимации для всех модулей
         for (Module module : ModuleManager.getInstance().getModules()) {
             float current = settingsAnimations.getOrDefault(module, 0f);
             float target = (module == expandedModule) ? 1f : 0f;
@@ -261,7 +241,7 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyInput input) {
-        if (input.getKeycode() == 256) { // ESC key
+        if (input.getKeycode() == 256) {
             this.close();
             return true;
         }
@@ -270,7 +250,6 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
-        // Конвертируем мышь из GUI в framebuffer координаты
         MinecraftPlugin plugin = MinecraftPlugin.getInstance();
         double scale = (double) plugin.getMainFramebufferWidth() / this.width;
         
@@ -282,7 +261,6 @@ public class ClickGuiScreen extends Screen {
                                GLFW.glfwGetKey(this.client.getWindow().getHandle(), GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
         
         if (button == 0) {
-            // Проверяем клик по заголовку для драга
             for (CategoryPanel panel : categoryPanels.values()) {
                 if (panel.isHeaderHovered(mouseX, mouseY)) {
                     draggingPanel = panel;
@@ -292,8 +270,7 @@ public class ClickGuiScreen extends Screen {
                     return true;
                 }
             }
-            
-            // Проверяем клик по модулю
+
             for (CategoryPanel panel : categoryPanels.values()) {
                 Module module = panel.getHoveredModule(mouseX, mouseY);
                 if (module != null) {
@@ -308,7 +285,7 @@ public class ClickGuiScreen extends Screen {
                     return true;
                 }
             }
-        } else if (button == 1) { // ПКМ - открыть/закрыть настройки
+        } else if (button == 1) {
             for (CategoryPanel panel : categoryPanels.values()) {
                 Module module = panel.getHoveredModule(mouseX, mouseY);
                 if (module != null) {
@@ -339,7 +316,6 @@ public class ClickGuiScreen extends Screen {
     @Override
     public boolean mouseDragged(net.minecraft.client.gui.Click click, double offsetX, double offsetY) {
         if (draggingPanel != null && click.button() == 0) {
-            // Конвертируем мышь из GUI в framebuffer координаты
             MinecraftPlugin plugin = MinecraftPlugin.getInstance();
             double scale = (double) plugin.getMainFramebufferWidth() / this.width;
             
@@ -357,7 +333,6 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public void renderBackground(net.minecraft.client.gui.DrawContext context, int mouseX, int mouseY, float delta) {
-        // Override to prevent default background
     }
 
     @Override

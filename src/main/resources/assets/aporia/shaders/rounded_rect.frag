@@ -21,8 +21,7 @@ float roundedBoxSDF(vec2 centerPosition, vec2 size, float radius) {
 void main() {
     vec2 _position = vec2(rectPosition.x, height - rectPosition.y);
     float distance = roundedBoxSDF(gl_FragCoord.xy - _position, halfSize, radius);
-    
-    // Основной цвет с мягкими краями
+
     float alpha = 1.0 - smoothstep(0.0, edgeSoftness, distance);
     
     vec4 finalColor = vertexColor * shaderColor;

@@ -19,8 +19,7 @@ public class MultiListButton {
     private Animation expandAnimation = new Animation();
     private Animation hoverAnimation = new Animation();
     private int hoveredIndex = -1;
-    
-    // Unicode для стрелки вниз из icons.json (код 86 = V)
+
     private static final String ARROW_DOWN = "V";
     
     public MultiListButton(String name, String... options) {
@@ -43,8 +42,7 @@ public class MultiListButton {
         expandAnimation.update();
         
         float expandProgress = expandAnimation.get();
-        
-        // Заголовок
+
         boolean headerHovered = mouseX >= x && mouseX <= x + width && 
                                mouseY >= y && mouseY <= y + 25;
         
@@ -60,19 +58,16 @@ public class MultiListButton {
             200
         );
         RectRenderer.drawRoundedRect(x, y, width, 25, 5, headerColor);
-        
-        // Текст заголовка
+
         if (textRenderer != null) {
             String headerText = expanded ? name : "Нажми, чтобы открыть";
             textRenderer.drawText(x + 8, y + 8, 12, headerText, RenderColor.WHITE);
-            
-            // Иконка стрелки
+
             float arrowRotation = expandProgress * 180; // Поворот на 180 градусов
             textRenderer.drawText(x + width - 20, y + 8, 12, ARROW_DOWN, 
                 RenderColor.of(180, 180, 190, 255));
         }
-        
-        // Список опций
+
         if (expandProgress > 0.01f) {
             int listHeight = (int) (options.size() * 22 * expandProgress);
             int optionY = y + 27;
@@ -90,8 +85,7 @@ public class MultiListButton {
                 }
                 
                 boolean isSelected = selected.get(i);
-                
-                // Фон опции
+
                 RenderColor optionColor = RenderColor.of(
                     isSelected ? 60 : (hovered ? 50 : 40),
                     isSelected ? 120 : (hovered ? 50 : 40),
@@ -99,14 +93,12 @@ public class MultiListButton {
                     (int) (itemAlpha * (isSelected ? 200 : 160))
                 );
                 RectRenderer.drawRoundedRect(x + 5, optionY, width - 10, 20, 4, optionColor);
-                
-                // Чекбокс
+
                 RenderColor checkColor = isSelected 
                     ? RenderColor.of(80, 200, 120, (int) (itemAlpha * 255)) 
                     : RenderColor.of(100, 100, 110, (int) (itemAlpha * 200));
                 RectRenderer.drawRoundedRect(x + 10, optionY + 5, 10, 10, 2, checkColor);
-                
-                // Текст опции
+
                 if (textRenderer != null) {
                     RenderColor textColor = RenderColor.of(255, 255, 255, (int) (itemAlpha * 255));
                     textRenderer.drawText(x + 25, optionY + 5, 11, options.get(i), textColor);
@@ -123,14 +115,12 @@ public class MultiListButton {
     
     public boolean mouseClicked(int mouseX, int mouseY, int button) {
         if (button != 0) return false;
-        
-        // Клик по заголовку
+
         if (mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + 25) {
             expanded = !expanded;
             return true;
         }
-        
-        // Клик по опции
+
         if (expanded && hoveredIndex >= 0) {
             selected.set(hoveredIndex, !selected.get(hoveredIndex));
             return true;

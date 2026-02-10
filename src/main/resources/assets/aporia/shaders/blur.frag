@@ -11,8 +11,7 @@ out vec4 fragColor;
 void main() {
     vec4 blurred = vec4(0.0);
     float totalWeight = 0.0;
-    
-    // Gaussian blur with configurable radius
+
     int samples = int(Radius);
     for (int i = -samples; i <= samples; i++) {
         float weight = exp(-float(i * i) / (2.0 * Radius * Radius));
@@ -22,7 +21,6 @@ void main() {
     }
     
     blurred /= totalWeight;
-    
-    // Apply color tint
+
     fragColor = mix(blurred, vec4(ColorTint.rgb, 1.0), ColorTint.a * 0.3);
 }
