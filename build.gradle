@@ -2,6 +2,7 @@ plugins {
     id 'fabric-loom' version '1.15-SNAPSHOT'
     id 'maven-publish'
     id "com.github.johnrengelman.shadow" version "8.1.1"
+    id 'org.jetbrains.kotlin.jvm' version '2.3.10'
 }
 
 version = project.mod_version
@@ -36,14 +37,16 @@ dependencies {
     implementation "com.ferra13671:comet-renderer-better-exceptions:2.5-HOTFIX-1"
     implementation "com.ferra13671:comet-renderer-post-effects:2.5-HOTFIX-1"
     implementation 'ai.catboost:catboost-prediction:1.2.8'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.1.10"
 
-    include(implementation("com.ferra13671:comet-renderer:2.5-HOTFIX-1"))
+    include "com.ferra13671:comet-renderer:2.5-HOTFIX-1"
     include "com.ferra13671:gl-texture-utils:1.7.4-HOTFIX-1"
     include "com.ferra13671:comet-renderer-minecraft:26.1-snapshot-1-fabric-2.5-HOTFIX-1"
     include "com.ferra13671:comet-renderer-better-compiler:2.5-HOTFIX-1"
     include "com.ferra13671:comet-renderer-better-exceptions:2.5-HOTFIX-1"
     include "com.ferra13671:comet-renderer-post-effects:2.5-HOTFIX-1"
     include 'ai.catboost:catboost-prediction:1.2.8'
+    include "org.jetbrains.kotlin:kotlin-stdlib:2.1.10"
 
     compileOnly("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")
@@ -71,7 +74,7 @@ processResources {
     }
 }
 
-def targetJavaVersion = 21
+def targetJavaVersion = 25
 tasks.withType(JavaCompile).configureEach {
     it.options.encoding = "UTF-8"
     if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
@@ -93,7 +96,6 @@ jar {
     }
 }
 
-// Простая сборка мода без shadowJar
 task buildMod {
     dependsOn build
     group = 'build'
