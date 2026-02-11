@@ -1,7 +1,6 @@
 package ru;
 
 import aporia.cc.user.UserData;
-import aporia.cc.user.UserGenerator;
 import com.ferra13671.cometrenderer.CometRenderer;
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import net.fabricmc.api.ClientModInitializer;

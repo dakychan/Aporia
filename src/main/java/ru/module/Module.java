@@ -172,28 +172,6 @@ public abstract class Module {
             name + (enabled ? " включен" : " выключен"),
             ru.ui.notify.Notify.NotificationType.MODULE
         );
-        
-        saveConfig();
-    }
-    
-    private void saveConfig() {
-        try {
-            ru.Aporia.getFilesManager().saveConfig(collectModuleConfigs());
-        } catch (Exception e) {
-            System.err.println("Failed to auto-save config: " + e.getMessage());
-        }
-    }
-    
-    private java.util.Map<String, ru.files.ModuleConfig> collectModuleConfigs() {
-        java.util.Map<String, ru.files.ModuleConfig> configs = new java.util.HashMap<>();
-        for (Module module : ModuleManager.getInstance().getModules()) {
-            java.util.Map<String, String> settingsMap = new java.util.HashMap<>();
-            for (Setting<?> setting : module.getSettings()) {
-                settingsMap.put(setting.getName(), setting.getValue().toString());
-            }
-            configs.put(module.getName(), new ru.files.ModuleConfig(module.isEnabled(), settingsMap));
-        }
-        return configs;
     }
     
     public abstract void onEnable();

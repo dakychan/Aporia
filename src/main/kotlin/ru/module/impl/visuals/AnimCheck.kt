@@ -6,36 +6,42 @@ import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor
 import com.ferra13671.cometrenderer.plugins.minecraft.drawer.impl.RoundedRectDrawer
 import ru.module.Module
 import ru.render.AnimationSystem
+import ru.render.MsdfTextRenderer
 
 class AnimCheck : Module("AnimCheck", "Тестовый модуль анимаций", C.VISUALS) {
     
     private val loadingAnimation = LoopingAnimation(2000L)
     private val borderAnimation = LoopingAnimation(3000L)
+    private val textAnimation = LoopingAnimation(2500L)
+    
+    private var textRenderer: MsdfTextRenderer? = null
     
     init {
         AnimationSystem.getInstance().ensureRegistered(loadingAnimation)
         AnimationSystem.getInstance().ensureRegistered(borderAnimation)
+        AnimationSystem.getInstance().ensureRegistered(textAnimation)
+        
+        try {
+            val font = ru.render.MsdfFont(
+                "assets/aporia/fonts/Inter_Medium.json",
+                "assets/aporia/fonts/Inter_Medium.png"
+            )
+            textRenderer = MsdfTextRenderer(font)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
     
     override fun onEnable() {
         loadingAnimation.reset()
         borderAnimation.reset()
+        textAnimation.reset()
     }
     
     override fun onDisable() {
     }
     
     override fun onTick() {
-        if (!isEnabled) return
-        
-        val plugin = MinecraftPlugin.getInstance()
-        plugin.bindMainFramebuffer(true)
-        
-        val x = 100f
-        val y = 100f
-        
-        renderLoadingRect(x, y, 200f, 50f)
-        renderBorderAnimRect(x, y + 70f, 200f, 50f)
     }
     
     private fun renderLoadingRect(x: Float, y: Float, width: Float, height: Float) {
@@ -105,6 +111,62 @@ class AnimCheck : Module("AnimCheck", "Тестовый модуль анима�
                 .build()
                 .tryDraw()
                 .close()
+        }
+    }
+    
+    private fun renderTextAnimRect(x: Float, y: Float, width: Float, height: Float) {
+        val progress = textAnimation.getValue()
+        val radius = 10f
+        
+        RoundedRectDrawer()
+            .rectSized(x, y, width, height, radius, RectColors.oneColor(RenderColor.of(40, 40, 50, 200)))
+            .build()
+            .tryDraw()
+            .close()
+        
+        val text = "APORIA"
+        val fontSize = 24f
+        
+        if (textRenderer != null) {
+            val textWidth = textRenderer!!.measureWidth(text, fontSize)
+            val textHeight = textRenderer!!.measureHeight(text, fontSize)
+            
+            val textX = x + (width - textWidth) / 2
+            val textY = y + (height + textHeight) / 2 - 5
+            
+            val fillWidth = textWidth * progress
+            
+            val plugin = MinecraftPlugin.getInstance()
+            
+            org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST)
+            
+            val fbHeight = plugin.mainFramebufferHeight
+            val scissorX = textX.toInt()
+            val scissorY = (fbHeight - textY - textHeight).toInt()
+            val scissorWidth = fillWidth.toInt()
+            val scissorHeight = (textHeight + 10).toInt()
+            
+            org.lwjgl.opengl.GL11.glScissor(scissorX, scissorY, scissorWidth, scissorHeight)
+            
+            textRenderer!!.drawText(
+                textX, textY, fontSize, text,
+                RenderColor.of(100, 200, 255, 255)
+            )
+            
+            org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST)
+            
+            if (fillWidth < textWidth) {
+                val remainingText = text.substring(
+                    ((text.length * progress).toInt().coerceAtMost(text.length))
+                )
+                if (remainingText.isNotEmpty()) {
+                    textRenderer!!.drawText(
+                        textX + fillWidth, textY, fontSize, 
+                        remainingText,
+                        RenderColor.of(150, 150, 160, 100)
+                    )
+                }
+            }
         }
     }
     

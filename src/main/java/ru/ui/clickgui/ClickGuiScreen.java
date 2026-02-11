@@ -398,6 +398,12 @@ public class ClickGuiScreen extends Screen {
                                 Module.ModeSetting modeSetting = (Module.ModeSetting) setting;
                                 modeSetting.cycle();
                                 return true;
+                            } else if (setting instanceof Module.NumberSetting) {
+                                Module.NumberSetting numSetting = (Module.NumberSetting) setting;
+                                double current = numSetting.getValue();
+                                double step = numSetting.getStep();
+                                numSetting.setValue(current + step);
+                                return true;
                             }
                         }
                         
@@ -502,10 +508,10 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent mouseButtonEvent, double dragX, double dragY) {
+        MinecraftPlugin plugin = MinecraftPlugin.getInstance();
+        double scale = (double) plugin.getMainFramebufferWidth() / this.width;
+        
         if (draggingPanel != null && mouseButtonEvent.button() == 0) {
-            MinecraftPlugin plugin = MinecraftPlugin.getInstance();
-            double scale = (double) plugin.getMainFramebufferWidth() / this.width;
-
             int scaledMouseX = (int)(mouseButtonEvent.x() * scale);
             int scaledMouseY = (int)(mouseButtonEvent.y() * scale);
 
