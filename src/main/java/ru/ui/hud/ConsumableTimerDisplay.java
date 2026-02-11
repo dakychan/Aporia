@@ -3,9 +3,9 @@ package ru.ui.hud;
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor;
 import com.ferra13671.cometrenderer.plugins.minecraft.drawer.impl.RoundedRectDrawer;
 import com.ferra13671.cometrenderer.plugins.minecraft.RectColors;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.ItemStack;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.ItemStack;
 import ru.render.MsdfTextRenderer;
 import ru.util.MathUtils;
 
@@ -35,7 +35,7 @@ public class ConsumableTimerDisplay {
      * @param player The client player
      * @param textRenderer Text renderer for drawing text
      */
-    public void render(DrawContext context, ClientPlayerEntity player, MsdfTextRenderer textRenderer) {
+    public void render(GuiGraphics context, LocalPlayer player, MsdfTextRenderer textRenderer) {
         if (player == null || textRenderer == null) {
             return;
         }
@@ -58,7 +58,7 @@ public class ConsumableTimerDisplay {
         float progress = MathUtils.getConsumptionProgress(player);
         
         // Get item name
-        String itemName = activeItem.getName().getString();
+        String itemName = activeItem.getItemName().getString();
         if (itemName.length() > 15) {
             itemName = itemName.substring(0, 15) + "...";
         }
@@ -90,7 +90,7 @@ public class ConsumableTimerDisplay {
      * @param context Draw context
      * @param progress Progress from 0.0 to 1.0
      */
-    public void renderProgressBar(DrawContext context, float progress) {
+    public void renderProgressBar(GuiGraphics context, float progress) {
         if (progress < 0) progress = 0;
         if (progress > 1) progress = 1;
         

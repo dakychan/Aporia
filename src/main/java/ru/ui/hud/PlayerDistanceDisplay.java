@@ -3,9 +3,9 @@ package ru.ui.hud;
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor;
 import com.ferra13671.cometrenderer.plugins.minecraft.drawer.impl.RoundedRectDrawer;
 import com.ferra13671.cometrenderer.plugins.minecraft.RectColors;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
 import ru.render.MsdfTextRenderer;
 import ru.util.MathUtils;
 
@@ -39,7 +39,7 @@ public class PlayerDistanceDisplay {
      * @param player The local client player
      * @param textRenderer Text renderer for drawing text
      */
-    public void render(DrawContext context, ClientPlayerEntity player, MsdfTextRenderer textRenderer) {
+    public void render(GuiGraphics context, LocalPlayer player, MsdfTextRenderer textRenderer) {
         if (player == null || textRenderer == null) {
             return;
         }
@@ -51,7 +51,7 @@ public class PlayerDistanceDisplay {
         textRenderer.drawText(x + 10, y + 10, 14, "Player Distances", RenderColor.WHITE);
         
         // Calculate distances to all players
-        Map<AbstractClientPlayerEntity, Double> distances = MathUtils.calculateDistancesToPlayers(player);
+        Map<AbstractClientPlayer, Double> distances = MathUtils.calculateDistancesToPlayers(player);
         
         if (distances.isEmpty()) {
             textRenderer.drawText(x + 10, y + 35, 12, "No players nearby", RenderColor.of(150, 150, 150, 200));
@@ -59,7 +59,7 @@ public class PlayerDistanceDisplay {
         }
         
         // Sort players by distance (closest first)
-        List<Map.Entry<AbstractClientPlayerEntity, Double>> sortedDistances = new ArrayList<>(distances.entrySet());
+        List<Map.Entry<AbstractClientPlayer, Double>> sortedDistances = new ArrayList<>(distances.entrySet());
         sortedDistances.sort(Map.Entry.comparingByValue());
         
         // Display up to 5 closest players
@@ -67,8 +67,8 @@ public class PlayerDistanceDisplay {
         int maxPlayers = Math.min(5, sortedDistances.size());
         
         for (int i = 0; i < maxPlayers; i++) {
-            Map.Entry<AbstractClientPlayerEntity, Double> entry = sortedDistances.get(i);
-            AbstractClientPlayerEntity otherPlayer = entry.getKey();
+            Map.Entry<AbstractClientPlayer, Double> entry = sortedDistances.get(i);
+            AbstractClientPlayer otherPlayer = entry.getKey();
             double distance = entry.getValue();
             
             // Get player name

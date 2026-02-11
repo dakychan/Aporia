@@ -1,7 +1,7 @@
 package ru.module.impl.misc;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import ru.module.Module;
 
 public class AutoFlyMe extends Module {
@@ -32,7 +32,7 @@ public class AutoFlyMe extends Module {
         wasFalling = false;
         receivedCantFlyMessage = false;
         
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             lastY = mc.player.getY();
         }
@@ -50,12 +50,12 @@ public class AutoFlyMe extends Module {
     public void onTick() {
         if (!isEnabled()) return;
         
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null || mc.world == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
 
         checkFalling(mc);
 
-        if (mc.options.jumpKey.isPressed() && !isExecuting) {
+        if (mc.options.keyJump.isDefault() && !isExecuting) {
             isExecuting = true;
             lastSpacePress = System.currentTimeMillis();
             currentRepeat = 0;
@@ -84,7 +84,7 @@ public class AutoFlyMe extends Module {
         }
     }
     
-    private void checkFalling(MinecraftClient mc) {
+    private void checkFalling(Minecraft mc) {
         boolean isFalling = isFalling(mc);
         if (isFalling && !wasFalling) {
             long currentTime = System.currentTimeMillis();
@@ -97,24 +97,22 @@ public class AutoFlyMe extends Module {
         lastY = mc.player.getY();
     }
     
-    private boolean isFalling(MinecraftClient mc) {
+    private boolean isFalling(Minecraft mc) {
         if (mc.player == null) return false;
-        boolean isMovingDown = mc.player.getVelocity().y < -0.1;
-        boolean notOnGround = !mc.player.isOnGround();
-        boolean notInWater = !mc.player.isTouchingWater();
-        boolean notFlying = !mc.player.getAbilities().flying;
-        return isMovingDown && notOnGround && notInWater && notFlying;
+        return mc.player.getDeltaMovement().y < -0.1
+                && !mc.player.onGround()
+                && !mc.player.getAbilities().flying;
     }
-    
+
     private void executeCommand() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             String command = useFlyme ? "flyme" : "fly";
-            mc.player.networkHandler.sendChatCommand(command);
+            mc.player.connection.sendCommand(command);
         }
     }
 
-    public void onChatMessage(Text message) {
+    public void onChatMessage(Component message) {
         String text = message.getString().toLowerCase();
 
         if (text.contains("вы не можете летать") ||

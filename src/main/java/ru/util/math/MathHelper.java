@@ -2,11 +2,11 @@ package ru.util.math;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.util.Window;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.platform.Window;
 
 public class MathHelper {
-    public static MinecraftClient mc = MinecraftClient.getInstance();
+    public static Minecraft mc = Minecraft.getInstance();
 
     public static double interpolate(double current, double old, double scale) {
         return old + (current - old) * scale;
@@ -130,13 +130,13 @@ public class MathHelper {
     }
 
     public static int calc(int value) {
-        Window mainWindow = MinecraftClient.getInstance().getWindow();
-        return (int) ((double) value * mainWindow.getScaleFactor() / 2);
+        Window mainWindow = Minecraft.getInstance().getWindow();
+        return (int) ((double) value * mainWindow.getGuiScale() / 2);
     }
 
     public static double deltaTime() {
-        return MinecraftClient.getInstance().getCurrentFps() > 0 
-            ? 1.0 / MinecraftClient.getInstance().getCurrentFps() 
+        return Minecraft.getInstance().getFps() > 0
+            ? 1.0 / Minecraft.getInstance().getFps()
             : 1.0;
     }
 

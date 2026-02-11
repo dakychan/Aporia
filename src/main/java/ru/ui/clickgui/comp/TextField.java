@@ -2,7 +2,7 @@ package ru.ui.clickgui.comp;
 
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 import ru.render.MsdfTextRenderer;
 import ru.render.RectRenderer;

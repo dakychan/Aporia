@@ -1,7 +1,7 @@
 package ru.input.impl;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 import ru.event.impl.EventSystemImpl;
 import ru.event.impl.KeyPressEvent;
@@ -26,12 +26,12 @@ public class UnifiedInputHandler {
     }
 
     private static void pollKeyboard() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client == null || client.getWindow() == null) {
             return;
         }
         
-        long window = client.getWindow().getHandle();
+        long window = client.getWindow().handle();
         
         for (KeyboardKeys key : KeyboardKeys.values()) {
             if (key == KeyboardKeys.KEY_NONE || key.getKeyCode() < 0) {
@@ -71,12 +71,12 @@ public class UnifiedInputHandler {
     }
 
     private static void pollMouse() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client == null || client.getWindow() == null) {
             return;
         }
         
-        long window = client.getWindow().getHandle();
+        long window = client.getWindow().handle();
         
         double[] mouseX = new double[1];
         double[] mouseY = new double[1];

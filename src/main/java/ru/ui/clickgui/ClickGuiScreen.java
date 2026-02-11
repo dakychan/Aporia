@@ -6,6 +6,10 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 import ru.input.impl.bind.KeybindManager;
 import ru.module.Module;
@@ -47,7 +51,7 @@ public class ClickGuiScreen extends Screen {
     private static final float ANIMATION_SPEED = 0.15f;
 
     public ClickGuiScreen(int width, int height) {
-        super(Text.literal("Click GUI"));
+        super(Component.literal("Click GUI"));
         initFont();
         Lang.load(); // Загружаем переводы
         if (blurRenderer == null) {
@@ -110,7 +114,7 @@ public class ClickGuiScreen extends Screen {
     }
 
     @Override
-    public void render(net.minecraft.client.gui.DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(net.minecraft.client.gui.GuiGraphics context, int mouseX, int mouseY, float delta) {
         if (!initialized) return;
 
         MinecraftPlugin plugin = MinecraftPlugin.getInstance();
@@ -282,26 +286,26 @@ public class ClickGuiScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(net.minecraft.client.input.KeyInput input) {
-        if (input.getKeycode() == 256) {
-            this.close();
+    public boolean keyPressed(KeyEvent input) {
+        if (input.key() == 256) {
+            this.onClose();
             return true;
         }
         return false;
     }
 
     @Override
-    public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean bl) {
         MinecraftPlugin plugin = MinecraftPlugin.getInstance();
         double scale = (double) plugin.getMainFramebufferWidth() / this.width;
-        
+
         int mouseX = (int)(click.x() * scale);
         int mouseY = (int)(click.y() * scale);
         int button = click.button();
-        
-        boolean shiftPressed = GLFW.glfwGetKey(this.client.getWindow().getHandle(), GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS ||
-                               GLFW.glfwGetKey(this.client.getWindow().getHandle(), GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
-        
+
+        boolean shiftPressed = GLFW.glfwGetKey(this.minecraft.getWindow().handle(), GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS ||
+                GLFW.glfwGetKey(this.minecraft.getWindow().handle(), GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
+
         if (button == 0) {
             for (CategoryPanel panel : categoryPanels.values()) {
                 if (panel.isHeaderHovered(mouseX, mouseY)) {
@@ -340,46 +344,46 @@ public class ClickGuiScreen extends Screen {
                 }
             }
         }
-        
-        return false;
+
+        return super.mouseClicked(click, bl);
     }
 
     @Override
-    public boolean mouseReleased(net.minecraft.client.gui.Click click) {
-        if (click.button() == 0 && draggingPanel != null) {
+    public boolean mouseReleased(MouseButtonEvent mouseButtonEvent) {
+        if (mouseButtonEvent.button() == 0 && draggingPanel != null) {
             draggingPanel.setDragging(false);
             draggingPanel = null;
             savePanelPositions();
             return true;
         }
-        return false;
+        return super.mouseReleased(mouseButtonEvent);
     }
 
     @Override
-    public boolean mouseDragged(net.minecraft.client.gui.Click click, double offsetX, double offsetY) {
-        if (draggingPanel != null && click.button() == 0) {
+    public boolean mouseDragged(MouseButtonEvent mouseButtonEvent, double dragX, double dragY) {
+        if (draggingPanel != null && mouseButtonEvent.button() == 0) {
             MinecraftPlugin plugin = MinecraftPlugin.getInstance();
             double scale = (double) plugin.getMainFramebufferWidth() / this.width;
-            
-            int mouseX = (int)(click.x() * scale);
-            int mouseY = (int)(click.y() * scale);
-            
+
+            int scaledMouseX = (int)(mouseButtonEvent.x() * scale);
+            int scaledMouseY = (int)(mouseButtonEvent.y() * scale);
+
             draggingPanel.setPosition(
-                mouseX - dragOffsetX,
-                mouseY - dragOffsetY
+                    scaledMouseX - dragOffsetX,
+                    scaledMouseY - dragOffsetY
             );
             return true;
         }
-        return false;
+        return super.mouseDragged(mouseButtonEvent, dragX, dragY);
     }
 
     @Override
-    public void renderBackground(net.minecraft.client.gui.DrawContext context, int mouseX, int mouseY, float delta) {
+    public void renderBackground(net.minecraft.client.gui.GuiGraphics context, int mouseX, int mouseY, float delta) {
     } 
 
     @Override
-    public void close() {
-        super.close();
+    public void onClose() {
+        super.onClose();
     }
 
     public boolean shouldCloseOnEsc() {

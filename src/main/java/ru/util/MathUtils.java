@@ -1,11 +1,11 @@
 package ru.util;
 
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,25 +44,25 @@ public class MathUtils {
         }
     }
 
-    public static List<Vec3d> calculateElytraTrajectory(Vec3d position, Vec3d velocity, float pitch, float yaw) {
+    public static List<Vec3> calculateElytraTrajectory(Vec3 position, Vec3 velocity, float pitch, float yaw) {
         if (position == null || velocity == null) {
             return new ArrayList<>();
         }
         
-        List<Vec3d> trajectory = new ArrayList<>();
-        Vec3d currentPos = position;
-        Vec3d currentVel = velocity;
+        List<Vec3> trajectory = new ArrayList<>();
+        Vec3 currentPos = position;
+        Vec3 currentVel = velocity;
 
         for (int tick = 0; tick < 200; tick++) {
             trajectory.add(currentPos);
 
-            currentVel = currentVel.multiply(DRAG);
+            currentVel = currentVel.scale(DRAG);
 
             currentVel = currentVel.subtract(0, GRAVITY, 0);
 
             currentPos = currentPos.add(currentVel);
 
-            if (currentVel.lengthSquared() < 0.001) {
+            if (currentVel.lengthSqr() < 0.001) {
                 break;
             }
         }
@@ -70,34 +70,34 @@ public class MathUtils {
         return trajectory;
     }
 
-    public static double calculateElytraMaxDistance(Vec3d position, Vec3d velocity) {
+    public static double calculateElytraMaxDistance(Vec3 position, Vec3 velocity) {
         if (position == null || velocity == null) {
             return 0.0;
         }
         
-        List<Vec3d> trajectory = calculateElytraTrajectory(position, velocity, 0, 0);
+        List<Vec3> trajectory = calculateElytraTrajectory(position, velocity, 0, 0);
         
         if (trajectory.isEmpty()) {
             return 0.0;
         }
         
-        Vec3d start = trajectory.get(0);
-        Vec3d end = trajectory.get(trajectory.size() - 1);
+        Vec3 start = trajectory.get(0);
+        Vec3 end = trajectory.get(trajectory.size() - 1);
         double dx = end.x - start.x;
         double dz = end.z - start.z;
         return Math.sqrt(dx * dx + dz * dz);
     }
 
-    public static Vec3d predictElytraPosition(Vec3d position, Vec3d velocity, int ticks) {
+    public static Vec3 predictElytraPosition(Vec3 position, Vec3 velocity, int ticks) {
         if (position == null || velocity == null || ticks < 0) {
-            return position != null ? position : new Vec3d(0, 0, 0);
+            return position != null ? position : new Vec3(0, 0, 0);
         }
         
-        Vec3d currentPos = position;
-        Vec3d currentVel = velocity;
+        Vec3 currentPos = position;
+        Vec3 currentVel = velocity;
         
         for (int tick = 0; tick < ticks; tick++) {
-            currentVel = currentVel.multiply(DRAG);
+            currentVel = currentVel.scale(DRAG);
 
             currentVel = currentVel.subtract(0, GRAVITY, 0);
 
@@ -107,7 +107,7 @@ public class MathUtils {
         return currentPos;
     }
 
-    public static double calculateDistance(Vec3d pos1, Vec3d pos2) {
+    public static double calculateDistance(Vec3 pos1, Vec3 pos2) {
         if (pos1 == null || pos2 == null) {
             return 0.0;
         }
@@ -119,22 +119,22 @@ public class MathUtils {
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
-    public static Map<AbstractClientPlayerEntity, Double> calculateDistancesToPlayers(ClientPlayerEntity localPlayer) {
-        Map<AbstractClientPlayerEntity, Double> distances = new HashMap<>();
+    public static Map<AbstractClientPlayer, Double> calculateDistancesToPlayers(LocalPlayer localPlayer) {
+        Map<AbstractClientPlayer, Double> distances = new HashMap<>();
         
-        if (localPlayer == null || localPlayer.getEntityWorld() == null) {
+        if (localPlayer == null || localPlayer.level() == null) {
             return distances;
         }
         
-        Vec3d localPos = localPlayer.getEntityPos();
+        Vec3 localPos = localPlayer.position();
 
-        for (Object playerObj : localPlayer.getEntityWorld().getPlayers()) {
-            if (playerObj instanceof AbstractClientPlayerEntity) {
-                AbstractClientPlayerEntity player = (AbstractClientPlayerEntity) playerObj;
+        for (Object playerObj : localPlayer.level().players()) {
+            if (playerObj instanceof AbstractClientPlayer) {
+                AbstractClientPlayer player = (AbstractClientPlayer) playerObj;
                 if (player.equals(localPlayer)) {
                     continue;
                 }
-                Vec3d playerPos = player.getEntityPos();
+                Vec3 playerPos = player.position();
                 double distance = calculateDistance(localPos, playerPos);
                 distances.put(player, distance);
             }
@@ -143,21 +143,21 @@ public class MathUtils {
         return distances;
     }
 
-    public static AbstractClientPlayerEntity findNearestPlayer(ClientPlayerEntity localPlayer) {
-        if (localPlayer == null || localPlayer.getEntityWorld() == null) {
+    public static AbstractClientPlayer findNearestPlayer(LocalPlayer localPlayer) {
+        if (localPlayer == null || localPlayer.level() == null) {
             return null;
         }
         
-        Map<AbstractClientPlayerEntity, Double> distances = calculateDistancesToPlayers(localPlayer);
+        Map<AbstractClientPlayer, Double> distances = calculateDistancesToPlayers(localPlayer);
         
         if (distances.isEmpty()) {
             return null;
         }
         
-        AbstractClientPlayerEntity nearestPlayer = null;
+        AbstractClientPlayer nearestPlayer = null;
         double minDistance = Double.MAX_VALUE;
         
-        for (Map.Entry<AbstractClientPlayerEntity, Double> entry : distances.entrySet()) {
+        for (Map.Entry<AbstractClientPlayer, Double> entry : distances.entrySet()) {
             if (entry.getValue() < minDistance) {
                 minDistance = entry.getValue();
                 nearestPlayer = entry.getKey();
@@ -178,22 +178,22 @@ public class MathUtils {
         return consumptionTimes.getOrDefault(itemType, 32);
     }
 
-    public static int getRemainingTime(ClientPlayerEntity player) {
+    public static int getRemainingTime(LocalPlayer player) {
         if (player == null || !player.isUsingItem()) {
             return 0;
         }
         
-        return player.getItemUseTimeLeft();
+        return player.getTicksUsingItem();
     }
 
-    public static float getConsumptionProgress(ClientPlayerEntity player) {
+    public static float getConsumptionProgress(LocalPlayer player) {
         if (player == null || !player.isUsingItem()) {
             return 0.0f;
         }
         
         ItemStack activeItem = player.getActiveItem();
-        int maxUseTime = activeItem.getMaxUseTime(player);
-        int timeLeft = player.getItemUseTimeLeft();
+        int maxUseTime = activeItem.getUseDuration(player);
+        int timeLeft = player.getTicksUsingItem();
         
         if (maxUseTime <= 0) {
             return 0.0f;

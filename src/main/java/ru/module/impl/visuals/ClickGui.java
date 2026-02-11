@@ -1,6 +1,6 @@
 package ru.module.impl.visuals;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import ru.module.Module;
 import ru.ui.clickgui.ClickGuiScreen;
 
@@ -12,7 +12,7 @@ public class ClickGui extends Module {
     
     @Override
     public void onEnable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         mc.setScreen(new ClickGuiScreen(mc.getWindow().getWidth(), mc.getWindow().getHeight()));
         setEnabled(false);
     }

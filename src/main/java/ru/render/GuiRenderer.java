@@ -1,6 +1,7 @@
 package ru.render;
 
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
+import net.minecraft.client.gui.GuiGraphics;
 
 public class GuiRenderer {
     private final BlurRenderer blurRenderer;
@@ -16,7 +17,7 @@ public class GuiRenderer {
         }
         initialized = true;
     }
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         if (!initialized) {
             initialize();
         }
@@ -24,8 +25,8 @@ public class GuiRenderer {
         animationSystem.tick();
 
         if (BlurRenderer.isInitialized()) {
-            int width = context.getScaledWindowWidth();
-            int height = context.getScaledWindowHeight();
+            int width = context.guiWidth();
+            int height = context.guiHeight();
             blurRenderer.applyBlur(width, height);
         }
     }
