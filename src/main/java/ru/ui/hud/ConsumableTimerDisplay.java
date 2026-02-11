@@ -8,7 +8,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.item.ItemStack;
 import ru.render.MsdfTextRenderer;
-import ru.util.MathUtils;
+import ru.util.math.MathUtils;
 
 public class ConsumableTimerDisplay {
     private final int x;

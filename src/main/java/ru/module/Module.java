@@ -4,12 +4,16 @@ import ru.event.impl.EventSystemImpl;
 import ru.event.impl.ModuleToggleEvent;
 import ru.ui.notify.Notify;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public abstract class Module {
     private final String name;
     private final String description;
     private final Category category;
     private final int defaultBind;
     private boolean enabled;
+    private final List<Setting<?>> settings = new ArrayList<>();
 
     public static class C {
         public static final Category COMBAT = Category.COMBAT;
@@ -37,6 +41,96 @@ public abstract class Module {
         }
     }
     
+    public static abstract class Setting<T> {
+        private final String name;
+        private T value;
+        
+        public Setting(String name, T defaultValue) {
+            this.name = name;
+            this.value = defaultValue;
+        }
+        
+        public String getName() {
+            return name;
+        }
+        
+        public T getValue() {
+            return value;
+        }
+        
+        public void setValue(T value) {
+            this.value = value;
+        }
+    }
+    
+    public static class BooleanSetting extends Setting<Boolean> {
+        public BooleanSetting(String name, boolean defaultValue) {
+            super(name, defaultValue);
+        }
+    }
+    
+    public static class NumberSetting extends Setting<Double> {
+        private final double min;
+        private final double max;
+        private final double step;
+        
+        public NumberSetting(String name, double defaultValue, double min, double max, double step) {
+            super(name, defaultValue);
+            this.min = min;
+            this.max = max;
+            this.step = step;
+        }
+        
+        @Override
+        public void setValue(Double value) {
+            super.setValue(Math.max(min, Math.min(max, value)));
+        }
+        
+        public double getMin() {
+            return min;
+        }
+        
+        public double getMax() {
+            return max;
+        }
+        
+        public double getStep() {
+            return step;
+        }
+    }
+    
+    public static class StringSetting extends Setting<String> {
+        public StringSetting(String name, String defaultValue) {
+            super(name, defaultValue);
+        }
+    }
+    
+    public static class ModeSetting extends Setting<String> {
+        private final String[] modes;
+        
+        public ModeSetting(String name, String defaultValue, String... modes) {
+            super(name, defaultValue);
+            this.modes = modes;
+        }
+        
+        public String[] getModes() {
+            return modes;
+        }
+        
+        public void cycle() {
+            String current = getValue();
+            for (int i = 0; i < modes.length; i++) {
+                if (modes[i].equals(current)) {
+                    setValue(modes[(i + 1) % modes.length]);
+                    return;
+                }
+            }
+            if (modes.length > 0) {
+                setValue(modes[0]);
+            }
+        }
+    }
+    
     public Module(String name, String description, Category category) {
         this(name, description, category, -1);
     }
@@ -47,6 +141,14 @@ public abstract class Module {
         this.category = category;
         this.defaultBind = defaultBind;
         this.enabled = false;
+    }
+    
+    protected void addSetting(Setting<?> setting) {
+        settings.add(setting);
+    }
+    
+    public List<Setting<?>> getSettings() {
+        return settings;
     }
     
     public void toggle() {
@@ -70,6 +172,28 @@ public abstract class Module {
             name + (enabled ? " включен" : " выключен"),
             ru.ui.notify.Notify.NotificationType.MODULE
         );
+        
+        saveConfig();
+    }
+    
+    private void saveConfig() {
+        try {
+            ru.Aporia.getFilesManager().saveConfig(collectModuleConfigs());
+        } catch (Exception e) {
+            System.err.println("Failed to auto-save config: " + e.getMessage());
+        }
+    }
+    
+    private java.util.Map<String, ru.files.ModuleConfig> collectModuleConfigs() {
+        java.util.Map<String, ru.files.ModuleConfig> configs = new java.util.HashMap<>();
+        for (Module module : ModuleManager.getInstance().getModules()) {
+            java.util.Map<String, String> settingsMap = new java.util.HashMap<>();
+            for (Setting<?> setting : module.getSettings()) {
+                settingsMap.put(setting.getName(), setting.getValue().toString());
+            }
+            configs.put(module.getName(), new ru.files.ModuleConfig(module.isEnabled(), settingsMap));
+        }
+        return configs;
     }
     
     public abstract void onEnable();

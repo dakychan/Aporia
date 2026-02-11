@@ -1,4 +1,4 @@
-package ru.util;
+package ru.util.math;
 
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;

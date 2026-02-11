@@ -14,7 +14,7 @@ import org.lwjgl.glfw.GLFW;
 import ru.input.impl.bind.KeybindManager;
 import ru.module.Module;
 import ru.module.ModuleManager;
-import ru.render.BlurRenderer;
+import ru.render.BlurShader;
 import ru.render.MsdfFont;
 import ru.render.MsdfTextRenderer;
 import ru.render.RectRenderer;
@@ -24,17 +24,18 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ClickGuiScreen extends Screen {
     private static MsdfFont font;
     private static MsdfTextRenderer textRenderer;
     private static boolean initialized = false;
-    private static BlurRenderer blurRenderer;
     
     private Module hoveredModule = null;
-    private Module expandedModule = null;
+    private final Set<Module> expandedModules = new HashSet<>();
     private final Map<Module, Float> settingsAnimations = new HashMap<>();
     
     private final Map<Module.Category, CategoryPanel> categoryPanels = new HashMap<>();
@@ -47,18 +48,20 @@ public class ClickGuiScreen extends Screen {
     private static final int MODULE_HEIGHT = 32;
     private static final int MODULE_SPACING = 8;
     private static final int HEADER_HEIGHT = 38;
-    private static final int SETTINGS_HEIGHT = 100;
+    private static final int SETTINGS_HEIGHT = 200;
     private static final float ANIMATION_SPEED = 0.15f;
+    private static final float DESCRIPTION_Y_OFFSET = 20f;
+    private static final float DESCRIPTION_DASH_SPACING = 8f;
+    
+    private BlurShader blurShader;
 
     public ClickGuiScreen(int width, int height) {
         super(Component.literal("Click GUI"));
         initFont();
         Lang.load();
-        if (blurRenderer == null) {
-            blurRenderer = new BlurRenderer();
-        }
         initializeCategoryPanels();
         loadPanelPositions();
+        blurShader = new BlurShader();
     }
 
     private static void initFont() {
@@ -129,6 +132,10 @@ public class ClickGuiScreen extends Screen {
 
         centerPanels(fbWidth, fbHeight);
         
+        if (blurShader != null) {
+            blurShader.apply(fbWidth, fbHeight);
+        }
+        
         hoveredModule = null;
 
         updateSettingsAnimations();
@@ -138,7 +145,7 @@ public class ClickGuiScreen extends Screen {
         }
         
         if (hoveredModule != null) {
-            renderModuleTooltip(hoveredModule, fbMouseX, fbMouseY);
+            renderModuleDescription(fbMouseX, fbMouseY);
         }
     }
     
@@ -148,9 +155,9 @@ public class ClickGuiScreen extends Screen {
         int width = panel.getWidth();
         int height = panel.getHeight();
 
-        renderRect(x, y, width, height, 8, RenderColor.of(20, 20, 25, 230));
+        renderRectWithBlur(x, y, width, height, 8, RenderColor.of(20, 20, 25, 230), 3f);
 
-        renderRect(x, y, width, HEADER_HEIGHT, 8, RenderColor.of(30, 30, 38, 255));
+        renderRectWithBlur(x, y, width, HEADER_HEIGHT, 8, RenderColor.of(30, 30, 38, 255), 3f);
 
         if (textRenderer != null) {
             textRenderer.drawText(x + 10, y + 21, 16, 
@@ -183,7 +190,7 @@ public class ClickGuiScreen extends Screen {
     private void renderModule(Module module, int x, int y, int width, int height, int mouseX, int mouseY) {
         boolean isHovered = mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
         boolean isEnabled = module.isEnabled();
-        boolean isExpanded = module == expandedModule;
+        boolean isExpanded = expandedModules.contains(module);
         
         if (isHovered) {
             hoveredModule = module;
@@ -201,7 +208,7 @@ public class ClickGuiScreen extends Screen {
         }
 
         float radius = isExpanded && settingsAnimations.getOrDefault(module, 0f) > 0.01f ? 5 : 5;
-        renderRect(x, y, width, height, radius, bgColor);
+        renderRectWithBlur(x, y, width, height, radius, bgColor, 2f);
 
         if (textRenderer != null) {
             textRenderer.drawText(x + 8, y + 20, 15, module.getName(), textColor);
@@ -219,20 +226,81 @@ public class ClickGuiScreen extends Screen {
 
         int alphaValue = (int)(200 * alpha);
         RenderColor bgColor = RenderColor.of(35, 35, 45, alphaValue);
-        renderRect(x, y, width, height, 5, bgColor);
+        renderRectWithBlur(x, y, width, height, 5, bgColor, 2f);
 
-        if (textRenderer != null && alpha > 0.3f) {
-            textRenderer.drawText(x + 10, y + 15, 13, 
-                "Настройки модуля", RenderColor.of(150, 150, 160, (int)(255 * alpha)));
-            textRenderer.drawText(x + 10, y + 35, 11, 
-                module.getDescription(), RenderColor.of(120, 120, 130, (int)(255 * alpha)));
+        if (alpha < 0.3f) return;
+        
+        List<Module.Setting<?>> settings = module.getSettings();
+        
+        if (settings.isEmpty()) {
+            if (textRenderer != null) {
+                textRenderer.drawText(x + 10, y + 15, 13, 
+                    "Нет настроек", RenderColor.of(150, 150, 160, (int)(255 * alpha)));
+            }
+            return;
+        }
+        
+        int settingY = y + 10;
+        
+        for (Module.Setting<?> setting : settings) {
+            if (settingY + 30 > y + height) break;
+            
+            if (textRenderer != null) {
+                textRenderer.drawText(x + 10, settingY + 8, 12, 
+                    setting.getName(), RenderColor.of(200, 200, 210, (int)(255 * alpha)));
+            }
+            
+            if (setting instanceof Module.BooleanSetting) {
+                Module.BooleanSetting boolSetting = (Module.BooleanSetting) setting;
+                String value = boolSetting.getValue() ? "Да" : "Нет";
+                RenderColor valueColor = boolSetting.getValue() 
+                    ? RenderColor.of(80, 200, 120, (int)(255 * alpha))
+                    : RenderColor.of(180, 180, 190, (int)(255 * alpha));
+                
+                if (textRenderer != null) {
+                    float valueWidth = textRenderer.measureWidth(value, 12);
+                    textRenderer.drawText(x + width - valueWidth - 10, settingY + 8, 12, value, valueColor);
+                }
+            } else if (setting instanceof Module.NumberSetting) {
+                Module.NumberSetting numSetting = (Module.NumberSetting) setting;
+                String value = String.format("%.1f", numSetting.getValue());
+                
+                if (textRenderer != null) {
+                    float valueWidth = textRenderer.measureWidth(value, 12);
+                    textRenderer.drawText(x + width - valueWidth - 10, settingY + 8, 12, 
+                        value, RenderColor.of(180, 180, 190, (int)(255 * alpha)));
+                }
+            } else if (setting instanceof Module.ModeSetting) {
+                Module.ModeSetting modeSetting = (Module.ModeSetting) setting;
+                String value = modeSetting.getValue();
+                
+                if (textRenderer != null) {
+                    float valueWidth = textRenderer.measureWidth(value, 12);
+                    textRenderer.drawText(x + width - valueWidth - 10, settingY + 8, 12, 
+                        value, RenderColor.of(100, 150, 255, (int)(255 * alpha)));
+                }
+            } else if (setting instanceof Module.StringSetting) {
+                Module.StringSetting strSetting = (Module.StringSetting) setting;
+                String value = strSetting.getValue();
+                if (value.length() > 15) {
+                    value = value.substring(0, 12) + "...";
+                }
+                
+                if (textRenderer != null) {
+                    float valueWidth = textRenderer.measureWidth(value, 12);
+                    textRenderer.drawText(x + width - valueWidth - 10, settingY + 8, 12, 
+                        value, RenderColor.of(180, 180, 190, (int)(255 * alpha)));
+                }
+            }
+            
+            settingY += 30;
         }
     }
     
     private void updateSettingsAnimations() {
         for (Module module : ModuleManager.getInstance().getModules()) {
             float current = settingsAnimations.getOrDefault(module, 0f);
-            float target = (module == expandedModule) ? 1f : 0f;
+            float target = expandedModules.contains(module) ? 1f : 0f;
             
             if (Math.abs(current - target) > 0.01f) {
                 float newValue = current + (target - current) * ANIMATION_SPEED;
@@ -243,15 +311,17 @@ public class ClickGuiScreen extends Screen {
         }
     }
     
-    private void renderModuleTooltip(Module module, int mouseX, int mouseY) {
-        if (textRenderer == null) return;
+    private void renderModuleDescription(int mouseX, int mouseY) {
+        if (textRenderer == null || hoveredModule == null) return;
         
-        String moduleName = module.getName();
+        String moduleName = hoveredModule.getName();
         String description = Lang.getModuleDescription(moduleName);
        
         if (description.equals("module." + moduleName.toLowerCase() + ".description")) {
-            description = module.getDescription();
+            description = hoveredModule.getDescription();
         }
+
+        if (description == null || description.isEmpty()) return;
 
         String fullText = moduleName + " - " + description;
       
@@ -264,18 +334,86 @@ public class ClickGuiScreen extends Screen {
         float totalWidth = nameWidth + dashWidth + descWidth;
         
         int tooltipX = (int)((fbWidth - totalWidth) / 2);
-        int tooltipY = 35;
+        int tooltipY = 60;
     
         textRenderer.drawText(tooltipX, tooltipY, 30, 
             moduleName, RenderColor.WHITE);
    
-        float offsetX = tooltipX + nameWidth;
+        float offsetX = tooltipX + nameWidth + DESCRIPTION_DASH_SPACING;
         textRenderer.drawText(offsetX, tooltipY, 26, 
             " - " + description, RenderColor.of(200, 200, 210, 255));
     }
 
     private void renderRect(float x, float y, float w, float h, float radius, RenderColor color) {
         RectRenderer.drawRoundedRect(x, y, w, h, radius, color);
+    }
+    
+    private void renderRectWithBlur(float x, float y, float w, float h, float radius, RenderColor color, float blurAmount) {
+        RectRenderer.drawRectangleWithBlur(x, y, w, h, color, radius, blurAmount);
+    }
+    
+    private boolean handleSettingClick(Module module, int mouseX, int mouseY) {
+        if (!expandedModules.contains(module)) return false;
+        
+        float settingsProgress = settingsAnimations.getOrDefault(module, 0f);
+        if (settingsProgress < 0.3f) return false;
+        
+        CategoryPanel panel = null;
+        for (CategoryPanel p : categoryPanels.values()) {
+            if (p.getCategory() == module.getCategory()) {
+                panel = p;
+                break;
+            }
+        }
+        
+        if (panel == null) return false;
+        
+        List<Module> modules = ModuleManager.getInstance().getModulesByCategory(module.getCategory());
+        int moduleY = panel.getY() + HEADER_HEIGHT + 5;
+        int moduleX = panel.getX() + 5;
+        int moduleWidth = panel.getWidth() - 10;
+        
+        for (Module m : modules) {
+            if (m == module) {
+                int settingsY = moduleY + MODULE_HEIGHT;
+                int settingsHeight = (int)(SETTINGS_HEIGHT * settingsProgress);
+                
+                if (mouseX >= moduleX && mouseX <= moduleX + moduleWidth &&
+                    mouseY >= settingsY && mouseY <= settingsY + settingsHeight) {
+                    
+                    List<Module.Setting<?>> settings = module.getSettings();
+                    int settingY = settingsY + 10;
+                    
+                    for (Module.Setting<?> setting : settings) {
+                        if (settingY + 30 > settingsY + settingsHeight) break;
+                        
+                        if (mouseX >= moduleX && mouseX <= moduleX + moduleWidth &&
+                            mouseY >= settingY && mouseY <= settingY + 30) {
+                            
+                            if (setting instanceof Module.BooleanSetting) {
+                                Module.BooleanSetting boolSetting = (Module.BooleanSetting) setting;
+                                boolSetting.setValue(!boolSetting.getValue());
+                                return true;
+                            } else if (setting instanceof Module.ModeSetting) {
+                                Module.ModeSetting modeSetting = (Module.ModeSetting) setting;
+                                modeSetting.cycle();
+                                return true;
+                            }
+                        }
+                        
+                        settingY += 30;
+                    }
+                }
+                
+                return false;
+            }
+            
+            float progress = settingsAnimations.getOrDefault(m, 0f);
+            int settingsHeight = (int)(SETTINGS_HEIGHT * progress);
+            moduleY += MODULE_HEIGHT + MODULE_SPACING + settingsHeight;
+        }
+        
+        return false;
     }
 
     @Override
@@ -311,6 +449,16 @@ public class ClickGuiScreen extends Screen {
             }
 
             for (CategoryPanel panel : categoryPanels.values()) {
+                List<Module> modules = ModuleManager.getInstance().getModulesByCategory(panel.getCategory());
+                
+                for (Module module : modules) {
+                    if (handleSettingClick(module, mouseX, mouseY)) {
+                        return true;
+                    }
+                }
+            }
+
+            for (CategoryPanel panel : categoryPanels.values()) {
                 Module module = panel.getHoveredModule(mouseX, mouseY);
                 if (module != null) {
                     if (shiftPressed) {
@@ -328,10 +476,10 @@ public class ClickGuiScreen extends Screen {
             for (CategoryPanel panel : categoryPanels.values()) {
                 Module module = panel.getHoveredModule(mouseX, mouseY);
                 if (module != null) {
-                    if (expandedModule == module) {
-                        expandedModule = null;
+                    if (expandedModules.contains(module)) {
+                        expandedModules.remove(module);
                     } else {
-                        expandedModule = module;
+                        expandedModules.add(module);
                     }
                     return true;
                 }

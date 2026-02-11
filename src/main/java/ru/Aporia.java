@@ -5,6 +5,7 @@ import aporia.cc.user.UserGenerator;
 import com.ferra13671.cometrenderer.CometRenderer;
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import net.fabricmc.api.ClientModInitializer;
+import ru.files.FilesManager;
 import ru.gui.GuiManager;
 import ru.input.api.KeyBindings;
 import ru.input.impl.UnifiedInputHandler;
@@ -15,6 +16,8 @@ import ru.ui.notify.Notify;
 
 public class Aporia implements ClientModInitializer {
 
+    private static FilesManager filesManager;
+
     public static void initRender() {
         CometRenderer.init();
         MinecraftPlugin.init(glGpuBuffer -> ((IGlBuffer) glGpuBuffer)._getHandle(), () -> 1);
@@ -22,6 +25,7 @@ public class Aporia implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        initFileSystem();
         UnifiedInputHandler.init();
         KeybindManager.getInstance().loadKeybinds();
         KeybindListener.init();
@@ -29,6 +33,24 @@ public class Aporia implements ClientModInitializer {
         KeyBindings.register();
         setupKeyBindings();
         initUserData();
+    }
+
+    private static void initFileSystem() {
+        filesManager = new FilesManager();
+        filesManager.initialize();
+        
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                UserData.UserDataClass userData = UserData.INSTANCE.getUserData();
+                filesManager.saveStats(userData);
+            } catch (Exception e) {
+                System.err.println("Failed to save stats on shutdown: " + e.getMessage());
+            }
+        }));
+    }
+
+    public static FilesManager getFilesManager() {
+        return filesManager;
     }
 
     private static void setupKeyBindings() {}

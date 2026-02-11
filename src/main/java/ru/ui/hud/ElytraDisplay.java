@@ -8,7 +8,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.phys.Vec3;
 import ru.render.MsdfTextRenderer;
-import ru.util.MathUtils;
+import ru.util.math.MathUtils;
 
 import java.util.List;
 

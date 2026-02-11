@@ -5,9 +5,6 @@ import net.minecraft.network.chat.Component;
 import ru.module.Module;
 
 public class AutoFlyMe extends Module {
-    private float timeDelay = 1.0f;
-    private int repeatCount = 1;
-    private boolean useFlyme = false;
     private long lastSpacePress = 0;
     private int currentRepeat = 0;
     private boolean isExecuting = false;
@@ -20,8 +17,26 @@ public class AutoFlyMe extends Module {
     private long cantFlyMessageTime = 0;
     private static final long CANT_FLY_RETRY_DELAY = 100;
     
+    private final NumberSetting timeDelay;
+    private final NumberSetting repeatCount;
+    private final BooleanSetting useFlyme;
+    private final BooleanSetting onFall;
+    private final ModeSetting mode;
+    
     public AutoFlyMe() {
         super("AutoFlyMe", "Автоматически прописывает /fly или /flyme при падении", C.MISC, -1);
+        
+        timeDelay = new NumberSetting("Задержка", 1.0, 0.1, 2.0, 0.1);
+        repeatCount = new NumberSetting("Повторы", 1.0, 1.0, 5.0, 1.0);
+        useFlyme = new BooleanSetting("Использовать /flyme", false);
+        onFall = new BooleanSetting("При падении", true);
+        mode = new ModeSetting("Режим", "Авто", "Авто", "Ручной", "Смешанный");
+        
+        addSetting(timeDelay);
+        addSetting(repeatCount);
+        addSetting(useFlyme);
+        addSetting(onFall);
+        addSetting(mode);
     }
 
     @Override
@@ -53,24 +68,28 @@ public class AutoFlyMe extends Module {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
-        checkFalling(mc);
+        if (onFall.getValue()) {
+            checkFalling(mc);
+        }
 
         if (mc.options.keyJump.isDefault() && !isExecuting) {
             isExecuting = true;
             lastSpacePress = System.currentTimeMillis();
             currentRepeat = 0;
         }
-        if (isExecuting && currentRepeat < repeatCount) {
+        
+        if (isExecuting && currentRepeat < repeatCount.getValue().intValue()) {
             long elapsed = System.currentTimeMillis() - lastSpacePress;
-            long delayMs = (long) (timeDelay * 1000);
+            long delayMs = (long) (timeDelay.getValue() * 1000);
             if (elapsed >= delayMs * currentRepeat) {
                 executeCommand();
                 currentRepeat++;
-                if (currentRepeat >= repeatCount) {
+                if (currentRepeat >= repeatCount.getValue().intValue()) {
                     isExecuting = false;
                 }
             }
         }
+        
         if (receivedCantFlyMessage) {
             long elapsed = System.currentTimeMillis() - cantFlyMessageTime;
             if (elapsed >= CANT_FLY_RETRY_DELAY) {
@@ -107,7 +126,7 @@ public class AutoFlyMe extends Module {
     private void executeCommand() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
-            String command = useFlyme ? "flyme" : "fly";
+            String command = useFlyme.getValue() ? "flyme" : "fly";
             mc.player.connection.sendCommand(command);
         }
     }
@@ -123,28 +142,5 @@ public class AutoFlyMe extends Module {
             receivedCantFlyMessage = true;
             cantFlyMessageTime = System.currentTimeMillis();
         }
-    }
-    public float getTimeDelay() {
-        return timeDelay;
-    }
-    
-    public void setTimeDelay(float timeDelay) {
-        this.timeDelay = Math.max(0.1f, Math.min(2.0f, timeDelay));
-    }
-    
-    public int getRepeatCount() {
-        return repeatCount;
-    }
-    
-    public void setRepeatCount(int repeatCount) {
-        this.repeatCount = Math.max(1, Math.min(5, repeatCount));
-    }
-    
-    public boolean isUseFlyme() {
-        return useFlyme;
-    }
-    
-    public void setUseFlyme(boolean useFlyme) {
-        this.useFlyme = useFlyme;
     }
 }

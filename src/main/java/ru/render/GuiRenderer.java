@@ -4,11 +4,11 @@ import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import net.minecraft.client.gui.GuiGraphics;
 
 public class GuiRenderer {
-    private final BlurRenderer blurRenderer;
+    private final BlurShader blurShader;
     private final AnimationSystem animationSystem;
     private boolean initialized = false;
     public GuiRenderer() {
-        this.blurRenderer = new BlurRenderer();
+        this.blurShader = new BlurShader();
         this.animationSystem = new AnimationSystem();
     }
     public void initialize() {
@@ -24,17 +24,18 @@ public class GuiRenderer {
 
         animationSystem.tick();
 
-        if (BlurRenderer.isInitialized()) {
+        if (BlurShader.isInitialized()) {
             int width = context.guiWidth();
             int height = context.guiHeight();
-            blurRenderer.applyBlur(width, height);
+            blurShader.apply(width, height);
         }
     }
     public void cleanup() {
+        blurShader.cleanup();
         initialized = false;
     }
-    public BlurRenderer getBlurRenderer() {
-        return blurRenderer;
+    public BlurShader getBlurShader() {
+        return blurShader;
     }
     public AnimationSystem getAnimationSystem() {
         return animationSystem;

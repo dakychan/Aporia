@@ -25,6 +25,54 @@ public class ModuleManager {
         registerModules();
         registerModuleKeybinds();
         KeybindManager.getInstance().loadKeybinds();
+        loadConfig();
+    }
+    
+    private void loadConfig() {
+        try {
+            ru.files.FilesManager filesManager = ru.Aporia.getFilesManager();
+            if (filesManager != null) {
+                Map<String, ru.files.ModuleConfig> configs = filesManager.loadConfig();
+                if (configs != null) {
+                    applyConfig(configs);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to load config: " + e.getMessage());
+        }
+    }
+    
+    private void applyConfig(Map<String, ru.files.ModuleConfig> configs) {
+        for (Module module : modules) {
+            ru.files.ModuleConfig config = configs.get(module.getName());
+            if (config != null) {
+                if (config.getEnabled() != module.isEnabled()) {
+                    module.setEnabled(config.getEnabled());
+                }
+                
+                for (Module.Setting<?> setting : module.getSettings()) {
+                    String value = config.getSettings().get(setting.getName());
+                    if (value != null) {
+                        applySetting(setting, value);
+                    }
+                }
+            }
+        }
+    }
+    
+    @SuppressWarnings("unchecked")
+    private void applySetting(Module.Setting<?> setting, String value) {
+        try {
+            if (setting instanceof Module.BooleanSetting) {
+                ((Module.Setting<Boolean>) setting).setValue(Boolean.parseBoolean(value));
+            } else if (setting instanceof Module.NumberSetting) {
+                ((Module.Setting<Double>) setting).setValue(Double.parseDouble(value));
+            } else if (setting instanceof Module.StringSetting || setting instanceof Module.ModeSetting) {
+                ((Module.Setting<String>) setting).setValue(value);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to apply setting " + setting.getName() + ": " + e.getMessage());
+        }
     }
     
     private void registerModule(Module module) {
@@ -35,6 +83,10 @@ public class ModuleManager {
     private void registerModules() {
         // Visuals
         registerModule(new ClickGui());
+        registerModule(new ru.module.impl.visuals.AnimCheck());
+        
+        // Movement
+        registerModule(new ru.module.impl.movement.AutoSprint());
         
         // Misc
         registerModule(new ru.module.impl.misc.AutoFlyMe());
