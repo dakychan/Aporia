@@ -53,7 +53,7 @@ public class ClickGuiScreen extends Screen {
     public ClickGuiScreen(int width, int height) {
         super(Component.literal("Click GUI"));
         initFont();
-        Lang.load(); // Загружаем переводы
+        Lang.load();
         if (blurRenderer == null) {
             blurRenderer = new BlurRenderer();
         }
@@ -137,7 +137,6 @@ public class ClickGuiScreen extends Screen {
             renderCategory(panel, fbMouseX, fbMouseY);
         }
         
-        // Рендерим тултип с описанием модуля над панелями
         if (hoveredModule != null) {
             renderModuleTooltip(hoveredModule, fbMouseX, fbMouseY);
         }
@@ -249,35 +248,29 @@ public class ClickGuiScreen extends Screen {
         
         String moduleName = module.getName();
         String description = Lang.getModuleDescription(moduleName);
-        
-        // Если описание не найдено, используем дефолтное
+       
         if (description.equals("module." + moduleName.toLowerCase() + ".description")) {
             description = module.getDescription();
         }
-        
-        // Формируем строку: "ModuleName - описание"
+
         String fullText = moduleName + " - " + description;
-        
-        // Позиционируем текст по центру экрана, чуть ниже верха
+      
         MinecraftPlugin plugin = MinecraftPlugin.getInstance();
         int fbWidth = plugin.getMainFramebufferWidth();
-        
-        // Измеряем ширину для центрирования (БОЛЬШИЕ размеры)
+      
         float nameWidth = textRenderer.measureWidth(moduleName, 24);
         float dashWidth = textRenderer.measureWidth(" - ", 20);
         float descWidth = textRenderer.measureWidth(description, 20);
         float totalWidth = nameWidth + dashWidth + descWidth;
         
         int tooltipX = (int)((fbWidth - totalWidth) / 2);
-        int tooltipY = 50; // Чуть ниже верха
-        
-        // Рендерим название модуля (жирным - большой размер 24)
-        textRenderer.drawText(tooltipX, tooltipY, 24, 
+        int tooltipY = 35;
+    
+        textRenderer.drawText(tooltipX, tooltipY, 30, 
             moduleName, RenderColor.WHITE);
-        
-        // Рендерим тире и описание (размер 20)
+   
         float offsetX = tooltipX + nameWidth;
-        textRenderer.drawText(offsetX, tooltipY, 20, 
+        textRenderer.drawText(offsetX, tooltipY, 26, 
             " - " + description, RenderColor.of(200, 200, 210, 255));
     }
 

@@ -66,7 +66,7 @@ public class MultiListButton {
             String headerText = expanded ? name : "Нажми, чтобы открыть";
             textRenderer.drawText(x + 8, y + 8, 12, headerText, RenderColor.WHITE);
 
-            float arrowRotation = expandProgress * 180; // Поворот на 180 градусов
+            float arrowRotation = expandProgress * 180;
             textRenderer.drawText(x + width - 20, y + 8, 12, ARROW_DOWN, 
                 RenderColor.of(180, 180, 190, 255));
         }

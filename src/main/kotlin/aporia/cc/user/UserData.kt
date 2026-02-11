@@ -11,7 +11,6 @@ object UserData {
     private const val CONFIG_DIR = "sorray"
     private const val USER_DATA_FILE = "user.dat"
 
-    // ============= ПОЛУЧЕНИЕ СИСТЕМНОГО ЮЗЕРНЕЙМА =============
     fun getSystemUsername(): String {
         val username = when {
             Platform.get() == Platform.LINUX -> getLinuxUsername()
@@ -58,7 +57,6 @@ object UserData {
         return "User${random.nextInt(1000, 9999)}"
     }
 
-    // ============= ПОЛУЧЕНИЕ РОЛИ =============
     fun getUserRole(username: String): UserRole {
         return when (username.lowercase()) {
             "daky_chan", "dusky2", "kotay" -> UserRole.DEVELOPER
@@ -66,24 +64,18 @@ object UserData {
         }
     }
 
-    // ============= ПОЛУЧЕНИЕ UUID =============
     fun getUserUUID(username: String): String {
-        // Используем сжатый числовой UUID
         return UserGenerator.generateCompressedNumericUUID(username)
     }
 
-    // ============= ПОЛУЧЕНИЕ HWID =============
     fun getHardwareId(): String {
-        // Сначала пробуем получить системный HWID
         val systemId = UserGenerator.generateSystemHardwareId()
         if (systemId != null && systemId.isNotBlank()) {
             return systemId
         }
-        // Если не получилось - генерируем из компонентов
         return UserGenerator.generateHardwareId()
     }
 
-    // ============= ПОЛНЫЕ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ =============
     fun getUserData(): UserDataClass {
         val username = getSystemUsername()
         val uuid = getUserUUID(username)

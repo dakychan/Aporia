@@ -39,17 +39,12 @@ public class Aporia implements ClientModInitializer {
 
     public static void initUserData() {
         UserData.UserDataClass userData = UserData.INSTANCE.getUserData();
-        //                     TESTS
         System.out.println("§a[UserData] Username: " + userData.getUsername());
         System.out.println("§a[UserData] UUID: " + userData.getUuid());
         System.out.println("§a[UserData] Role: " + userData.getRole());
         System.out.println("§a[UserData] HardwareID: " + userData.getHardwareId());
-
-        // Пример генерации рандомного ника
         String randomName = UserGenerator.INSTANCE.generateRandomUsername();
         System.out.println("§a[UserGenerator] Random: " + randomName);
-
-        // Оффлайн UUID
         String offlineUUID = UserGenerator.INSTANCE.generateOfflineUUID("kotay");
         System.out.println("§a[UserGenerator] Offline UUID: " + offlineUUID);
     }

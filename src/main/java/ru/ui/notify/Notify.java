@@ -7,8 +7,6 @@ import ru.render.anim.Animation;
 import ru.render.anim.Easings;
 
 public class Notify {
-
-    // ===== NotificationType =====
     public enum NotificationType {
         INFO(RenderColor.of(60, 120, 245, 230)),
         MODULE(RenderColor.of(80, 200, 120, 230)),
@@ -25,7 +23,6 @@ public class Notify {
         }
     }
 
-    // ===== Notification =====
     public static class Notification {
         private final String message;
         private final NotificationType type;
@@ -79,7 +76,6 @@ public class Notify {
         }
     }
 
-    // ===== NotificationMessages =====
     public static class Messages {
         public static String playerBrokeShield(String playerName) {
             return String.format("Игрок %s пробил щит!", playerName);
@@ -133,7 +129,6 @@ public class Notify {
         }
     }
 
-    // ===== NotificationManager =====
     public static class Manager {
         private static Manager instance;
         private final List<Notification> activeNotifications = new ArrayList<>();

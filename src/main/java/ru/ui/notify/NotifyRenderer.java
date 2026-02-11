@@ -33,12 +33,10 @@ public class NotifyRenderer {
         
         List<Notify.Notification> notifications = manager.getActiveNotifications();
         if (notifications.isEmpty()) return;
-        
-        // Проверяем, открыто ли ClickGui
+
         Minecraft client = Minecraft.getInstance();
         boolean isClickGuiOpen = client.screen instanceof ClickGuiScreen;
-        
-        // Если ClickGui открыто, фильтруем нотификации о модулях
+ 
         if (isClickGuiOpen) {
             notifications = notifications.stream()
                 .filter(n -> n.getType() != Notify.NotificationType.MODULE)
@@ -66,10 +64,8 @@ public class NotifyRenderer {
     }
     
     private static void renderNotification(Notify.Notification n, int x, int y) {
-        // Фон - закругленный со всех 4 сторон
         RectRenderer.drawRoundedRect(x, y, NOTIFICATION_WIDTH, NOTIFICATION_HEIGHT, 8, BG_COLOR);
-        
-        // Текст по центру
+
         if (textRenderer != null) {
             textRenderer.drawText(x + 10, y + 16, 11, n.getMessage(), RenderColor.WHITE);
         }

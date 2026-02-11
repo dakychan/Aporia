@@ -8,7 +8,6 @@ import java.util.*
 import java.io.File
 import kotlin.random.Random as KtRandom
 
-// ============= 1. ГЕНЕРАТОР (только генерация) =============
 object UserGenerator {
     
     fun generateRandomUsername(): String {
@@ -33,7 +32,7 @@ object UserGenerator {
             "Kvadratniy_Krug", "Vash_Menedzher", "Agent_000", "Borsch_V_Kruzhke", "Chay_S_Saharnim", "Domasniy_Tapok", "Zloy_Adminko", "Malenkaya_Loshadka",
             "Pustoy_Bakal"
         )
-        val suffix = KtRandom.nextInt(100, 9999)  // Kotlin Random
+        val suffix = KtRandom.nextInt(100, 9999)
         return "${prefixes.random()}_$suffix"
     }
 
@@ -67,7 +66,6 @@ object UserGenerator {
         )
     }
     
-    // ============= ГЕНЕРАЦИЯ UUID ИЗ НИКА (ЧИСЛОВОЙ) =============
     fun generateNumericUUID(username: String): String {
         val normalized = normalizeUsername(username)
         return normalized.map { char ->
@@ -98,8 +96,7 @@ object UserGenerator {
             .filter { it.isLetterOrDigit() }
             .let { if (it.isEmpty()) "user" else it }
     }
-    
-    // ============= ГЕНЕРАЦИЯ HWID =============
+
     fun generateHardwareId(): String {
         val input = System.getProperty("user.name") +
                     System.getProperty("os.name") +
