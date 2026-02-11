@@ -1,8 +1,5 @@
 package ru.ui.drag;
 
-/**
- * Интерфейс для перетаскиваемых элементов
- */
 public interface Draggable {
     int getX();
     int getY();

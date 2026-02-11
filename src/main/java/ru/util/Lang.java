@@ -9,9 +9,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Система локализации для модулей
- */
 public class Lang {
     private static final Map<String, String> translations = new HashMap<>();
     private static boolean loaded = false;
@@ -39,18 +36,12 @@ public class Lang {
             e.printStackTrace();
         }
     }
-    
-    /**
-     * Получить перевод по ключу
-     */
+
     public static String get(String key) {
         if (!loaded) load();
         return translations.getOrDefault(key, key);
     }
-    
-    /**
-     * Получить описание модуля
-     */
+
     public static String getModuleDescription(String moduleName) {
         String key = "module." + moduleName.toLowerCase() + ".description";
         return get(key);

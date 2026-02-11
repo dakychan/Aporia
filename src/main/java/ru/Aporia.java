@@ -39,14 +39,6 @@ public class Aporia implements ClientModInitializer {
 
     public static void initUserData() {
         UserData.UserDataClass userData = UserData.INSTANCE.getUserData();
-        System.out.println("§a[UserData] Username: " + userData.getUsername());
-        System.out.println("§a[UserData] UUID: " + userData.getUuid());
-        System.out.println("§a[UserData] Role: " + userData.getRole());
-        System.out.println("§a[UserData] HardwareID: " + userData.getHardwareId());
-        String randomName = UserGenerator.INSTANCE.generateRandomUsername();
-        System.out.println("§a[UserGenerator] Random: " + randomName);
-        String offlineUUID = UserGenerator.INSTANCE.generateOfflineUUID("kotay");
-        System.out.println("§a[UserGenerator] Offline UUID: " + offlineUUID);
     }
 }
 

@@ -11,9 +11,6 @@ import ru.ui.clickgui.ClickGuiScreen;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Минимальный рендерер нотификаций
- */
 public class NotifyRenderer {
     private static MsdfTextRenderer textRenderer;
     private static boolean initialized = false;
@@ -36,7 +33,7 @@ public class NotifyRenderer {
 
         Minecraft client = Minecraft.getInstance();
         boolean isClickGuiOpen = client.screen instanceof ClickGuiScreen;
- 
+
         if (isClickGuiOpen) {
             notifications = notifications.stream()
                 .filter(n -> n.getType() != Notify.NotificationType.MODULE)
