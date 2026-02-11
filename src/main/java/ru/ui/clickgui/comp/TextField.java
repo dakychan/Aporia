@@ -1,5 +1,6 @@
 package ru.ui.clickgui.comp;
 
+import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor;
 import net.minecraft.client.MinecraftClient;
 import org.lwjgl.glfw.GLFW;
@@ -28,6 +29,8 @@ public class TextField {
     }
     
     public void render(int x, int y, int width, MsdfTextRenderer textRenderer, int mouseX, int mouseY) {
+        MinecraftPlugin plugin = MinecraftPlugin.getInstance();
+        plugin.bindMainFramebuffer(true);
         this.x = x;
         this.y = y;
         this.width = width;

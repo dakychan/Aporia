@@ -1,5 +1,6 @@
 package ru.ui.clickgui.comp;
 
+import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor;
 import ru.render.MsdfTextRenderer;
 import ru.render.RectRenderer;
@@ -20,6 +21,8 @@ public class FuncButton {
     }
     
     public void render(int x, int y, int width, MsdfTextRenderer textRenderer, int mouseX, int mouseY) {
+        MinecraftPlugin plugin = MinecraftPlugin.getInstance();
+        plugin.bindMainFramebuffer(true);
         this.x = x;
         this.y = y;
         this.width = width;

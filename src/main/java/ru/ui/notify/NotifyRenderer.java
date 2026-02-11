@@ -2,11 +2,14 @@ package ru.ui.notify;
 
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import ru.render.MsdfTextRenderer;
 import ru.render.RectRenderer;
+import ru.ui.clickgui.ClickGuiScreen;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Минимальный рендерер нотификаций
@@ -30,6 +33,19 @@ public class NotifyRenderer {
         
         List<Notify.Notification> notifications = manager.getActiveNotifications();
         if (notifications.isEmpty()) return;
+        
+        // Проверяем, открыто ли ClickGui
+        MinecraftClient client = MinecraftClient.getInstance();
+        boolean isClickGuiOpen = client.currentScreen instanceof ClickGuiScreen;
+        
+        // Если ClickGui открыто, фильтруем нотификации о модулях
+        if (isClickGuiOpen) {
+            notifications = notifications.stream()
+                .filter(n -> n.getType() != Notify.NotificationType.MODULE)
+                .collect(Collectors.toList());
+            
+            if (notifications.isEmpty()) return;
+        }
         
         ensureInitialized();
         

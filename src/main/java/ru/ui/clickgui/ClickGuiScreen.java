@@ -16,6 +16,7 @@ import ru.render.BlurRenderer;
 import ru.render.MsdfFont;
 import ru.render.MsdfTextRenderer;
 import ru.render.RectRenderer;
+import ru.util.Lang;
 
 import java.io.File;
 import java.io.FileReader;
@@ -50,6 +51,7 @@ public class ClickGuiScreen extends Screen {
     public ClickGuiScreen(int width, int height) {
         super(Text.literal("Click GUI"));
         initFont();
+        Lang.load(); // Загружаем переводы
         if (blurRenderer == null) {
             blurRenderer = new BlurRenderer();
         }
@@ -131,6 +133,11 @@ public class ClickGuiScreen extends Screen {
 
         for (CategoryPanel panel : categoryPanels.values()) {
             renderCategory(panel, fbMouseX, fbMouseY);
+        }
+        
+        // Рендерим тултип с описанием модуля над панелями
+        if (hoveredModule != null) {
+            renderModuleTooltip(hoveredModule, fbMouseX, fbMouseY);
         }
     }
     
@@ -234,6 +241,43 @@ public class ClickGuiScreen extends Screen {
             }
         }
     }
+    
+    private void renderModuleTooltip(Module module, int mouseX, int mouseY) {
+        if (textRenderer == null) return;
+        
+        String moduleName = module.getName();
+        String description = Lang.getModuleDescription(moduleName);
+        
+        // Если описание не найдено, используем дефолтное
+        if (description.equals("module." + moduleName.toLowerCase() + ".description")) {
+            description = module.getDescription();
+        }
+        
+        // Формируем строку: "ModuleName - описание"
+        String fullText = moduleName + " - " + description;
+        
+        // Позиционируем текст по центру экрана, чуть ниже верха
+        MinecraftPlugin plugin = MinecraftPlugin.getInstance();
+        int fbWidth = plugin.getMainFramebufferWidth();
+        
+        // Измеряем ширину для центрирования (БОЛЬШИЕ размеры)
+        float nameWidth = textRenderer.measureWidth(moduleName, 24);
+        float dashWidth = textRenderer.measureWidth(" - ", 20);
+        float descWidth = textRenderer.measureWidth(description, 20);
+        float totalWidth = nameWidth + dashWidth + descWidth;
+        
+        int tooltipX = (int)((fbWidth - totalWidth) / 2);
+        int tooltipY = 50; // Чуть ниже верха
+        
+        // Рендерим название модуля (жирным - большой размер 24)
+        textRenderer.drawText(tooltipX, tooltipY, 24, 
+            moduleName, RenderColor.WHITE);
+        
+        // Рендерим тире и описание (размер 20)
+        float offsetX = tooltipX + nameWidth;
+        textRenderer.drawText(offsetX, tooltipY, 20, 
+            " - " + description, RenderColor.of(200, 200, 210, 255));
+    }
 
     private void renderRect(float x, float y, float w, float h, float radius, RenderColor color) {
         RectRenderer.drawRoundedRect(x, y, w, h, radius, color);
@@ -333,7 +377,7 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public void renderBackground(net.minecraft.client.gui.DrawContext context, int mouseX, int mouseY, float delta) {
-    }
+    } 
 
     @Override
     public void close() {
