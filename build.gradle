@@ -37,7 +37,6 @@ dependencies {
     compileOnly("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")
 
-    // Testing dependencies
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
     testImplementation("net.jqwik:jqwik:1.8.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.1")
@@ -90,7 +89,6 @@ publishing {
             from components.java
         }
     }
-
     repositories {
     }
 }
