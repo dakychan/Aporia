@@ -1,6 +1,7 @@
 plugins {
     id 'fabric-loom' version '1.15-SNAPSHOT'
     id 'maven-publish'
+    id "com.github.johnrengelman.shadow" version "8.1.1"
 }
 
 version = project.mod_version
@@ -16,12 +17,13 @@ repositories {
         name = "ferra13671-maven"
         url = "https://ferra13671.github.io/maven/"
     }
+    mavenCentral()
 }
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
 
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    mappings loom.officialMojangMappings()
 
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
@@ -33,6 +35,15 @@ dependencies {
     implementation "com.ferra13671:comet-renderer-better-compiler:2.5-HOTFIX-1"
     implementation "com.ferra13671:comet-renderer-better-exceptions:2.5-HOTFIX-1"
     implementation "com.ferra13671:comet-renderer-post-effects:2.5-HOTFIX-1"
+    implementation 'ai.catboost:catboost-prediction:1.2.8'
+
+    include(implementation("com.ferra13671:comet-renderer:2.5-HOTFIX-1"))
+    include "com.ferra13671:gl-texture-utils:1.7.4-HOTFIX-1"
+    include "com.ferra13671:comet-renderer-minecraft:1.21.11-fabric-2.5-HOTFIX-1"
+    include "com.ferra13671:comet-renderer-better-compiler:2.5-HOTFIX-1"
+    include "com.ferra13671:comet-renderer-better-exceptions:2.5-HOTFIX-1"
+    include "com.ferra13671:comet-renderer-post-effects:2.5-HOTFIX-1"
+    include 'ai.catboost:catboost-prediction:1.2.8'
 
     compileOnly("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")
@@ -79,6 +90,18 @@ java {
 jar {
     from("LICENSE") {
         rename { "${it}_${project.archives_base_name}" }
+    }
+}
+
+// Простая сборка мода без shadowJar
+task buildMod {
+    dependsOn build
+    group = 'build'
+    description = 'Builds the final mod jar'
+    
+    doLast {
+        println "Mod built successfully!"
+        println "Output: build/libs/${project.archives_base_name}-${project.version}.jar"
     }
 }
 

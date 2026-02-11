@@ -1,6 +1,6 @@
 package ru.input.impl.bind;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import ru.event.impl.EventSystemImpl;
 import ru.event.impl.KeyPressEvent;
 import ru.gui.GuiManager;
@@ -27,11 +27,11 @@ public class KeybindListener {
             return false;
         }
         
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client == null) {
             return false;
         }
         
-        return client.currentScreen == null;
+        return client.screen == null;
     }
 }

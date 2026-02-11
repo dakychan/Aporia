@@ -1,7 +1,6 @@
 package ru.render;
 
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
-import net.minecraft.client.gui.DrawContext;
 
 public class GuiRenderer {
     private final BlurRenderer blurRenderer;
