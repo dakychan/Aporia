@@ -7,11 +7,17 @@ abstract class HudComponent(val name: String) {
     var y: Float = 0f
     var width: Float = 0f
     var height: Float = 0f
-    var zIndex: Int = 0
+    private var zIndex: Int = 0
     
     var isDragging = false
     private var dragOffsetX = 0f
     private var dragOffsetY = 0f
+    
+    fun getZIndex(): Int = zIndex
+    
+    fun setZIndex(value: Int) {
+        zIndex = value
+    }
     
     abstract fun render(plugin: MinecraftPlugin)
     

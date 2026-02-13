@@ -9,12 +9,17 @@ import ru.input.api.KeyBindings;
 import ru.input.impl.UnifiedInputHandler;
 import ru.input.impl.bind.KeybindListener;
 import ru.input.impl.bind.KeybindManager;
+import ru.render.BlurShader;
+import ru.ui.hud.HudManager;
 import ru.ui.notify.Notify;
+import ru.help.discordrpc.DiscordRPC;
 
 
 public class Aporia {
 
     private static FilesManager filesManager;
+    private static BlurShader blurShader;
+    private static DiscordRPC discordRPC;
 
     public static void initRender() {
         CometRenderer.init();
@@ -30,6 +35,27 @@ public class Aporia {
         KeyBindings.register();
         setupKeyBindings();
         initUserData();
+        initRenderingSystems();
+        initCommandSystem();
+        initDiscordRPC();
+    }
+
+    private static void initRenderingSystems() {
+        blurShader = new BlurShader();
+        HudManager.INSTANCE.initialize();
+    }
+
+    private static void initCommandSystem() {
+        ru.command.CommandManager.getInstance().initialize();
+    }
+    
+    private static void initDiscordRPC() {
+        try {
+            discordRPC = DiscordRPC.getInstance();
+            discordRPC.initialize();
+        } catch (Exception e) {
+            ru.files.Logger.INSTANCE.error("Failed to initialize Discord RPC", e);
+        }
     }
 
     private static void initFileSystem() {
@@ -41,6 +67,14 @@ public class Aporia {
             try {
                 UserData.UserDataClass userData = UserData.INSTANCE.getUserData();
                 filesManager.saveStats(userData);
+                
+                if (discordRPC != null) {
+                    discordRPC.shutdown();
+                }
+                
+                if (blurShader != null) {
+                    blurShader.cleanup();
+                }
             } catch (Exception e) {
                 ru.files.Logger.INSTANCE.error("Failed to save stats on shutdown: " + e.getMessage(), e);
             }
@@ -50,15 +84,37 @@ public class Aporia {
     public static FilesManager getFilesManager() {
         return filesManager;
     }
+    
+    /**
+     * Gets the Discord RPC instance.
+     *
+     * @return the DiscordRPC instance
+     */
+    public static DiscordRPC getDiscordRPC() {
+        return discordRPC;
+    }
 
     private static void setupKeyBindings() {}
 
     public static void render() {
         GuiManager.render();
         
-        // Render Interface module if enabled
+        MinecraftPlugin plugin = MinecraftPlugin.getInstance();
+        if (plugin == null) return;
+        
+        int width = plugin.getMainFramebufferWidth();
+        int height = plugin.getMainFramebufferHeight();
+        
         ru.module.Module interfaceModule = ru.module.ModuleManager.getInstance().getModuleByName("Interface");
-        if (interfaceModule != null && interfaceModule.isEnabled() && interfaceModule instanceof ru.module.impl.visuals.Interface) {
+        boolean interfaceEnabled = interfaceModule != null && interfaceModule.isEnabled();
+        
+        if (interfaceEnabled && blurShader != null) {
+            blurShader.renderToFramebuffer(width, height, () -> {
+                if (interfaceModule instanceof ru.module.impl.visuals.Interface) {
+                    ((ru.module.impl.visuals.Interface) interfaceModule).render();
+                }
+            });
+        } else if (interfaceEnabled && interfaceModule instanceof ru.module.impl.visuals.Interface) {
             ((ru.module.impl.visuals.Interface) interfaceModule).render();
         }
     }
