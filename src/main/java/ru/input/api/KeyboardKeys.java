@@ -2,10 +2,7 @@ package ru.input.api;
 
 import java.util.HashMap;
 import java.util.Map;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 
-@Environment(EnvType.CLIENT)
 public enum KeyboardKeys {
     KEY_SPACE("SPACE", 32),
     KEY_APOSTROPHE("APOSTROPHE", 39),

@@ -16,22 +16,22 @@ public class AutoFlyMe extends Module {
     private boolean receivedCantFlyMessage = false;
     private long cantFlyMessageTime = 0;
     private static final long CANT_FLY_RETRY_DELAY = 100;
-    
+
     private final NumberSetting timeDelay;
     private final NumberSetting repeatCount;
     private final BooleanSetting useFlyme;
     private final BooleanSetting onFall;
     private final ModeSetting mode;
-    
+
     public AutoFlyMe() {
         super("AutoFlyMe", "Автоматически прописывает /fly или /flyme при падении", C.MISC, -1);
-        
+
         timeDelay = new NumberSetting("Задержка", 1.0, 0.1, 2.0, 0.1);
         repeatCount = new NumberSetting("Повторы", 1.0, 1.0, 5.0, 1.0);
         useFlyme = new BooleanSetting("Использовать /flyme", false);
         onFall = new BooleanSetting("При падении", true);
         mode = new ModeSetting("Режим", "Авто", "Авто", "Ручной", "Смешанный");
-        
+
         addSetting(timeDelay);
         addSetting(repeatCount);
         addSetting(useFlyme);
@@ -46,7 +46,7 @@ public class AutoFlyMe extends Module {
         isExecuting = false;
         wasFalling = false;
         receivedCantFlyMessage = false;
-        
+
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             lastY = mc.player.getY();
@@ -64,7 +64,7 @@ public class AutoFlyMe extends Module {
     @Override
     public void onTick() {
         if (!isEnabled()) return;
-        
+
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
@@ -77,7 +77,7 @@ public class AutoFlyMe extends Module {
             lastSpacePress = System.currentTimeMillis();
             currentRepeat = 0;
         }
-        
+
         if (isExecuting && currentRepeat < repeatCount.getValue().intValue()) {
             long elapsed = System.currentTimeMillis() - lastSpacePress;
             long delayMs = (long) (timeDelay.getValue() * 1000);
@@ -89,7 +89,7 @@ public class AutoFlyMe extends Module {
                 }
             }
         }
-        
+
         if (receivedCantFlyMessage) {
             long elapsed = System.currentTimeMillis() - cantFlyMessageTime;
             if (elapsed >= CANT_FLY_RETRY_DELAY) {
@@ -102,7 +102,7 @@ public class AutoFlyMe extends Module {
             }
         }
     }
-    
+
     private void checkFalling(Minecraft mc) {
         boolean isFalling = isFalling(mc);
         if (isFalling && !wasFalling) {
@@ -115,7 +115,7 @@ public class AutoFlyMe extends Module {
         wasFalling = isFalling;
         lastY = mc.player.getY();
     }
-    
+
     private boolean isFalling(Minecraft mc) {
         if (mc.player == null) return false;
         return mc.player.getDeltaMovement().y < -0.1
@@ -135,10 +135,10 @@ public class AutoFlyMe extends Module {
         String text = message.getString().toLowerCase();
 
         if (text.contains("вы не можете летать") ||
-            text.contains("you cannot fly") ||
-            text.contains("you can't fly") ||
-            text.contains("flying is not enabled")) {
-            
+                text.contains("you cannot fly") ||
+                text.contains("you can't fly") ||
+                text.contains("flying is not enabled")) {
+
             receivedCantFlyMessage = true;
             cantFlyMessageTime = System.currentTimeMillis();
         }

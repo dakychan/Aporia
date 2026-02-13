@@ -1,10 +1,6 @@
 package ru.render.anim;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-
 @FunctionalInterface
-@Environment(EnvType.CLIENT)
 public interface EasingFunction {
    float ease(float var1);
 

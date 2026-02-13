@@ -3,10 +3,7 @@ package ru.render;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 
-@Environment(EnvType.CLIENT)
 public final class AnimationSystem {
    private static final float MIN_DELTA_SECONDS = 1.0E-4F;
    private static final float MAX_DELTA_SECONDS = 0.06666667F;
@@ -76,7 +73,6 @@ public final class AnimationSystem {
       }
    }
 
-   @Environment(EnvType.CLIENT)
    public interface Animated {
       boolean update(float var1);
    }

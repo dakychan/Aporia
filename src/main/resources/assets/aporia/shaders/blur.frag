@@ -3,7 +3,6 @@
 uniform sampler2D Sampler0;
 uniform vec2 BlurDir;
 uniform float Radius;
-uniform vec4 ColorTint;
 
 in vec2 texCoord;
 out vec4 fragColor;

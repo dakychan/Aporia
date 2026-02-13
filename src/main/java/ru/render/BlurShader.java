@@ -30,7 +30,6 @@ public class BlurShader {
                     .sampler("Sampler0")
                     .uniform("BlurDir", UniformType.VEC2)
                     .uniform("Radius", UniformType.FLOAT)
-                    .uniform("ColorTint", UniformType.VEC4)
                     .build();
             
             initialized = true;
@@ -64,7 +63,6 @@ public class BlurShader {
         CometRenderer.setGlobalProgram(blurProgram);
         
         blurProgram.getUniform("Radius", UniformType.FLOAT).set(blurRadius);
-        blurProgram.getUniform("ColorTint", UniformType.VEC4).set(new Vector4f(0, 0, 0, 0));
         
         for (int i = 0; i < passes; i++) {
             blurProgram.getUniform("BlurDir", UniformType.VEC2).set(new Vector2f(1.0f, 0.0f));

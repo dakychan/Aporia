@@ -48,18 +48,19 @@ class AnimCheck : Module("AnimCheck", "Тестовый модуль анима�
         val progress = loadingAnimation.getValue()
         val fillWidth = width * progress
         
-        RoundedRectDrawer()
-            .rectSized(x, y, width, height, 0f, RectColors.oneColor(RenderColor.of(255, 255, 255, 64)))
-            .build()
-            .tryDraw()
-            .close()
+        // Background with blur
+        ru.render.RectRenderer.drawRectangleWithBlur(
+            x, y, width, height,
+            RenderColor.of(40, 40, 50, 200),
+            8f, 3f
+        )
         
+        // Progress fill
         if (fillWidth > 0) {
-            RoundedRectDrawer()
-                .rectSized(x, y, fillWidth, height, 0f, RectColors.oneColor(RenderColor.of(0, 255, 0, 255)))
-                .build()
-                .tryDraw()
-                .close()
+            ru.render.RectRenderer.drawRoundedRect(
+                x, y, fillWidth, height, 8f,
+                RectColors.oneColor(RenderColor.of(0, 255, 0, 255))
+            )
         }
     }
     
@@ -69,11 +70,12 @@ class AnimCheck : Module("AnimCheck", "Тестовый модуль анима�
         
         val radius = 10f
         
-        RoundedRectDrawer()
-            .rectSized(x, y, width, height, radius, RectColors.oneColor(RenderColor.of(40, 40, 50, 200)))
-            .build()
-            .tryDraw()
-            .close()
+        // Background with blur
+        ru.render.RectRenderer.drawRectangleWithBlur(
+            x, y, width, height,
+            RenderColor.of(40, 40, 50, 200),
+            radius, 4f
+        )
         
         val color = RenderColor.of(
             (borderColor shr 16) and 0xFF,
@@ -85,32 +87,29 @@ class AnimCheck : Module("AnimCheck", "Тестовый модуль анима�
         val borderWidth = 2f
         val animatedWidth = width * progress
         
-        RoundedRectDrawer()
-            .rectSized(x, y, animatedWidth, borderWidth, radius, RectColors.oneColor(color))
-            .build()
-            .tryDraw()
-            .close()
+        // Animated borders with rounded corners
+        ru.render.RectRenderer.drawRoundedRect(
+            x, y, animatedWidth, borderWidth, radius,
+            RectColors.oneColor(color)
+        )
         
-        RoundedRectDrawer()
-            .rectSized(x, y + height - borderWidth, animatedWidth, borderWidth, radius, RectColors.oneColor(color))
-            .build()
-            .tryDraw()
-            .close()
+        ru.render.RectRenderer.drawRoundedRect(
+            x, y + height - borderWidth, animatedWidth, borderWidth, radius,
+            RectColors.oneColor(color)
+        )
         
         if (animatedWidth > 0) {
-            RoundedRectDrawer()
-                .rectSized(x, y, borderWidth, height, radius, RectColors.oneColor(color))
-                .build()
-                .tryDraw()
-                .close()
+            ru.render.RectRenderer.drawRoundedRect(
+                x, y, borderWidth, height, radius,
+                RectColors.oneColor(color)
+            )
         }
         
         if (animatedWidth >= width - borderWidth) {
-            RoundedRectDrawer()
-                .rectSized(x + width - borderWidth, y, borderWidth, height, radius, RectColors.oneColor(color))
-                .build()
-                .tryDraw()
-                .close()
+            ru.render.RectRenderer.drawRoundedRect(
+                x + width - borderWidth, y, borderWidth, height, radius,
+                RectColors.oneColor(color)
+            )
         }
     }
     
@@ -118,11 +117,12 @@ class AnimCheck : Module("AnimCheck", "Тестовый модуль анима�
         val progress = textAnimation.getValue()
         val radius = 10f
         
-        RoundedRectDrawer()
-            .rectSized(x, y, width, height, radius, RectColors.oneColor(RenderColor.of(40, 40, 50, 200)))
-            .build()
-            .tryDraw()
-            .close()
+        // Background with blur and rounded corners
+        ru.render.RectRenderer.drawRectangleWithBlur(
+            x, y, width, height,
+            RenderColor.of(40, 40, 50, 200),
+            radius, 5f
+        )
         
         val text = "APORIA"
         val fontSize = 24f

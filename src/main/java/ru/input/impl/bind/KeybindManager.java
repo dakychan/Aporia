@@ -4,9 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.loader.api.FabricLoader;
 import ru.input.api.KeyboardKeys;
 import ru.input.api.bind.Keybind;
 
@@ -16,7 +13,6 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Environment(EnvType.CLIENT)
 public class KeybindManager {
     private static KeybindManager instance;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -220,7 +216,8 @@ public class KeybindManager {
     
     private Path getConfigDirectory() {
         try {
-            return FabricLoader.getInstance().getConfigDir().resolve(CONFIG_DIR);
+            // MCP: Use Minecraft's game directory
+            return net.minecraft.client.Minecraft.getInstance().gameDirectory.toPath().resolve(CONFIG_DIR);
         } catch (Exception e) {
             return null;
         }
