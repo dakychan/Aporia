@@ -1,0 +1,131 @@
+package ru.ui.hud.components
+
+import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin
+import com.ferra13671.cometrenderer.plugins.minecraft.RectColors
+import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor
+import ru.module.ModuleManager
+import ru.render.MsdfTextRenderer
+import ru.ui.hud.HudComponent
+
+class ArrayList(private val textRenderer: MsdfTextRenderer?) : HudComponent("ArrayList") {
+    
+    private val moduleAnimations = mutableMapOf<ru.module.Module, Float>()
+    private val modulePositions = mutableMapOf<ru.module.Module, Float>()
+    
+    var position = "Справа сверху" // Справа сверху, Справа снизу, Слева сверху, Слева снизу
+    var sortByLength = true
+    
+    init {
+        x = 10f
+        y = 10f
+    }
+    
+    override fun render(plugin: MinecraftPlugin) {
+        if (textRenderer == null) return
+        
+        val fbWidth = plugin.mainFramebufferWidth
+        val fbHeight = plugin.mainFramebufferHeight
+        
+        val enabledModules = ModuleManager.getInstance().modules
+            .filter { it.isEnabled() && it.name != "Interface" }
+            .toMutableList()
+        
+        if (sortByLength) {
+            enabledModules.sortByDescending { textRenderer.measureWidth(it.name, 16f) }
+        }
+        
+        // Update animations
+        for (module in ModuleManager.getInstance().modules) {
+            val target = if (module.isEnabled() && module.name != "Interface") 1f else 0f
+            val current = moduleAnimations.getOrDefault(module, 0f)
+            val newValue = current + (target - current) * 0.15f
+            
+            if (Math.abs(newValue - target) < 0.01f) {
+                moduleAnimations[module] = target
+            } else {
+                moduleAnimations[module] = newValue
+            }
+        }
+        
+        // Calculate max width for background
+        var maxWidth = 0f
+        for (module in enabledModules) {
+            val alpha = moduleAnimations.getOrDefault(module, 0f)
+            if (alpha < 0.01f) continue
+            
+            val textWidth = textRenderer.measureWidth(module.name, 16f)
+            if (textWidth > maxWidth) maxWidth = textWidth
+        }
+        
+        val padding = 4f
+        val spacing = 2f
+        val fontSize = 16f
+        
+        // Calculate total height
+        var totalHeight = 0f
+        for (module in enabledModules) {
+            val alpha = moduleAnimations.getOrDefault(module, 0f)
+            if (alpha < 0.01f) continue
+            
+            val textHeight = textRenderer.measureHeight(module.name, fontSize)
+            totalHeight += (textHeight + padding * 2 + spacing) * alpha
+        }
+        
+        if (totalHeight > 0) {
+            totalHeight -= spacing // Remove last spacing
+        }
+        
+        // Calculate size
+        val bgWidth = maxWidth + padding * 2
+        val bgHeight = totalHeight
+        
+        // Update component size for dragging
+        width = bgWidth
+        height = bgHeight
+        
+        // Use current x, y (set by dragging or loaded from config)
+        val bgX = x
+        val bgY = y
+        
+        // Draw background
+        if (maxWidth > 0 && totalHeight > 0) {
+            ru.render.RectRenderer.drawRoundedRect(
+                bgX, bgY, bgWidth, bgHeight, 8f,
+                RectColors.oneColor(RenderColor.of(20, 20, 25, 200))
+            )
+        }
+        
+        // Render modules
+        var yOffset = bgY + padding
+        
+        for (module in enabledModules) {
+            val alpha = moduleAnimations.getOrDefault(module, 0f)
+            if (alpha < 0.01f) continue
+            
+            val text = module.name
+            val textWidth = textRenderer.measureWidth(text, fontSize)
+            val textHeight = textRenderer.measureHeight(text, fontSize)
+            
+            val targetY = yOffset
+            val currentY = modulePositions.getOrDefault(module, targetY)
+            val newY = currentY + (targetY - currentY) * 0.2f
+            modulePositions[module] = newY
+            
+            val textX = when {
+                position.contains("Справа") -> bgX + bgWidth - textWidth - padding
+                else -> bgX + padding
+            }
+            
+            textRenderer.drawText(
+                textX, newY + textHeight - 2, fontSize, text,
+                RenderColor.of(255, 255, 255, (255 * alpha).toInt())
+            )
+            
+            yOffset += (textHeight + padding * 2 + spacing) * alpha
+        }
+    }
+    
+    override fun updateSize(plugin: MinecraftPlugin) {
+        // Size is calculated in render
+    }
+}

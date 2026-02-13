@@ -205,7 +205,10 @@ public class Gui {
         if (!(this.minecraft.screen instanceof LevelLoadingScreen)) {
             if (!this.minecraft.options.hideGui) {
                 this.renderCameraOverlays(p_282884_, p_342095_);
-                this.renderCrosshair(p_282884_, p_342095_);
+                // Aporia: Don't render crosshair when ClickGUI is open
+                if (!(this.minecraft.screen instanceof ru.ui.clickgui.ClickGuiScreen)) {
+                    this.renderCrosshair(p_282884_, p_342095_);
+                }
                 p_282884_.nextStratum();
                 this.renderHotbarAndDecorations(p_282884_, p_342095_);
                 this.renderEffects(p_282884_, p_342095_);

@@ -54,6 +54,34 @@ public class Aporia {
 
     public static void render() {
         GuiManager.render();
+        
+        // Render Interface module if enabled
+        ru.module.Module interfaceModule = ru.module.ModuleManager.getInstance().getModuleByName("Interface");
+        if (interfaceModule != null && interfaceModule.isEnabled() && interfaceModule instanceof ru.module.impl.visuals.Interface) {
+            ((ru.module.impl.visuals.Interface) interfaceModule).render();
+        }
+    }
+    
+    public static boolean handleInterfaceClick(int mouseX, int mouseY, int button) {
+        ru.module.Module interfaceModule = ru.module.ModuleManager.getInstance().getModuleByName("Interface");
+        if (interfaceModule != null && interfaceModule.isEnabled() && interfaceModule instanceof ru.module.impl.visuals.Interface) {
+            return ((ru.module.impl.visuals.Interface) interfaceModule).handleMouseClick(mouseX, mouseY, button);
+        }
+        return false;
+    }
+    
+    public static void handleInterfaceDrag(int mouseX, int mouseY) {
+        ru.module.Module interfaceModule = ru.module.ModuleManager.getInstance().getModuleByName("Interface");
+        if (interfaceModule != null && interfaceModule.isEnabled() && interfaceModule instanceof ru.module.impl.visuals.Interface) {
+            ((ru.module.impl.visuals.Interface) interfaceModule).handleMouseDrag(mouseX, mouseY);
+        }
+    }
+    
+    public static void handleInterfaceRelease() {
+        ru.module.Module interfaceModule = ru.module.ModuleManager.getInstance().getModuleByName("Interface");
+        if (interfaceModule != null && interfaceModule.isEnabled() && interfaceModule instanceof ru.module.impl.visuals.Interface) {
+            ((ru.module.impl.visuals.Interface) interfaceModule).handleMouseRelease();
+        }
     }
 
     public static void initUserData() {

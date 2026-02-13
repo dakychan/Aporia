@@ -40,6 +40,7 @@ public class ClickGuiScreen extends Screen {
     private final Set<Module> expandedModules = new HashSet<>();
     private final Map<Module, Float> settingsAnimations = new HashMap<>();
     private final Map<String, Slider> sliderCache = new HashMap<>();
+    private final Set<Module.Setting<?>> expandedMultiSettings = new HashSet<>();
     
     private final Map<Module.Category, CategoryPanel> categoryPanels = new HashMap<>();
     private CategoryPanel draggingPanel = null;
@@ -310,6 +311,48 @@ public class ClickGuiScreen extends Screen {
                         textRenderer.drawText(x + width - valueWidth - 10, settingY + 8, 12, 
                             value, RenderColor.of(100, 150, 255, (int)(255 * alpha)));
                     }
+                } else if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting) {
+                    ru.module.impl.visuals.Interface.MultiSetting multiSetting = 
+                        (ru.module.impl.visuals.Interface.MultiSetting) setting;
+                    
+                    boolean isExpanded = expandedMultiSettings.contains(setting);
+                    
+                    // Show arrow to indicate expandable
+                    if (textRenderer != null) {
+                        String arrow = isExpanded ? "▼" : "▶";
+                        float arrowWidth = textRenderer.measureWidth(arrow, 12);
+                        textRenderer.drawText(x + width - arrowWidth - 10, settingY + 8, 12, 
+                            arrow, RenderColor.of(100, 200, 255, (int)(255 * alpha)));
+                    }
+                    
+                    settingY += SETTING_SPACING;
+                    
+                    // Render options if expanded
+                    if (isExpanded) {
+                        for (String option : multiSetting.getOptions()) {
+                            if (settingY > y + height - 25) break;
+                            
+                            boolean isSelected = multiSetting.getValue().contains(option);
+                            
+                            if (textRenderer != null) {
+                                // Draw background for selected options
+                                if (isSelected) {
+                                    renderRectWithBlur(x + 15, settingY, width - 30, SETTING_SPACING - 2, 4, 
+                                        RenderColor.of(40, 80, 40, (int)(150 * alpha)), 1f);
+                                }
+                                
+                                // Draw option name
+                                RenderColor textColor = isSelected 
+                                    ? RenderColor.of(80, 200, 120, (int)(255 * alpha))
+                                    : RenderColor.of(150, 150, 160, (int)(255 * alpha));
+                                
+                                textRenderer.drawText(x + 25, settingY + 8, 12, 
+                                    option, textColor);
+                            }
+                            
+                            settingY += SETTING_SPACING;
+                        }
+                    }
                 } else if (setting instanceof Module.StringSetting) {
                     Module.StringSetting strSetting = (Module.StringSetting) setting;
                     String value = strSetting.getValue();
@@ -334,7 +377,22 @@ public class ClickGuiScreen extends Screen {
         if (settings.isEmpty()) {
             return 40;
         }
-        return SETTINGS_PADDING + (settings.size() * SETTING_SPACING);
+        
+        int totalHeight = SETTINGS_PADDING;
+        
+        for (Module.Setting<?> setting : settings) {
+            totalHeight += SETTING_SPACING;
+            
+            // If it's an expanded MultiSetting, add height for options
+            if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting && 
+                expandedMultiSettings.contains(setting)) {
+                ru.module.impl.visuals.Interface.MultiSetting multiSetting = 
+                    (ru.module.impl.visuals.Interface.MultiSetting) setting;
+                totalHeight += multiSetting.getOptions().size() * SETTING_SPACING;
+            }
+        }
+        
+        return totalHeight;
     }
     
     private void updateSettingsAnimations() {
@@ -435,6 +493,40 @@ public class ClickGuiScreen extends Screen {
                                 return true;
                             }
                             settingY += SETTING_SPACING;
+                        } else if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting) {
+                            ru.module.impl.visuals.Interface.MultiSetting multiSetting = 
+                                (ru.module.impl.visuals.Interface.MultiSetting) setting;
+                            
+                            // Check if clicking on the setting itself (to expand/collapse)
+                            if (mouseX >= moduleX && mouseX <= moduleX + moduleWidth &&
+                                mouseY >= settingY && mouseY <= settingY + SETTING_SPACING) {
+                                
+                                // Toggle expansion
+                                if (expandedMultiSettings.contains(setting)) {
+                                    expandedMultiSettings.remove(setting);
+                                } else {
+                                    expandedMultiSettings.add(setting);
+                                }
+                                return true;
+                            }
+                            
+                            settingY += SETTING_SPACING;
+                            
+                            // Check if clicking on options
+                            if (expandedMultiSettings.contains(setting)) {
+                                for (String option : multiSetting.getOptions()) {
+                                    if (settingY > settingsY + settingsHeight - 25) break;
+                                    
+                                    if (mouseX >= moduleX && mouseX <= moduleX + moduleWidth &&
+                                        mouseY >= settingY && mouseY <= settingY + SETTING_SPACING) {
+                                        
+                                        multiSetting.toggle(option);
+                                        return true;
+                                    }
+                                    
+                                    settingY += SETTING_SPACING;
+                                }
+                            }
                         } else if (mouseX >= moduleX && mouseX <= moduleX + moduleWidth &&
                             mouseY >= settingY && mouseY <= settingY + SETTING_SPACING) {
                             
@@ -489,6 +581,11 @@ public class ClickGuiScreen extends Screen {
                 GLFW.glfwGetKey(this.minecraft.getWindow().handle(), GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
 
         if (button == 0) {
+            // Check Interface HUD components first
+            if (ru.Aporia.handleInterfaceClick(mouseX, mouseY, button)) {
+                return true;
+            }
+            
             for (CategoryPanel panel : categoryPanels.values()) {
                 if (panel.isHeaderHovered(mouseX, mouseY)) {
                     draggingPanel = panel;
@@ -542,6 +639,9 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent mouseButtonEvent) {
+        // Handle Interface HUD release
+        ru.Aporia.handleInterfaceRelease();
+        
         for (Slider slider : sliderCache.values()) {
             if (slider.mouseReleased((int)mouseButtonEvent.x(), (int)mouseButtonEvent.y(), mouseButtonEvent.button())) {
                 String sliderId = null;
@@ -588,6 +688,9 @@ public class ClickGuiScreen extends Screen {
         int fbMouseX = (int)(mouseButtonEvent.x() * scale);
         int fbMouseY = (int)(mouseButtonEvent.y() * scale);
         
+        // Handle Interface HUD dragging
+        ru.Aporia.handleInterfaceDrag(fbMouseX, fbMouseY);
+        
         for (Slider slider : sliderCache.values()) {
             slider.mouseDragged(fbMouseX, fbMouseY);
         }
@@ -611,6 +714,15 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public void onClose() {
+        // Save Interface positions
+        Module interfaceModule = ModuleManager.getInstance().getModuleByName("Interface");
+        if (interfaceModule instanceof ru.module.impl.visuals.Interface) {
+            ((ru.module.impl.visuals.Interface) interfaceModule).handleMouseRelease();
+        }
+        
+        // Save all module configs
+        ModuleManager.getInstance().saveConfig();
+        
         super.onClose();
     }
 
@@ -624,29 +736,32 @@ public class ClickGuiScreen extends Screen {
     
     private void savePanelPositions() {
         try {
-            File configDir = new File("config/aporia");
-            if (!configDir.exists()) {
-                configDir.mkdirs();
-            }
-            
-            File configFile = new File(configDir, "gui_positions.json");
-            Gson gson = new GsonBuilder().setPrettyPrinting().create();
-            
-            JsonObject root = new JsonObject();
-            JsonArray panelsArray = new JsonArray();
-            
-            for (CategoryPanel panel : categoryPanels.values()) {
-                JsonObject panelObj = new JsonObject();
-                panelObj.addProperty("category", panel.getCategory().name());
-                panelObj.addProperty("x", panel.getX());
-                panelObj.addProperty("y", panel.getY());
-                panelsArray.add(panelObj);
-            }
-            
-            root.add("panels", panelsArray);
-            
-            try (FileWriter writer = new FileWriter(configFile)) {
-                gson.toJson(root, writer);
+            // Save panel positions to Config.apr through FilesManager
+            ru.files.FilesManager filesManager = ru.Aporia.getFilesManager();
+            if (filesManager != null) {
+                Map<String, ru.files.ModuleConfig> configs = new HashMap<>();
+                
+                // Load existing configs first
+                Map<String, ru.files.ModuleConfig> existingConfigs = filesManager.loadConfig();
+                if (existingConfigs != null) {
+                    configs.putAll(existingConfigs);
+                }
+                
+                // Add ClickGUI panel positions
+                Map<String, String> guiSettings = new HashMap<>();
+                for (CategoryPanel panel : categoryPanels.values()) {
+                    String categoryName = panel.getCategory().name();
+                    guiSettings.put("Panel." + categoryName + ".X", String.valueOf(panel.getX()));
+                    guiSettings.put("Panel." + categoryName + ".Y", String.valueOf(panel.getY()));
+                }
+                
+                // Get ClickGui module state
+                Module clickGuiModule = ModuleManager.getInstance().getModuleByName("ClickGui");
+                boolean enabled = clickGuiModule != null && clickGuiModule.isEnabled();
+                
+                configs.put("ClickGui", new ru.files.ModuleConfig(enabled, guiSettings));
+                
+                filesManager.saveConfig(configs);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -655,32 +770,27 @@ public class ClickGuiScreen extends Screen {
     
     private void loadPanelPositions() {
         try {
-            File configFile = new File("config/aporia/gui_positions.json");
-            if (!configFile.exists()) {
-                return;
-            }
-            
-            Gson gson = new Gson();
-            try (FileReader reader = new FileReader(configFile)) {
-                JsonObject root = gson.fromJson(reader, JsonObject.class);
-                if (root == null || !root.has("panels")) {
-                    return;
-                }
-                
-                JsonArray panelsArray = root.getAsJsonArray("panels");
-                for (int i = 0; i < panelsArray.size(); i++) {
-                    JsonObject panelObj = panelsArray.get(i).getAsJsonObject();
-                    String categoryName = panelObj.get("category").getAsString();
-                    int x = panelObj.get("x").getAsInt();
-                    int y = panelObj.get("y").getAsInt();
+            ru.files.FilesManager filesManager = ru.Aporia.getFilesManager();
+            if (filesManager != null) {
+                Map<String, ru.files.ModuleConfig> configs = filesManager.loadConfig();
+                if (configs != null && configs.containsKey("ClickGui")) {
+                    ru.files.ModuleConfig guiConfig = configs.get("ClickGui");
+                    Map<String, String> settings = guiConfig.getSettings();
                     
-                    try {
-                        Module.Category category = Module.Category.valueOf(categoryName);
-                        CategoryPanel panel = categoryPanels.get(category);
-                        if (panel != null) {
-                            panel.setPosition(x, y);
+                    for (CategoryPanel panel : categoryPanels.values()) {
+                        String categoryName = panel.getCategory().name();
+                        String xKey = "Panel." + categoryName + ".X";
+                        String yKey = "Panel." + categoryName + ".Y";
+                        
+                        if (settings.containsKey(xKey) && settings.containsKey(yKey)) {
+                            try {
+                                int x = Integer.parseInt(settings.get(xKey));
+                                int y = Integer.parseInt(settings.get(yKey));
+                                panel.setPosition(x, y);
+                            } catch (NumberFormatException e) {
+                                // Ignore invalid values
+                            }
                         }
-                    } catch (IllegalArgumentException e) {
                     }
                 }
             }
