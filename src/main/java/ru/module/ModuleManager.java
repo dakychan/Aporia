@@ -38,7 +38,7 @@ public class ModuleManager {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to load config: " + e.getMessage());
+            ru.files.Logger.INSTANCE.error("Failed to load config: " + e.getMessage(), e);
         }
     }
     
@@ -70,7 +70,6 @@ public class ModuleManager {
             } else if (setting instanceof Module.StringSetting || setting instanceof Module.ModeSetting) {
                 ((Module.Setting<String>) setting).setValue(value);
             } else if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting) {
-                // Parse comma-separated list
                 String[] items = value.split(",");
                 java.util.List<String> list = new java.util.ArrayList<>();
                 for (String item : items) {
@@ -83,7 +82,7 @@ public class ModuleManager {
                 ((ru.module.impl.visuals.Interface.MultiSetting) setting).getValue().addAll(list);
             }
         } catch (Exception e) {
-            System.err.println("Failed to apply setting " + setting.getName() + ": " + e.getMessage());
+            ru.files.Logger.INSTANCE.error("Failed to apply setting " + setting.getName() + ": " + e.getMessage(), e);
         }
     }
     
@@ -142,14 +141,12 @@ public class ModuleManager {
             if (filesManager != null) {
                 Map<String, ru.files.ModuleConfig> configs = new HashMap<>();
                 
-                // Load existing configs to preserve ClickGui panel positions
                 Map<String, ru.files.ModuleConfig> existingConfigs = filesManager.loadConfig();
                 if (existingConfigs != null && existingConfigs.containsKey("ClickGui")) {
                     configs.put("ClickGui", existingConfigs.get("ClickGui"));
                 }
                 
                 for (Module module : modules) {
-                    // Skip ClickGui module as it's handled separately
                     if (module.getName().equals("ClickGui")) {
                         continue;
                     }
@@ -169,8 +166,7 @@ public class ModuleManager {
                 filesManager.saveConfig(configs);
             }
         } catch (Exception e) {
-            System.err.println("Failed to save config: " + e.getMessage());
-            e.printStackTrace();
+            ru.files.Logger.INSTANCE.error("Failed to save config: " + e.getMessage(), e);
         }
     }
     
@@ -185,12 +181,11 @@ public class ModuleManager {
             } else if (setting instanceof Module.ModeSetting) {
                 return ((Module.ModeSetting) setting).getValue();
             } else if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting) {
-                // Save as comma-separated list
                 java.util.List<String> values = ((ru.module.impl.visuals.Interface.MultiSetting) setting).getValue();
                 return String.join(",", values);
             }
         } catch (Exception e) {
-            System.err.println("Failed to get setting value for " + setting.getName() + ": " + e.getMessage());
+            ru.files.Logger.INSTANCE.error("Failed to get setting value for " + setting.getName() + ": " + e.getMessage(), e);
         }
         return null;
     }

@@ -81,8 +81,7 @@ public class KeybindManager {
                 try {
                     bind.execute();
                 } catch (Exception e) {
-                    System.err.println("Error executing keybind " + bind.getId() + ": " + e.getMessage());
-                    e.printStackTrace();
+                    ru.files.Logger.INSTANCE.error("Error executing keybind " + bind.getId() + ": " + e.getMessage(), e);
                 }
             }
         }
@@ -137,7 +136,7 @@ public class KeybindManager {
         try {
             Path configDir = getConfigDirectory();
             if (configDir == null) {
-                System.err.println("Config directory not available (test environment?)");
+                ru.files.Logger.INSTANCE.warn("Config directory not available (test environment?)");
                 return;
             }
             
@@ -161,8 +160,7 @@ public class KeybindManager {
             String json = GSON.toJson(root);
             Files.writeString(keybindsFile, json);
         } catch (IOException e) {
-            System.err.println("Failed to save keybinds: " + e.getMessage());
-            e.printStackTrace();
+            ru.files.Logger.INSTANCE.error("Failed to save keybinds: " + e.getMessage(), e);
         }
     }
     
@@ -170,7 +168,7 @@ public class KeybindManager {
         try {
             Path configDir = getConfigDirectory();
             if (configDir == null) {
-                System.err.println("Config directory not available (test environment?)");
+                ru.files.Logger.INSTANCE.warn("Config directory not available (test environment?)");
                 return;
             }
             
@@ -206,11 +204,9 @@ public class KeybindManager {
                 }
             }
         } catch (IOException e) {
-            System.err.println("Failed to load keybinds: " + e.getMessage());
-            e.printStackTrace();
+            ru.files.Logger.INSTANCE.error("Failed to load keybinds: " + e.getMessage(), e);
         } catch (Exception e) {
-            System.err.println("Corrupted keybinds file, using defaults: " + e.getMessage());
-            e.printStackTrace();
+            ru.files.Logger.INSTANCE.error("Corrupted keybinds file, using defaults: " + e.getMessage(), e);
         }
     }
     

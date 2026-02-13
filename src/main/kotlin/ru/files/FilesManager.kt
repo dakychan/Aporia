@@ -17,7 +17,7 @@ class FilesManager {
     private val statsPath: Path = PathResolver.cacheDirectory.resolve("Stats.json")
     
     fun initialize() {
-        println("[FilesManager] Initializing file system...")
+        Logger.info("Initializing file system...")
         
         createDirectories()
         
@@ -27,9 +27,9 @@ class FilesManager {
         
         setHiddenAttributeForCacheFiles()
         
-        println("[FilesManager] File system initialized successfully")
-        println("[FilesManager] Main directory: ${PathResolver.mainDirectory}")
-        println("[FilesManager] Cache directory: ${PathResolver.cacheDirectory}")
+        Logger.info("File system initialized successfully")
+        Logger.info("Main directory: ${PathResolver.mainDirectory}")
+        Logger.info("Cache directory: ${PathResolver.cacheDirectory}")
     }
     
     private fun createDirectories() {
@@ -40,9 +40,9 @@ class FilesManager {
     private fun createDirectoryWithFallback(path: Path) {
         try {
             Files.createDirectories(path)
-            println("[FilesManager] ✓ Created directory: $path")
+            Logger.info("✓ Created directory: $path")
         } catch (e: Exception) {
-            println("[FilesManager] Failed to create directory with standard method, trying fallback...")
+            Logger.warn("Failed to create directory with standard method, trying fallback...")
             
             val success = when (PathResolver.platform) {
                 PathResolver.Platform.WINDOWS -> createDirectoryWindows(path)
@@ -50,10 +50,9 @@ class FilesManager {
             }
             
             if (success) {
-                println("[FilesManager] ✓ Created directory via fallback: $path")
+                Logger.info("✓ Created directory via fallback: $path")
             } else {
-                System.err.println("[FilesManager] ✗ Failed to create directory: $path")
-                e.printStackTrace()
+                Logger.error("✗ Failed to create directory: $path", e)
             }
         }
     }
@@ -81,13 +80,12 @@ class FilesManager {
         if (!Files.exists(path)) {
             try {
                 Files.writeString(path, defaultContent, StandardOpenOption.CREATE_NEW)
-                println("[FilesManager] ✓ Created file: ${path.fileName}")
+                Logger.info("✓ Created file: ${path.fileName}")
             } catch (e: Exception) {
-                System.err.println("[FilesManager] ✗ Failed to create file: ${path.fileName}")
-                e.printStackTrace()
+                Logger.error("✗ Failed to create file: ${path.fileName}", e)
             }
         } else {
-            println("[FilesManager] ○ File exists: ${path.fileName}")
+            Logger.info("○ File exists: ${path.fileName}")
         }
     }
     
@@ -96,9 +94,9 @@ class FilesManager {
             try {
                 val dosView = Files.getFileAttributeView(statsPath, DosFileAttributeView::class.java)
                 dosView?.setHidden(true)
-                println("[FilesManager] ✓ Set hidden attribute for cache files")
+                Logger.info("✓ Set hidden attribute for cache files")
             } catch (e: Exception) {
-                println("[FilesManager] Could not set hidden attribute for cache files: ${e.message}")
+                Logger.warn("Could not set hidden attribute for cache files: ${e.message}")
             }
         }
     }
@@ -116,10 +114,9 @@ class FilesManager {
         
         try {
             Files.writeString(configPath, content)
-            println("[FilesManager] Config saved")
+            Logger.info("Config saved")
         } catch (e: Exception) {
-            System.err.println("[FilesManager] Failed to save config")
-            e.printStackTrace()
+            Logger.error("Failed to save config", e)
         }
     }
     
@@ -153,10 +150,9 @@ class FilesManager {
         try {
             val json = gson.toJson(userData)
             Files.writeString(statsPath, json)
-            println("[FilesManager] Stats saved")
+            Logger.info("Stats saved")
         } catch (e: Exception) {
-            System.err.println("[FilesManager] Failed to save stats")
-            e.printStackTrace()
+            Logger.error("Failed to save stats", e)
         }
     }
     
@@ -166,8 +162,7 @@ class FilesManager {
                 gson.fromJson(it, UserData.UserDataClass::class.java) 
             }
         } catch (e: Exception) {
-            System.err.println("[FilesManager] Failed to load stats")
-            e.printStackTrace()
+            Logger.error("Failed to load stats", e)
             null
         }
     }
@@ -176,10 +171,9 @@ class FilesManager {
         try {
             val content = friends.joinToString("\n")
             Files.writeString(friendsPath, content)
-            println("[FilesManager] Friends saved")
+            Logger.info("Friends saved")
         } catch (e: Exception) {
-            System.err.println("[FilesManager] Failed to save friends")
-            e.printStackTrace()
+            Logger.error("Failed to save friends", e)
         }
     }
     
@@ -191,8 +185,7 @@ class FilesManager {
                 emptyList()
             }
         } catch (e: Exception) {
-            System.err.println("[FilesManager] Failed to load friends")
-            e.printStackTrace()
+            Logger.error("Failed to load friends", e)
             emptyList()
         }
     }

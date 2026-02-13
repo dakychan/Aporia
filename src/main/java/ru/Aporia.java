@@ -33,6 +33,7 @@ public class Aporia {
     }
 
     private static void initFileSystem() {
+        ru.files.Logger.INSTANCE.initialize();
         filesManager = new FilesManager();
         filesManager.initialize();
         
@@ -41,7 +42,7 @@ public class Aporia {
                 UserData.UserDataClass userData = UserData.INSTANCE.getUserData();
                 filesManager.saveStats(userData);
             } catch (Exception e) {
-                System.err.println("Failed to save stats on shutdown: " + e.getMessage());
+                ru.files.Logger.INSTANCE.error("Failed to save stats on shutdown: " + e.getMessage(), e);
             }
         }));
     }
