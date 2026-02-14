@@ -15,9 +15,11 @@ import ru.input.impl.bind.KeybindManager;
 import ru.module.Module;
 import ru.module.ModuleManager;
 import ru.render.BlurShader;
+import ru.render.IconFont;
 import ru.render.MsdfFont;
 import ru.render.MsdfTextRenderer;
 import ru.render.RectRenderer;
+import ru.ui.clickgui.comp.Slider;
 import ru.util.Lang;
 
 import java.io.File;
@@ -37,6 +39,7 @@ public class ClickGuiScreen extends Screen {
     private Module hoveredModule = null;
     private final Set<Module> expandedModules = new HashSet<>();
     private final Map<Module, Float> settingsAnimations = new HashMap<>();
+    private final Map<String, Slider> sliderCache = new HashMap<>();
     
     private final Map<Module.Category, CategoryPanel> categoryPanels = new HashMap<>();
     private CategoryPanel draggingPanel = null;
@@ -49,6 +52,7 @@ public class ClickGuiScreen extends Screen {
     private static final int MODULE_SPACING = 8;
     private static final int HEADER_HEIGHT = 38;
     private static final int SETTINGS_HEIGHT = 200;
+    private static final int SETTING_SPACING = 35;
     private static final float ANIMATION_SPEED = 0.15f;
     private static final float DESCRIPTION_Y_OFFSET = 20f;
     private static final float DESCRIPTION_DASH_SPACING = 8f;
@@ -58,6 +62,7 @@ public class ClickGuiScreen extends Screen {
     public ClickGuiScreen(int width, int height) {
         super(Component.literal("Click GUI"));
         initFont();
+        IconFont.init();
         Lang.load();
         initializeCategoryPanels();
         loadPanelPositions();
@@ -159,8 +164,16 @@ public class ClickGuiScreen extends Screen {
 
         renderRectWithBlur(x, y, width, HEADER_HEIGHT, 8, RenderColor.of(30, 30, 38, 255), 3f);
 
+        if (IconFont.isInitialized()) {
+            MsdfTextRenderer iconRenderer = IconFont.getRenderer();
+            String icon = IconFont.getIcon(panel.getCategory());
+            if (iconRenderer != null) {
+                iconRenderer.drawText(x + 10, y + 21, 18, icon, RenderColor.WHITE);
+            }
+        }
+
         if (textRenderer != null) {
-            textRenderer.drawText(x + 10, y + 21, 16, 
+            textRenderer.drawText(x + 35, y + 21, 16, 
                 panel.getCategory().getDisplayName(), RenderColor.WHITE);
         }
 
@@ -242,58 +255,71 @@ public class ClickGuiScreen extends Screen {
         
         int settingY = y + 10;
         
+        MinecraftPlugin plugin = MinecraftPlugin.getInstance();
+        double scale = (double) plugin.getMainFramebufferWidth() / this.width;
+        int fbMouseX = (int)(this.minecraft.mouseHandler.xpos() * scale);
+        int fbMouseY = (int)(this.minecraft.mouseHandler.ypos() * scale);
+        
         for (Module.Setting<?> setting : settings) {
-            if (settingY + 30 > y + height) break;
+            if (settingY > y + height - 25) break;
             
-            if (textRenderer != null) {
-                textRenderer.drawText(x + 10, settingY + 8, 12, 
-                    setting.getName(), RenderColor.of(200, 200, 210, (int)(255 * alpha)));
-            }
-            
-            if (setting instanceof Module.BooleanSetting) {
-                Module.BooleanSetting boolSetting = (Module.BooleanSetting) setting;
-                String value = boolSetting.getValue() ? "Да" : "Нет";
-                RenderColor valueColor = boolSetting.getValue() 
-                    ? RenderColor.of(80, 200, 120, (int)(255 * alpha))
-                    : RenderColor.of(180, 180, 190, (int)(255 * alpha));
-                
-                if (textRenderer != null) {
-                    float valueWidth = textRenderer.measureWidth(value, 12);
-                    textRenderer.drawText(x + width - valueWidth - 10, settingY + 8, 12, value, valueColor);
-                }
-            } else if (setting instanceof Module.NumberSetting) {
+            if (setting instanceof Module.NumberSetting) {
                 Module.NumberSetting numSetting = (Module.NumberSetting) setting;
-                String value = String.format("%.1f", numSetting.getValue());
+                String sliderId = module.getName() + "." + setting.getName();
                 
-                if (textRenderer != null) {
-                    float valueWidth = textRenderer.measureWidth(value, 12);
-                    textRenderer.drawText(x + width - valueWidth - 10, settingY + 8, 12, 
-                        value, RenderColor.of(180, 180, 190, (int)(255 * alpha)));
-                }
-            } else if (setting instanceof Module.ModeSetting) {
-                Module.ModeSetting modeSetting = (Module.ModeSetting) setting;
-                String value = modeSetting.getValue();
+                Slider slider = sliderCache.computeIfAbsent(sliderId, k -> 
+                    new Slider(setting.getName(), 
+                        numSetting.getValue().floatValue(), 
+                        (float)numSetting.getMin(), 
+                        (float)numSetting.getMax())
+                );
                 
+                slider.setValue(numSetting.getValue().floatValue());
+                slider.render(x + 10, settingY, width - 20, textRenderer, fbMouseX, fbMouseY);
+                
+                settingY += SETTING_SPACING;
+            } else {
                 if (textRenderer != null) {
-                    float valueWidth = textRenderer.measureWidth(value, 12);
-                    textRenderer.drawText(x + width - valueWidth - 10, settingY + 8, 12, 
-                        value, RenderColor.of(100, 150, 255, (int)(255 * alpha)));
-                }
-            } else if (setting instanceof Module.StringSetting) {
-                Module.StringSetting strSetting = (Module.StringSetting) setting;
-                String value = strSetting.getValue();
-                if (value.length() > 15) {
-                    value = value.substring(0, 12) + "...";
+                    textRenderer.drawText(x + 10, settingY + 8, 12, 
+                        setting.getName(), RenderColor.of(200, 200, 210, (int)(255 * alpha)));
                 }
                 
-                if (textRenderer != null) {
-                    float valueWidth = textRenderer.measureWidth(value, 12);
-                    textRenderer.drawText(x + width - valueWidth - 10, settingY + 8, 12, 
-                        value, RenderColor.of(180, 180, 190, (int)(255 * alpha)));
+                if (setting instanceof Module.BooleanSetting) {
+                    Module.BooleanSetting boolSetting = (Module.BooleanSetting) setting;
+                    String value = boolSetting.getValue() ? "Да" : "Нет";
+                    RenderColor valueColor = boolSetting.getValue() 
+                        ? RenderColor.of(80, 200, 120, (int)(255 * alpha))
+                        : RenderColor.of(180, 180, 190, (int)(255 * alpha));
+                    
+                    if (textRenderer != null) {
+                        float valueWidth = textRenderer.measureWidth(value, 12);
+                        textRenderer.drawText(x + width - valueWidth - 10, settingY + 8, 12, value, valueColor);
+                    }
+                } else if (setting instanceof Module.ModeSetting) {
+                    Module.ModeSetting modeSetting = (Module.ModeSetting) setting;
+                    String value = modeSetting.getValue();
+                    
+                    if (textRenderer != null) {
+                        float valueWidth = textRenderer.measureWidth(value, 12);
+                        textRenderer.drawText(x + width - valueWidth - 10, settingY + 8, 12, 
+                            value, RenderColor.of(100, 150, 255, (int)(255 * alpha)));
+                    }
+                } else if (setting instanceof Module.StringSetting) {
+                    Module.StringSetting strSetting = (Module.StringSetting) setting;
+                    String value = strSetting.getValue();
+                    if (value.length() > 15) {
+                        value = value.substring(0, 12) + "...";
+                    }
+                    
+                    if (textRenderer != null) {
+                        float valueWidth = textRenderer.measureWidth(value, 12);
+                        textRenderer.drawText(x + width - valueWidth - 10, settingY + 8, 12, 
+                            value, RenderColor.of(180, 180, 190, (int)(255 * alpha)));
+                    }
                 }
+                
+                settingY += SETTING_SPACING;
             }
-            
-            settingY += 30;
         }
     }
     
@@ -385,10 +411,17 @@ public class ClickGuiScreen extends Screen {
                     int settingY = settingsY + 10;
                     
                     for (Module.Setting<?> setting : settings) {
-                        if (settingY + 30 > settingsY + settingsHeight) break;
+                        if (settingY > settingsY + settingsHeight - 25) break;
                         
-                        if (mouseX >= moduleX && mouseX <= moduleX + moduleWidth &&
-                            mouseY >= settingY && mouseY <= settingY + 30) {
+                        if (setting instanceof Module.NumberSetting) {
+                            String sliderId = module.getName() + "." + setting.getName();
+                            Slider slider = sliderCache.get(sliderId);
+                            if (slider != null && slider.mouseClicked(mouseX, mouseY, 0)) {
+                                return true;
+                            }
+                            settingY += SETTING_SPACING;
+                        } else if (mouseX >= moduleX && mouseX <= moduleX + moduleWidth &&
+                            mouseY >= settingY && mouseY <= settingY + SETTING_SPACING) {
                             
                             if (setting instanceof Module.BooleanSetting) {
                                 Module.BooleanSetting boolSetting = (Module.BooleanSetting) setting;
@@ -398,16 +431,12 @@ public class ClickGuiScreen extends Screen {
                                 Module.ModeSetting modeSetting = (Module.ModeSetting) setting;
                                 modeSetting.cycle();
                                 return true;
-                            } else if (setting instanceof Module.NumberSetting) {
-                                Module.NumberSetting numSetting = (Module.NumberSetting) setting;
-                                double current = numSetting.getValue();
-                                double step = numSetting.getStep();
-                                numSetting.setValue(current + step);
-                                return true;
                             }
+                            
+                            settingY += SETTING_SPACING;
+                        } else {
+                            settingY += SETTING_SPACING;
                         }
-                        
-                        settingY += 30;
                     }
                 }
                 
@@ -497,6 +526,36 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent mouseButtonEvent) {
+        for (Slider slider : sliderCache.values()) {
+            if (slider.mouseReleased((int)mouseButtonEvent.x(), (int)mouseButtonEvent.y(), mouseButtonEvent.button())) {
+                String sliderId = null;
+                for (Map.Entry<String, Slider> entry : sliderCache.entrySet()) {
+                    if (entry.getValue() == slider) {
+                        sliderId = entry.getKey();
+                        break;
+                    }
+                }
+                
+                if (sliderId != null) {
+                    String[] parts = sliderId.split("\\.", 2);
+                    if (parts.length == 2) {
+                        String moduleName = parts[0];
+                        String settingName = parts[1];
+                        
+                        Module module = ModuleManager.getInstance().getModuleByName(moduleName);
+                        if (module != null) {
+                            for (Module.Setting<?> setting : module.getSettings()) {
+                                if (setting.getName().equals(settingName) && setting instanceof Module.NumberSetting) {
+                                    ((Module.NumberSetting) setting).setValue((double) slider.getValue());
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         if (mouseButtonEvent.button() == 0 && draggingPanel != null) {
             draggingPanel.setDragging(false);
             draggingPanel = null;
@@ -510,6 +569,12 @@ public class ClickGuiScreen extends Screen {
     public boolean mouseDragged(MouseButtonEvent mouseButtonEvent, double dragX, double dragY) {
         MinecraftPlugin plugin = MinecraftPlugin.getInstance();
         double scale = (double) plugin.getMainFramebufferWidth() / this.width;
+        int fbMouseX = (int)(mouseButtonEvent.x() * scale);
+        int fbMouseY = (int)(mouseButtonEvent.y() * scale);
+        
+        for (Slider slider : sliderCache.values()) {
+            slider.mouseDragged(fbMouseX, fbMouseY);
+        }
         
         if (draggingPanel != null && mouseButtonEvent.button() == 0) {
             int scaledMouseX = (int)(mouseButtonEvent.x() * scale);

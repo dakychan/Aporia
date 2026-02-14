@@ -103,6 +103,15 @@ public class ModuleManager {
         return modules;
     }
     
+    public Module getModuleByName(String name) {
+        for (Module module : modules) {
+            if (module.getName().equals(name)) {
+                return module;
+            }
+        }
+        return null;
+    }
+    
     public List<Module> getModulesByCategory(Module.Category category) {
         return modulesByCategory.get(category);
     }
