@@ -513,7 +513,6 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
             RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(rendertarget.getDepthTexture(), 1.0);
             this.minecraft.gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
             this.guiRenderState.reset();
-            // Aporia: Custom rendering
             com.ferra13671.cometrenderer.plugins.minecraft.AbstractMinecraftPlugin.getInstance().setupUIProjection();
             com.mojang.blaze3d.opengl.GlStateManager._disableDepthTest();
             ru.Aporia.render();

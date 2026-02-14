@@ -212,7 +212,6 @@ public class KeybindManager {
     
     private Path getConfigDirectory() {
         try {
-            // MCP: Use Minecraft's game directory
             return net.minecraft.client.Minecraft.getInstance().gameDirectory.toPath().resolve(CONFIG_DIR);
         } catch (Exception e) {
             return null;

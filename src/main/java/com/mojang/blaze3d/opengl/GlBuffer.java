@@ -40,7 +40,6 @@ public class GlBuffer extends GpuBuffer {
         return this.closed;
     }
 
-    // Aporia: Public getter for handle
     public int getHandle() {
         return this.handle;
     }

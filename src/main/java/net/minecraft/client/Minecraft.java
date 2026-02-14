@@ -1726,7 +1726,6 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
     }
 
     public void tick() {
-        // Aporia: Handle input
         ru.input.impl.UnifiedInputHandler.tick();
         
         this.clientTickCount++;

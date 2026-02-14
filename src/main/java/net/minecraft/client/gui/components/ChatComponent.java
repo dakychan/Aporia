@@ -211,7 +211,6 @@ public class ChatComponent {
     }
 
     public void addMessage(Component p_93786_) {
-        // Aporia: Handle chat messages
         /* Temporarily disabled - may cause encoding issues
         ru.module.ModuleManager.getInstance().getModules().stream()
                 .filter(module -> module instanceof ru.module.impl.misc.AutoFlyMe && module.isEnabled())

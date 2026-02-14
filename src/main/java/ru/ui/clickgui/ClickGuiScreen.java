@@ -316,8 +316,7 @@ public class ClickGuiScreen extends Screen {
                         (ru.module.impl.visuals.Interface.MultiSetting) setting;
                     
                     boolean isExpanded = expandedMultiSettings.contains(setting);
-                    
-                    // Show arrow to indicate expandable
+
                     if (textRenderer != null) {
                         String arrow = isExpanded ? "▼" : "▶";
                         float arrowWidth = textRenderer.measureWidth(arrow, 12);
@@ -326,8 +325,7 @@ public class ClickGuiScreen extends Screen {
                     }
                     
                     settingY += SETTING_SPACING;
-                    
-                    // Render options if expanded
+
                     if (isExpanded) {
                         for (String option : multiSetting.getOptions()) {
                             if (settingY > y + height - 25) break;
@@ -335,13 +333,11 @@ public class ClickGuiScreen extends Screen {
                             boolean isSelected = multiSetting.getValue().contains(option);
                             
                             if (textRenderer != null) {
-                                // Draw background for selected options
                                 if (isSelected) {
                                     renderRectWithBlur(x + 15, settingY, width - 30, SETTING_SPACING - 2, 4, 
                                         RenderColor.of(40, 80, 40, (int)(150 * alpha)), 1f);
                                 }
-                                
-                                // Draw option name
+
                                 RenderColor textColor = isSelected 
                                     ? RenderColor.of(80, 200, 120, (int)(255 * alpha))
                                     : RenderColor.of(150, 150, 160, (int)(255 * alpha));
@@ -382,9 +378,8 @@ public class ClickGuiScreen extends Screen {
         
         for (Module.Setting<?> setting : settings) {
             totalHeight += SETTING_SPACING;
-            
-            // If it's an expanded MultiSetting, add height for options
-            if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting && 
+
+            if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting &&
                 expandedMultiSettings.contains(setting)) {
                 ru.module.impl.visuals.Interface.MultiSetting multiSetting = 
                     (ru.module.impl.visuals.Interface.MultiSetting) setting;
@@ -496,12 +491,10 @@ public class ClickGuiScreen extends Screen {
                         } else if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting) {
                             ru.module.impl.visuals.Interface.MultiSetting multiSetting = 
                                 (ru.module.impl.visuals.Interface.MultiSetting) setting;
-                            
-                            // Check if clicking on the setting itself (to expand/collapse)
+
                             if (mouseX >= moduleX && mouseX <= moduleX + moduleWidth &&
                                 mouseY >= settingY && mouseY <= settingY + SETTING_SPACING) {
-                                
-                                // Toggle expansion
+
                                 if (expandedMultiSettings.contains(setting)) {
                                     expandedMultiSettings.remove(setting);
                                 } else {
@@ -511,8 +504,7 @@ public class ClickGuiScreen extends Screen {
                             }
                             
                             settingY += SETTING_SPACING;
-                            
-                            // Check if clicking on options
+
                             if (expandedMultiSettings.contains(setting)) {
                                 for (String option : multiSetting.getOptions()) {
                                     if (settingY > settingsY + settingsHeight - 25) break;
@@ -581,7 +573,6 @@ public class ClickGuiScreen extends Screen {
                 GLFW.glfwGetKey(this.minecraft.getWindow().handle(), GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
 
         if (button == 0) {
-            // Check Interface HUD components first
             if (ru.Aporia.handleInterfaceClick(mouseX, mouseY, button)) {
                 return true;
             }
@@ -639,7 +630,6 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent mouseButtonEvent) {
-        // Handle Interface HUD release
         ru.Aporia.handleInterfaceRelease();
         
         for (Slider slider : sliderCache.values()) {
@@ -687,8 +677,7 @@ public class ClickGuiScreen extends Screen {
         double scale = (double) plugin.getMainFramebufferWidth() / this.width;
         int fbMouseX = (int)(mouseButtonEvent.x() * scale);
         int fbMouseY = (int)(mouseButtonEvent.y() * scale);
-        
-        // Handle Interface HUD dragging
+
         ru.Aporia.handleInterfaceDrag(fbMouseX, fbMouseY);
         
         for (Slider slider : sliderCache.values()) {
@@ -714,13 +703,11 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public void onClose() {
-        // Save Interface positions
         Module interfaceModule = ModuleManager.getInstance().getModuleByName("Interface");
         if (interfaceModule instanceof ru.module.impl.visuals.Interface) {
             ((ru.module.impl.visuals.Interface) interfaceModule).handleMouseRelease();
         }
-        
-        // Save all module configs
+
         ModuleManager.getInstance().saveConfig();
         
         super.onClose();
@@ -736,26 +723,22 @@ public class ClickGuiScreen extends Screen {
     
     private void savePanelPositions() {
         try {
-            // Save panel positions to Config.apr through FilesManager
             ru.files.FilesManager filesManager = ru.Aporia.getFilesManager();
             if (filesManager != null) {
                 Map<String, ru.files.ModuleConfig> configs = new HashMap<>();
-                
-                // Load existing configs first
+
                 Map<String, ru.files.ModuleConfig> existingConfigs = filesManager.loadConfig();
                 if (existingConfigs != null) {
                     configs.putAll(existingConfigs);
                 }
-                
-                // Add ClickGUI panel positions
+
                 Map<String, String> guiSettings = new HashMap<>();
                 for (CategoryPanel panel : categoryPanels.values()) {
                     String categoryName = panel.getCategory().name();
                     guiSettings.put("Panel." + categoryName + ".X", String.valueOf(panel.getX()));
                     guiSettings.put("Panel." + categoryName + ".Y", String.valueOf(panel.getY()));
                 }
-                
-                // Get ClickGui module state
+
                 Module clickGuiModule = ModuleManager.getInstance().getModuleByName("ClickGui");
                 boolean enabled = clickGuiModule != null && clickGuiModule.isEnabled();
                 
@@ -788,7 +771,6 @@ public class ClickGuiScreen extends Screen {
                                 int y = Integer.parseInt(settings.get(yKey));
                                 panel.setPosition(x, y);
                             } catch (NumberFormatException e) {
-                                // Ignore invalid values
                             }
                         }
                     }
