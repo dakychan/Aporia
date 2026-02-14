@@ -15,8 +15,7 @@ class FileLoader {
             val content = Files.readString(path)
             gson.fromJson(content, JsonObject::class.java)
         } catch (e: Exception) {
-            System.err.println("Failed to load JSON from $path: ${e.message}")
-            e.printStackTrace()
+            Logger.error("Failed to load JSON from $path: ${e.message}", e)
             null
         }
     }
@@ -27,8 +26,7 @@ class FileLoader {
             val content = Files.readString(path)
             parseAprFormat(content)
         } catch (e: Exception) {
-            System.err.println("Failed to load APR from $path: ${e.message}")
-            e.printStackTrace()
+            Logger.error("Failed to load APR from $path: ${e.message}", e)
             null
         }
     }
@@ -38,8 +36,7 @@ class FileLoader {
             if (!Files.exists(path)) return null
             Files.readAllBytes(path)
         } catch (e: Exception) {
-            System.err.println("Failed to load CBM from $path: ${e.message}")
-            e.printStackTrace()
+            Logger.error("Failed to load CBM from $path: ${e.message}", e)
             null
         }
     }

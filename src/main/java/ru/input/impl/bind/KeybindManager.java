@@ -4,9 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.loader.api.FabricLoader;
 import ru.input.api.KeyboardKeys;
 import ru.input.api.bind.Keybind;
 
@@ -16,7 +13,6 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Environment(EnvType.CLIENT)
 public class KeybindManager {
     private static KeybindManager instance;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -85,8 +81,7 @@ public class KeybindManager {
                 try {
                     bind.execute();
                 } catch (Exception e) {
-                    System.err.println("Error executing keybind " + bind.getId() + ": " + e.getMessage());
-                    e.printStackTrace();
+                    ru.files.Logger.INSTANCE.error("Error executing keybind " + bind.getId() + ": " + e.getMessage(), e);
                 }
             }
         }
@@ -141,7 +136,7 @@ public class KeybindManager {
         try {
             Path configDir = getConfigDirectory();
             if (configDir == null) {
-                System.err.println("Config directory not available (test environment?)");
+                ru.files.Logger.INSTANCE.warn("Config directory not available (test environment?)");
                 return;
             }
             
@@ -165,8 +160,7 @@ public class KeybindManager {
             String json = GSON.toJson(root);
             Files.writeString(keybindsFile, json);
         } catch (IOException e) {
-            System.err.println("Failed to save keybinds: " + e.getMessage());
-            e.printStackTrace();
+            ru.files.Logger.INSTANCE.error("Failed to save keybinds: " + e.getMessage(), e);
         }
     }
     
@@ -174,7 +168,7 @@ public class KeybindManager {
         try {
             Path configDir = getConfigDirectory();
             if (configDir == null) {
-                System.err.println("Config directory not available (test environment?)");
+                ru.files.Logger.INSTANCE.warn("Config directory not available (test environment?)");
                 return;
             }
             
@@ -210,17 +204,15 @@ public class KeybindManager {
                 }
             }
         } catch (IOException e) {
-            System.err.println("Failed to load keybinds: " + e.getMessage());
-            e.printStackTrace();
+            ru.files.Logger.INSTANCE.error("Failed to load keybinds: " + e.getMessage(), e);
         } catch (Exception e) {
-            System.err.println("Corrupted keybinds file, using defaults: " + e.getMessage());
-            e.printStackTrace();
+            ru.files.Logger.INSTANCE.error("Corrupted keybinds file, using defaults: " + e.getMessage(), e);
         }
     }
     
     private Path getConfigDirectory() {
         try {
-            return FabricLoader.getInstance().getConfigDir().resolve(CONFIG_DIR);
+            return net.minecraft.client.Minecraft.getInstance().gameDirectory.toPath().resolve(CONFIG_DIR);
         } catch (Exception e) {
             return null;
         }

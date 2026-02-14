@@ -1,9 +1,4 @@
-pluginManagement {
-    repositories {
-        maven {
-            name = 'Fabric'
-            url = 'https://maven.fabricmc.net/'
-        }
-        gradlePluginPortal()
-    }
-}
+rootProject.name = 'Aporia.cc'
+
+include ':Aporia'
+project(":Aporia").projectDir = file("projects/Aporia.cc")

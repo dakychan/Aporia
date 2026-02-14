@@ -168,9 +168,9 @@ public abstract class Module {
         
         EventSystemImpl.getInstance().fire(new ModuleToggleEvent(this, enabled));
 
-        ru.ui.notify.Notify.Manager.getInstance().showNotification(
+        Notify.Manager.getInstance().showNotification(
             name + (enabled ? " включен" : " выключен"),
-            ru.ui.notify.Notify.NotificationType.MODULE
+            Notify.NotificationType.MODULE
         );
     }
     

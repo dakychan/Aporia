@@ -1,9 +1,5 @@
 package ru.input.impl.bind;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-
-@Environment(EnvType.CLIENT)
 public class KeybindData {
     private String id;
     private int keyCode;

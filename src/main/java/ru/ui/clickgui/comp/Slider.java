@@ -38,31 +38,23 @@ public class Slider {
         
         float hoverProgress = hoverAnimation.get();
 
-        RenderColor bgColor = RenderColor.of(
-            (int) MathHelper.lerp(40, 50, hoverProgress),
-            (int) MathHelper.lerp(40, 50, hoverProgress),
-            (int) MathHelper.lerp(50, 60, hoverProgress),
-            180
-        );
-        RectRenderer.drawRoundedRect(x, y, width, height, 5, bgColor);
-
-        float percentage = (value - min) / (max - min);
-        float barWidth = (width - 10) * percentage;
-        
-        RenderColor barColor = RenderColor.of(60, 120, 245, 200);
-        if (barWidth > 0) {
-            RectRenderer.drawRoundedRect(x + 5, y + height - 8, barWidth, 3, 1.5f, barColor);
-        }
-
         if (textRenderer != null) {
-            textRenderer.drawText(x + 8, y + 6, 12, name, RenderColor.WHITE);
+            textRenderer.drawText(x, y + 6, 12, name, RenderColor.WHITE);
         }
 
         if (textRenderer != null) {
             String valueText = String.format("%.1f", value);
             float textWidth = textRenderer.measureWidth(valueText, 12);
-            textRenderer.drawText(x + width - textWidth - 8, y + 6, 12, valueText, 
+            textRenderer.drawText(x + width - textWidth, y + 6, 12, valueText, 
                 RenderColor.of(180, 180, 190, 255));
+        }
+
+        float percentage = (value - min) / (max - min);
+        float barWidth = width * percentage;
+        
+        RenderColor barColor = RenderColor.of(60, 120, 245, 200);
+        if (barWidth > 0) {
+            RectRenderer.drawRoundedRect(x, y + height - 8, barWidth, 3, 1.5f, barColor);
         }
     }
     
@@ -90,7 +82,7 @@ public class Slider {
     }
     
     private void updateValue(int mouseX) {
-        float percentage = MathHelper.clamp((float) (mouseX - x - 5) / (width - 10), 0, 1);
+        float percentage = MathHelper.clamp((float) (mouseX - x) / width, 0, 1);
         value = min + percentage * (max - min);
         value = (float) MathHelper.round(value, 1);
     }

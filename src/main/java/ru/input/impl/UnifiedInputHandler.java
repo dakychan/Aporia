@@ -1,6 +1,5 @@
 package ru.input.impl;
 
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 import ru.event.impl.EventSystemImpl;
@@ -17,12 +16,16 @@ public class UnifiedInputHandler {
     private static final EventBus eventBus = EventSystemImpl.getInstance();
     private static double lastMouseX = 0;
     private static double lastMouseY = 0;
+    private static boolean initialized = false;
 
     public static void init() {
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            pollKeyboard();
-            pollMouse();
-        });
+        initialized = true;
+    }
+
+    public static void tick() {
+        if (!initialized) return;
+        pollKeyboard();
+        pollMouse();
     }
 
     private static void pollKeyboard() {

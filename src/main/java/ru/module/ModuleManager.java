@@ -38,7 +38,7 @@ public class ModuleManager {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to load config: " + e.getMessage());
+            ru.files.Logger.INSTANCE.error("Failed to load config: " + e.getMessage(), e);
         }
     }
     
@@ -69,9 +69,20 @@ public class ModuleManager {
                 ((Module.Setting<Double>) setting).setValue(Double.parseDouble(value));
             } else if (setting instanceof Module.StringSetting || setting instanceof Module.ModeSetting) {
                 ((Module.Setting<String>) setting).setValue(value);
+            } else if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting) {
+                String[] items = value.split(",");
+                java.util.List<String> list = new java.util.ArrayList<>();
+                for (String item : items) {
+                    String trimmed = item.trim();
+                    if (!trimmed.isEmpty()) {
+                        list.add(trimmed);
+                    }
+                }
+                ((ru.module.impl.visuals.Interface.MultiSetting) setting).getValue().clear();
+                ((ru.module.impl.visuals.Interface.MultiSetting) setting).getValue().addAll(list);
             }
         } catch (Exception e) {
-            System.err.println("Failed to apply setting " + setting.getName() + ": " + e.getMessage());
+            ru.files.Logger.INSTANCE.error("Failed to apply setting " + setting.getName() + ": " + e.getMessage(), e);
         }
     }
     
@@ -83,7 +94,7 @@ public class ModuleManager {
     private void registerModules() {
         // Visuals
         registerModule(new ClickGui());
-        registerModule(new ru.module.impl.visuals.AnimCheck());
+        registerModule(new ru.module.impl.visuals.Interface());
         
         // Movement
         registerModule(new ru.module.impl.movement.AutoSprint());
@@ -103,6 +114,15 @@ public class ModuleManager {
         return modules;
     }
     
+    public Module getModuleByName(String name) {
+        for (Module module : modules) {
+            if (module.getName().equals(name)) {
+                return module;
+            }
+        }
+        return null;
+    }
+    
     public List<Module> getModulesByCategory(Module.Category category) {
         return modulesByCategory.get(category);
     }
@@ -113,6 +133,61 @@ public class ModuleManager {
                 module.onTick();
             }
         }
+    }
+    
+    public void saveConfig() {
+        try {
+            ru.files.FilesManager filesManager = ru.Aporia.getFilesManager();
+            if (filesManager != null) {
+                Map<String, ru.files.ModuleConfig> configs = new HashMap<>();
+                
+                Map<String, ru.files.ModuleConfig> existingConfigs = filesManager.loadConfig();
+                if (existingConfigs != null && existingConfigs.containsKey("ClickGui")) {
+                    configs.put("ClickGui", existingConfigs.get("ClickGui"));
+                }
+                
+                for (Module module : modules) {
+                    if (module.getName().equals("ClickGui")) {
+                        continue;
+                    }
+                    
+                    Map<String, String> settings = new HashMap<>();
+                    
+                    for (Module.Setting<?> setting : module.getSettings()) {
+                        String value = getSettingValue(setting);
+                        if (value != null) {
+                            settings.put(setting.getName(), value);
+                        }
+                    }
+                    
+                    configs.put(module.getName(), new ru.files.ModuleConfig(module.isEnabled(), settings));
+                }
+                
+                filesManager.saveConfig(configs);
+            }
+        } catch (Exception e) {
+            ru.files.Logger.INSTANCE.error("Failed to save config: " + e.getMessage(), e);
+        }
+    }
+    
+    private String getSettingValue(Module.Setting<?> setting) {
+        try {
+            if (setting instanceof Module.BooleanSetting) {
+                return String.valueOf(((Module.BooleanSetting) setting).getValue());
+            } else if (setting instanceof Module.NumberSetting) {
+                return String.valueOf(((Module.NumberSetting) setting).getValue());
+            } else if (setting instanceof Module.StringSetting) {
+                return ((Module.StringSetting) setting).getValue();
+            } else if (setting instanceof Module.ModeSetting) {
+                return ((Module.ModeSetting) setting).getValue();
+            } else if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting) {
+                java.util.List<String> values = ((ru.module.impl.visuals.Interface.MultiSetting) setting).getValue();
+                return String.join(",", values);
+            }
+        } catch (Exception e) {
+            ru.files.Logger.INSTANCE.error("Failed to get setting value for " + setting.getName() + ": " + e.getMessage(), e);
+        }
+        return null;
     }
     
     private void registerModuleKeybinds() {

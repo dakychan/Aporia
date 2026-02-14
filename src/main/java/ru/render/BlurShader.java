@@ -5,8 +5,9 @@ import com.ferra13671.cometrenderer.CometRenderer;
 import com.ferra13671.cometrenderer.glsl.GlProgram;
 import com.ferra13671.cometrenderer.glsl.shader.ShaderType;
 import com.ferra13671.cometrenderer.glsl.uniform.UniformType;
+import com.mojang.blaze3d.pipeline.TextureTarget;
+import net.minecraft.client.Minecraft;
 import org.joml.Vector2f;
-import org.joml.Vector4f;
 
 public class BlurShader {
     private static GlProgram blurProgram;
@@ -14,6 +15,7 @@ public class BlurShader {
     
     private float blurRadius = 4.0f;
     private int passes = 2;
+    private TextureTarget blurFramebuffer;
     
     public BlurShader() {
         initProgram();
@@ -30,7 +32,6 @@ public class BlurShader {
                     .sampler("Sampler0")
                     .uniform("BlurDir", UniformType.VEC2)
                     .uniform("Radius", UniformType.FLOAT)
-                    .uniform("ColorTint", UniformType.VEC4)
                     .build();
             
             initialized = true;
@@ -64,7 +65,6 @@ public class BlurShader {
         CometRenderer.setGlobalProgram(blurProgram);
         
         blurProgram.getUniform("Radius", UniformType.FLOAT).set(blurRadius);
-        blurProgram.getUniform("ColorTint", UniformType.VEC4).set(new Vector4f(0, 0, 0, 0));
         
         for (int i = 0; i < passes; i++) {
             blurProgram.getUniform("BlurDir", UniformType.VEC2).set(new Vector2f(1.0f, 0.0f));
@@ -77,7 +77,41 @@ public class BlurShader {
         }
     }
     
+    /**
+     * Renders blur effect to a separate framebuffer before GUI elements.
+     * This ensures proper layering: blur background → GUI components.
+     * 
+     * @param width The width of the framebuffer
+     * @param height The height of the framebuffer
+     * @param guiRenderer Runnable that renders GUI elements after blur
+     */
+    public void renderToFramebuffer(int width, int height, Runnable guiRenderer) {
+        if (!initialized || blurProgram == null) {
+            if (guiRenderer != null) {
+                guiRenderer.run();
+            }
+            return;
+        }
+        
+        if (blurFramebuffer == null || blurFramebuffer.width != width || blurFramebuffer.height != height) {
+            if (blurFramebuffer != null) {
+                blurFramebuffer.destroyBuffers();
+            }
+            blurFramebuffer = new TextureTarget("blur_framebuffer", width, height, true);
+        }
+        
+        apply(width, height);
+        
+        if (guiRenderer != null) {
+            guiRenderer.run();
+        }
+    }
+    
     public void cleanup() {
+        if (blurFramebuffer != null) {
+            blurFramebuffer.destroyBuffers();
+            blurFramebuffer = null;
+        }
     }
     
     public static boolean isInitialized() {
