@@ -11,6 +11,7 @@ import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 import ru.files.Logger;
 import ru.files.PathResolver;
+import ru.input.api.bind.Keybind;
 import ru.input.impl.bind.KeybindManager;
 import ru.module.Module;
 import ru.module.ModuleManager;
@@ -20,6 +21,7 @@ import ru.render.MsdfFont;
 import ru.render.MsdfTextRenderer;
 import ru.render.RectRenderer;
 import ru.ui.clickgui.comp.Slider;
+import ru.ui.notify.Notify;
 import ru.util.Lang;
 
 import java.io.File;
@@ -67,6 +69,10 @@ public class ClickGuiScreen extends Screen {
     private final Map<String, Slider> sliderCache = new HashMap<>();
     private final Set<Module.Setting<?>> expandedMultiSettings = new HashSet<>();
     
+    // Keybind mode state
+    private Module bindingModule = null;
+    private Map<Module, Integer> moduleKeybinds = new HashMap<>();
+    
     private final Map<Module.Category, CategoryPanel> categoryPanels = new HashMap<>();
     private CategoryPanel draggingPanel = null;
     private int dragOffsetX = 0;
@@ -92,6 +98,7 @@ public class ClickGuiScreen extends Screen {
         Lang.load();
         initializeCategoryPanels();
         loadPanelPositions();
+        loadModuleKeybinds();
         blurShader = new BlurShader();
     }
 
@@ -120,6 +127,28 @@ public class ClickGuiScreen extends Screen {
             CategoryPanel panel = new CategoryPanel(category, categoryX, startY, CATEGORY_WIDTH, 385);
             categoryPanels.put(category, panel);
             categoryX += CATEGORY_WIDTH + CATEGORY_SPACING;
+        }
+    }
+    
+    /**
+     * Load module keybinds from KeybindManager and populate the cache.
+     * This method queries all registered modules and retrieves their keybind assignments.
+     */
+    private void loadModuleKeybinds() {
+        moduleKeybinds.clear();
+        
+        // Query all modules and check for keybinds
+        for (Module module : ModuleManager.getInstance().getModules()) {
+            String keybindId = "module." + module.getName().toLowerCase() + ".toggle";
+            Keybind keybind = KeybindManager.getInstance().getKeybind(keybindId);
+            
+            if (keybind != null) {
+                int keyCode = keybind.getKeyCode();
+                // Only store if a valid key is bound (not -1 or 0)
+                if (keyCode > 0) {
+                    moduleKeybinds.put(module, keyCode);
+                }
+            }
         }
     }
     
@@ -276,13 +305,29 @@ public class ClickGuiScreen extends Screen {
         renderRectWithBlur(x, y, width, height, radius, bgColor, 2f);
 
         if (textRenderer != null) {
-            textRenderer.drawText(x + 8, y + 20, 15, module.getName(), textColor);
-        }
-
-        if (textRenderer != null && !module.getSettings().isEmpty()) {
-            String arrow = isExpanded ? "▼" : "▶";
-            float arrowWidth = textRenderer.measureWidth(arrow, 12);
-            textRenderer.drawText(x + width - arrowWidth - 8, y + 19, 12, arrow, textColor);
+            // Check if this module is in keybind mode
+            String displayText = (module == bindingModule) ? "Биндим на..." : module.getName();
+            textRenderer.drawText(x + 8, y + 20, 15, displayText, textColor);
+            
+            // Render keybind indicator if module has a keybind assigned
+            if (moduleKeybinds.containsKey(module)) {
+                int keyCode = moduleKeybinds.get(module);
+                String keyName = ru.input.api.KeyboardKeys.getKeyName(keyCode);
+                
+                // Fallback for unknown key names
+                if (keyName == null || keyName.equals("NONE") || keyName.isEmpty()) {
+                    Logger.INSTANCE.warn("Unknown key code for module " + module.getName() + ": " + keyCode);
+                    keyName = "???";
+                }
+                
+                // Measure the key name width to position it on the right side
+                float keyNameWidth = textRenderer.measureWidth(keyName, 13);
+                float keyNameX = x + width - keyNameWidth - 8;
+                
+                // Render the key name with a slightly dimmed color
+                RenderColor keyColor = RenderColor.of(150, 150, 160, 255);
+                textRenderer.drawText(keyNameX, y + 20, 13, keyName, keyColor);
+            }
         }
     }
     
@@ -598,6 +643,58 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent input) {
+        // Check if we're in keybind mode
+        if (bindingModule != null) {
+            int keyCode = input.key();
+            
+            // Check if ESC key is pressed - cancel keybind mode
+            if (keyCode == 256) {
+                bindingModule = null;
+                Notify.Manager.getInstance().showNotification(
+                    "Привязка клавиши отменена",
+                    Notify.NotificationType.INFO
+                );
+                return true;
+            }
+            
+            // Validate the key code
+            ru.input.api.KeyboardKeys key = ru.input.api.KeyboardKeys.findByKeyCode(keyCode);
+            if (key == ru.input.api.KeyboardKeys.KEY_NONE || keyCode <= 0) {
+                // Invalid key code - exit keybind mode without storing
+                bindingModule = null;
+                Notify.Manager.getInstance().showNotification(
+                    "Недопустимая клавиша для привязки",
+                    Notify.NotificationType.ERROR
+                );
+                return true;
+            }
+            
+            // Valid key - store the binding
+            String keybindId = "module." + bindingModule.getName().toLowerCase() + ".toggle";
+            KeybindManager.getInstance().updateKeybind(keybindId, keyCode);
+            
+            // Update the keybinds cache for display
+            moduleKeybinds.put(bindingModule, keyCode);
+            
+            // Show success notification
+            String keyName = ru.input.api.KeyboardKeys.getKeyName(keyCode);
+            
+            // Fallback for unknown key names
+            if (keyName == null || keyName.equals("NONE") || keyName.isEmpty()) {
+                Logger.INSTANCE.warn("Unknown key code assigned to module " + bindingModule.getName() + ": " + keyCode);
+                keyName = "???";
+            }
+            
+            Notify.Manager.getInstance().showNotification(
+                "Модуль " + bindingModule.getName() + " привязан к " + keyName,
+                Notify.NotificationType.MODULE
+            );
+            
+            // Exit keybind mode
+            bindingModule = null;
+            return true;
+        }
+        
         if (input.key() == 256) {
             this.onClose();
             return true;
@@ -613,9 +710,6 @@ public class ClickGuiScreen extends Screen {
         int mouseX = (int)(click.x() * scale);
         int mouseY = (int)(click.y() * scale);
         int button = click.button();
-
-        boolean shiftPressed = GLFW.glfwGetKey(this.minecraft.getWindow().handle(), GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS ||
-                GLFW.glfwGetKey(this.minecraft.getWindow().handle(), GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
 
         if (button == 0) {
             if (ru.Aporia.handleInterfaceClick(mouseX, mouseY, button)) {
@@ -645,14 +739,7 @@ public class ClickGuiScreen extends Screen {
             for (CategoryPanel panel : categoryPanels.values()) {
                 Module module = panel.getHoveredModule(mouseX, mouseY);
                 if (module != null) {
-                    if (shiftPressed) {
-                        KeybindUI.startBinding(module.getName(), keyCode -> {
-                            String keybindId = "module." + module.getName().toLowerCase() + ".toggle";
-                            KeybindManager.getInstance().updateKeybind(keybindId, keyCode);
-                        });
-                    } else {
-                        module.toggle();
-                    }
+                    module.toggle();
                     return true;
                 }
             }
@@ -665,6 +752,17 @@ public class ClickGuiScreen extends Screen {
                     } else {
                         expandedModules.add(module);
                     }
+                    return true;
+                }
+            }
+        } else if (button == 2) {
+            // Middle mouse button - enter keybind mode
+            for (CategoryPanel panel : categoryPanels.values()) {
+                Module module = panel.getHoveredModule(mouseX, mouseY);
+                if (module != null) {
+                    // getHoveredModule only returns a module if clicking on the module button itself,
+                    // not on expanded settings, so this is safe
+                    bindingModule = module;
                     return true;
                 }
             }
