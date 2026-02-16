@@ -38,6 +38,29 @@ public class ClickGuiScreen extends Screen {
     private static MsdfTextRenderer textRenderer;
     private static boolean initialized = false;
     
+    /**
+     * Text-only mode setting.
+     */
+    private boolean textOnlyMode = false;
+    
+    /**
+     * Set text-only display mode.
+     * 
+     * @param enabled true to enable text-only mode
+     */
+    public void setTextOnlyMode(boolean enabled) {
+        this.textOnlyMode = enabled;
+    }
+    
+    /**
+     * Get whether text-only mode is enabled.
+     * 
+     * @return true if text-only mode is enabled
+     */
+    public boolean isTextOnlyMode() {
+        return this.textOnlyMode;
+    }
+    
     private Module hoveredModule = null;
     private final Set<Module> expandedModules = new HashSet<>();
     private final Map<Module, Float> settingsAnimations = new HashMap<>();
@@ -127,6 +150,19 @@ public class ClickGuiScreen extends Screen {
     @Override
     public void render(net.minecraft.client.gui.GuiGraphics context, int mouseX, int mouseY, float delta) {
         if (!initialized) return;
+        
+        /**
+         * Update text-only mode from ClickGui module settings.
+         */
+        Module clickGuiModule = ModuleManager.getInstance().getModuleByName("ClickGui");
+        if (clickGuiModule != null) {
+            for (Module.Setting<?> setting : clickGuiModule.getSettings()) {
+                if (setting.getName().equals("Text Only") && setting instanceof Module.BooleanSetting) {
+                    this.textOnlyMode = ((Module.BooleanSetting) setting).getValue();
+                    break;
+                }
+            }
+        }
 
         MinecraftPlugin plugin = MinecraftPlugin.getInstance();
         plugin.bindMainFramebuffer(true);
@@ -223,12 +259,17 @@ public class ClickGuiScreen extends Screen {
         RenderColor bgColor;
         RenderColor textColor;
         
-        if (isEnabled) {
-            bgColor = isHovered ? RenderColor.of(70, 130, 255, 255) : RenderColor.of(60, 120, 245, 230);
-            textColor = RenderColor.WHITE;
+        if (textOnlyMode) {
+            bgColor = isHovered ? RenderColor.of(60, 60, 70, 220) : RenderColor.of(50, 50, 60, 200);
+            textColor = isEnabled ? RenderColor.of(80, 200, 120, 255) : RenderColor.of(150, 150, 160, 255);
         } else {
-            bgColor = isHovered ? RenderColor.of(50, 50, 60, 200) : RenderColor.of(40, 40, 50, 180);
-            textColor = RenderColor.of(180, 180, 190, 255);
+            if (isEnabled) {
+                bgColor = isHovered ? RenderColor.of(70, 130, 255, 255) : RenderColor.of(60, 120, 245, 230);
+                textColor = RenderColor.WHITE;
+            } else {
+                bgColor = isHovered ? RenderColor.of(60, 60, 70, 220) : RenderColor.of(50, 50, 60, 200);
+                textColor = RenderColor.of(180, 180, 190, 255);
+            }
         }
 
         float radius = 5;
@@ -919,19 +960,21 @@ public class ClickGuiScreen extends Screen {
     private void loadDiscordAvatar() {
         try {
             ru.help.discord.DiscordManager discordManager = ru.Aporia.getDiscordManager();
-            if (discordManager == null) return;
+            if (discordManager == null) {
+                return;
+            }
             
             ru.help.discord.DiscordManager.DiscordInfo info = discordManager.getInfo();
             if (info == null || info.avatarUrl().isEmpty()) {
                 return;
             }
             
-            net.minecraft.client.renderer.texture.DynamicTexture texture = ru.files.avatar.BufferUtil.getHeadFromURL(info.avatarUrl());
+           /* net.minecraft.client.renderer.texture.DynamicTexture texture = ru.files.avatar.BufferUtil.getHeadFromURL(info.avatarUrl());
             if (texture != null) {
                 avatarTexture = ru.files.avatar.BufferUtil.registerDynamicTexture("discord-avatar-", texture);
-            }
+            } */
         } catch (Exception e) {
-            ru.files.Logger.INSTANCE.error("Failed to load Discord avatar", e);
+            avatarTexture = null;
         }
     }
     

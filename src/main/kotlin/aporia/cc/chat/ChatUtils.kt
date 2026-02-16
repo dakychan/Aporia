@@ -224,17 +224,7 @@ object ChatUtils {
             MessageType.SUCCESS -> "§a"
         }
         
-        val prefixText = if (useGradientPrefix) {
-            if (useRandomGradient) {
-                generateRandomGradientPrefix()
-            } else {
-                GRADIENT_PREFIX_STATIC
-            }
-        } else {
-            "§eAporia.cc ->"
-        }
-        
-        return "$prefixText $colorCode$text"
+        return "§fAporia.cc -> $colorCode$text"
     }
     
     /**
@@ -249,7 +239,7 @@ object ChatUtils {
     }
     
     /**
-     * Apply gradient to text using &#RRGGBB format.
+     * Apply gradient to text using Minecraft color codes §.
      * 
      * @param text The text to apply gradient to
      * @param colors List of RGB colors for gradient
@@ -266,11 +256,62 @@ object ChatUtils {
             val progress = if (steps > 0) i.toFloat() / steps else 0f
             val color = interpolateColors(colors, progress)
             
-            val hex = String.format("%06X", color)
-            result.append("&#$hex$char")
+            val minecraftColor = rgbToMinecraftColor(color)
+            result.append("§$minecraftColor$char")
         }
         
         return result.toString()
+    }
+    
+    /**
+     * Convert RGB color to nearest Minecraft color code.
+     * 
+     * @param rgb RGB color value
+     * @return Minecraft color code (0-9, a-f)
+     */
+    private fun rgbToMinecraftColor(rgb: Int): Char {
+        val r = (rgb shr 16) and 0xFF
+        val g = (rgb shr 8) and 0xFF
+        val b = rgb and 0xFF
+        
+        val minecraftColors = mapOf(
+            0x000000 to '0',
+            0x0000AA to '1',
+            0x00AA00 to '2',
+            0x00AAAA to '3',
+            0xAA0000 to '4',
+            0xAA00AA to '5',
+            0xFFAA00 to '6',
+            0xAAAAAA to '7',
+            0x555555 to '8',
+            0x5555FF to '9',
+            0x55FF55 to 'a',
+            0x55FFFF to 'b',
+            0xFF5555 to 'c',
+            0xFF55FF to 'd',
+            0xFFFF55 to 'e',
+            0xFFFFFF to 'f'
+        )
+        
+        var minDistance = Int.MAX_VALUE
+        var closestColor = 'f'
+        
+        for ((mcRgb, code) in minecraftColors) {
+            val mcR = (mcRgb shr 16) and 0xFF
+            val mcG = (mcRgb shr 8) and 0xFF
+            val mcB = mcRgb and 0xFF
+            
+            val distance = (r - mcR) * (r - mcR) + 
+                          (g - mcG) * (g - mcG) + 
+                          (b - mcB) * (b - mcB)
+            
+            if (distance < minDistance) {
+                minDistance = distance
+                closestColor = code
+            }
+        }
+        
+        return closestColor
     }
     
     /**
@@ -374,18 +415,20 @@ object ChatUtils {
     }
     
     /**
-     * Message stack entry for anti-spam system.
+     * Message stack entry for anti-spam system with smart detection.
      * 
      * @property sender The message sender
      * @property message The message content
      * @property count Number of times this message has been sent
      * @property lastTime Timestamp of the last occurrence (milliseconds)
+     * @property lastIndex Index of the last message in chat history
      */
     data class MessageStack(
         val sender: String,
         val message: String,
         var count: Int,
-        var lastTime: Long
+        var lastTime: Long,
+        var lastIndex: Int
     )
     
     /**
@@ -394,45 +437,25 @@ object ChatUtils {
     private val messageStacks: MutableList<MessageStack> = mutableListOf()
     
     /**
+     * Global message counter for tracking positions.
+     */
+    private var messageCounter: Int = 0
+    
+    /**
      * Maximum time between messages to stack (milliseconds).
      * Messages older than this will be removed from the stack.
      */
     private const val STACK_TIMEOUT = 5000L
     
     /**
-     * Process incoming chat message for stacking.
-     * 
-     * This method checks if the message should be stacked with a previous
-     * message from the same sender. If a match is found, the count is
-     * incremented and a formatted message with the count is returned.
-     * If no match is found, a new stack entry is created.
-     * 
-     * @param sender Message sender
-     * @param message Message content
-     * @return Formatted message with stack count, or null if this is a duplicate
+     * Minimum delay between messages to consider as spam (milliseconds).
      */
-    fun processAntiSpam(sender: String, message: String): String? {
-        if (!antiSpamEnabled) {
-            return "$sender -> $message"
-        }
-        
-        val currentTime = System.currentTimeMillis()
-        
-        messageStacks.removeIf { currentTime - it.lastTime > STACK_TIMEOUT }
-        
-        val existing = messageStacks.find { 
-            it.sender == sender && it.message == message 
-        }
-        
-        if (existing != null) {
-            existing.count++
-            existing.lastTime = currentTime
-            return "$sender -> $message (x${existing.count})"
-        } else {
-            messageStacks.add(MessageStack(sender, message, 1, currentTime))
-            return "$sender -> $message"
-        }
-    }
+    private const val SPAM_DELAY_THRESHOLD = 2000L
+    
+    /**
+     * Minimum number of repetitions to consider as spam.
+     */
+    private const val SPAM_COUNT_THRESHOLD = 3
     
     /**
      * Clear all message stacks.

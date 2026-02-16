@@ -6,14 +6,24 @@ import ru.ui.clickgui.ClickGuiScreen;
 
 public class ClickGui extends Module {
     
+    /**
+     * Text-only mode setting.
+     */
+    private final BooleanSetting textOnlyMode;
+    
     public ClickGui() {
         super("ClickGui", "Гуи чита", C.VISUALS, 96);
+        
+        textOnlyMode = new BooleanSetting("Text Only", false);
+        addSetting(textOnlyMode);
     }
     
     @Override
     public void onEnable() {
         Minecraft mc = Minecraft.getInstance();
-        mc.setScreen(new ClickGuiScreen(mc.getWindow().getWidth(), mc.getWindow().getHeight()));
+        ClickGuiScreen screen = new ClickGuiScreen(mc.getWindow().getWidth(), mc.getWindow().getHeight());
+        screen.setTextOnlyMode(textOnlyMode.getValue());
+        mc.setScreen(screen);
         setEnabled(false);
     }
     
@@ -23,5 +33,12 @@ public class ClickGui extends Module {
     
     @Override
     public void onTick() {
+        /**
+         * Update ClickGui with text-only mode setting.
+         */
+        if (Minecraft.getInstance().screen instanceof ClickGuiScreen) {
+            ClickGuiScreen screen = (ClickGuiScreen) Minecraft.getInstance().screen;
+            screen.setTextOnlyMode(textOnlyMode.getValue());
+        }
     }
 }

@@ -22,7 +22,6 @@ class Interface : Module("Interface", "HUD элементы", C.VISUALS) {
     
     private val enabledComponents: MultiSetting
     
-    // Position settings for each component
     private val arrayListX: NumberSetting
     private val arrayListY: NumberSetting
     private val waterMarkX: NumberSetting

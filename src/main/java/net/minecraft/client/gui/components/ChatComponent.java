@@ -269,151 +269,16 @@ public class ChatComponent {
     }
 
     public void addMessage(Component p_93786_) {
-        /* Temporarily disabled - may cause encoding issues
-        ru.module.ModuleManager.getInstance().getModules().stream()
-                .filter(module -> module instanceof ru.module.impl.misc.AutoFlyMe && module.isEnabled())
-                .forEach(module -> ((ru.module.impl.misc.AutoFlyMe) module).onChatMessage(p_93786_));
-        */
         this.addMessage(p_93786_, null, this.minecraft.isSingleplayer() ? GuiMessageTag.systemSinglePlayer() : GuiMessageTag.system());
     }
 
     public void addMessage(Component p_241484_, @Nullable MessageSignature p_241323_, @Nullable GuiMessageTag p_241297_) {
-        /**
-         * Process message through anti-spam system if enabled
-         */
-        if (aporia.cc.chat.ChatUtils.INSTANCE.getAntiSpamEnabled()) {
-            String messageText = p_241484_.getString();
-            
-            /**
-             * Extract sender and message content
-             */
-            String[] parts = extractSenderAndMessage(messageText);
-            String sender = parts[0];
-            String message = parts[1];
-            
-            if (!sender.isEmpty() && !message.isEmpty()) {
-                /**
-                 * Process through anti-spam system
-                 * Returns formatted message with count or null if duplicate
-                 */
-                String processedText = aporia.cc.chat.ChatUtils.INSTANCE.processAntiSpam(sender, message);
-                
-                if (processedText != null) {
-                    /**
-                     * Check if this is an update to an existing stack (contains count > 1)
-                     */
-                    if (processedText.matches(".*\\(x\\d+\\)$")) {
-                        /**
-                         * Extract count from message
-                         */
-                        int countStart = processedText.lastIndexOf("(x");
-                        String countStr = processedText.substring(countStart + 2, processedText.length() - 1);
-                        int count = Integer.parseInt(countStr);
-                        
-                        if (count > 1) {
-                            /**
-                             * This is a duplicate - update the most recent matching message
-                             */
-                            updateStackedMessage(sender, message, processedText);
-                            return;
-                        }
-                    }
-                    
-                    /**
-                     * New message - use processed text
-                     */
-                    p_241484_ = Component.literal(processedText);
-                }
-            }
-        }
-        
         GuiMessage guimessage = new GuiMessage(this.minecraft.gui.getGuiTicks(), p_241484_, p_241323_, p_241297_);
         this.logChatMessage(guimessage);
         this.addMessageToDisplayQueue(guimessage);
         this.addMessageToQueue(guimessage);
     }
     
-    /**
-     * Extract sender and message from chat text.
-     * 
-     * @param messageText The raw message text
-     * @return Array with [sender, message]
-     */
-    private String[] extractSenderAndMessage(String messageText) {
-        String sender = "";
-        String message = messageText;
-        
-        /**
-         * Format: "Player -> message"
-         */
-        if (messageText.contains(" -> ")) {
-            int arrowIndex = messageText.indexOf(" -> ");
-            sender = messageText.substring(0, arrowIndex).trim();
-            message = messageText.substring(arrowIndex + 4).trim();
-        }
-        /**
-         * Format: "<Player> message"
-         */
-        else if (messageText.startsWith("<") && messageText.contains(">")) {
-            int endBracket = messageText.indexOf(">");
-            sender = messageText.substring(1, endBracket).trim();
-            message = messageText.substring(endBracket + 1).trim();
-        }
-        /**
-         * Format: "[Player] message"
-         */
-        else if (messageText.startsWith("[") && messageText.contains("]")) {
-            int endBracket = messageText.indexOf("]");
-            sender = messageText.substring(1, endBracket).trim();
-            message = messageText.substring(endBracket + 1).trim();
-        }
-        
-        return new String[]{sender, message};
-    }
-    
-    /**
-     * Update an existing stacked message with new count.
-     * Finds the most recent message from the same sender with the same content
-     * and updates it with the new stack count.
-     * 
-     * @param sender The message sender
-     * @param message The message content (without count)
-     * @param newText The new text with updated count
-     */
-    private void updateStackedMessage(String sender, String message, String newText) {
-        /**
-         * Find the most recent message that matches this sender and content
-         */
-        for (int i = 0; i < this.allMessages.size(); i++) {
-            GuiMessage guimessage = this.allMessages.get(i);
-            String msgText = guimessage.content().getString();
-            
-            /**
-             * Check if this message matches (with or without count)
-             */
-            if (msgText.startsWith(sender + " -> " + message)) {
-                /**
-                 * Update the message with new count
-                 */
-                Component newComponent = Component.literal(newText);
-                GuiMessage updatedMessage = new GuiMessage(
-                    guimessage.addedTime(),
-                    newComponent,
-                    guimessage.signature(),
-                    guimessage.tag()
-                );
-                
-                this.allMessages.set(i, updatedMessage);
-                
-                /**
-                 * Refresh the display to show updated message
-                 */
-                this.refreshTrimmedMessages();
-                return;
-            }
-        }
-    }
-
     private void logChatMessage(GuiMessage p_328461_) {
         String s = p_328461_.content().getString().replaceAll("\r", "\\\\r").replaceAll("\n", "\\\\n");
         String s1 = Optionull.map(p_328461_.tag(), GuiMessageTag::logTag);
