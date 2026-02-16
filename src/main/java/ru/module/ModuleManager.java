@@ -101,6 +101,8 @@ public class ModuleManager {
         
         // Misc
         registerModule(new ru.module.impl.misc.AutoFlyMe());
+        registerModule(new ru.module.impl.misc.BetterChat());
+        registerModule(new ru.module.impl.misc.DiscordRPC());
     }
     
     public static ModuleManager getInstance() {

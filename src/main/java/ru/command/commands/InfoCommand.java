@@ -1,27 +1,50 @@
 package ru.command.commands;
 
+import aporia.cc.chat.ChatUtils;
 import aporia.cc.user.UserData;
 import ru.Aporia;
 import ru.command.Command;
-import ru.command.CommandManager;
 
+/**
+ * Command for displaying client information.
+ */
 public class InfoCommand implements Command {
     
+    /**
+     * Get command name.
+     * 
+     * @return Command name
+     */
     @Override
     public String getName() {
         return "info";
     }
     
+    /**
+     * Get command description.
+     * 
+     * @return Command description
+     */
     @Override
     public String getDescription() {
         return "Отображение информации о клиенте";
     }
     
+    /**
+     * Get command usage.
+     * 
+     * @return Command usage string
+     */
     @Override
     public String getUsage() {
-        return ".info - Показать UID, username и HWID";
+        return "^info - Показать UID, username и HWID";
     }
     
+    /**
+     * Execute the info command.
+     * 
+     * @param args Command arguments (unused)
+     */
     @Override
     public void execute(String[] args) {
         try {
@@ -32,14 +55,14 @@ public class InfoCommand implements Command {
                 Aporia.getFilesManager().saveStats(userData);
             }
             
-            CommandManager.sendChatMessage("§e=== Информация о клиенте ===");
-            CommandManager.sendChatMessage("§7UID: §f" + userData.getUuid());
-            CommandManager.sendChatMessage("§7Username: §f" + userData.getUsername());
-            CommandManager.sendChatMessage("§7HWID: §f" + userData.getHardwareId());
-            CommandManager.sendChatMessage("§7Role: §f" + userData.getRole());
+            ChatUtils.INSTANCE.sendMessage("=== Информация о клиенте ===", ChatUtils.MessageType.WARNING);
+            ChatUtils.INSTANCE.sendMessage("UID: " + (userData.getUuid() != null ? userData.getUuid() : "N/A"), ChatUtils.MessageType.WARNING);
+            ChatUtils.INSTANCE.sendMessage("Username: " + (userData.getUsername() != null ? userData.getUsername() : "N/A"), ChatUtils.MessageType.WARNING);
+            ChatUtils.INSTANCE.sendMessage("HWID: " + (userData.getHardwareId() != null ? userData.getHardwareId() : "N/A"), ChatUtils.MessageType.WARNING);
+            ChatUtils.INSTANCE.sendMessage("Role: " + (userData.getRole() != null ? userData.getRole().toString() : "N/A"), ChatUtils.MessageType.WARNING);
             
         } catch (Exception e) {
-            CommandManager.sendChatMessage("§cНе удалось загрузить данные пользователя: " + e.getMessage());
+            ChatUtils.INSTANCE.sendMessage("Не удалось загрузить данные пользователя: " + e.getMessage(), ChatUtils.MessageType.ERROR);
             ru.files.Logger.INSTANCE.error("Failed to load user data", e);
         }
     }

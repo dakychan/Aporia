@@ -1,95 +1,151 @@
 package ru.command.commands;
 
+import aporia.cc.chat.ChatUtils;
 import ru.Aporia;
 import ru.command.Command;
-import ru.command.CommandManager;
 import ru.files.FilesManager;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Command for managing friends list.
+ */
 public class FriendCommand implements Command {
     
+    /**
+     * Get command name.
+     * 
+     * @return Command name
+     */
     @Override
     public String getName() {
         return "friend";
     }
     
+    /**
+     * Get command description.
+     * 
+     * @return Command description
+     */
     @Override
     public String getDescription() {
         return "Управление списком друзей";
     }
     
+    /**
+     * Get command usage.
+     * 
+     * @return Command usage string
+     */
     @Override
     public String getUsage() {
-        return ".friend add <имя> - Добавить друга\n" +
-               ".friend remove <имя> - Удалить друга\n" +
-               ".friend list - Показать всех друзей\n" +
-               ".friend clear - Очистить список друзей";
+        return "^friend add <имя> - Добавить друга\n" +
+               "^friend remove <имя> - Удалить друга\n" +
+               "^friend list - Показать всех друзей\n" +
+               "^friend clear - Очистить список друзей";
     }
     
+    /**
+     * Execute the friend command.
+     * 
+     * @param args Command arguments
+     */
     @Override
     public void execute(String[] args) {
         FilesManager fm = Aporia.getFilesManager();
         
-        if (args.length == 0 || (args.length == 1 && args[0].equalsIgnoreCase("list"))) {
+        if (args.length == 0) {
+            List<String> friends = fm.loadFriends();
+            if (friends.isEmpty()) {
+                ChatUtils.INSTANCE.sendMessage("Список друзей пуст", ChatUtils.MessageType.WARNING);
+                ChatUtils.INSTANCE.sendMessage("Попробуйте: add ; remove ; list ; clear", ChatUtils.MessageType.WARNING);
+            } else {
+                listFriends(fm);
+            }
+            return;
+        }
+        
+        if (args[0].equalsIgnoreCase("list")) {
             listFriends(fm);
         } else if (args.length == 2 && args[0].equalsIgnoreCase("add")) {
             addFriend(fm, args[1]);
         } else if (args.length == 2 && args[0].equalsIgnoreCase("remove")) {
             removeFriend(fm, args[1]);
-        } else if (args.length == 1 && args[0].equalsIgnoreCase("clear")) {
+        } else if (args[0].equalsIgnoreCase("clear")) {
             clearFriends(fm);
         } else {
-            CommandManager.sendChatMessage("§cИспользование:");
+            ChatUtils.INSTANCE.sendMessage("Использование:", ChatUtils.MessageType.WARNING);
             for (String line : getUsage().split("\n")) {
-                CommandManager.sendChatMessage("§e" + line);
+                ChatUtils.INSTANCE.sendMessage(line, ChatUtils.MessageType.WARNING);
             }
         }
     }
     
+    /**
+     * List all friends.
+     * 
+     * @param fm Files manager
+     */
     private void listFriends(FilesManager fm) {
         List<String> friends = fm.loadFriends();
         
         if (friends.isEmpty()) {
-            CommandManager.sendChatMessage("§eСписок друзей пуст");
+            ChatUtils.INSTANCE.sendMessage("Список друзей пуст", ChatUtils.MessageType.WARNING);
             return;
         }
         
-        CommandManager.sendChatMessage("§e=== Друзья (" + friends.size() + ") ===");
+        ChatUtils.INSTANCE.sendMessage("=== Друзья (" + friends.size() + ") ===", ChatUtils.MessageType.WARNING);
         friends.forEach(friend -> 
-            CommandManager.sendChatMessage("§7- §f" + friend)
+            ChatUtils.INSTANCE.sendMessage("- " + friend, ChatUtils.MessageType.WARNING)
         );
     }
     
+    /**
+     * Add a friend.
+     * 
+     * @param fm Files manager
+     * @param username Friend username
+     */
     private void addFriend(FilesManager fm, String username) {
         List<String> friends = new ArrayList<>(fm.loadFriends());
         
         if (friends.contains(username)) {
-            CommandManager.sendChatMessage("§c" + username + " уже в списке друзей");
+            ChatUtils.INSTANCE.sendMessage(username + " уже в списке друзей", ChatUtils.MessageType.ERROR);
             return;
         }
         
         friends.add(username);
         fm.saveFriends(friends);
-        CommandManager.sendChatMessage("§aДруг добавлен: §f" + username);
+        ChatUtils.INSTANCE.sendMessage("Друг добавлен: " + username, ChatUtils.MessageType.SUCCESS);
     }
     
+    /**
+     * Remove a friend.
+     * 
+     * @param fm Files manager
+     * @param username Friend username
+     */
     private void removeFriend(FilesManager fm, String username) {
         List<String> friends = new ArrayList<>(fm.loadFriends());
         
         if (!friends.contains(username)) {
-            CommandManager.sendChatMessage("§c" + username + " не найден в списке друзей");
+            ChatUtils.INSTANCE.sendMessage(username + " не найден в списке друзей", ChatUtils.MessageType.ERROR);
             return;
         }
         
         friends.remove(username);
         fm.saveFriends(friends);
-        CommandManager.sendChatMessage("§aДруг удалён: §f" + username);
+        ChatUtils.INSTANCE.sendMessage("Друг удалён: " + username, ChatUtils.MessageType.SUCCESS);
     }
     
+    /**
+     * Clear all friends.
+     * 
+     * @param fm Files manager
+     */
     private void clearFriends(FilesManager fm) {
         fm.saveFriends(new ArrayList<>());
-        CommandManager.sendChatMessage("§aСписок друзей очищен");
+        ChatUtils.INSTANCE.sendMessage("Список друзей очищен", ChatUtils.MessageType.SUCCESS);
     }
 }

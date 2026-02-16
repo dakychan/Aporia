@@ -3,8 +3,10 @@ package ru;
 import aporia.cc.user.UserData;
 import com.ferra13671.cometrenderer.CometRenderer;
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
+import lombok.Getter;
 import ru.files.FilesManager;
 import ru.gui.GuiManager;
+import ru.help.discord.DiscordManager;
 import ru.input.api.KeyBindings;
 import ru.input.impl.UnifiedInputHandler;
 import ru.input.impl.bind.KeybindListener;
@@ -12,14 +14,16 @@ import ru.input.impl.bind.KeybindManager;
 import ru.render.BlurShader;
 import ru.ui.hud.HudManager;
 import ru.ui.notify.Notify;
-import ru.help.discordrpc.DiscordRPC;
-
 
 public class Aporia {
 
     private static FilesManager filesManager;
     private static BlurShader blurShader;
-    private static DiscordRPC discordRPC;
+    private static DiscordManager discordManager;
+    
+    public static DiscordManager getDiscordManager() {
+        return discordManager;
+    }
 
     public static void initRender() {
         CometRenderer.init();
@@ -37,7 +41,7 @@ public class Aporia {
         initUserData();
         initRenderingSystems();
         initCommandSystem();
-        initDiscordRPC();
+        initDiscordManager();
     }
 
     private static void initRenderingSystems() {
@@ -46,16 +50,15 @@ public class Aporia {
     }
 
     private static void initCommandSystem() {
-        ru.command.CommandManager.getInstance().initialize();
+        aporia.cc.chat.ChatUtils.INSTANCE.initialize();
     }
     
-    private static void initDiscordRPC() {
-        try {
-            discordRPC = DiscordRPC.getInstance();
-            discordRPC.initialize();
-        } catch (Exception e) {
-            ru.files.Logger.INSTANCE.error("Failed to initialize Discord RPC", e);
-        }
+    private static void initDiscordManager() {
+        /**
+         * Initialize Discord manager but don't start RPC automatically.
+         * RPC will be started when DiscordRPC module is enabled.
+         */
+        discordManager = new DiscordManager();
     }
 
     private static void initFileSystem() {
@@ -68,10 +71,6 @@ public class Aporia {
                 UserData.UserDataClass userData = UserData.INSTANCE.getUserData();
                 filesManager.saveStats(userData);
                 
-                if (discordRPC != null) {
-                    discordRPC.shutdown();
-                }
-                
                 if (blurShader != null) {
                     blurShader.cleanup();
                 }
@@ -83,15 +82,6 @@ public class Aporia {
 
     public static FilesManager getFilesManager() {
         return filesManager;
-    }
-    
-    /**
-     * Gets the Discord RPC instance.
-     *
-     * @return the DiscordRPC instance
-     */
-    public static DiscordRPC getDiscordRPC() {
-        return discordRPC;
     }
 
     private static void setupKeyBindings() {}

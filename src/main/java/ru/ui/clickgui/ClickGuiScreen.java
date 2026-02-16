@@ -1,16 +1,16 @@
 package ru.ui.clickgui;
 
+import aporia.cc.user.UserData;
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import com.google.gson.*;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
+import ru.files.Logger;
+import ru.files.PathResolver;
 import ru.input.impl.bind.KeybindManager;
 import ru.module.Module;
 import ru.module.ModuleManager;
@@ -25,6 +25,8 @@ import ru.util.Lang;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -153,6 +155,8 @@ public class ClickGuiScreen extends Screen {
         if (hoveredModule != null) {
             renderModuleDescription(fbMouseX, fbMouseY);
         }
+        
+        renderDiscordAvatar(fbWidth, fbHeight);
     }
     
     private void renderCategory(CategoryPanel panel, int mouseX, int mouseY) {
@@ -863,6 +867,107 @@ public class ClickGuiScreen extends Screen {
         
         public void setDragging(boolean dragging) {
             this.dragging = dragging;
+        }
+    }
+    
+    /**
+     * Discord avatar display fields
+     */
+    private net.minecraft.resources.Identifier avatarTexture = null;
+    private String cachedUID = null;
+    private static final int AVATAR_SIZE = 64;
+    private static final int AVATAR_X_OFFSET = 300;
+    private static final int AVATAR_Y_OFFSET = 150;
+    private static final int TEXT_OFFSET_X = 10;
+    private static final int TEXT_LINE_HEIGHT = 24;
+    
+    /**
+     * Render Discord avatar display in bottom-right corner.
+     * 
+     * @param fbWidth Framebuffer width
+     * @param fbHeight Framebuffer height
+     */
+    private void renderDiscordAvatar(int fbWidth, int fbHeight) {
+        ru.help.discord.DiscordManager discordManager = ru.Aporia.getDiscordManager();
+        
+        if (discordManager == null || !discordManager.isRunning()) {
+            return;
+        }
+        
+        if (avatarTexture == null) {
+            loadDiscordAvatar();
+        }
+        
+        int x = fbWidth - AVATAR_X_OFFSET;
+        int y = fbHeight - AVATAR_Y_OFFSET;
+        
+        if (textRenderer != null) {
+            String username = System.getProperty("user.name", "Unknown");
+            String uid = getDiscordUID();
+            String version = "1.0.0";
+            
+            int textX = x + AVATAR_SIZE + TEXT_OFFSET_X;
+            textRenderer.drawText(textX, y, 28, "Aporia.cc " + version, RenderColor.WHITE);
+            textRenderer.drawText(textX, y + TEXT_LINE_HEIGHT, 24, username, RenderColor.of(170, 170, 170, 255));
+            textRenderer.drawText(textX, y + TEXT_LINE_HEIGHT * 2, 24, "UID: " + uid, RenderColor.of(136, 136, 136, 255));
+        }
+    }
+    
+    /**
+     * Load Discord avatar texture.
+     */
+    private void loadDiscordAvatar() {
+        try {
+            ru.help.discord.DiscordManager discordManager = ru.Aporia.getDiscordManager();
+            if (discordManager == null) return;
+            
+            ru.help.discord.DiscordManager.DiscordInfo info = discordManager.getInfo();
+            if (info == null || info.avatarUrl().isEmpty()) {
+                return;
+            }
+            
+            net.minecraft.client.renderer.texture.DynamicTexture texture = ru.files.avatar.BufferUtil.getHeadFromURL(info.avatarUrl());
+            if (texture != null) {
+                avatarTexture = ru.files.avatar.BufferUtil.registerDynamicTexture("discord-avatar-", texture);
+            }
+        } catch (Exception e) {
+            ru.files.Logger.INSTANCE.error("Failed to load Discord avatar", e);
+        }
+    }
+    
+    /**
+     * Get user UID from Stats.json or UserData.
+     * 
+     * @return User UID or "Unknown"
+     */
+    private String getDiscordUID() {
+        if (cachedUID != null) {
+            return cachedUID;
+        }
+        
+        try {
+            Path statsFile = PathResolver.INSTANCE.getCacheDirectory().resolve("Stats.json");
+            if (!Files.exists(statsFile)) {
+                UserData.UserDataClass userData = UserData.getUserData();
+                cachedUID = userData.getUuid();
+                return cachedUID;
+            }
+            
+            JsonObject json = JsonParser.parseReader(
+                new FileReader(statsFile.toFile())
+            ).getAsJsonObject();
+            
+            JsonElement uuidElem = json.get("uuid");
+            JsonElement uidElem = json.get("uid");
+            
+            cachedUID = uuidElem != null ? uuidElem.getAsString() : 
+                       (uidElem != null ? uidElem.getAsString() : "Unknown");
+            return cachedUID;
+        } catch (Exception e) {
+            Logger.INSTANCE.error("Failed to load UID from Stats.json", e);
+            UserData.UserDataClass userData = UserData.getUserData();
+            cachedUID = userData.getUuid();
+            return cachedUID;
         }
     }
 }

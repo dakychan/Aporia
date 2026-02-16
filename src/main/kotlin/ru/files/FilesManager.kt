@@ -7,6 +7,9 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.DosFileAttributeView
 
+/**
+ * File manager for handling configuration, friends, and stats files.
+ */
 class FilesManager {
     
     private val fileLoader = FileLoader()
@@ -16,6 +19,9 @@ class FilesManager {
     private val friendsPath: Path = PathResolver.mainDirectory.resolve("Friends.apr")
     private val statsPath: Path = PathResolver.cacheDirectory.resolve("Stats.json")
     
+    /**
+     * Initialize file system and create necessary directories and files.
+     */
     fun initialize() {
         Logger.info("Initializing file system...")
         
@@ -101,6 +107,11 @@ class FilesManager {
         }
     }
     
+    /**
+     * Save module configuration.
+     * 
+     * @param modules Map of module configurations
+     */
     fun saveConfig(modules: Map<String, ModuleConfig>) {
         val content = buildString {
             appendLine("# Aporia Module Configuration")
@@ -120,6 +131,11 @@ class FilesManager {
         }
     }
     
+    /**
+     * Load module configuration.
+     * 
+     * @return Map of module configurations or null if not found
+     */
     fun loadConfig(): Map<String, ModuleConfig>? {
         return fileLoader.loadApr(configPath)?.let { parseConfig(it) }
     }
@@ -146,27 +162,45 @@ class FilesManager {
         }
     }
     
+    /**
+     * Save user statistics to Stats.json.
+     * 
+     * @param userData User data to save
+     */
     fun saveStats(userData: UserData.UserDataClass) {
         try {
             val json = gson.toJson(userData)
             Files.writeString(statsPath, json)
-            Logger.info("Stats saved")
         } catch (e: Exception) {
-            Logger.error("Failed to save stats", e)
+            Logger.error("Failed to save stats to $statsPath", e)
         }
     }
     
+    /**
+     * Load user statistics from Stats.json.
+     * 
+     * @return User data or null if not found
+     */
     fun loadStats(): UserData.UserDataClass? {
         return try {
+            if (!Files.exists(statsPath)) {
+                return null
+            }
+            
             fileLoader.loadJson(statsPath)?.let { 
-                gson.fromJson(it, UserData.UserDataClass::class.java) 
+                gson.fromJson(it, UserData.UserDataClass::class.java)
             }
         } catch (e: Exception) {
-            Logger.error("Failed to load stats", e)
+            Logger.error("Failed to load stats from $statsPath", e)
             null
         }
     }
     
+    /**
+     * Save friends list.
+     * 
+     * @param friends List of friend usernames
+     */
     fun saveFriends(friends: List<String>) {
         try {
             val content = friends.joinToString("\n")
@@ -177,6 +211,11 @@ class FilesManager {
         }
     }
     
+    /**
+     * Load friends list.
+     * 
+     * @return List of friend usernames
+     */
     fun loadFriends(): List<String> {
         return try {
             if (Files.exists(friendsPath)) {

@@ -1,51 +1,72 @@
 package ru.command.commands;
 
+import aporia.cc.chat.ChatUtils;
 import ru.command.Command;
-import ru.command.CommandManager;
 
+/**
+ * Command for changing the command prefix.
+ */
 public class PrefixCommand implements Command {
     
+    /**
+     * Get command name.
+     * 
+     * @return Command name
+     */
     @Override
     public String getName() {
         return "prefix";
     }
     
+    /**
+     * Get command description.
+     * 
+     * @return Command description
+     */
     @Override
     public String getDescription() {
         return "Изменение префикса команд";
     }
     
+    /**
+     * Get command usage.
+     * 
+     * @return Command usage string
+     */
     @Override
     public String getUsage() {
-        return ".prefix <символ> - Установить новый префикс команд";
+        return "^prefix <символ> - Установить новый префикс команд";
     }
     
+    /**
+     * Execute the prefix command.
+     * 
+     * @param args Command arguments
+     */
     @Override
     public void execute(String[] args) {
         if (args.length == 0) {
-            CommandManager cm = CommandManager.getInstance();
-            CommandManager.sendChatMessage("§eТекущий префикс: §f" + cm.getPrefix());
-            CommandManager.sendChatMessage("§eИспользование: " + getUsage());
+            ChatUtils.INSTANCE.sendMessage("Текущий префикс: " + ChatUtils.INSTANCE.getPrefix(), ChatUtils.MessageType.WARNING);
+            ChatUtils.INSTANCE.sendMessage("Использование: " + getUsage(), ChatUtils.MessageType.WARNING);
             return;
         }
         
         if (args.length > 1) {
-            CommandManager.sendChatMessage("§cПрефикс должен быть одним символом");
-            CommandManager.sendChatMessage("§eИспользование: " + getUsage());
+            ChatUtils.INSTANCE.sendMessage("Префикс должен быть одним символом", ChatUtils.MessageType.ERROR);
+            ChatUtils.INSTANCE.sendMessage("Использование: " + getUsage(), ChatUtils.MessageType.WARNING);
             return;
         }
         
         String newPrefix = args[0];
         
         if (newPrefix.length() > 1) {
-            CommandManager.sendChatMessage("§cПрефикс должен быть одним символом");
+            ChatUtils.INSTANCE.sendMessage("Префикс должен быть одним символом", ChatUtils.MessageType.ERROR);
             return;
         }
         
-        CommandManager cm = CommandManager.getInstance();
-        String oldPrefix = cm.getPrefix();
-        cm.setPrefix(newPrefix);
+        String oldPrefix = ChatUtils.INSTANCE.getPrefix();
+        ChatUtils.INSTANCE.setPrefix(newPrefix);
         
-        CommandManager.sendChatMessage("§aПрефикс изменён с §f" + oldPrefix + " §aна §f" + newPrefix);
+        ChatUtils.INSTANCE.sendMessage("Префикс изменён с " + oldPrefix + " на " + newPrefix, ChatUtils.MessageType.SUCCESS);
     }
 }

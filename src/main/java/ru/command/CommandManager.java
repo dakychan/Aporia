@@ -6,6 +6,10 @@ import net.minecraft.network.chat.Component;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * @deprecated Use {@link aporia.cc.chat.ChatUtils} instead.
+ */
+@Deprecated
 public class CommandManager {
     private static CommandManager instance;
     

@@ -159,23 +159,45 @@ public class ChatScreen extends Screen {
         if (this.commandSuggestions.mouseClicked(p_429485_)) {
             return true;
         } else {
-            if (p_429485_.button() == 0) {
-                int i = this.minecraft.getWindow().getGuiScaledHeight();
-                ActiveTextCollector.ClickableStyleFinder activetextcollector$clickablestylefinder = new ActiveTextCollector.ClickableStyleFinder(
-                        this.getFont(), (int)p_429485_.x(), (int)p_429485_.y()
-                    )
-                    .includeInsertions(this.insertionClickMode());
-                this.minecraft.gui.getChat().captureClickableText(activetextcollector$clickablestylefinder, i, this.minecraft.gui.getGuiTicks(), true);
-                Style style = activetextcollector$clickablestylefinder.result();
-                if (style != null && this.handleComponentClicked(style, this.insertionClickMode())) {
-                    this.initial = this.input.getValue();
-                    return true;
+            /**
+             * Chat copy functionality: Shift+LMB copies, RMB opens chat with text
+             * Only works when BetterChat module is enabled
+             */
+            ru.module.Module betterChat = ru.module.ModuleManager.getInstance().getModuleByName("BetterChat");
+            if (betterChat != null && betterChat.isEnabled()) {
+                String messageText = this.minecraft.gui.getChat().getMessageAt((int)p_429485_.x(), (int)p_429485_.y());
+                
+                if (messageText != null && !messageText.isEmpty()) {
+                    if (this.minecraft.hasShiftDown() && p_429485_.button() == 0) {
+                        this.minecraft.keyboardHandler.setClipboard(messageText);
+                        if (aporia.cc.chat.ChatUtils.notifyOnCopy) {
+                            aporia.cc.chat.ChatUtils.INSTANCE.sendMessage("Строка скопирована", aporia.cc.chat.ChatUtils.MessageType.SUCCESS);
+                        }
+                        return true;
+                    } else if (p_429485_.button() == 1) {
+                        this.input.setValue(messageText);
+                        return true;
+                    }
                 }
+            }
+            
+            int i = this.minecraft.getWindow().getGuiScaledHeight();
+            ActiveTextCollector.ClickableStyleFinder activetextcollector$clickablestylefinder = new ActiveTextCollector.ClickableStyleFinder(
+                    this.getFont(), (int)p_429485_.x(), (int)p_429485_.y()
+            )
+                    .includeInsertions(this.insertionClickMode());
+            this.minecraft.gui.getChat().captureClickableText(activetextcollector$clickablestylefinder, i, this.minecraft.gui.getGuiTicks(), true);
+            Style style = activetextcollector$clickablestylefinder.result();
+
+            if (p_429485_.button() == 0 && style != null && this.handleComponentClicked(style, this.insertionClickMode())) {
+                this.initial = this.input.getValue();
+                return true;
             }
 
             return super.mouseClicked(p_429485_, p_423918_);
         }
     }
+
 
     private boolean insertionClickMode() {
         return this.minecraft.hasShiftDown();
@@ -271,7 +293,7 @@ public class ChatScreen extends Screen {
     public void handleChatInput(String p_242400_, boolean p_242161_) {
         p_242400_ = this.normalizeChatMessage(p_242400_);
         if (!p_242400_.isEmpty()) {
-            if (ru.command.CommandManager.getInstance().handleChatMessage(p_242400_)) {
+            if (aporia.cc.chat.ChatUtils.INSTANCE.handleChatMessage(p_242400_)) {
                 return;
             }
             

@@ -76,6 +76,7 @@ object UserData {
         return UserGenerator.generateHardwareId()
     }
 
+    @JvmStatic
     fun getUserData(): UserDataClass {
         val username = getSystemUsername()
         val uuid = getUserUUID(username)
