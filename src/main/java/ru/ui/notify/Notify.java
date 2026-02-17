@@ -10,7 +10,8 @@ public class Notify {
     public enum NotificationType {
         INFO(RenderColor.of(60, 120, 245, 230)),
         MODULE(RenderColor.of(80, 200, 120, 230)),
-        ERROR(RenderColor.of(245, 80, 80, 230));
+        ERROR(RenderColor.of(245, 80, 80, 230)),
+        MENTION(RenderColor.of(255, 200, 50, 230));
 
         private final RenderColor color;
 
@@ -127,12 +128,16 @@ public class Notify {
         public static String keyPressed(String keyName) {
             return String.format("Нажата клавиша: %s", keyName);
         }
+
+        public static String chatMention() {
+            return "Вас упомянули в чате !";
+        }
     }
 
     public static class Manager {
         private static Manager instance;
-        private final List<Notification> activeNotifications = new ArrayList<>();
-        private static final int MAX_NOTIFICATIONS = 5;
+        private final List<Notification> notificationQueue = new ArrayList<>();
+        private Notification activeNotification = null;
         private static final long DEFAULT_DURATION = 3000;
 
         private Manager() {}
@@ -144,24 +149,61 @@ public class Notify {
         public void showNotification(String message, NotificationType type, long duration) {
             Notification notification = new Notification(message, type, duration);
 
-            synchronized (activeNotifications) {
-                activeNotifications.add(notification);
+            synchronized (notificationQueue) {
+                // Для MODULE нотификаций - проверяем дубликаты по имени модуля
+                if (type == NotificationType.MODULE) {
+                    // Извлекаем имя модуля из сообщения (формат: "ModuleName включен/выключен")
+                    String moduleName = extractModuleName(message);
+                    
+                    // Удаляем все существующие нотификации для этого модуля из очереди
+                    notificationQueue.removeIf(n -> 
+                        n.getType() == NotificationType.MODULE && 
+                        extractModuleName(n.getMessage()).equals(moduleName)
+                    );
+                    
+                    // Если активная нотификация тоже для этого модуля - заменяем её
+                    if (activeNotification != null && 
+                        activeNotification.getType() == NotificationType.MODULE &&
+                        extractModuleName(activeNotification.getMessage()).equals(moduleName)) {
+                        activeNotification = notification;
+                        return; // Не добавляем в очередь, уже активна
+                    }
+                }
+                
+                notificationQueue.add(notification);
+            }
+        }
+        
+        private String extractModuleName(String message) {
+            // Извлекаем имя модуля из сообщения формата "ModuleName включен/выключен"
+            if (message.contains(" включен")) {
+                return message.substring(0, message.indexOf(" включен"));
+            } else if (message.contains(" выключен")) {
+                return message.substring(0, message.indexOf(" выключен"));
+            }
+            return message;
+        }
 
-                while (activeNotifications.size() > MAX_NOTIFICATIONS) {
-                    activeNotifications.remove(0);
+        public void update() {
+            synchronized (notificationQueue) {
+                if (activeNotification != null && 
+                    (activeNotification.isExpired() || activeNotification.isDismissed())) {
+                    activeNotification = null;
+                }
+                
+                if (activeNotification == null && !notificationQueue.isEmpty()) {
+                    activeNotification = notificationQueue.remove(0);
                 }
             }
         }
 
-        public void update() {
-            synchronized (activeNotifications) {
-                activeNotifications.removeIf(n -> n.isExpired() || n.isDismissed());
-            }
-        }
-
         public List<Notification> getActiveNotifications() {
-            synchronized (activeNotifications) {
-                return new ArrayList<>(activeNotifications);
+            synchronized (notificationQueue) {
+                List<Notification> result = new ArrayList<>();
+                if (activeNotification != null) {
+                    result.add(activeNotification);
+                }
+                return result;
             }
         }
 

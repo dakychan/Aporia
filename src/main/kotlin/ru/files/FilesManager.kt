@@ -125,7 +125,6 @@ class FilesManager {
         
         try {
             Files.writeString(configPath, content)
-            Logger.info("Config saved")
         } catch (e: Exception) {
             Logger.error("Failed to save config", e)
         }

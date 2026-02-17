@@ -273,6 +273,18 @@ public class ChatComponent {
     }
 
     public void addMessage(Component p_241484_, @Nullable MessageSignature p_241323_, @Nullable GuiMessageTag p_241297_) {
+        // Проверка на упоминание ника игрока
+        String messageText = p_241484_.getString();
+        String playerName = this.minecraft.player != null ? this.minecraft.player.getName().getString() : "";
+        
+        if (!playerName.isEmpty() && messageText.toLowerCase().contains(playerName.toLowerCase())) {
+            // Показываем нотификацию о упоминании
+            ru.ui.notify.Notify.Manager.getInstance().showNotification(
+                ru.ui.notify.Notify.Messages.chatMention(),
+                ru.ui.notify.Notify.NotificationType.MENTION
+            );
+        }
+        
         GuiMessage guimessage = new GuiMessage(this.minecraft.gui.getGuiTicks(), p_241484_, p_241323_, p_241297_);
         this.logChatMessage(guimessage);
         this.addMessageToDisplayQueue(guimessage);

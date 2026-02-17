@@ -19,9 +19,7 @@ object HudManager {
     private val components = mutableListOf<HudComponent>()
     
     fun initialize() {
-        Logger.info("Initializing HudManager...")
         loadConfig()
-        Logger.info("HudManager initialized")
     }
     
     fun addComponent(component: HudComponent) {
@@ -93,7 +91,6 @@ object HudManager {
             
             val json = gson.toJson(configData)
             Files.writeString(configPath, json)
-            Logger.info("HUD configuration saved")
         } catch (e: Exception) {
             Logger.error("Failed to save HUD configuration", e)
         }
@@ -102,7 +99,6 @@ object HudManager {
     fun loadConfig() {
         try {
             if (!Files.exists(configPath)) {
-                Logger.info("HUD config file not found, using defaults")
                 return
             }
             
@@ -118,8 +114,6 @@ object HudManager {
                     component.setZIndex(config.zIndex)
                 }
             }
-            
-            Logger.info("HUD configuration loaded")
         } catch (e: Exception) {
             Logger.error("Failed to load HUD configuration", e)
         }

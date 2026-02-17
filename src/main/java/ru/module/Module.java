@@ -152,10 +152,18 @@ public abstract class Module {
     }
     
     public void toggle() {
-        setEnabled(!enabled);
+        toggle(false);
+    }
+    
+    public void toggle(boolean fromGui) {
+        setEnabled(!enabled, fromGui);
     }
     
     public void setEnabled(boolean enabled) {
+        setEnabled(enabled, false);
+    }
+    
+    public void setEnabled(boolean enabled, boolean fromGui) {
         if (this.enabled == enabled) return;
         
         this.enabled = enabled;
@@ -168,10 +176,13 @@ public abstract class Module {
         
         EventSystemImpl.getInstance().fire(new ModuleToggleEvent(this, enabled));
 
-        Notify.Manager.getInstance().showNotification(
-            name + (enabled ? " включен" : " выключен"),
-            Notify.NotificationType.MODULE
-        );
+        // Не показываем нотификацию если модуль включен из GUI
+        if (!fromGui) {
+            Notify.Manager.getInstance().showNotification(
+                name + (enabled ? " включен" : " выключен"),
+                Notify.NotificationType.MODULE
+            );
+        }
     }
     
     public abstract void onEnable();

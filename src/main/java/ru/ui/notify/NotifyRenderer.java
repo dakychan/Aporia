@@ -15,10 +15,13 @@ public class NotifyRenderer {
     private static MsdfTextRenderer textRenderer;
     private static boolean initialized = false;
     
-    private static final int NOTIFICATION_WIDTH = 250;
-    private static final int NOTIFICATION_HEIGHT = 40;
+    private static final int NOTIFICATION_WIDTH = 220;
+    private static final int NOTIFICATION_HEIGHT = 28;
     private static final int NOTIFICATION_SPACING = 8;
     private static final int START_Y = 20;
+    private static final int BORDER_RADIUS = 14;
+    private static final int ICON_SIZE = 16;
+    private static final int ICON_PADDING = 8;
     
     private static final RenderColor BG_COLOR = RenderColor.of(20, 20, 25, 230);
     
@@ -61,10 +64,35 @@ public class NotifyRenderer {
     }
     
     private static void renderNotification(Notify.Notification n, int x, int y) {
-        RectRenderer.drawRoundedRect(x, y, NOTIFICATION_WIDTH, NOTIFICATION_HEIGHT, 8, BG_COLOR);
-
+        String message = n.getMessage();
+        float fontSize = 11f; 
+        
         if (textRenderer != null) {
-            textRenderer.drawText(x + 10, y + 16, 11, n.getMessage(), RenderColor.WHITE);
+            float textWidth = textRenderer.measureWidth(message, fontSize);
+            int iconSpace = ICON_SIZE + ICON_PADDING * 2;
+            int padding = 28;
+            int dynamicWidth = (int)(textWidth + padding + iconSpace);
+       
+            dynamicWidth = Math.max(120, Math.min(dynamicWidth, 250));
+            
+            MinecraftPlugin plugin = MinecraftPlugin.getInstance();
+            int fbWidth = plugin.getMainFramebufferWidth();
+            int centeredX = (fbWidth - dynamicWidth) / 2;
+       
+            RectRenderer.drawRoundedRect(centeredX, y, dynamicWidth, NOTIFICATION_HEIGHT, BORDER_RADIUS, BG_COLOR);
+        
+            // Icon space (left side)
+            int iconX = centeredX + ICON_PADDING;
+            int iconY = y + (NOTIFICATION_HEIGHT - ICON_SIZE) / 2;
+            // TODO: Render icon here when available at (iconX, iconY) with size ICON_SIZE
+            
+            // Text (shifted right to make room for icon)
+            float textStartX = centeredX + iconSpace;
+            float textX = textStartX + (dynamicWidth - iconSpace - textWidth) / 2;
+            float textY = y + (NOTIFICATION_HEIGHT - fontSize) / 2 + 5;
+            textRenderer.drawText(textX, textY, fontSize, message, RenderColor.WHITE);
+        } else {
+            RectRenderer.drawRoundedRect(x, y, NOTIFICATION_WIDTH, NOTIFICATION_HEIGHT, BORDER_RADIUS, BG_COLOR);
         }
     }
     

@@ -136,15 +136,13 @@ public class ClickGuiScreen extends Screen {
      */
     private void loadModuleKeybinds() {
         moduleKeybinds.clear();
-        
-        // Query all modules and check for keybinds
+
         for (Module module : ModuleManager.getInstance().getModules()) {
             String keybindId = "module." + module.getName().toLowerCase() + ".toggle";
             Keybind keybind = KeybindManager.getInstance().getKeybind(keybindId);
             
             if (keybind != null) {
                 int keyCode = keybind.getKeyCode();
-                // Only store if a valid key is bound (not -1 or 0)
                 if (keyCode > 0) {
                     moduleKeybinds.put(module, keyCode);
                 }
@@ -305,26 +303,21 @@ public class ClickGuiScreen extends Screen {
         renderRectWithBlur(x, y, width, height, radius, bgColor, 2f);
 
         if (textRenderer != null) {
-            // Check if this module is in keybind mode
             String displayText = (module == bindingModule) ? "Биндим на..." : module.getName();
             textRenderer.drawText(x + 8, y + 20, 15, displayText, textColor);
-            
-            // Render keybind indicator if module has a keybind assigned
+
             if (moduleKeybinds.containsKey(module)) {
                 int keyCode = moduleKeybinds.get(module);
                 String keyName = ru.input.api.KeyboardKeys.getKeyName(keyCode);
-                
-                // Fallback for unknown key names
+
                 if (keyName == null || keyName.equals("NONE") || keyName.isEmpty()) {
                     Logger.INSTANCE.warn("Unknown key code for module " + module.getName() + ": " + keyCode);
                     keyName = "???";
                 }
-                
-                // Measure the key name width to position it on the right side
+
                 float keyNameWidth = textRenderer.measureWidth(keyName, 13);
                 float keyNameX = x + width - keyNameWidth - 8;
-                
-                // Render the key name with a slightly dimmed color
+
                 RenderColor keyColor = RenderColor.of(150, 150, 160, 255);
                 textRenderer.drawText(keyNameX, y + 20, 13, keyName, keyColor);
             }
@@ -643,11 +636,9 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent input) {
-        // Check if we're in keybind mode
         if (bindingModule != null) {
             int keyCode = input.key();
-            
-            // Check if ESC key is pressed - cancel keybind mode
+
             if (keyCode == 256) {
                 bindingModule = null;
                 Notify.Manager.getInstance().showNotification(
@@ -656,11 +647,9 @@ public class ClickGuiScreen extends Screen {
                 );
                 return true;
             }
-            
-            // Validate the key code
+
             ru.input.api.KeyboardKeys key = ru.input.api.KeyboardKeys.findByKeyCode(keyCode);
             if (key == ru.input.api.KeyboardKeys.KEY_NONE || keyCode <= 0) {
-                // Invalid key code - exit keybind mode without storing
                 bindingModule = null;
                 Notify.Manager.getInstance().showNotification(
                     "Недопустимая клавиша для привязки",
@@ -668,18 +657,14 @@ public class ClickGuiScreen extends Screen {
                 );
                 return true;
             }
-            
-            // Valid key - store the binding
+
             String keybindId = "module." + bindingModule.getName().toLowerCase() + ".toggle";
             KeybindManager.getInstance().updateKeybind(keybindId, keyCode);
-            
-            // Update the keybinds cache for display
+
             moduleKeybinds.put(bindingModule, keyCode);
-            
-            // Show success notification
+
             String keyName = ru.input.api.KeyboardKeys.getKeyName(keyCode);
-            
-            // Fallback for unknown key names
+
             if (keyName == null || keyName.equals("NONE") || keyName.isEmpty()) {
                 Logger.INSTANCE.warn("Unknown key code assigned to module " + bindingModule.getName() + ": " + keyCode);
                 keyName = "???";
@@ -689,8 +674,7 @@ public class ClickGuiScreen extends Screen {
                 "Модуль " + bindingModule.getName() + " привязан к " + keyName,
                 Notify.NotificationType.MODULE
             );
-            
-            // Exit keybind mode
+
             bindingModule = null;
             return true;
         }
@@ -739,7 +723,7 @@ public class ClickGuiScreen extends Screen {
             for (CategoryPanel panel : categoryPanels.values()) {
                 Module module = panel.getHoveredModule(mouseX, mouseY);
                 if (module != null) {
-                    module.toggle();
+                    module.toggle(true);
                     return true;
                 }
             }
@@ -756,12 +740,9 @@ public class ClickGuiScreen extends Screen {
                 }
             }
         } else if (button == 2) {
-            // Middle mouse button - enter keybind mode
             for (CategoryPanel panel : categoryPanels.values()) {
                 Module module = panel.getHoveredModule(mouseX, mouseY);
                 if (module != null) {
-                    // getHoveredModule only returns a module if clicking on the module button itself,
-                    // not on expanded settings, so this is safe
                     bindingModule = module;
                     return true;
                 }

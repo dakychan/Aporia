@@ -60,34 +60,28 @@ object ChatUtils {
      * White to dark gray gradient using &#RRGGBB format
      */
     private val GRADIENT_PREFIX_STATIC = 
-        "&#FFFFFFA" +      // A - white
-        "&#EBEBEBp" +      // p
-        "&#D6D6D6o" +      // o
-        "&#C2C2C2r" +      // r
-        "&#AEAEAEi" +      // i
-        "&#999999a" +      // a
-        "&#858585." +      // .
-        "&#707070c" +      // c
-        "&#5C5C5Cc" +      // c
-        "&#474747 " +      // space
-        "&#333333-" +      // -
-        "&#1F1F1F>"        // >
+        "&#FFFFFFA" +
+        "&#EBEBEBp" +
+        "&#D6D6D6o" +
+        "&#C2C2C2r" +
+        "&#AEAEAEi" +
+        "&#999999a" +
+        "&#858585." +
+        "&#707070c" +
+        "&#5C5C5Cc" +
+        "&#474747 " +
+        "&#333333-" +
+        "&#1F1F1F>"
     
     /**
      * Gradient color presets for random mode
      */
     private val GRADIENT_PRESETS = listOf(
-        // Cyan to blue
         listOf(0x00FFFF, 0x0080FF, 0x0000FF),
-        // Purple to pink
         listOf(0x8000FF, 0xFF00FF, 0xFF0080),
-        // Green to cyan
         listOf(0x00FF00, 0x00FF80, 0x00FFFF),
-        // Orange to red
         listOf(0xFF8000, 0xFF4000, 0xFF0000),
-        // Yellow to orange
         listOf(0xFFFF00, 0xFFCC00, 0xFF8000),
-        // Pink to purple
         listOf(0xFF80FF, 0xFF00FF, 0x8000FF)
     )
     
@@ -101,8 +95,6 @@ object ChatUtils {
         registerCommand(ru.command.commands.InfoCommand())
         registerCommand(ru.command.commands.PrefixCommand())
         registerCommand(ru.command.commands.HelpCommand(registry))
-        
-        ru.files.Logger.info("ChatUtils initialized with ${registry.getAllCommands().size} commands")
     }
     
     /**
