@@ -98,4 +98,11 @@ public class Slider {
     public void setValue(float value) {
         this.value = MathHelper.clamp(value, min, max);
     }
+    
+    // For testing purposes - allows setting bounds without rendering
+    public void setBounds(int x, int y, int width) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+    }
 }

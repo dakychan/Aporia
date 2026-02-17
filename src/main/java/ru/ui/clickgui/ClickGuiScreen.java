@@ -21,6 +21,7 @@ import ru.render.MsdfFont;
 import ru.render.MsdfTextRenderer;
 import ru.render.RectRenderer;
 import ru.ui.clickgui.comp.Slider;
+import ru.ui.clickgui.comp.MultiSetting;
 import ru.ui.notify.Notify;
 import ru.util.Lang;
 
@@ -67,11 +68,15 @@ public class ClickGuiScreen extends Screen {
     private final Set<Module> expandedModules = new HashSet<>();
     private final Map<Module, Float> settingsAnimations = new HashMap<>();
     private final Map<String, Slider> sliderCache = new HashMap<>();
+    private final Map<String, MultiSetting> multiSettingCache = new HashMap<>();
     private final Set<Module.Setting<?>> expandedMultiSettings = new HashSet<>();
     
     // Keybind mode state
     private Module bindingModule = null;
     private Map<Module, Integer> moduleKeybinds = new HashMap<>();
+    
+    // Mouse event handling state for z-order and drag blocking
+    private boolean anyComponentDragging = false;
     
     private final Map<Module.Category, CategoryPanel> categoryPanels = new HashMap<>();
     private CategoryPanel draggingPanel = null;
@@ -395,43 +400,24 @@ public class ClickGuiScreen extends Screen {
                             value, RenderColor.of(100, 150, 255, (int)(255 * alpha)));
                     }
                 } else if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting) {
-                    ru.module.impl.visuals.Interface.MultiSetting multiSetting = 
+                    ru.module.impl.visuals.Interface.MultiSetting multiSettingData = 
                         (ru.module.impl.visuals.Interface.MultiSetting) setting;
                     
-                    boolean isExpanded = expandedMultiSettings.contains(setting);
-
-                    if (textRenderer != null) {
-                        String arrow = isExpanded ? "▼" : "▶";
-                        float arrowWidth = textRenderer.measureWidth(arrow, 12);
-                        textRenderer.drawText(x + width - arrowWidth - 10, settingY + 8, 12, 
-                            arrow, RenderColor.of(100, 200, 255, (int)(255 * alpha)));
+                    // Get or create MultiSetting component
+                    String cacheKey = module.getName() + "_" + setting.getName();
+                    MultiSetting multiSetting = multiSettingCache.get(cacheKey);
+                    if (multiSetting == null) {
+                        multiSetting = new MultiSetting(
+                            setting.getName(),
+                            multiSettingData.getOptions(),
+                            multiSettingData.getValue()
+                        );
+                        multiSettingCache.put(cacheKey, multiSetting);
                     }
                     
-                    settingY += SETTING_SPACING;
-
-                    if (isExpanded) {
-                        for (String option : multiSetting.getOptions()) {
-                            if (settingY > y + height - 25) break;
-                            
-                            boolean isSelected = multiSetting.getValue().contains(option);
-                            
-                            if (textRenderer != null) {
-                                if (isSelected) {
-                                    renderRectWithBlur(x + 15, settingY, width - 30, SETTING_SPACING - 2, 4, 
-                                        RenderColor.of(40, 80, 40, (int)(150 * alpha)), 1f);
-                                }
-
-                                RenderColor textColor = isSelected 
-                                    ? RenderColor.of(80, 200, 120, (int)(255 * alpha))
-                                    : RenderColor.of(150, 150, 160, (int)(255 * alpha));
-                                
-                                textRenderer.drawText(x + 25, settingY + 8, 12, 
-                                    option, textColor);
-                            }
-                            
-                            settingY += SETTING_SPACING;
-                        }
-                    }
+                    // Render the component
+                    multiSetting.render(x, settingY, width, textRenderer, fbMouseX, fbMouseY, alpha);
+                    settingY += multiSetting.getHeight();
                 } else if (setting instanceof Module.StringSetting) {
                     Module.StringSetting strSetting = (Module.StringSetting) setting;
                     String value = strSetting.getValue();
@@ -460,13 +446,24 @@ public class ClickGuiScreen extends Screen {
         int totalHeight = SETTINGS_PADDING;
         
         for (Module.Setting<?> setting : settings) {
-            totalHeight += SETTING_SPACING;
-
-            if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting &&
-                expandedMultiSettings.contains(setting)) {
-                ru.module.impl.visuals.Interface.MultiSetting multiSetting = 
+            if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting) {
+                ru.module.impl.visuals.Interface.MultiSetting multiSettingData = 
                     (ru.module.impl.visuals.Interface.MultiSetting) setting;
-                totalHeight += multiSetting.getOptions().size() * SETTING_SPACING;
+                
+                String cacheKey = module.getName() + "_" + setting.getName();
+                MultiSetting multiSetting = multiSettingCache.get(cacheKey);
+                if (multiSetting == null) {
+                    multiSetting = new MultiSetting(
+                        setting.getName(),
+                        multiSettingData.getOptions(),
+                        multiSettingData.getValue()
+                    );
+                    multiSettingCache.put(cacheKey, multiSetting);
+                }
+                
+                totalHeight += multiSetting.getHeight();
+            } else {
+                totalHeight += SETTING_SPACING;
             }
         }
         
@@ -568,40 +565,30 @@ public class ClickGuiScreen extends Screen {
                             String sliderId = module.getName() + "." + setting.getName();
                             Slider slider = sliderCache.get(sliderId);
                             if (slider != null && slider.mouseClicked(mouseX, mouseY, 0)) {
+                                anyComponentDragging = true;
                                 return true;
                             }
                             settingY += SETTING_SPACING;
                         } else if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting) {
-                            ru.module.impl.visuals.Interface.MultiSetting multiSetting = 
+                            ru.module.impl.visuals.Interface.MultiSetting multiSettingData = 
                                 (ru.module.impl.visuals.Interface.MultiSetting) setting;
-
-                            if (mouseX >= moduleX && mouseX <= moduleX + moduleWidth &&
-                                mouseY >= settingY && mouseY <= settingY + SETTING_SPACING) {
-
-                                if (expandedMultiSettings.contains(setting)) {
-                                    expandedMultiSettings.remove(setting);
-                                } else {
-                                    expandedMultiSettings.add(setting);
-                                }
+                            
+                            String cacheKey = module.getName() + "_" + setting.getName();
+                            MultiSetting multiSetting = multiSettingCache.get(cacheKey);
+                            if (multiSetting == null) {
+                                multiSetting = new MultiSetting(
+                                    setting.getName(),
+                                    multiSettingData.getOptions(),
+                                    multiSettingData.getValue()
+                                );
+                                multiSettingCache.put(cacheKey, multiSetting);
+                            }
+                            
+                            if (multiSetting.mouseClicked(mouseX, mouseY, 0)) {
                                 return true;
                             }
                             
-                            settingY += SETTING_SPACING;
-
-                            if (expandedMultiSettings.contains(setting)) {
-                                for (String option : multiSetting.getOptions()) {
-                                    if (settingY > settingsY + settingsHeight - 25) break;
-                                    
-                                    if (mouseX >= moduleX && mouseX <= moduleX + moduleWidth &&
-                                        mouseY >= settingY && mouseY <= settingY + SETTING_SPACING) {
-                                        
-                                        multiSetting.toggle(option);
-                                        return true;
-                                    }
-                                    
-                                    settingY += SETTING_SPACING;
-                                }
-                            }
+                            settingY += multiSetting.getHeight();
                         } else if (mouseX >= moduleX && mouseX <= moduleX + moduleWidth &&
                             mouseY >= settingY && mouseY <= settingY + SETTING_SPACING) {
                             
@@ -696,20 +683,42 @@ public class ClickGuiScreen extends Screen {
         int button = click.button();
 
         if (button == 0) {
+            // Check for outside clicks on expanded MultiSettings first (highest priority)
+            boolean handledOutsideClick = false;
+            for (MultiSetting multiSetting : multiSettingCache.values()) {
+                if (multiSetting.isExpanded() && multiSetting.isClickOutside(mouseX, mouseY)) {
+                    multiSetting.collapse();
+                    handledOutsideClick = true;
+                }
+            }
+            
+            // If we handled an outside click, don't process other clicks
+            if (handledOutsideClick) {
+                return true;
+            }
+            
+            // Block all clicks if any component is in drag mode
+            if (anyComponentDragging) {
+                return true;
+            }
+            
             if (ru.Aporia.handleInterfaceClick(mouseX, mouseY, button)) {
                 return true;
             }
             
+            // Check panel headers (z-order: panels are above modules)
             for (CategoryPanel panel : categoryPanels.values()) {
                 if (panel.isHeaderHovered(mouseX, mouseY)) {
                     draggingPanel = panel;
                     dragOffsetX = mouseX - panel.getX();
                     dragOffsetY = mouseY - panel.getY();
                     panel.setDragging(true);
+                    anyComponentDragging = true;
                     return true;
                 }
             }
 
+            // Check settings (z-order: settings are above module headers)
             for (CategoryPanel panel : categoryPanels.values()) {
                 List<Module> modules = ModuleManager.getInstance().getModulesByCategory(panel.getCategory());
                 
@@ -720,6 +729,7 @@ public class ClickGuiScreen extends Screen {
                 }
             }
 
+            // Check module headers (lowest z-order for left click)
             for (CategoryPanel panel : categoryPanels.values()) {
                 Module module = panel.getHoveredModule(mouseX, mouseY);
                 if (module != null) {
@@ -728,6 +738,11 @@ public class ClickGuiScreen extends Screen {
                 }
             }
         } else if (button == 1) {
+            // Block right clicks if any component is dragging
+            if (anyComponentDragging) {
+                return true;
+            }
+            
             for (CategoryPanel panel : categoryPanels.values()) {
                 Module module = panel.getHoveredModule(mouseX, mouseY);
                 if (module != null) {
@@ -740,6 +755,11 @@ public class ClickGuiScreen extends Screen {
                 }
             }
         } else if (button == 2) {
+            // Block middle clicks if any component is dragging
+            if (anyComponentDragging) {
+                return true;
+            }
+            
             for (CategoryPanel panel : categoryPanels.values()) {
                 Module module = panel.getHoveredModule(mouseX, mouseY);
                 if (module != null) {
@@ -789,9 +809,14 @@ public class ClickGuiScreen extends Screen {
         if (mouseButtonEvent.button() == 0 && draggingPanel != null) {
             draggingPanel.setDragging(false);
             draggingPanel = null;
+            anyComponentDragging = false;
             savePanelPositions();
             return true;
         }
+        
+        // Clear drag state when mouse is released
+        anyComponentDragging = false;
+        
         return super.mouseReleased(mouseButtonEvent);
     }
 
