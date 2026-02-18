@@ -31,6 +31,10 @@ public class MultiSetting {
     }
     
     public int getHeight() {
+        // If expanded, return full height immediately for layout calculation
+        if (expanded && dropdownHeight < options.size() * OPTION_HEIGHT * 0.5f) {
+            return HEADER_HEIGHT + options.size() * OPTION_HEIGHT;
+        }
         return (int) (HEADER_HEIGHT + dropdownHeight);
     }
     
@@ -48,6 +52,9 @@ public class MultiSetting {
         this.x = x;
         this.y = y;
         this.width = width;
+        
+        // Always use full alpha for visibility
+        alpha = 1.0f;
         
         // Update animation
         expandAnimation.run(expanded ? 1.0 : 0.0, 0.2, Easings.CUBIC_OUT, false);

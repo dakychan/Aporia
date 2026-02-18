@@ -77,6 +77,7 @@ public class ClickGuiScreen extends Screen {
     
     // Mouse event handling state for z-order and drag blocking
     private boolean anyComponentDragging = false;
+    private Slider currentlyDraggingSlider = null;
     
     private final Map<Module.Category, CategoryPanel> categoryPanels = new HashMap<>();
     private CategoryPanel draggingPanel = null;
@@ -267,7 +268,7 @@ public class ClickGuiScreen extends Screen {
 
             if (settingsProgress > 0.01f) {
                 renderModuleSettings(module, x + 5, moduleY + MODULE_HEIGHT, 
-                    width - 10, settingsHeight, settingsProgress);
+                    width - 10, settingsHeight, settingsProgress, mouseX, mouseY);
             }
             
             moduleY += MODULE_HEIGHT + MODULE_SPACING + settingsHeight;
@@ -329,7 +330,7 @@ public class ClickGuiScreen extends Screen {
         }
     }
     
-    private void renderModuleSettings(Module module, int x, int y, int width, int height, float alpha) {
+    private void renderModuleSettings(Module module, int x, int y, int width, int height, float alpha, int fbMouseX, int fbMouseY) {
         if (height <= 0) return;
 
         int alphaValue = (int)(200 * alpha);
@@ -350,10 +351,8 @@ public class ClickGuiScreen extends Screen {
         
         int settingY = y + 10;
         
-        MinecraftPlugin plugin = MinecraftPlugin.getInstance();
-        double scale = (double) plugin.getMainFramebufferWidth() / this.width;
-        int fbMouseX = (int)(this.minecraft.mouseHandler.xpos() * scale);
-        int fbMouseY = (int)(this.minecraft.mouseHandler.ypos() * scale);
+        // Use the mouse coordinates passed from render(), not from mouseHandler
+        // This ensures consistency with click event coordinates
         
         for (Module.Setting<?> setting : settings) {
             if (settingY > y + height - 25) break;
@@ -369,7 +368,12 @@ public class ClickGuiScreen extends Screen {
                         (float)numSetting.getMax())
                 );
                 
-                slider.setValue(numSetting.getValue().floatValue());
+                // Always sync value from setting to slider when not dragging this specific slider
+                // This ensures the displayed value matches the setting value
+                if (!slider.isDragging()) {
+                    slider.setValue(numSetting.getValue().floatValue());
+                }
+                
                 slider.render(x + 10, settingY, width - 20, textRenderer, fbMouseX, fbMouseY);
                 
                 settingY += SETTING_SPACING;
@@ -416,7 +420,7 @@ public class ClickGuiScreen extends Screen {
                     }
                     
                     // Render the component
-                    multiSetting.render(x, settingY, width, textRenderer, fbMouseX, fbMouseY, alpha);
+                    multiSetting.render(x + 10, settingY, width - 20, textRenderer, fbMouseX, fbMouseY, alpha);
                     settingY += multiSetting.getHeight();
                 } else if (setting instanceof Module.StringSetting) {
                     Module.StringSetting strSetting = (Module.StringSetting) setting;
@@ -564,9 +568,14 @@ public class ClickGuiScreen extends Screen {
                         if (setting instanceof Module.NumberSetting) {
                             String sliderId = module.getName() + "." + setting.getName();
                             Slider slider = sliderCache.get(sliderId);
-                            if (slider != null && slider.mouseClicked(mouseX, mouseY, 0)) {
-                                anyComponentDragging = true;
-                                return true;
+                            if (slider != null) {
+                                // Update bounds before checking click
+                                slider.setBounds(moduleX + 10, settingY, moduleWidth - 20);
+                                if (slider.mouseClicked(mouseX, mouseY, 0)) {
+                                    anyComponentDragging = true;
+                                    currentlyDraggingSlider = slider;
+                                    return true;
+                                }
                             }
                             settingY += SETTING_SPACING;
                         } else if (setting instanceof ru.module.impl.visuals.Interface.MultiSetting) {
@@ -583,6 +592,9 @@ public class ClickGuiScreen extends Screen {
                                 );
                                 multiSettingCache.put(cacheKey, multiSetting);
                             }
+                            
+                            // Update bounds before checking click
+                            multiSetting.setBounds(moduleX + 10, settingY, moduleWidth - 20);
                             
                             if (multiSetting.mouseClicked(mouseX, mouseY, 0)) {
                                 return true;
@@ -776,35 +788,18 @@ public class ClickGuiScreen extends Screen {
     public boolean mouseReleased(MouseButtonEvent mouseButtonEvent) {
         ru.Aporia.handleInterfaceRelease();
         
+        MinecraftPlugin plugin = MinecraftPlugin.getInstance();
+        double scale = (double) plugin.getMainFramebufferWidth() / this.width;
+        int fbMouseX = (int)(mouseButtonEvent.x() * scale);
+        int fbMouseY = (int)(mouseButtonEvent.y() * scale);
+        
+        // Release all sliders
         for (Slider slider : sliderCache.values()) {
-            if (slider.mouseReleased((int)mouseButtonEvent.x(), (int)mouseButtonEvent.y(), mouseButtonEvent.button())) {
-                String sliderId = null;
-                for (Map.Entry<String, Slider> entry : sliderCache.entrySet()) {
-                    if (entry.getValue() == slider) {
-                        sliderId = entry.getKey();
-                        break;
-                    }
-                }
-                
-                if (sliderId != null) {
-                    String[] parts = sliderId.split("\\.", 2);
-                    if (parts.length == 2) {
-                        String moduleName = parts[0];
-                        String settingName = parts[1];
-                        
-                        Module module = ModuleManager.getInstance().getModuleByName(moduleName);
-                        if (module != null) {
-                            for (Module.Setting<?> setting : module.getSettings()) {
-                                if (setting.getName().equals(settingName) && setting instanceof Module.NumberSetting) {
-                                    ((Module.NumberSetting) setting).setValue((double) slider.getValue());
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            slider.mouseReleased(fbMouseX, fbMouseY, mouseButtonEvent.button());
         }
+        
+        // Clear currently dragging slider reference
+        currentlyDraggingSlider = null;
         
         if (mouseButtonEvent.button() == 0 && draggingPanel != null) {
             draggingPanel.setDragging(false);
@@ -829,8 +824,40 @@ public class ClickGuiScreen extends Screen {
 
         ru.Aporia.handleInterfaceDrag(fbMouseX, fbMouseY);
         
-        for (Slider slider : sliderCache.values()) {
-            slider.mouseDragged(fbMouseX, fbMouseY);
+        // Only update the slider that is currently being dragged
+        if (currentlyDraggingSlider != null) {
+            float oldValue = currentlyDraggingSlider.getValue();
+            currentlyDraggingSlider.mouseDragged(fbMouseX, fbMouseY);
+            
+            // If value changed, update the module setting immediately
+            if (Math.abs(currentlyDraggingSlider.getValue() - oldValue) > 0.01f) {
+                // Find the slider ID
+                String sliderId = null;
+                for (Map.Entry<String, Slider> entry : sliderCache.entrySet()) {
+                    if (entry.getValue() == currentlyDraggingSlider) {
+                        sliderId = entry.getKey();
+                        break;
+                    }
+                }
+                
+                if (sliderId != null) {
+                    String[] parts = sliderId.split("\\.", 2);
+                    if (parts.length == 2) {
+                        String moduleName = parts[0];
+                        String settingName = parts[1];
+                        
+                        Module module = ModuleManager.getInstance().getModuleByName(moduleName);
+                        if (module != null) {
+                            for (Module.Setting<?> setting : module.getSettings()) {
+                                if (setting.getName().equals(settingName) && setting instanceof Module.NumberSetting) {
+                                    ((Module.NumberSetting) setting).setValue((double) currentlyDraggingSlider.getValue());
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         
         if (draggingPanel != null && mouseButtonEvent.button() == 0) {
