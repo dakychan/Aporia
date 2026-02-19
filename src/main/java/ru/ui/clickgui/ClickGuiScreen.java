@@ -348,9 +348,11 @@ public class ClickGuiScreen extends Screen {
         }
         
         int settingY = y + 10;
+        int maxY = y + height; // Maximum Y coordinate for rendering
         
         for (Module.Setting<?> setting : settings) {
-            if (settingY > y + height - 25) break;
+            // Stop rendering if we've reached the bottom of the settings area
+            if (settingY > maxY - 25) break;
             
             if (setting instanceof Module.NumberSetting) {
                 Module.NumberSetting numSetting = (Module.NumberSetting) setting;
@@ -411,8 +413,12 @@ public class ClickGuiScreen extends Screen {
                         multiSettingCache.put(cacheKey, multiSetting);
                     }
 
-                    multiSetting.render(x + 10, settingY, width - 20, textRenderer, fbMouseX, fbMouseY, alpha);
-                    settingY += multiSetting.getHeight();
+                    // Only render if it fits within the settings area
+                    int multiSettingHeight = multiSetting.getHeight();
+                    if (settingY + multiSettingHeight <= maxY) {
+                        multiSetting.render(x + 10, settingY, width - 20, textRenderer, fbMouseX, fbMouseY, alpha);
+                    }
+                    settingY += multiSettingHeight;
                 } else if (setting instanceof Module.StringSetting) {
                     Module.StringSetting strSetting = (Module.StringSetting) setting;
                     String value = strSetting.getValue();

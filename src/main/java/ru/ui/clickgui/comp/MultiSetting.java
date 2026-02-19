@@ -4,48 +4,67 @@ import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor;
 import ru.render.MsdfTextRenderer;
 import ru.render.RectRenderer;
-import ru.render.anim.Animation;
-import ru.render.anim.Easings;
 
 import java.util.List;
 
+/**
+ * Multi-setting component that displays all options inline without expansion.
+ * Shows header with setting name and all options as clickable buttons in a row.
+ */
 public class MultiSetting {
     private String name;
     private List<String> options;
     private List<String> selectedOptions;
     private int x, y, width, height;
-
-    private boolean expanded = false;
-    private Animation expandAnimation = new Animation();
-    private float dropdownHeight = 0;
+    private MsdfTextRenderer textRenderer; // Store for width calculations
     
-    private static final int HEADER_HEIGHT = 25;
-    private static final int OPTION_HEIGHT = 25;
+    private static final int HEADER_HEIGHT = 20;
+    private static final int BUTTON_HEIGHT = 18;
+    private static final int BUTTON_SPACING = 4;
+    private static final int PADDING = 6;
     
     public MultiSetting(String name, List<String> options, List<String> selectedOptions) {
         this.name = name;
         this.options = options;
         this.selectedOptions = selectedOptions;
-        this.height = HEADER_HEIGHT;
-    }
-    
-    public int getHeight() {
-        if (expanded && dropdownHeight < options.size() * OPTION_HEIGHT * 0.5f) {
-            return HEADER_HEIGHT + options.size() * OPTION_HEIGHT;
-        }
-        return (int) (HEADER_HEIGHT + dropdownHeight);
-    }
-    
-    public boolean isExpanded() {
-        return expanded;
-    }
-    
-    public void setExpanded(boolean expanded) {
-        this.expanded = expanded;
+        this.height = HEADER_HEIGHT + BUTTON_HEIGHT + PADDING;
     }
     
     /**
-     * Render the multi-setting component with all options.
+     * Get total height of the component.
+     * Calculates height based on number of rows needed for buttons.
+     * 
+     * @return Component height in pixels
+     */
+    public int getHeight() {
+        // Calculate number of rows needed
+        int totalRows = 1;
+        int currentRowWidth = 0;
+        int maxWidth = width > 0 ? width : 150; // Use stored width or default
+        
+        for (String option : options) {
+            float textWidth = 40; // Default
+            if (textRenderer != null) {
+                try {
+                    textWidth = textRenderer.measureWidth(option, 9);
+                } catch (Exception e) {
+                    textWidth = option.length() * 6;
+                }
+            }
+            int buttonWidth = (int) (textWidth + 12);
+            
+            if (currentRowWidth + buttonWidth > maxWidth && currentRowWidth > 0) {
+                totalRows++;
+                currentRowWidth = 0;
+            }
+            currentRowWidth += buttonWidth + BUTTON_SPACING;
+        }
+        
+        return HEADER_HEIGHT + (totalRows * (BUTTON_HEIGHT + BUTTON_SPACING)) + PADDING;
+    }
+    
+    /**
+     * Render the multi-setting component with inline options.
      * 
      * @param x X coordinate
      * @param y Y coordinate
@@ -58,147 +77,125 @@ public class MultiSetting {
     public void render(int x, int y, int width, MsdfTextRenderer textRenderer, int mouseX, int mouseY, float alpha) {
         MinecraftPlugin plugin = MinecraftPlugin.getInstance();
         plugin.bindMainFramebuffer(true);
+        
         this.x = x;
         this.y = y;
         this.width = width;
+        this.textRenderer = textRenderer; // Store for later use
         
-        /**
-         * Force full alpha for visibility regardless of parent animation state.
-         * This ensures MultiSetting components remain visible even when parent
-         * containers are animating or have reduced opacity.
-         * Validates Requirements 6.1, 6.2, 6.3.
-         */
+        // Force full alpha for visibility
         alpha = 1.0f;
-
-        expandAnimation.run(expanded ? 1.0 : 0.0, 0.2, Easings.CUBIC_OUT, false);
-        expandAnimation.update();
-        float animProgress = expandAnimation.get();
-
-        dropdownHeight = animProgress * options.size() * OPTION_HEIGHT;
-
-        renderHeader(textRenderer, mouseX, mouseY, alpha);
-
-        if (animProgress > 0.01f) {
-            renderOptions(textRenderer, alpha, animProgress);
-        }
-    }
-    
-    private void renderHeader(MsdfTextRenderer textRenderer, int mouseX, int mouseY, float alpha) {
-        boolean hovered = isHeaderHovered(mouseX, mouseY);
-        RenderColor bgColor = hovered 
-            ? RenderColor.of(60, 60, 70, 220)
-            : RenderColor.of(50, 50, 60, 200);
         
-        RectRenderer.drawRoundedRect(x, y, width, HEADER_HEIGHT, 4, bgColor);
-
+        // Render header with setting name
         if (textRenderer != null) {
-            textRenderer.drawText(x + 10, y + 8, 12, name, 
-                RenderColor.of(220, 220, 230, 255));
+            textRenderer.drawText(x, y + 6, 10, name, RenderColor.of(220, 220, 230, 255));
         }
-
-        if (textRenderer != null) {
-            String arrow = expanded ? "▼" : "▶";
-            float arrowWidth = textRenderer.measureWidth(arrow, 12);
-            textRenderer.drawText(x + width - arrowWidth - 10, y + 8, 12, 
-                arrow, RenderColor.of(100, 200, 255, (int)(255 * alpha)));
-        }
-    }
-    
-    /**
-     * Render multi-setting options with full opacity.
-     * Uses full alpha values to ensure options are clearly visible
-     * regardless of animation state.
-     * 
-     * @param textRenderer Text renderer for drawing text
-     * @param alpha Parent alpha value (used at full opacity)
-     * @param animProgress Animation progress for height calculation
-     */
-    private void renderOptions(MsdfTextRenderer textRenderer, float alpha, float animProgress) {
-        int optionY = y + HEADER_HEIGHT;
         
-        for (int i = 0; i < options.size(); i++) {
-            String option = options.get(i);
+        // Render option buttons inline with wrapping
+        int buttonX = x;
+        int buttonY = y + HEADER_HEIGHT;
+        int maxWidth = width; // Maximum width before wrapping
+        int currentRowWidth = 0;
+        
+        for (String option : options) {
             boolean isSelected = selectedOptions.contains(option);
             
-            /**
-             * Use full alpha for option rendering to ensure clear visibility.
-             * Animation progress affects height/position only, not opacity.
-             * Validates Requirements 6.1, 6.2, 6.3.
-             */
-
-            if (isSelected) {
-                RectRenderer.drawRoundedRect(x + 5, optionY, width - 10, OPTION_HEIGHT - 2, 3,
-                    RenderColor.of(40, 80, 40, 150));
-            }
-
-            drawCheckbox(x + 15, optionY + 7, isSelected, alpha);
-
-            if (textRenderer != null) {
-                RenderColor textColor = isSelected 
-                    ? RenderColor.of(80, 200, 120, 255)
-                    : RenderColor.of(150, 150, 160, 255);
-                
-                textRenderer.drawText(x + 35, optionY + 8, 12, option, textColor);
+            // Calculate button width based on text
+            float textWidth = textRenderer != null ? textRenderer.measureWidth(option, 9) : 40;
+            int buttonWidth = (int) (textWidth + 12);
+            
+            // Check if button needs to wrap to next line
+            if (currentRowWidth + buttonWidth > maxWidth && currentRowWidth > 0) {
+                buttonX = x;
+                buttonY += BUTTON_HEIGHT + BUTTON_SPACING;
+                currentRowWidth = 0;
             }
             
-            optionY += OPTION_HEIGHT;
+            // Check if button is hovered
+            boolean hovered = mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+                            mouseY >= buttonY && mouseY <= buttonY + BUTTON_HEIGHT;
+            
+            // Button background color
+            RenderColor bgColor;
+            if (isSelected) {
+                bgColor = hovered 
+                    ? RenderColor.of(70, 130, 255, 255)
+                    : RenderColor.of(60, 120, 245, 230);
+            } else {
+                bgColor = hovered 
+                    ? RenderColor.of(60, 60, 70, 220)
+                    : RenderColor.of(50, 50, 60, 200);
+            }
+            
+            RectRenderer.drawRoundedRect(buttonX, buttonY, buttonWidth, BUTTON_HEIGHT, 3, bgColor);
+            
+            // Button text - опущен еще ниже
+            if (textRenderer != null) {
+                RenderColor textColor = isSelected 
+                    ? RenderColor.WHITE
+                    : RenderColor.of(180, 180, 190, 255);
+                textRenderer.drawText(buttonX + 6, buttonY + 8, 9, option, textColor);
+            }
+            
+            buttonX += buttonWidth + BUTTON_SPACING;
+            currentRowWidth += buttonWidth + BUTTON_SPACING;
         }
     }
     
     /**
-     * Draw checkbox with full opacity for clear visibility.
+     * Handle mouse click on option buttons.
      * 
-     * @param x X coordinate
-     * @param y Y coordinate
-     * @param checked Whether checkbox is checked
-     * @param alpha Parent alpha value (used at full opacity)
+     * @param mouseX Mouse X coordinate
+     * @param mouseY Mouse Y coordinate
+     * @param button Mouse button (0 = left click)
+     * @return true if click was handled
      */
-    private void drawCheckbox(int x, int y, boolean checked, float alpha) {
-        int size = 10;
-        
-        /**
-         * Use full alpha for checkbox rendering to ensure clear visibility.
-         * Validates Requirements 6.1, 6.2, 6.3.
-         */
-
-        RenderColor borderColor = checked 
-            ? RenderColor.of(80, 200, 120, 255)
-            : RenderColor.of(100, 100, 110, 200);
-        
-        RectRenderer.drawRoundedRect(x, y, size, size, 2, borderColor);
-
-        if (checked) {
-            RectRenderer.drawRoundedRect(x + 2, y + 2, size - 4, size - 4, 1,
-                RenderColor.of(80, 200, 120, 255));
-        }
-    }
-    
-    private boolean isHeaderHovered(int mouseX, int mouseY) {
-        return mouseX >= x && mouseX <= x + width && 
-               mouseY >= y && mouseY <= y + HEADER_HEIGHT;
-    }
-    
     public boolean mouseClicked(int mouseX, int mouseY, int button) {
-        if (button == 0 && isHeaderHovered(mouseX, mouseY)) {
-            expanded = !expanded;
-            return true;
-        }
-
-        if (button == 0 && expanded) {
-            int optionY = y + HEADER_HEIGHT;
-            for (String option : options) {
-                if (mouseX >= x && mouseX <= x + width &&
-                    mouseY >= optionY && mouseY <= optionY + OPTION_HEIGHT) {
-                    toggleOption(option);
-                    return true;
+        if (button != 0) return false;
+        
+        int buttonX = x;
+        int buttonY = y + HEADER_HEIGHT;
+        int maxWidth = width;
+        int currentRowWidth = 0;
+        
+        for (String option : options) {
+            // Calculate button width based on text - need textRenderer for accurate width
+            float textWidth = 40; // Default fallback
+            if (textRenderer != null) {
+                // Create a temporary renderer instance to measure text
+                try {
+                    textWidth = textRenderer.measureWidth(option, 9);
+                } catch (Exception e) {
+                    textWidth = option.length() * 6; // Fallback calculation
                 }
-                optionY += OPTION_HEIGHT;
             }
+            int buttonWidth = (int) (textWidth + 12);
+            
+            // Check if button needs to wrap to next line
+            if (currentRowWidth + buttonWidth > maxWidth && currentRowWidth > 0) {
+                buttonX = x;
+                buttonY += BUTTON_HEIGHT + BUTTON_SPACING;
+                currentRowWidth = 0;
+            }
+            
+            if (mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+                mouseY >= buttonY && mouseY <= buttonY + BUTTON_HEIGHT) {
+                toggleOption(option);
+                return true;
+            }
+            
+            buttonX += buttonWidth + BUTTON_SPACING;
+            currentRowWidth += buttonWidth + BUTTON_SPACING;
         }
         
         return false;
     }
     
+    /**
+     * Toggle option selection state.
+     * 
+     * @param option Option to toggle
+     */
     private void toggleOption(String option) {
         if (selectedOptions.contains(option)) {
             selectedOptions.remove(option);
@@ -207,26 +204,22 @@ public class MultiSetting {
         }
     }
     
-    public boolean isClickOutside(int mouseX, int mouseY) {
-        if (!expanded) {
-            return false;
-        }
-        
-        int totalHeight = HEADER_HEIGHT + (int) dropdownHeight;
-        return !(mouseX >= x && mouseX <= x + width && 
-                 mouseY >= y && mouseY <= y + totalHeight);
-    }
-    
-    public void collapse() {
-        expanded = false;
-    }
-
+    /**
+     * Set component bounds.
+     * 
+     * @param x X coordinate
+     * @param y Y coordinate
+     * @param width Component width
+     */
     public void setBounds(int x, int y, int width) {
         this.x = x;
         this.y = y;
         this.width = width;
-        if (expanded) {
-            dropdownHeight = options.size() * OPTION_HEIGHT;
-        }
     }
+    
+    // Deprecated methods for compatibility
+    public boolean isExpanded() { return false; }
+    public void setExpanded(boolean expanded) { }
+    public boolean isClickOutside(int mouseX, int mouseY) { return false; }
+    public void collapse() { }
 }
