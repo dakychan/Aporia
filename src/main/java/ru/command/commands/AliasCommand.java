@@ -38,10 +38,10 @@ public class AliasCommand implements Command {
      */
     @Override
     public String getUsage() {
-        return "^alias add <имя> <команда> - Создать псевдоним\n" +
-               "^alias list - Показать все псевдонимы\n" +
-               "^alias remove <имя> - Удалить псевдоним\n" +
-               "^alias clear - Очистить все псевдонимы";
+        return ChatUtils.INSTANCE.formatCommand("alias") + " add <имя> <команда> - Создать псевдоним\n" +
+               ChatUtils.INSTANCE.formatCommand("alias") + " list - Показать все псевдонимы\n" +
+               ChatUtils.INSTANCE.formatCommand("alias") + " remove <имя> - Удалить псевдоним\n" +
+               ChatUtils.INSTANCE.formatCommand("alias") + " clear - Очистить все псевдонимы";
     }
     
     /**
@@ -74,14 +74,14 @@ public class AliasCommand implements Command {
                     String command = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
                     addAlias(alias, command);
                 } else {
-                    ChatUtils.INSTANCE.sendMessage("Использование: ^alias add <имя> <команда>", ChatUtils.MessageType.ERROR);
+                    ChatUtils.INSTANCE.sendMessage("Использование: " + ChatUtils.INSTANCE.formatCommand("alias") + " add <имя> <команда>", ChatUtils.MessageType.ERROR);
                 }
                 break;
             case "remove":
                 if (args.length >= 2) {
                     removeAlias(args[1]);
                 } else {
-                    ChatUtils.INSTANCE.sendMessage("Использование: ^alias remove <имя>", ChatUtils.MessageType.ERROR);
+                    ChatUtils.INSTANCE.sendMessage("Использование: " + ChatUtils.INSTANCE.formatCommand("alias") + " remove <имя>", ChatUtils.MessageType.ERROR);
                 }
                 break;
             case "clear":

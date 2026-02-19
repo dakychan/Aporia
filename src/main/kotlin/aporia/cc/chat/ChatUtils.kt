@@ -144,7 +144,8 @@ object ChatUtils {
      * @param type The message type
      */
     fun sendMessage(message: String, type: MessageType) {
-        val formatted = formatMessage(message, type)
+        val withCommand = message.replace("%command", formatCommand(""))
+        val formatted = formatMessage(withCommand, type)
         val mc = Minecraft.getInstance()
         mc.player?.displayClientMessage(Component.literal(formatted), false)
     }
@@ -376,6 +377,16 @@ object ChatUtils {
      */
     fun getPrefix(): String {
         return prefix
+    }
+    
+    /**
+     * Format command syntax with current prefix.
+     * 
+     * @param command Command name without prefix
+     * @return Formatted command string with current prefix
+     */
+    fun formatCommand(command: String): String {
+        return "$prefix$command"
     }
     
     /**

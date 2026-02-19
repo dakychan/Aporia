@@ -28,8 +28,7 @@ public class Slider {
     public void render(int x, int y, int width, MsdfTextRenderer textRenderer, int mouseX, int mouseY) {
         MinecraftPlugin plugin = MinecraftPlugin.getInstance();
         plugin.bindMainFramebuffer(true);
-        
-        // Only update bounds if not currently dragging to prevent coordinate desync
+
         if (!dragging) {
             this.x = x;
             this.y = y;
@@ -53,11 +52,9 @@ public class Slider {
                 RenderColor.of(180, 180, 190, 255));
         }
 
-        // Draw slider track (background)
         RenderColor trackColor = RenderColor.of(40, 40, 50, 255);
         RectRenderer.drawRoundedRect(x, y + height - 8, width, 6, 3f, trackColor);
-        
-        // Draw slider fill (progress)
+
         float percentage = (value - min) / (max - min);
         float barWidth = width * percentage;
         
@@ -65,8 +62,7 @@ public class Slider {
         if (barWidth > 2) {
             RectRenderer.drawRoundedRect(x, y + height - 8, barWidth, 6, 3f, barColor);
         }
-        
-        // Draw slider handle (knob) - bigger and more visible
+
         float handleX = x + barWidth - 6;
         float handleY = y + height - 11;
         RenderColor handleColor = hovered || dragging 
@@ -75,14 +71,27 @@ public class Slider {
         RectRenderer.drawRoundedRect(handleX, handleY, 12, 12, 6f, handleColor);
     }
     
+    /**
+     * Handle mouse click with precise hit detection.
+     * Only captures clicks on the slider circle (handle) or slider line (track).
+     * 
+     * @param mouseX Mouse X coordinate
+     * @param mouseY Mouse Y coordinate
+     * @param button Mouse button
+     * @return true if click was handled
+     */
     public boolean mouseClicked(int mouseX, int mouseY, int button) {
-        boolean hovered = isHovered(mouseX, mouseY);
+        if (button != 0) return false;
         
-        if (button == 0 && hovered) {
+        boolean circleHit = isCircleHovered(mouseX, mouseY);
+        boolean lineHit = isLineHovered(mouseX, mouseY);
+        
+        if (circleHit || lineHit) {
             dragging = true;
             updateValue(mouseX);
             return true;
         }
+        
         return false;
     }
     
@@ -110,6 +119,45 @@ public class Slider {
         }
     }
     
+    /**
+     * Check if mouse is over the slider circle (handle).
+     * Uses radius-based distance calculation for precise hit detection.
+     * 
+     * @param mouseX Mouse X coordinate
+     * @param mouseY Mouse Y coordinate
+     * @return true if mouse is over the circle
+     */
+    private boolean isCircleHovered(int mouseX, int mouseY) {
+        float percentage = (value - min) / (max - min);
+        float barWidth = width * percentage;
+
+        float handleX = x + barWidth - 6 + 6;
+        float handleY = y + height - 11 + 6;
+        float handleRadius = 6;
+        
+        float dx = mouseX - handleX;
+        float dy = mouseY - handleY;
+        float distanceSquared = dx * dx + dy * dy;
+        
+        return distanceSquared <= handleRadius * handleRadius;
+    }
+    
+    /**
+     * Check if mouse is over the slider line (track).
+     * Checks if click is within the track rectangle bounds.
+     * 
+     * @param mouseX Mouse X coordinate
+     * @param mouseY Mouse Y coordinate
+     * @return true if mouse is over the line
+     */
+    private boolean isLineHovered(int mouseX, int mouseY) {
+        int lineY = y + height - 8;
+        int lineHeight = 6;
+        
+        return mouseX >= x && mouseX <= x + width &&
+               mouseY >= lineY && mouseY <= lineY + lineHeight;
+    }
+    
     private boolean isHovered(int mouseX, int mouseY) {
         return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
     }
@@ -118,15 +166,23 @@ public class Slider {
         return value;
     }
     
+    /**
+     * Update slider value from external source.
+     * Only applies when not actively dragging to prevent external updates
+     * from overwriting user drag operations.
+     * 
+     * @param value New value
+     */
     public void setValue(float value) {
-        this.value = MathHelper.clamp(value, min, max);
+        if (!dragging) {
+            this.value = MathHelper.clamp(value, min, max);
+        }
     }
     
     public boolean isDragging() {
         return dragging;
     }
-    
-    // For testing purposes - allows setting bounds without rendering
+
     public void setBounds(int x, int y, int width) {
         this.x = x;
         this.y = y;

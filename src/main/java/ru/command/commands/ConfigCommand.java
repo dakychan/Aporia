@@ -35,7 +35,7 @@ public class ConfigCommand implements Command {
      */
     @Override
     public String getUsage() {
-        return "^config save - Сохранить текущую конфигурацию";
+        return ChatUtils.INSTANCE.formatCommand("config") + " save - Сохранить текущую конфигурацию";
     }
     
     /**
@@ -57,7 +57,7 @@ public class ConfigCommand implements Command {
                 ChatUtils.INSTANCE.sendMessage("Конфигурация успешно сохранена", ChatUtils.MessageType.SUCCESS);
             } catch (Exception e) {
                 ChatUtils.INSTANCE.sendMessage("Ошибка при сохранении конфигурации: " + e.getMessage(), ChatUtils.MessageType.ERROR);
-                ru.files.Logger.INSTANCE.error("Failed to save configuration", e);
+                aporia.cc.Logger.INSTANCE.error("Failed to save configuration", e);
             }
         } else {
             ChatUtils.INSTANCE.sendMessage("Неизвестная подкоманда: " + args[0], ChatUtils.MessageType.ERROR);

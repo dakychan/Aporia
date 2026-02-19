@@ -22,7 +22,6 @@ abstract class HudComponent(val name: String) {
     abstract fun render(plugin: MinecraftPlugin)
     
     open fun updateSize(plugin: MinecraftPlugin) {
-        // Override in subclasses to calculate width/height
     }
     
     fun isHovered(mouseX: Int, mouseY: Int): Boolean {

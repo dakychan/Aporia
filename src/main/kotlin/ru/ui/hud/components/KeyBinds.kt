@@ -25,8 +25,7 @@ class KeyBinds(private val textRenderer: MsdfTextRenderer?) : HudComponent("KeyB
         val padding = 6f
         val spacing = 2f
         val fontSize = 14f
-        
-        // Get modules with keybinds that are enabled
+
         val boundModules = mutableListOf<Pair<String, Int>>()
         
         for (module in ModuleManager.getInstance().modules) {
@@ -46,8 +45,7 @@ class KeyBinds(private val textRenderer: MsdfTextRenderer?) : HudComponent("KeyB
             height = 0f
             return
         }
-        
-        // Calculate max width
+
         var maxWidth = textRenderer.measureWidth("KeyBinds", 16f)
         for ((moduleName, keyCode) in boundModules) {
             val keyName = getKeyName(keyCode)
@@ -63,27 +61,23 @@ class KeyBinds(private val textRenderer: MsdfTextRenderer?) : HudComponent("KeyB
         
         width = rectWidth
         height = rectHeight
-        
-        // Draw background
+
         ru.render.RectRenderer.drawRoundedRect(
             x, y, rectWidth, rectHeight, 8f,
             RectColors.oneColor(RenderColor.of(20, 20, 25, 200))
         )
-        
-        // Draw title
+
         textRenderer.drawText(
             x + padding, y + padding + titleHeight - 2, 16f, "KeyBinds",
             RenderColor.of(100, 200, 255, 255)
         )
-        
-        // Draw separator line
+
         val lineY = y + titleHeight + padding * 2
         ru.render.RectRenderer.drawRoundedRect(
             x + padding, lineY, rectWidth - padding * 2, 1f, 0f,
             RectColors.oneColor(RenderColor.of(60, 60, 70, 255))
         )
-        
-        // Draw modules
+
         var yOffset = lineY + padding
         for ((moduleName, keyCode) in boundModules) {
             val keyName = getKeyName(keyCode)
@@ -113,6 +107,5 @@ class KeyBinds(private val textRenderer: MsdfTextRenderer?) : HudComponent("KeyB
     }
     
     override fun updateSize(plugin: MinecraftPlugin) {
-        // Size is calculated in render
     }
 }

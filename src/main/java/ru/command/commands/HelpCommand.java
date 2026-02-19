@@ -47,7 +47,7 @@ public class HelpCommand implements Command {
      */
     @Override
     public String getUsage() {
-        return "^help - Показать все команды";
+        return ChatUtils.INSTANCE.formatCommand("help") + " - Показать все команды";
     }
     
     /**

@@ -62,7 +62,7 @@ public class Aporia {
     }
 
     private static void initFileSystem() {
-        ru.files.Logger.INSTANCE.initialize();
+        aporia.cc.Logger.INSTANCE.initialize();
         filesManager = new FilesManager();
         filesManager.initialize();
         
@@ -75,7 +75,7 @@ public class Aporia {
                     blurShader.cleanup();
                 }
             } catch (Exception e) {
-                ru.files.Logger.INSTANCE.error("Failed to save stats on shutdown: " + e.getMessage(), e);
+                aporia.cc.Logger.INSTANCE.error("Failed to save stats on shutdown: " + e.getMessage(), e);
             }
         }));
     }

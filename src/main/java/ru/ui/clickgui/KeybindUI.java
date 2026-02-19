@@ -6,12 +6,10 @@ import ru.input.api.KeyboardKeys;
  * Utility class for keybind-related operations.
  * This class provides helper methods for formatting key names and other keybind utilities.
  * 
- * Note: Keybind mode is now handled directly in ClickGuiScreen to avoid
- * ConcurrentModificationException issues with EventSystemImpl.
+ * FIXED
  */
 public class KeybindUI {
-    
-    // Private constructor to prevent instantiation
+
     private KeybindUI() {
         throw new UnsupportedOperationException("Utility class");
     }

@@ -37,7 +37,7 @@ public class InfoCommand implements Command {
      */
     @Override
     public String getUsage() {
-        return "^info - Показать UID, username и HWID";
+        return ChatUtils.INSTANCE.formatCommand("info") + " - Показать UID, username и HWID";
     }
     
     /**
@@ -63,7 +63,7 @@ public class InfoCommand implements Command {
             
         } catch (Exception e) {
             ChatUtils.INSTANCE.sendMessage("Не удалось загрузить данные пользователя: " + e.getMessage(), ChatUtils.MessageType.ERROR);
-            ru.files.Logger.INSTANCE.error("Failed to load user data", e);
+            aporia.cc.Logger.INSTANCE.error("Failed to load user data", e);
         }
     }
 }

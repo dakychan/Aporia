@@ -14,8 +14,7 @@ public class MultiSetting {
     private List<String> options;
     private List<String> selectedOptions;
     private int x, y, width, height;
-    
-    // State fields
+
     private boolean expanded = false;
     private Animation expandAnimation = new Animation();
     private float dropdownHeight = 0;
@@ -31,7 +30,6 @@ public class MultiSetting {
     }
     
     public int getHeight() {
-        // If expanded, return full height immediately for layout calculation
         if (expanded && dropdownHeight < options.size() * OPTION_HEIGHT * 0.5f) {
             return HEADER_HEIGHT + options.size() * OPTION_HEIGHT;
         }
@@ -46,6 +44,17 @@ public class MultiSetting {
         this.expanded = expanded;
     }
     
+    /**
+     * Render the multi-setting component with all options.
+     * 
+     * @param x X coordinate
+     * @param y Y coordinate
+     * @param width Component width
+     * @param textRenderer Text renderer for drawing text
+     * @param mouseX Mouse X coordinate for hover detection
+     * @param mouseY Mouse Y coordinate for hover detection
+     * @param alpha Parent alpha value (overridden to 1.0 for visibility)
+     */
     public void render(int x, int y, int width, MsdfTextRenderer textRenderer, int mouseX, int mouseY, float alpha) {
         MinecraftPlugin plugin = MinecraftPlugin.getInstance();
         plugin.bindMainFramebuffer(true);
@@ -53,42 +62,40 @@ public class MultiSetting {
         this.y = y;
         this.width = width;
         
-        // Always use full alpha for visibility
+        /**
+         * Force full alpha for visibility regardless of parent animation state.
+         * This ensures MultiSetting components remain visible even when parent
+         * containers are animating or have reduced opacity.
+         * Validates Requirements 6.1, 6.2, 6.3.
+         */
         alpha = 1.0f;
-        
-        // Update animation
+
         expandAnimation.run(expanded ? 1.0 : 0.0, 0.2, Easings.CUBIC_OUT, false);
         expandAnimation.update();
         float animProgress = expandAnimation.get();
-        
-        // Calculate dropdown height based on animation
+
         dropdownHeight = animProgress * options.size() * OPTION_HEIGHT;
-        
-        // Render collapsed state (header)
+
         renderHeader(textRenderer, mouseX, mouseY, alpha);
-        
-        // Render expanded state (options)
+
         if (animProgress > 0.01f) {
             renderOptions(textRenderer, alpha, animProgress);
         }
     }
     
     private void renderHeader(MsdfTextRenderer textRenderer, int mouseX, int mouseY, float alpha) {
-        // Draw header background
         boolean hovered = isHeaderHovered(mouseX, mouseY);
         RenderColor bgColor = hovered 
-            ? RenderColor.of(35, 35, 40, (int)(180 * alpha))
-            : RenderColor.of(30, 30, 35, (int)(150 * alpha));
+            ? RenderColor.of(60, 60, 70, 220)
+            : RenderColor.of(50, 50, 60, 200);
         
         RectRenderer.drawRoundedRect(x, y, width, HEADER_HEIGHT, 4, bgColor);
-        
-        // Draw setting name
+
         if (textRenderer != null) {
             textRenderer.drawText(x + 10, y + 8, 12, name, 
-                RenderColor.of(200, 200, 210, (int)(255 * alpha)));
+                RenderColor.of(220, 220, 230, 255));
         }
-        
-        // Draw arrow indicator
+
         if (textRenderer != null) {
             String arrow = expanded ? "▼" : "▶";
             float arrowWidth = textRenderer.measureWidth(arrow, 12);
@@ -97,6 +104,15 @@ public class MultiSetting {
         }
     }
     
+    /**
+     * Render multi-setting options with full opacity.
+     * Uses full alpha values to ensure options are clearly visible
+     * regardless of animation state.
+     * 
+     * @param textRenderer Text renderer for drawing text
+     * @param alpha Parent alpha value (used at full opacity)
+     * @param animProgress Animation progress for height calculation
+     */
     private void renderOptions(MsdfTextRenderer textRenderer, float alpha, float animProgress) {
         int optionY = y + HEADER_HEIGHT;
         
@@ -104,23 +120,23 @@ public class MultiSetting {
             String option = options.get(i);
             boolean isSelected = selectedOptions.contains(option);
             
-            // Calculate option alpha based on animation progress
-            float optionAlpha = alpha * animProgress;
-            
-            // Draw option background if selected
+            /**
+             * Use full alpha for option rendering to ensure clear visibility.
+             * Animation progress affects height/position only, not opacity.
+             * Validates Requirements 6.1, 6.2, 6.3.
+             */
+
             if (isSelected) {
                 RectRenderer.drawRoundedRect(x + 5, optionY, width - 10, OPTION_HEIGHT - 2, 3,
-                    RenderColor.of(40, 80, 40, (int)(150 * optionAlpha)));
+                    RenderColor.of(40, 80, 40, 150));
             }
-            
-            // Draw checkbox
-            drawCheckbox(x + 15, optionY + 7, isSelected, optionAlpha);
-            
-            // Draw option text
+
+            drawCheckbox(x + 15, optionY + 7, isSelected, alpha);
+
             if (textRenderer != null) {
                 RenderColor textColor = isSelected 
-                    ? RenderColor.of(80, 200, 120, (int)(255 * optionAlpha))
-                    : RenderColor.of(150, 150, 160, (int)(255 * optionAlpha));
+                    ? RenderColor.of(80, 200, 120, 255)
+                    : RenderColor.of(150, 150, 160, 255);
                 
                 textRenderer.drawText(x + 35, optionY + 8, 12, option, textColor);
             }
@@ -129,20 +145,31 @@ public class MultiSetting {
         }
     }
     
+    /**
+     * Draw checkbox with full opacity for clear visibility.
+     * 
+     * @param x X coordinate
+     * @param y Y coordinate
+     * @param checked Whether checkbox is checked
+     * @param alpha Parent alpha value (used at full opacity)
+     */
     private void drawCheckbox(int x, int y, boolean checked, float alpha) {
         int size = 10;
         
-        // Draw checkbox border
+        /**
+         * Use full alpha for checkbox rendering to ensure clear visibility.
+         * Validates Requirements 6.1, 6.2, 6.3.
+         */
+
         RenderColor borderColor = checked 
-            ? RenderColor.of(80, 200, 120, (int)(255 * alpha))
-            : RenderColor.of(100, 100, 110, (int)(200 * alpha));
+            ? RenderColor.of(80, 200, 120, 255)
+            : RenderColor.of(100, 100, 110, 200);
         
         RectRenderer.drawRoundedRect(x, y, size, size, 2, borderColor);
-        
-        // Draw checkmark if checked
+
         if (checked) {
             RectRenderer.drawRoundedRect(x + 2, y + 2, size - 4, size - 4, 1,
-                RenderColor.of(80, 200, 120, (int)(255 * alpha)));
+                RenderColor.of(80, 200, 120, 255));
         }
     }
     
@@ -153,18 +180,15 @@ public class MultiSetting {
     
     public boolean mouseClicked(int mouseX, int mouseY, int button) {
         if (button == 0 && isHeaderHovered(mouseX, mouseY)) {
-            // Toggle expanded state
             expanded = !expanded;
             return true;
         }
-        
-        // Check if clicking on an option checkbox
+
         if (button == 0 && expanded) {
             int optionY = y + HEADER_HEIGHT;
             for (String option : options) {
                 if (mouseX >= x && mouseX <= x + width &&
                     mouseY >= optionY && mouseY <= optionY + OPTION_HEIGHT) {
-                    // Toggle option selection
                     toggleOption(option);
                     return true;
                 }
@@ -196,13 +220,11 @@ public class MultiSetting {
     public void collapse() {
         expanded = false;
     }
-    
-    // For testing purposes - allows setting bounds without rendering
+
     public void setBounds(int x, int y, int width) {
         this.x = x;
         this.y = y;
         this.width = width;
-        // Update dropdown height for expanded state
         if (expanded) {
             dropdownHeight = options.size() * OPTION_HEIGHT;
         }

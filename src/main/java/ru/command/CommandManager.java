@@ -35,7 +35,7 @@ public class CommandManager {
         registerCommand(new ru.command.commands.InfoCommand());
         registerCommand(new ru.command.commands.PrefixCommand());
         
-        ru.files.Logger.INSTANCE.info("CommandManager initialized with " + registry.getAllCommands().size() + " commands");
+        aporia.cc.Logger.INSTANCE.info("CommandManager initialized with " + registry.getAllCommands().size() + " commands");
     }
     
     public boolean handleChatMessage(String message) {

@@ -35,7 +35,7 @@ public class PrefixCommand implements Command {
      */
     @Override
     public String getUsage() {
-        return "^prefix <символ> - Установить новый префикс команд";
+        return ChatUtils.INSTANCE.formatCommand("prefix") + " <символ> - Установить новый префикс команд";
     }
     
     /**

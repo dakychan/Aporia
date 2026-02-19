@@ -1,4 +1,4 @@
-package ru.files
+package aporia.cc.files
 
 data class ModuleConfig(
     val enabled: Boolean,

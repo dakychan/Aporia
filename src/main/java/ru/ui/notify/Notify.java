@@ -150,23 +150,19 @@ public class Notify {
             Notification notification = new Notification(message, type, duration);
 
             synchronized (notificationQueue) {
-                // Для MODULE нотификаций - проверяем дубликаты по имени модуля
                 if (type == NotificationType.MODULE) {
-                    // Извлекаем имя модуля из сообщения (формат: "ModuleName включен/выключен")
                     String moduleName = extractModuleName(message);
-                    
-                    // Удаляем все существующие нотификации для этого модуля из очереди
+
                     notificationQueue.removeIf(n -> 
                         n.getType() == NotificationType.MODULE && 
                         extractModuleName(n.getMessage()).equals(moduleName)
                     );
-                    
-                    // Если активная нотификация тоже для этого модуля - заменяем её
+
                     if (activeNotification != null && 
                         activeNotification.getType() == NotificationType.MODULE &&
                         extractModuleName(activeNotification.getMessage()).equals(moduleName)) {
                         activeNotification = notification;
-                        return; // Не добавляем в очередь, уже активна
+                        return;
                     }
                 }
                 
@@ -175,7 +171,6 @@ public class Notify {
         }
         
         private String extractModuleName(String message) {
-            // Извлекаем имя модуля из сообщения формата "ModuleName включен/выключен"
             if (message.contains(" включен")) {
                 return message.substring(0, message.indexOf(" включен"));
             } else if (message.contains(" выключен")) {

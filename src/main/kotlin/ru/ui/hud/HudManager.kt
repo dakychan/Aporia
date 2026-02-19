@@ -4,7 +4,7 @@ import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import ru.files.FilesManager
-import ru.files.Logger
+import aporia.cc.Logger
 import ru.files.PathResolver
 import ru.render.RenderLayerManager
 import java.nio.file.Files

@@ -176,7 +176,6 @@ public abstract class Module {
         
         EventSystemImpl.getInstance().fire(new ModuleToggleEvent(this, enabled));
 
-        // Не показываем нотификацию если модуль включен из GUI
         if (!fromGui) {
             Notify.Manager.getInstance().showNotification(
                 name + (enabled ? " включен" : " выключен"),

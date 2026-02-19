@@ -1,5 +1,7 @@
 package ru.files
 
+import aporia.cc.Logger
+import aporia.cc.files.ModuleConfig
 import aporia.cc.user.UserData
 import com.google.gson.Gson
 import java.nio.file.Files

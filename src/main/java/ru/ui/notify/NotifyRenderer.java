@@ -85,8 +85,7 @@ public class NotifyRenderer {
             int iconX = centeredX + ICON_PADDING;
             int iconY = y + (NOTIFICATION_HEIGHT - ICON_SIZE) / 2;
             // TODO: Render icon here when available at (iconX, iconY) with size ICON_SIZE
-            
-            // Text (shifted right to make room for icon)
+         
             float textStartX = centeredX + iconSpace;
             float textX = textStartX + (dynamicWidth - iconSpace - textWidth) / 2;
             float textY = y + (NOTIFICATION_HEIGHT - fontSize) / 2 + 5;

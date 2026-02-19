@@ -30,7 +30,6 @@ class Interface : Module("Interface", "HUD элементы", C.VISUALS) {
     private val keyBindsY: NumberSetting
     
     init {
-        // Initialize fonts
         try {
             val font = MsdfFont(
                 "assets/aporia/fonts/Inter_Medium.json",
@@ -44,21 +43,18 @@ class Interface : Module("Interface", "HUD элементы", C.VISUALS) {
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        
-        // Position settings
+
         arrayListX = NumberSetting("ArrayList.X", 10.0, 0.0, 3000.0, 1.0)
         arrayListY = NumberSetting("ArrayList.Y", 50.0, 0.0, 2000.0, 1.0)
         waterMarkX = NumberSetting("WaterMark.X", 10.0, 0.0, 3000.0, 1.0)
         waterMarkY = NumberSetting("WaterMark.Y", 10.0, 0.0, 2000.0, 1.0)
         keyBindsX = NumberSetting("KeyBinds.X", 10.0, 0.0, 3000.0, 1.0)
         keyBindsY = NumberSetting("KeyBinds.Y", 150.0, 0.0, 2000.0, 1.0)
-        
-        // Create components
+
         arrayList = ArrayList(textRenderer)
         waterMark = WaterMark(textRenderer, iconRenderer)
         keyBinds = KeyBinds(textRenderer)
-        
-        // Position components with settings values
+
         arrayList?.let {
             it.x = arrayListX.value.toFloat()
             it.y = arrayListY.value.toFloat()
@@ -78,8 +74,7 @@ class Interface : Module("Interface", "HUD элементы", C.VISUALS) {
             it.y = keyBindsY.value.toFloat()
             components.add(it)
         }
-        
-        // Settings
+
         enabledComponents = MultiSetting(
             "Элементы",
             mutableListOf("ArrayList", "WaterMark", "KeyBinds"),
@@ -107,7 +102,6 @@ class Interface : Module("Interface", "HUD элементы", C.VISUALS) {
     }
     
     private fun savePositions() {
-        // Update settings with current positions
         arrayList?.let {
             arrayListX.setValue(it.x.toDouble())
             arrayListY.setValue(it.y.toDouble())
@@ -125,7 +119,6 @@ class Interface : Module("Interface", "HUD элементы", C.VISUALS) {
     }
     
     private fun loadPositions() {
-        // Apply settings to components
         arrayList?.let {
             it.x = arrayListX.value.toFloat()
             it.y = arrayListY.value.toFloat()
@@ -150,8 +143,7 @@ class Interface : Module("Interface", "HUD элементы", C.VISUALS) {
         
         val fbWidth = plugin.mainFramebufferWidth
         val fbHeight = plugin.mainFramebufferHeight
-        
-        // Render enabled components
+
         val enabled = enabledComponents.value
         
         if (enabled.contains("ArrayList") && arrayList != null) {
@@ -171,8 +163,7 @@ class Interface : Module("Interface", "HUD элементы", C.VISUALS) {
         if (!isEnabled() || button != 0) return false
         
         val enabled = enabledComponents.value
-        
-        // Check components in reverse order (top to bottom)
+
         for (component in components.reversed()) {
             val componentName = component.name
             if (!enabled.contains(componentName)) continue
@@ -206,12 +197,10 @@ class Interface : Module("Interface", "HUD элементы", C.VISUALS) {
         for (component in components) {
             component.stopDrag()
         }
-        
-        // Save positions after dragging
+
         savePositions()
     }
-    
-    // Inner class for MultiSetting
+
     class MultiSetting(
         name: String,
         private val options: MutableList<String>,

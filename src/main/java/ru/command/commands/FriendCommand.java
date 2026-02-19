@@ -40,10 +40,10 @@ public class FriendCommand implements Command {
      */
     @Override
     public String getUsage() {
-        return "^friend add <имя> - Добавить друга\n" +
-               "^friend remove <имя> - Удалить друга\n" +
-               "^friend list - Показать всех друзей\n" +
-               "^friend clear - Очистить список друзей";
+        return ChatUtils.INSTANCE.formatCommand("friend") + " add <имя> - Добавить друга\n" +
+               ChatUtils.INSTANCE.formatCommand("friend") + " remove <имя> - Удалить друга\n" +
+               ChatUtils.INSTANCE.formatCommand("friend") + " list - Показать всех друзей\n" +
+               ChatUtils.INSTANCE.formatCommand("friend") + " clear - Очистить список друзей";
     }
     
     /**

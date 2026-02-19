@@ -12,7 +12,7 @@ class ArrayList(private val textRenderer: MsdfTextRenderer?) : HudComponent("Arr
     private val moduleAnimations = mutableMapOf<ru.module.Module, Float>()
     private val modulePositions = mutableMapOf<ru.module.Module, Float>()
     
-    var position = "Справа сверху" // Справа сверху, Справа снизу, Слева сверху, Слева снизу
+    var position = "Справа сверху"
     var sortByLength = true
     
     init {
@@ -33,8 +33,7 @@ class ArrayList(private val textRenderer: MsdfTextRenderer?) : HudComponent("Arr
         if (sortByLength) {
             enabledModules.sortByDescending { textRenderer.measureWidth(it.name, 16f) }
         }
-        
-        // Update animations
+
         for (module in ModuleManager.getInstance().modules) {
             val target = if (module.isEnabled() && module.name != "Interface") 1f else 0f
             val current = moduleAnimations.getOrDefault(module, 0f)
@@ -46,8 +45,7 @@ class ArrayList(private val textRenderer: MsdfTextRenderer?) : HudComponent("Arr
                 moduleAnimations[module] = newValue
             }
         }
-        
-        // Calculate max width for background
+
         var maxWidth = 0f
         for (module in enabledModules) {
             val alpha = moduleAnimations.getOrDefault(module, 0f)
@@ -60,8 +58,7 @@ class ArrayList(private val textRenderer: MsdfTextRenderer?) : HudComponent("Arr
         val padding = 4f
         val spacing = 2f
         val fontSize = 16f
-        
-        // Calculate total height
+
         var totalHeight = 0f
         for (module in enabledModules) {
             val alpha = moduleAnimations.getOrDefault(module, 0f)
@@ -72,30 +69,25 @@ class ArrayList(private val textRenderer: MsdfTextRenderer?) : HudComponent("Arr
         }
         
         if (totalHeight > 0) {
-            totalHeight -= spacing // Remove last spacing
+            totalHeight -= spacing
         }
-        
-        // Calculate size
+
         val bgWidth = maxWidth + padding * 2
         val bgHeight = totalHeight
-        
-        // Update component size for dragging
+
         width = bgWidth
         height = bgHeight
-        
-        // Use current x, y (set by dragging or loaded from config)
+
         val bgX = x
         val bgY = y
-        
-        // Draw background
+
         if (maxWidth > 0 && totalHeight > 0) {
             ru.render.RectRenderer.drawRoundedRect(
                 bgX, bgY, bgWidth, bgHeight, 8f,
                 RectColors.oneColor(RenderColor.of(20, 20, 25, 200))
             )
         }
-        
-        // Render modules
+
         var yOffset = bgY + padding
         
         for (module in enabledModules) {
@@ -126,6 +118,5 @@ class ArrayList(private val textRenderer: MsdfTextRenderer?) : HudComponent("Arr
     }
     
     override fun updateSize(plugin: MinecraftPlugin) {
-        // Size is calculated in render
     }
 }

@@ -76,6 +76,9 @@ dependencies {
 
     compileOnly("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")
+    
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
 }
 
 project(':Aporia') {
@@ -167,4 +170,8 @@ idea.project.settings {
             moduleName = idea.module.name + '.main'
         }
     }
+}
+
+test {
+    useJUnitPlatform()
 }

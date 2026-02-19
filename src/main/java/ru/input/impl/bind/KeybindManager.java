@@ -81,7 +81,7 @@ public class KeybindManager {
                 try {
                     bind.execute();
                 } catch (Exception e) {
-                    ru.files.Logger.INSTANCE.error("Error executing keybind " + bind.getId() + ": " + e.getMessage(), e);
+                    aporia.cc.Logger.INSTANCE.error("Error executing keybind " + bind.getId() + ": " + e.getMessage(), e);
                 }
             }
         }
@@ -136,7 +136,7 @@ public class KeybindManager {
         try {
             Path configDir = getConfigDirectory();
             if (configDir == null) {
-                ru.files.Logger.INSTANCE.warn("Config directory not available (test environment?)");
+                aporia.cc.Logger.INSTANCE.warn("Config directory not available (test environment?)");
                 return;
             }
             
@@ -160,7 +160,7 @@ public class KeybindManager {
             String json = GSON.toJson(root);
             Files.writeString(keybindsFile, json);
         } catch (IOException e) {
-            ru.files.Logger.INSTANCE.error("Failed to save keybinds: " + e.getMessage(), e);
+            aporia.cc.Logger.INSTANCE.error("Failed to save keybinds: " + e.getMessage(), e);
         }
     }
     
@@ -168,7 +168,7 @@ public class KeybindManager {
         try {
             Path configDir = getConfigDirectory();
             if (configDir == null) {
-                ru.files.Logger.INSTANCE.warn("Config directory not available (test environment?)");
+                aporia.cc.Logger.INSTANCE.warn("Config directory not available (test environment?)");
                 return;
             }
             
@@ -204,9 +204,9 @@ public class KeybindManager {
                 }
             }
         } catch (IOException e) {
-            ru.files.Logger.INSTANCE.error("Failed to load keybinds: " + e.getMessage(), e);
+            aporia.cc.Logger.INSTANCE.error("Failed to load keybinds: " + e.getMessage(), e);
         } catch (Exception e) {
-            ru.files.Logger.INSTANCE.error("Corrupted keybinds file, using defaults: " + e.getMessage(), e);
+            aporia.cc.Logger.INSTANCE.error("Corrupted keybinds file, using defaults: " + e.getMessage(), e);
         }
     }
     
