@@ -10,7 +10,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 import aporia.cc.Logger;
-import ru.files.PathResolver;
+import ru.manager.OsManager;
 import ru.input.api.bind.Keybind;
 import ru.input.impl.bind.KeybindManager;
 import ru.module.Module;
@@ -1139,9 +1139,9 @@ public class ClickGuiScreen extends Screen {
         if (cachedUID != null) {
             return cachedUID;
         }
-        
+
         try {
-            Path statsFile = PathResolver.INSTANCE.getCacheDirectory().resolve("Stats.json");
+            Path statsFile = OsManager.INSTANCE.getCacheDirectory().resolve("Stats.json");
             if (!Files.exists(statsFile)) {
                 UserData.UserDataClass userData = UserData.getUserData();
                 cachedUID = userData.getUuid();

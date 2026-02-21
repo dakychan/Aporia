@@ -11,6 +11,7 @@ import ru.input.api.KeyBindings;
 import ru.input.impl.UnifiedInputHandler;
 import ru.input.impl.bind.KeybindListener;
 import ru.input.impl.bind.KeybindManager;
+import ru.manager.OsManager;
 import ru.render.BlurShader;
 import ru.ui.hud.HudManager;
 import ru.ui.notify.Notify;
@@ -32,6 +33,7 @@ public class Aporia {
 
     public static void onInit() {
         initFileSystem();
+        initOsManager();
         UnifiedInputHandler.init();
         KeybindManager.getInstance().loadKeybinds();
         KeybindListener.init();
@@ -42,6 +44,14 @@ public class Aporia {
         initRenderingSystems();
         initCommandSystem();
         initDiscordManager();
+    }
+
+    private static void initOsManager() {
+        /**
+         * Initialize OsManager logger with ASCII banner.
+         * Logs system information (OS, CPU, RAM, GPU) without spam.
+         */
+        OsManager.INSTANCE.initLogger();
     }
 
     private static void initRenderingSystems() {

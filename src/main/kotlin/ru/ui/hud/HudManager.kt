@@ -3,18 +3,18 @@ package ru.ui.hud
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import ru.files.FilesManager
 import aporia.cc.Logger
-import ru.files.PathResolver
+import ru.manager.OsManager
+import ru.manager.OsManager.DirectoryType
 import ru.render.RenderLayerManager
 import java.nio.file.Files
 import java.nio.file.Path
 
 object HudManager {
-    
+
     private val renderLayerManager = RenderLayerManager()
     private val gson = Gson()
-    private val configPath: Path = PathResolver.mainDirectory.resolve("HudConfig.json")
+    private val configPath: Path = OsManager.getFile(DirectoryType.CONFIG, "HudConfig.json")
     
     private val components = mutableListOf<HudComponent>()
     
