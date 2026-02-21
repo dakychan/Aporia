@@ -7,7 +7,7 @@ import org.lwjgl.glfw.GLFW
 import ru.input.impl.bind.KeybindManager
 import ru.module.ModuleManager
 import ru.render.MsdfTextRenderer
-import ru.ui.hud.HudComponent
+import ru.ui.hud.HudManager.HudComponent
 
 class KeyBinds(private val textRenderer: MsdfTextRenderer?) : HudComponent("KeyBinds") {
     

@@ -5,7 +5,7 @@ import com.ferra13671.cometrenderer.plugins.minecraft.RectColors
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor
 import ru.render.IconFont
 import ru.render.MsdfTextRenderer
-import ru.ui.hud.HudComponent
+import ru.ui.hud.HudManager.HudComponent
 
 class WaterMark(
     private val textRenderer: MsdfTextRenderer?,

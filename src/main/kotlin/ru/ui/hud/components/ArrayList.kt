@@ -5,7 +5,7 @@ import com.ferra13671.cometrenderer.plugins.minecraft.RectColors
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor
 import ru.module.ModuleManager
 import ru.render.MsdfTextRenderer
-import ru.ui.hud.HudComponent
+import ru.ui.hud.HudManager.HudComponent
 
 class ArrayList(private val textRenderer: MsdfTextRenderer?) : HudComponent("ArrayList") {
     

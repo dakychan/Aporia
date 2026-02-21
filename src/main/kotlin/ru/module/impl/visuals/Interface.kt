@@ -5,7 +5,7 @@ import ru.module.Module
 import ru.render.IconFont
 import ru.render.MsdfFont
 import ru.render.MsdfTextRenderer
-import ru.ui.hud.HudComponent
+import ru.ui.hud.HudManager.HudComponent
 import ru.ui.hud.components.ArrayList
 import ru.ui.hud.components.KeyBinds
 import ru.ui.hud.components.WaterMark
