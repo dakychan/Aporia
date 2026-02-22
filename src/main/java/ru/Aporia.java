@@ -13,6 +13,7 @@ import ru.input.impl.bind.KeybindListener;
 import ru.input.impl.bind.KeybindManager;
 import ru.manager.OsManager;
 import ru.render.BlurShader;
+import ru.render.RectRenderer;
 import ru.ui.hud.HudManager;
 import ru.ui.notify.Notify;
 
@@ -56,6 +57,8 @@ public class Aporia {
 
     private static void initRenderingSystems() {
         blurShader = new BlurShader();
+        ru.render.RectRenderer.init();
+        ru.render.RectRenderer.setSharedBlurShader(blurShader); // Используем один BlurShader
         HudManager.INSTANCE.initialize();
     }
 
@@ -98,16 +101,16 @@ public class Aporia {
 
     public static void render() {
         GuiManager.render();
-        
+
         MinecraftPlugin plugin = MinecraftPlugin.getInstance();
         if (plugin == null) return;
-        
+
         int width = plugin.getMainFramebufferWidth();
         int height = plugin.getMainFramebufferHeight();
-        
+
         ru.module.Module interfaceModule = ru.module.ModuleManager.getInstance().getModuleByName("Interface");
         boolean interfaceEnabled = interfaceModule != null && interfaceModule.isEnabled();
-        
+
         if (interfaceEnabled && blurShader != null) {
             blurShader.renderToFramebuffer(width, height, () -> {
                 if (interfaceModule instanceof ru.module.impl.visuals.Interface) {
@@ -116,6 +119,95 @@ public class Aporia {
             });
         } else if (interfaceEnabled && interfaceModule instanceof ru.module.impl.visuals.Interface) {
             ((ru.module.impl.visuals.Interface) interfaceModule).render();
+        }
+
+        // BlurTest вызывается в renderBlur() после рендера мира
+        // ru.module.Module blurTestModule = ru.module.ModuleManager.getInstance().getModuleByName("BlurTest");
+        // if (blurTestModule != null && blurTestModule.isEnabled() && blurTestModule instanceof ru.module.impl.visuals.BlurTest) {
+        //     ((ru.module.impl.visuals.BlurTest) blurTestModule).onRender2D();
+        // }
+    }
+
+    /**
+     * Вызывается ПОСЛЕ рендера мира и ентитов для правильного blur
+     */
+    public static void renderBlur() {
+        MinecraftPlugin plugin = MinecraftPlugin.getInstance();
+        if (plugin == null) return;
+
+        int width = plugin.getMainFramebufferWidth();
+        int height = plugin.getMainFramebufferHeight();
+
+        ru.module.Module blurTestModule = ru.module.ModuleManager.getInstance().getModuleByName("BlurTest");
+        if (blurTestModule != null && blurTestModule.isEnabled() && blurTestModule instanceof ru.module.impl.visuals.BlurTest) {
+            ((ru.module.impl.visuals.BlurTest) blurTestModule).onRender2D();
+        }
+    }
+
+    /**
+     * Захватывает экран СРАЗУ после рендера мира для blur эффекта
+     */
+    public static void captureScreenForBlur() {
+        MinecraftPlugin plugin = MinecraftPlugin.getInstance();
+        if (plugin == null) return;
+
+        int width = plugin.getMainFramebufferWidth();
+        int height = plugin.getMainFramebufferHeight();
+
+        ru.module.Module blurTestModule = ru.module.ModuleManager.getInstance().getModuleByName("BlurTest");
+        if (blurTestModule != null && blurTestModule.isEnabled()) {
+            // Захватываем и размываем экран ОДИН РАЗ
+            RectRenderer.beginBlurBatch(width, height);
+        }
+    }
+    
+    /**
+     * Захватывает экран в КОНЦЕ кадра для использования в СЛЕДУЮЩЕМ кадре.
+     * Вызывается ПОСЛЕ guiRenderer.render() когда мир уже отрендерен.
+     */
+    public static void captureScreenForNextFrame() {
+        MinecraftPlugin plugin = MinecraftPlugin.getInstance();
+        if (plugin == null) return;
+
+        int width = plugin.getMainFramebufferWidth();
+        int height = plugin.getMainFramebufferHeight();
+
+        ru.module.Module blurTestModule = ru.module.ModuleManager.getInstance().getModuleByName("BlurTest");
+        if (blurTestModule != null && blurTestModule.isEnabled()) {
+            // Захватываем экран для использования в следующем кадре
+            RectRenderer.captureForNextFrame(width, height);
+        }
+    }
+    
+    /**
+     * НОВЫЙ МЕТОД: Захватывает экран ВНУТРИ FramePass когда framebuffer гарантированно заполнен.
+     * Вызывается из LevelRenderer.addBlurCapturePass() во время выполнения FrameGraph.
+     */
+    public static void captureScreenInFramePass(int width, int height) {
+        ru.module.Module blurTestModule = ru.module.ModuleManager.getInstance().getModuleByName("BlurTest");
+        if (blurTestModule != null && blurTestModule.isEnabled()) {
+            System.out.println("[APORIA] Capturing screen in FramePass - width=" + width + ", height=" + height);
+            RectRenderer.captureForNextFrame(width, height);
+        }
+    }
+    
+    /**
+     * НОВЫЙ ПОДХОД: Захватывает world-only RenderTarget для blur эффекта.
+     * Вызывается из LevelRenderer.addWorldOnlyCapturePass() когда мир отрендерен БЕЗ UI.
+     */
+    public static void captureWorldOnlyTarget(com.mojang.blaze3d.pipeline.RenderTarget worldTarget) {
+        // Всегда захватываем texture, независимо от модулей (может использоваться в ClickGui, Interface и т.д.)
+        int width = worldTarget.width;
+        int height = worldTarget.height;
+        
+        // Получаем texture ID из worldTarget
+        com.mojang.blaze3d.textures.GpuTexture gpuTexture = worldTarget.getColorTexture();
+        
+        if (gpuTexture instanceof com.mojang.blaze3d.opengl.GlTexture) {
+            int textureId = ((com.mojang.blaze3d.opengl.GlTexture)gpuTexture).glId();
+            
+            // Передаем texture ID в RectRenderer для использования в blur
+            RectRenderer.setWorldOnlyTexture(textureId, width, height);
         }
     }
     

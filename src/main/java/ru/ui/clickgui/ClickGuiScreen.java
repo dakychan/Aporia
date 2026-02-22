@@ -207,10 +207,6 @@ public class ClickGuiScreen extends Screen {
 
         centerPanels(fbWidth, fbHeight);
         
-        if (blurShader != null) {
-            blurShader.apply(fbWidth, fbHeight);
-        }
-        
         hoveredModule = null;
 
         updateSettingsAnimations();

@@ -498,6 +498,7 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
                 this.renderLevel(p_343467_);
                 this.tryTakeScreenshotIfNeeded();
                 this.minecraft.levelRenderer.doEntityOutline();
+                
                 if (this.postEffectId != null && this.effectActive) {
                     PostChain postchain = this.minecraft.getShaderManager().getPostChain(this.postEffectId, LevelTargetBundle.MAIN_TARGETS);
                     if (postchain != null) {
@@ -513,9 +514,11 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
             RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(rendertarget.getDepthTexture(), 1.0);
             this.minecraft.gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
             this.guiRenderState.reset();
+            
             com.ferra13671.cometrenderer.plugins.minecraft.AbstractMinecraftPlugin.getInstance().setupUIProjection();
             com.mojang.blaze3d.opengl.GlStateManager._disableDepthTest();
-            ru.Aporia.render();
+            ru.Aporia.render(); // Рендерим HUD/Interface
+            ru.Aporia.renderBlur(); // Рендерим blur прямоугольники (BlurTest)
             profilerfiller.push("guiExtraction");
             GuiGraphics guigraphics = new GuiGraphics(this.minecraft, this.guiRenderState, i, j);
             if (flag && p_109096_ && this.minecraft.level != null) {

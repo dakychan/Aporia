@@ -95,10 +95,11 @@ public class ModuleManager {
         // Visuals
         registerModule(new ClickGui());
         registerModule(new ru.module.impl.visuals.Interface());
-        
+        registerModule(new ru.module.impl.visuals.BlurTest());
+
         // Movement
         registerModule(new ru.module.impl.movement.AutoSprint());
-        
+
         // Misc
         registerModule(new ru.module.impl.misc.AutoFlyMe());
         registerModule(new ru.module.impl.misc.BetterChat());

@@ -147,6 +147,7 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
     private final Int2ObjectMap<BlockDestructionProgress> destroyingBlocks = new Int2ObjectOpenHashMap<>();
     private final Long2ObjectMap<SortedSet<BlockDestructionProgress>> destructionProgress = new Long2ObjectOpenHashMap<>();
     private @Nullable RenderTarget entityOutlineTarget;
+    private @Nullable RenderTarget worldOnlyTarget; // Aporia: separate target for world-only rendering (for blur)
     private final LevelTargetBundle targets = new LevelTargetBundle();
     private int lastCameraSectionX = Integer.MIN_VALUE;
     private int lastCameraSectionY = Integer.MIN_VALUE;
@@ -192,6 +193,10 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
             this.entityOutlineTarget.destroyBuffers();
         }
 
+        if (this.worldOnlyTarget != null) {
+            this.worldOnlyTarget.destroyBuffers();
+        }
+
         if (this.skyRenderer != null) {
             this.skyRenderer.close();
         }
@@ -206,6 +211,7 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
     @Override
     public void onResourceManagerReload(ResourceManager p_109513_) {
         this.initOutline();
+        this.initWorldOnlyTarget(); // Aporia: initialize world-only target for blur
         if (this.skyRenderer != null) {
             this.skyRenderer.close();
         }
@@ -219,6 +225,15 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
         }
 
         this.entityOutlineTarget = new TextureTarget("Entity Outline", this.minecraft.getWindow().getWidth(), this.minecraft.getWindow().getHeight(), true);
+    }
+
+    // Aporia: Initialize separate render target for world-only rendering (for blur effect)
+    public void initWorldOnlyTarget() {
+        if (this.worldOnlyTarget != null) {
+            this.worldOnlyTarget.destroyBuffers();
+        }
+
+        this.worldOnlyTarget = new TextureTarget("World Only", this.minecraft.getWindow().getWidth(), this.minecraft.getWindow().getHeight(), true);
     }
 
     private @Nullable PostChain getTransparencyChain() {
@@ -539,6 +554,10 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
         }
 
         this.addMainPass(framegraphbuilder, frustum, p_254120_, p_407881_, p_109603_, this.levelRenderState, p_342180_, profilerfiller);
+        
+        // Aporia: Add world-only capture pass for blur effect
+        this.addWorldOnlyCapturePass(framegraphbuilder);
+        
         PostChain postchain1 = this.minecraft.getShaderManager().getPostChain(ENTITY_OUTLINE_POST_CHAIN_ID, LevelTargetBundle.OUTLINE_TARGETS);
         if (this.levelRenderState.haveGlowingEntities && postchain1 != null) {
             postchain1.addToFrame(framegraphbuilder, i, j, this.targets);
@@ -698,6 +717,78 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
                 p_369478_.pop();
             }
         );
+    }
+
+    // Aporia: Capture world-only rendering to separate target for blur effect
+    private void addWorldOnlyCapturePass(FrameGraphBuilder p_framegraphbuilder_) {
+        if (this.worldOnlyTarget == null) {
+            initWorldOnlyTarget();
+        }
+        
+        if (this.worldOnlyTarget == null) {
+            return;
+        }
+
+        FramePass framepass = p_framegraphbuilder_.addPass("world_only_capture");
+        ResourceHandle<RenderTarget> worldOnlyHandle = p_framegraphbuilder_.importExternal("world_only", this.worldOnlyTarget);
+        
+        // Read from main target (which has world rendered) and write to worldOnlyTarget
+        framepass.reads(this.targets.main);
+        worldOnlyHandle = framepass.readsAndWrites(worldOnlyHandle);
+        
+        ResourceHandle<RenderTarget> mainHandle = this.targets.main;
+        
+        framepass.executes(() -> {
+            // Copy main target to worldOnlyTarget
+            RenderTarget mainTarget = mainHandle.get();
+            RenderTarget worldTarget = this.worldOnlyTarget;
+            
+            if (mainTarget != null && worldTarget != null) {
+                // DEBUG: Сохраняем main target ДО копирования
+                ru.debug.FramebufferDebug.saveRenderTarget(mainTarget, "01_mainTarget_before_blit");
+                
+                // Получаем РЕАЛЬНЫЕ размеры
+                int mainWidth = mainTarget.width;
+                int mainHeight = mainTarget.height;
+                int worldWidth = worldTarget.width;
+                int worldHeight = worldTarget.height;
+                
+                System.out.println("[DEBUG] Main size: " + mainWidth + "x" + mainHeight + 
+                                 ", World size: " + worldWidth + "x" + worldHeight);
+                
+                // Если размеры не совпадают - resize worldTarget
+                if (mainWidth != worldWidth || mainHeight != worldHeight) {
+                    System.out.println("[DEBUG] Resizing worldTarget to match main");
+                    worldTarget.resize(mainWidth, mainHeight);
+                }
+                
+                // Bind main as read, worldOnly as draw
+                org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, 
+                    ((com.mojang.blaze3d.opengl.GlTexture)mainTarget.getColorTexture()).getFbo(
+                        ((com.mojang.blaze3d.opengl.GlDevice)RenderSystem.getDevice()).directStateAccess(),
+                        mainTarget.useDepth ? mainTarget.getDepthTexture() : null
+                    ));
+                org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, 
+                    ((com.mojang.blaze3d.opengl.GlTexture)worldTarget.getColorTexture()).getFbo(
+                        ((com.mojang.blaze3d.opengl.GlDevice)RenderSystem.getDevice()).directStateAccess(),
+                        worldTarget.useDepth ? worldTarget.getDepthTexture() : null
+                    ));
+                
+                // Используем РЕАЛЬНЫЕ размеры main target
+                org.lwjgl.opengl.GL30.glBlitFramebuffer(
+                    0, 0, mainWidth, mainHeight,
+                    0, 0, mainWidth, mainHeight,
+                    org.lwjgl.opengl.GL30.GL_COLOR_BUFFER_BIT,
+                    org.lwjgl.opengl.GL11.GL_NEAREST
+                );
+                
+                // DEBUG: Сохраняем worldOnly target ПОСЛЕ копирования
+                ru.debug.FramebufferDebug.saveRenderTarget(worldTarget, "02_worldTarget_after_blit");
+                
+                // Notify Aporia that world-only capture is ready
+                ru.Aporia.captureWorldOnlyTarget(worldTarget);
+            }
+        });
     }
 
     private void addParticlesPass(FrameGraphBuilder p_366471_, GpuBufferSlice p_405857_) {
@@ -1534,5 +1625,20 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
 
     @OnlyIn(Dist.CLIENT)
     record FinalizedGizmos(DrawableGizmoPrimitives standardPrimitives, DrawableGizmoPrimitives alwaysOnTopPrimitives) {
+    }
+    
+    /**
+     * CUSTOM: Добавляет pass для захвата экрана для blur эффекта.
+     * Выполняется ПОСЛЕ рендера мира, но ДО UI.
+     */
+    private void addBlurCapturePass(FrameGraphBuilder p_framegraph_, int width, int height) {
+        FramePass framepass = p_framegraph_.addPass("blur_capture");
+        this.targets.main = framepass.readsAndWrites(this.targets.main);
+        
+        framepass.executes(() -> {
+            // Здесь framebuffer УЖЕ заполнен миром!
+            System.out.println("[BLUR_CAPTURE] Executing blur capture pass - framebuffer should be filled!");
+            ru.Aporia.captureScreenInFramePass(width, height);
+        });
     }
 }

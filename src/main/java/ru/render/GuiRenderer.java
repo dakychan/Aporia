@@ -23,12 +23,6 @@ public class GuiRenderer {
         }
 
         animationSystem.tick();
-
-        if (BlurShader.isInitialized()) {
-            int width = context.guiWidth();
-            int height = context.guiHeight();
-            blurShader.apply(width, height);
-        }
     }
     public void cleanup() {
         blurShader.cleanup();
