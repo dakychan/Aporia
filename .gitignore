@@ -2,3 +2,5 @@
 .kiro/
 out/
 run/
+src/run/
+help
