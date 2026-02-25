@@ -5,7 +5,7 @@ import aporia.cc.chat.ChatUtils.MessageType;
 import java.util.ArrayList;
 import java.util.List;
 import cc.apr.command.Command;
-import cc.apr.files.FilesManager;
+import aporia.cc.files.FilesManager;
 
 public class FriendCommand implements Command {
    @Override

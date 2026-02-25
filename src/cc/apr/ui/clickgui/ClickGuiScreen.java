@@ -4,6 +4,7 @@ import aporia.cc.Logger;
 import aporia.cc.files.ModuleConfig;
 import aporia.cc.user.UserData;
 import aporia.cc.user.UserData.UserDataClass;
+import cc.apr.Aporia;
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor;
 import com.google.gson.JsonElement;
@@ -24,7 +25,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import cc.apr.files.FilesManager;
+import aporia.cc.files.FilesManager;
 import cc.apr.help.discord.DiscordManager;
 import cc.apr.input.api.KeyboardKeys;
 import cc.apr.input.api.bind.Keybind;
@@ -783,7 +784,7 @@ public class ClickGuiScreen extends Screen {
 
    private void savePanelPositions() {
       try {
-         FilesManager filesManager = cc.apr.Aporia.getFilesManager();
+         FilesManager filesManager = Aporia.getFilesManager();
          if (filesManager != null) {
             Map<String, ModuleConfig> configs = new HashMap<>();
             Map<String, ModuleConfig> existingConfigs = filesManager.loadConfig();

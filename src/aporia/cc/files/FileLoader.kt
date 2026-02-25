@@ -1,4 +1,4 @@
-package cc.apr.files
+package aporia.cc.files
 
 import aporia.cc.Logger
 import com.google.gson.Gson
@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.time.LocalDateTime
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 
@@ -193,7 +194,7 @@ class FileLoader {
             Files.createDirectories(path.parent)
             val content = buildString {
                 appendLine(header)
-                appendLine("# Generated: ${java.time.LocalDateTime.now()}")
+                appendLine("# Generated: ${LocalDateTime.now()}")
                 appendLine()
                 data.forEach { (key, value) ->
                     appendLine("$key=$value")

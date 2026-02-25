@@ -5,17 +5,15 @@ import cc.apr.module.Module
 import cc.apr.render.IconFont
 import cc.apr.render.MsdfFont
 import cc.apr.render.MsdfTextRenderer
-import cc.apr.ui.hud.HudManager.HudComponent
-import cc.apr.ui.hud.components.ArrayList
-import cc.apr.ui.hud.components.KeyBinds
-import cc.apr.ui.hud.components.WaterMark
+import cc.apr.ui.hud.HudManager
+import cc.apr.ui.hud.components.*
 
 class Interface : Module("Interface", "HUD элементы", C.VISUALS) {
     
     private var textRenderer: MsdfTextRenderer? = null
     private var iconRenderer: MsdfTextRenderer? = null
     
-    private val components = mutableListOf<HudComponent>()
+    private val components = mutableListOf<HudManager.HudComponent>()
     private var arrayList: ArrayList? = null
     private var waterMark: WaterMark? = null
     private var keyBinds: KeyBinds? = null

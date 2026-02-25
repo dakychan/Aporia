@@ -1,0 +1,96 @@
+[2026-02-23 23:44:19] [INFO] Initializing file system with OsManager...
+[2026-02-23 23:44:19] [INFO] Platform: Windows 10.0
+[2026-02-23 23:44:19] [DEBUG] ✓ Created directory: C:\Users\kotay\.apr
+[2026-02-23 23:44:19] [DEBUG] ✓ Created directory: C:\Users\kotay\AppData\Roaming\Aporia.cc
+[2026-02-23 23:44:19] [DEBUG] ✓ Created directory: C:\Users\kotay\AppData\Local\Aporia
+[2026-02-23 23:44:19] [DEBUG] ✓ Created directory: C:\Users\kotay\AppData\Local\Aporia\logs
+[2026-02-23 23:44:19] [DEBUG] ✓ Created directory: C:\Users\kotay\AppData\Roaming\Aporia.cc\temp
+[2026-02-23 23:44:19] [DEBUG] ✓ Created directory: C:\Users\kotay\.apr\backup
+[2026-02-23 23:44:19] [DEBUG] ✓ Created directory: C:\Users\kotay\.apr\modules
+[2026-02-23 23:44:19] [DEBUG] ✓ Created directory: C:\Users\kotay\.apr\themes
+[2026-02-23 23:44:19] [DEBUG] ✓ Created directory: C:\Users\kotay\.apr\scripts
+[2026-02-23 23:44:19] [DEBUG] ○ File exists: Config.apr
+[2026-02-23 23:44:19] [DEBUG] ○ File exists: Friends.apr
+[2026-02-23 23:44:19] [DEBUG] ○ File exists: Stats.json
+[2026-02-23 23:44:19] [DEBUG] ○ File exists: Keybinds.json
+[2026-02-23 23:44:19] [DEBUG] ○ File exists: HudConfig.json
+[2026-02-23 23:44:19] [DEBUG] ○ File exists: ModulesConfig.apr
+[2026-02-23 23:44:19] [DEBUG] ✓ Set hidden attribute for cache files
+[2026-02-23 23:44:19] [INFO] ✓ File system initialized successfully
+[2026-02-23 23:44:19] [INFO]   Main directory: C:\Users\kotay\.apr
+[2026-02-23 23:44:19] [INFO]   Cache directory: C:\Users\kotay\AppData\Roaming\Aporia.cc
+[2026-02-23 23:44:19] [INFO]   Data directory: C:\Users\kotay\AppData\Local\Aporia
+[2026-02-23 23:44:19] [INFO]   Logs directory: C:\Users\kotay\AppData\Local\Aporia\logs
+[2026-02-23 23:44:19] [INFO] 
+╔═══════════════════════════════════════════════════════════╗
+║                                                           ║
+║    █████╗ ██╗      █████╗  ██████╗██████╗ ██╗████████╗    ║
+║   ██╔══██╗██║     ██╔══██╗██╔════╝██╔══██╗██║╚══██╔══╝    ║
+║   ███████║██║     ███████║██║     ██████╔╝██║   ██║       ║
+║   ██╔══██║██║     ██╔══██║██║     ██╔══██╗██║   ██║       ║
+║   ██║  ██║███████╗██║  ██║╚██████╗██║  ██║██║   ██║       ║
+║   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝   ╚═╝       ║
+║                                                           ║
+║                   . C C                                   ║
+║                                                           ║
+║              O S   M A N A G E R                          ║
+║                                                           ║
+╚═══════════════════════════════════════════════════════════╝
+
+[2026-02-23 23:44:19] [INFO] OsManager initialized
+[2026-02-23 23:44:19] [INFO] Platform: Windows 10.0
+[2026-02-23 23:44:19] [INFO] Architecture: amd64
+[2026-02-23 23:44:19] [INFO] User: kotay
+[2026-02-23 23:44:19] [INFO] ================================================
+[2026-02-23 23:44:19] [INFO] Cleaning up file system...
+[2026-02-23 23:44:19] [INFO] ✓ Temp directory cleared
+[2026-02-23 23:44:19] [INFO] ✓ File system cleanup complete
+[2026-02-23 23:44:19] [DEBUG] ✓ JSON saved: C:\Users\kotay\AppData\Roaming\Aporia.cc\Stats.json
+[2026-02-23 23:44:53] [INFO] Initializing file system with OsManager...
+[2026-02-23 23:44:53] [INFO] Platform: Windows 10.0
+[2026-02-23 23:44:53] [DEBUG] ✓ Created directory: C:\Users\kotay\.apr
+[2026-02-23 23:44:53] [DEBUG] ✓ Created directory: C:\Users\kotay\AppData\Roaming\Aporia.cc
+[2026-02-23 23:44:53] [DEBUG] ✓ Created directory: C:\Users\kotay\AppData\Local\Aporia
+[2026-02-23 23:44:53] [DEBUG] ✓ Created directory: C:\Users\kotay\AppData\Local\Aporia\logs
+[2026-02-23 23:44:53] [DEBUG] ✓ Created directory: C:\Users\kotay\AppData\Roaming\Aporia.cc\temp
+[2026-02-23 23:44:53] [DEBUG] ✓ Created directory: C:\Users\kotay\.apr\backup
+[2026-02-23 23:44:53] [DEBUG] ✓ Created directory: C:\Users\kotay\.apr\modules
+[2026-02-23 23:44:53] [DEBUG] ✓ Created directory: C:\Users\kotay\.apr\themes
+[2026-02-23 23:44:53] [DEBUG] ✓ Created directory: C:\Users\kotay\.apr\scripts
+[2026-02-23 23:44:53] [DEBUG] ○ File exists: Config.apr
+[2026-02-23 23:44:53] [DEBUG] ○ File exists: Friends.apr
+[2026-02-23 23:44:53] [DEBUG] ○ File exists: Stats.json
+[2026-02-23 23:44:53] [DEBUG] ○ File exists: Keybinds.json
+[2026-02-23 23:44:53] [DEBUG] ○ File exists: HudConfig.json
+[2026-02-23 23:44:53] [DEBUG] ○ File exists: ModulesConfig.apr
+[2026-02-23 23:44:53] [DEBUG] ✓ Set hidden attribute for cache files
+[2026-02-23 23:44:53] [INFO] ✓ File system initialized successfully
+[2026-02-23 23:44:53] [INFO]   Main directory: C:\Users\kotay\.apr
+[2026-02-23 23:44:53] [INFO]   Cache directory: C:\Users\kotay\AppData\Roaming\Aporia.cc
+[2026-02-23 23:44:53] [INFO]   Data directory: C:\Users\kotay\AppData\Local\Aporia
+[2026-02-23 23:44:53] [INFO]   Logs directory: C:\Users\kotay\AppData\Local\Aporia\logs
+[2026-02-23 23:44:53] [INFO] 
+╔═══════════════════════════════════════════════════════════╗
+║                                                           ║
+║    █████╗ ██╗      █████╗  ██████╗██████╗ ██╗████████╗    ║
+║   ██╔══██╗██║     ██╔══██╗██╔════╝██╔══██╗██║╚══██╔══╝    ║
+║   ███████║██║     ███████║██║     ██████╔╝██║   ██║       ║
+║   ██╔══██║██║     ██╔══██║██║     ██╔══██╗██║   ██║       ║
+║   ██║  ██║███████╗██║  ██║╚██████╗██║  ██║██║   ██║       ║
+║   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝   ╚═╝       ║
+║                                                           ║
+║                   . C C                                   ║
+║                                                           ║
+║              O S   M A N A G E R                          ║
+║                                                           ║
+╚═══════════════════════════════════════════════════════════╝
+
+[2026-02-23 23:44:53] [INFO] OsManager initialized
+[2026-02-23 23:44:53] [INFO] Platform: Windows 10.0
+[2026-02-23 23:44:53] [INFO] Architecture: amd64
+[2026-02-23 23:44:53] [INFO] User: kotay
+[2026-02-23 23:44:53] [INFO] ================================================
+[2026-02-23 23:44:54] [INFO] Cleaning up file system...
+[2026-02-23 23:44:54] [INFO] ✓ Temp directory cleared
+[2026-02-23 23:44:54] [INFO] ✓ File system cleanup complete
+[2026-02-23 23:44:54] [DEBUG] ✓ JSON saved: C:\Users\kotay\AppData\Roaming\Aporia.cc\Stats.json

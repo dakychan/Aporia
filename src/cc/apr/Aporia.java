@@ -9,7 +9,7 @@ import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.textures.GpuTexture;
-import cc.apr.files.FilesManager;
+import aporia.cc.files.FilesManager;
 import cc.apr.gui.GuiManager;
 import cc.apr.help.discord.DiscordManager;
 import cc.apr.input.api.KeyBindings;

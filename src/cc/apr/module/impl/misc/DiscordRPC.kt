@@ -1,8 +1,8 @@
 package cc.apr.module.impl.misc
 
-import cc.apr.module.Module
+import aporia.cc.Logger
 import cc.apr.Aporia
-
+import cc.apr.module.Module
 /**
  * DiscordRPC module - Discord Rich Presence integration.
  * 
@@ -34,7 +34,7 @@ class DiscordRPC : Module("DiscordRPC", "Discord Rich Presence", C.MISC) {
                 discordManager.init()
             }
         } catch (e: Exception) {
-            aporia.cc.Logger.error("Failed to initialize Discord RPC: ${e.message}", e)
+            Logger.error("Failed to initialize Discord RPC: ${e.message}", e)
         }
     }
     
@@ -48,7 +48,7 @@ class DiscordRPC : Module("DiscordRPC", "Discord Rich Presence", C.MISC) {
                 discordManager.stopRPC()
             }
         } catch (e: Exception) {
-            aporia.cc.Logger.error("Failed to stop Discord RPC: ${e.message}", e)
+            Logger.error("Failed to stop Discord RPC: ${e.message}", e)
         }
     }
     
@@ -67,7 +67,7 @@ class DiscordRPC : Module("DiscordRPC", "Discord Rich Presence", C.MISC) {
                     lastUpdateTime = currentTime
                 }
             } catch (e: Exception) {
-                aporia.cc.Logger.error("Failed to update Discord game state: ${e.message}", e)
+                Logger.error("Failed to update Discord game state: ${e.message}", e)
             }
         }
     }

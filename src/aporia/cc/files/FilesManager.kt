@@ -1,13 +1,13 @@
-package cc.apr.files
+package aporia.cc.files
 
 import aporia.cc.Logger
-import aporia.cc.files.ModuleConfig
 import aporia.cc.user.UserData
 import aporia.cc.user.UserRole
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import aporia.cc.core.manager.OsManager
 import aporia.cc.core.manager.OsManager.DirectoryType
+import com.google.gson.JsonArray
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
@@ -33,12 +33,12 @@ class FilesManager {
     private val gson: Gson = Gson()
 
     // Основные пути через OsManager
-    private val configPath: Path = OsManager.getFile(OsManager.DirectoryType.CONFIG, "Config.apr")
-    private val friendsPath: Path = OsManager.getFile(OsManager.DirectoryType.CONFIG, "Friends.apr")
-    private val statsPath: Path = OsManager.getFile(OsManager.DirectoryType.CACHE, "Stats.json")
-    private val keybindsPath: Path = OsManager.getFile(OsManager.DirectoryType.CONFIG, "Keybinds.json")
-    private val hudConfigPath: Path = OsManager.getFile(OsManager.DirectoryType.CONFIG, "HudConfig.json")
-    private val modulesConfigPath: Path = OsManager.getFile(OsManager.DirectoryType.CONFIG, "ModulesConfig.apr")
+    private val configPath: Path = OsManager.getFile(DirectoryType.CONFIG, "Config.apr")
+    private val friendsPath: Path = OsManager.getFile(DirectoryType.CONFIG, "Friends.apr")
+    private val statsPath: Path = OsManager.getFile(DirectoryType.CACHE, "Stats.json")
+    private val keybindsPath: Path = OsManager.getFile(DirectoryType.CONFIG, "Keybinds.json")
+    private val hudConfigPath: Path = OsManager.getFile(DirectoryType.CONFIG, "HudConfig.json")
+    private val modulesConfigPath: Path = OsManager.getFile(DirectoryType.CONFIG, "ModulesConfig.apr")
 
     /**
      * Инициализировать файловую систему.
@@ -368,7 +368,7 @@ class FilesManager {
     fun saveKeybinds(keybinds: List<Map<String, Any>>) {
         try {
             val json = JsonObject()
-            val array = com.google.gson.JsonArray()
+            val array = JsonArray()
 
             keybinds.forEach { kb ->
                 JsonObject().apply {
@@ -418,7 +418,7 @@ class FilesManager {
      */
     fun saveHudConfig(components: List<Map<String, Any>>) {
         try {
-            val json = com.google.gson.JsonArray()
+            val json = JsonArray()
 
             components.forEach { comp ->
                 JsonObject().apply {

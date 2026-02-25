@@ -1,13 +1,4 @@
-.gradle
-.kotlin
-.github
-.kiro
-.idea
-build
-out
-run
-runserver
-projects
-mcp
-logs
-.gitverse
+.idea/
+.kiro/
+out/
+run/
