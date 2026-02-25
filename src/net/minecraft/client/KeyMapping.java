@@ -16,11 +16,11 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class KeyMapping implements Comparable<KeyMapping> {
    private static final Map<String, KeyMapping> ALL = Maps.newHashMap();
    private static final Map<Key, List<KeyMapping>> MAP = Maps.newHashMap();
@@ -200,7 +200,7 @@ public class KeyMapping implements Comparable<KeyMapping> {
       return ALL.get(p_378660_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Category(Identifier id) {
       static final List<KeyMapping.Category> SORT_ORDER = new ArrayList<>();
       public static final KeyMapping.Category MOVEMENT = register("movement");

@@ -18,11 +18,11 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ParticleEngine {
    private static final List<ParticleRenderType> RENDER_ORDER = List.of(
       ParticleRenderType.SINGLE_QUADS, ParticleRenderType.ITEM_PICKUP, ParticleRenderType.ELDER_GUARDIANS

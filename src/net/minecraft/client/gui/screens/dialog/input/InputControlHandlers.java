@@ -26,12 +26,12 @@ import net.minecraft.server.dialog.input.InputControl;
 import net.minecraft.server.dialog.input.NumberRangeInput;
 import net.minecraft.server.dialog.input.SingleOptionInput;
 import net.minecraft.server.dialog.input.TextInput;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class InputControlHandlers {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final Map<MapCodec<? extends InputControl>, InputControlHandler<?>> HANDLERS = new HashMap<>();
@@ -60,7 +60,7 @@ public class InputControlHandlers {
       register(NumberRangeInput.MAP_CODEC, new InputControlHandlers.NumberRangeHandler());
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class BooleanHandler implements InputControlHandler<BooleanInput> {
       public void addControl(final BooleanInput p_409564_, Screen p_409847_, InputControlHandler.Output p_409802_) {
          Font font = p_409847_.getFont();
@@ -79,7 +79,7 @@ public class InputControlHandlers {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class NumberRangeHandler implements InputControlHandler<NumberRangeInput> {
       public void addControl(NumberRangeInput p_408461_, Screen p_406549_, InputControlHandler.Output p_407361_) {
          float f = p_408461_.rangeInfo().initialSliderValue();
@@ -99,7 +99,7 @@ public class InputControlHandlers {
          });
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       static class SliderImpl extends AbstractSliderButton {
          private final NumberRangeInput input;
 
@@ -144,7 +144,7 @@ public class InputControlHandlers {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class SingleOptionHandler implements InputControlHandler<SingleOptionInput> {
       public void addControl(SingleOptionInput p_407094_, Screen p_406176_, InputControlHandler.Output p_410623_) {
          SingleOptionInput.Entry singleoptioninput$entry = p_407094_.initial().orElse(p_407094_.entries().getFirst());
@@ -156,7 +156,7 @@ public class InputControlHandlers {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class TextInputHandler implements InputControlHandler<TextInput> {
       public void addControl(TextInput p_410124_, Screen p_408290_, InputControlHandler.Output p_406869_) {
          Font font = p_408290_.getFont();

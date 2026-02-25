@@ -1,9 +1,9 @@
 package net.minecraft.client.renderer;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class Rect2i {
    private int xPos;
    private int yPos;

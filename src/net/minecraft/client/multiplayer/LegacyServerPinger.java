@@ -9,10 +9,10 @@ import java.util.List;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.server.network.LegacyProtocolUtils;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class LegacyServerPinger extends SimpleChannelInboundHandler<ByteBuf> {
    private static final Splitter SPLITTER = Splitter.on('\u0000').limit(6);
    private final ServerAddress address;
@@ -70,7 +70,7 @@ public class LegacyServerPinger extends SimpleChannelInboundHandler<ByteBuf> {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Output {
       void handleResponse(int var1, String var2, String var3, int var4, int var5);
    }

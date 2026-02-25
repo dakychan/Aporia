@@ -24,11 +24,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class CreateBuffetWorldScreen extends Screen {
    private static final Component SEARCH_HINT = Component.translatable("createWorld.customize.buffet.search").withStyle(EditBox.SEARCH_HINT_STYLE);
    private static final int SPACING = 3;
@@ -87,7 +87,7 @@ public class CreateBuffetWorldScreen extends Screen {
       this.doneButton.active = this.list.getSelected() != null;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class BiomeList extends ObjectSelectionList<CreateBuffetWorldScreen.BiomeList.Entry> {
       BiomeList() {
          super(
@@ -122,7 +122,7 @@ public class CreateBuffetWorldScreen extends Screen {
          CreateBuffetWorldScreen.this.updateButtonValidity();
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       class Entry extends ObjectSelectionList.Entry<CreateBuffetWorldScreen.BiomeList.Entry> {
          final Holder.Reference<Biome> biome;
          final Component name;

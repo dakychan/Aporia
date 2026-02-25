@@ -13,11 +13,11 @@ import net.minecraft.client.renderer.item.SelectItemModel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface SelectItemModelProperty<T> {
    @Nullable T get(ItemStack var1, @Nullable ClientLevel var2, @Nullable LivingEntity var3, int var4, ItemDisplayContext var5);
 
@@ -25,7 +25,7 @@ public interface SelectItemModelProperty<T> {
 
    SelectItemModelProperty.Type<? extends SelectItemModelProperty<T>, T> type();
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Type<P extends SelectItemModelProperty<T>, T>(MapCodec<SelectItemModel.UnbakedSwitch<P, T>> switchCodec) {
       public static <P extends SelectItemModelProperty<T>, T> SelectItemModelProperty.Type<P, T> create(MapCodec<P> p_376943_, Codec<T> p_376938_) {
          MapCodec<SelectItemModel.UnbakedSwitch<P, T>> mapcodec = RecordCodecBuilder.mapCodec(

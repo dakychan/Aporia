@@ -7,11 +7,11 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record Count(boolean normalize) implements RangeSelectItemModelProperty {
    public static final MapCodec<Count> MAP_CODEC = RecordCodecBuilder.mapCodec(
       p_377483_ -> p_377483_.group(Codec.BOOL.optionalFieldOf("normalize", true).forGetter(Count::normalize)).apply(p_377483_, Count::new)

@@ -7,10 +7,10 @@ import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class TrailParticle extends SingleQuadParticle {
    private final Vec3 target;
 
@@ -63,7 +63,7 @@ public class TrailParticle extends SingleQuadParticle {
       return 15728880;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<TrailParticleOption> {
       private final SpriteSet sprite;
 

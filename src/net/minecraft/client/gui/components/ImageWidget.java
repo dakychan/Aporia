@@ -8,11 +8,11 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class ImageWidget extends AbstractWidget {
    ImageWidget(int p_275550_, int p_275723_, int p_301266_, int p_297426_) {
       super(p_275550_, p_275723_, p_301266_, p_297426_, CommonComponents.EMPTY);
@@ -46,7 +46,7 @@ public abstract class ImageWidget extends AbstractWidget {
       return null;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Sprite extends ImageWidget {
       private Identifier sprite;
 
@@ -66,7 +66,7 @@ public abstract class ImageWidget extends AbstractWidget {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Texture extends ImageWidget {
       private Identifier texture;
       private final int textureWidth;

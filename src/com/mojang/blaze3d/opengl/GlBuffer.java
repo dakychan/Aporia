@@ -5,11 +5,11 @@ import com.mojang.jtracy.MemoryPool;
 import com.mojang.jtracy.TracyClient;
 import java.nio.ByteBuffer;
 import java.util.function.Supplier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GlBuffer extends GpuBuffer {
    protected static final MemoryPool MEMORY_POOl = TracyClient.createMemoryPool("GPU Buffers");
    protected boolean closed;
@@ -58,7 +58,7 @@ public class GlBuffer extends GpuBuffer {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class GlMappedView implements GpuBuffer.MappedView {
       private final Runnable unmap;
       private final GlBuffer buffer;

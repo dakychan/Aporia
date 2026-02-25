@@ -8,11 +8,11 @@ import java.util.concurrent.TimeUnit;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DebugEntryMemory implements DebugScreenEntry {
    private static final Identifier GROUP = Identifier.withDefaultNamespace("memory");
    private final DebugEntryMemory.AllocationRateCalculator allocationRateCalculator = new DebugEntryMemory.AllocationRateCalculator();
@@ -42,7 +42,7 @@ public class DebugEntryMemory implements DebugScreenEntry {
       return true;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class AllocationRateCalculator {
       private static final int UPDATE_INTERVAL_MS = 500;
       private static final List<GarbageCollectorMXBean> GC_MBEANS = ManagementFactory.getGarbageCollectorMXBeans();

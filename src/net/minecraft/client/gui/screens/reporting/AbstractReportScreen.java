@@ -21,11 +21,11 @@ import net.minecraft.client.multiplayer.chat.report.ReportingContext;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ThrowingComponent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class AbstractReportScreen<B extends Report.Builder<?>> extends Screen {
    private static final Component REPORT_SENT_MESSAGE = Component.translatable("gui.abuseReport.report_sent_msg");
    private static final Component REPORT_SENDING_TITLE = Component.translatable("gui.abuseReport.sending.title").withStyle(net.minecraft.ChatFormatting.BOLD);
@@ -187,7 +187,7 @@ public abstract class AbstractReportScreen<B extends Report.Builder<?>> extends 
       super.removed();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class DiscardReportWarningScreen extends WarningScreen {
       private static final Component TITLE = Component.translatable("gui.abuseReport.discard.title").withStyle(net.minecraft.ChatFormatting.BOLD);
       private static final Component MESSAGE = Component.translatable("gui.abuseReport.discard.content");

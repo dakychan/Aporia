@@ -27,12 +27,12 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.CommonLinks;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 class RealmsSubscriptionTab extends GridLayoutTab implements RealmsConfigurationTab {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final int DEFAULT_COMPONENT_WIDTH = 200;

@@ -2,11 +2,11 @@ package com.mojang.blaze3d;
 
 import com.mojang.jtracy.TracyClient;
 import com.mojang.logging.LogListeners;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.event.Level;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TracyBootstrap {
    private static boolean setup;
 

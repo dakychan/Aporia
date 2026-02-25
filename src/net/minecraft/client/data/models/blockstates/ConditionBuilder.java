@@ -7,10 +7,10 @@ import java.util.stream.Stream;
 import net.minecraft.client.renderer.block.model.multipart.Condition;
 import net.minecraft.client.renderer.block.model.multipart.KeyValueCondition;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ConditionBuilder {
    private final Builder<String, KeyValueCondition.Terms> terms = ImmutableMap.builder();
 

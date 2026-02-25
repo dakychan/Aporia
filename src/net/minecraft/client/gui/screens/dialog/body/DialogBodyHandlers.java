@@ -17,12 +17,12 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.server.dialog.body.DialogBody;
 import net.minecraft.server.dialog.body.ItemBody;
 import net.minecraft.server.dialog.body.PlainMessage;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DialogBodyHandlers {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final Map<MapCodec<? extends DialogBody>, DialogBodyHandler<?>> HANDLERS = new HashMap<>();
@@ -59,7 +59,7 @@ public class DialogBodyHandlers {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class ItemHandler implements DialogBodyHandler<ItemBody> {
       public LayoutElement createControls(DialogScreen<?> p_409486_, ItemBody p_410433_) {
          if (p_410433_.description().isPresent()) {
@@ -103,7 +103,7 @@ public class DialogBodyHandlers {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class PlainMessageHandler implements DialogBodyHandler<PlainMessage> {
       public LayoutElement createControls(DialogScreen<?> p_405971_, PlainMessage p_408125_) {
          return FocusableTextWidget.builder(p_408125_.contents(), p_405971_.getFont())

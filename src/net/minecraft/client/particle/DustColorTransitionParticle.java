@@ -5,11 +5,11 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.state.QuadParticleRenderState;
 import net.minecraft.core.particles.DustColorTransitionOptions;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3f;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DustColorTransitionParticle extends DustParticleBase<DustColorTransitionOptions> {
    private final Vector3f fromColor;
    private final Vector3f toColor;
@@ -51,7 +51,7 @@ public class DustColorTransitionParticle extends DustParticleBase<DustColorTrans
       super.extract(p_425707_, p_430312_, p_426043_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<DustColorTransitionOptions> {
       private final SpriteSet sprites;
 

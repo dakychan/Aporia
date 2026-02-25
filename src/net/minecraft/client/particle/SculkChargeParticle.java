@@ -3,10 +3,10 @@ package net.minecraft.client.particle;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.SculkChargeParticleOptions;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SculkChargeParticle extends SingleQuadParticle {
    private final SpriteSet sprites;
 
@@ -37,7 +37,7 @@ public class SculkChargeParticle extends SingleQuadParticle {
       this.setSpriteFromAge(this.sprites);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Provider(SpriteSet sprite) implements ParticleProvider<SculkChargeParticleOptions> {
       public Particle createParticle(
          SculkChargeParticleOptions p_233918_,

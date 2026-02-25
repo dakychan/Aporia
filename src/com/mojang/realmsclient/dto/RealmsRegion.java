@@ -5,12 +5,12 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import com.mojang.logging.LogUtils;
 import java.io.IOException;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public enum RealmsRegion {
    AUSTRALIA_EAST("AustraliaEast", "realms.configuration.region.australia_east"),
    AUSTRALIA_SOUTHEAST("AustraliaSoutheast", "realms.configuration.region.australia_southeast"),
@@ -55,7 +55,7 @@ public enum RealmsRegion {
       return null;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class RealmsRegionJsonAdapter extends TypeAdapter<RealmsRegion> {
       private static final Logger LOGGER = LogUtils.getLogger();
 

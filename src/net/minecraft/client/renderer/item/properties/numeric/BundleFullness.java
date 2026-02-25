@@ -5,11 +5,11 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.BundleItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record BundleFullness() implements RangeSelectItemModelProperty {
    public static final MapCodec<BundleFullness> MAP_CODEC = MapCodec.unit(new BundleFullness());
 

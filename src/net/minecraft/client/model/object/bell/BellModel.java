@@ -10,11 +10,11 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class BellModel extends Model<BellModel.State> {
    private static final String BELL_BODY = "bell_body";
    private final ModelPart bellBody;
@@ -61,7 +61,7 @@ public class BellModel extends Model<BellModel.State> {
       this.bellBody.zRot = f1;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record State(float ticks, @Nullable Direction shakeDirection) {
    }
 }

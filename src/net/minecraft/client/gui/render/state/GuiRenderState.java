@@ -11,12 +11,12 @@ import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.TextureSetup;
 import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix3x2f;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GuiRenderState {
    private static final int DEBUG_RECTANGLE_COLOR = 2000962815;
    private final List<GuiRenderState.Node> strata = new ArrayList<>();
@@ -261,7 +261,7 @@ public class GuiRenderState {
       this.nextStratum();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Node {
       public final GuiRenderState.@Nullable Node parent;
       public GuiRenderState.@Nullable Node up;
@@ -316,7 +316,7 @@ public class GuiRenderState {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum TraverseRange {
       ALL,
       BEFORE_BLUR,

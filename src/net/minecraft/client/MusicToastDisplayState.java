@@ -3,10 +3,10 @@ package net.minecraft.client;
 import com.mojang.serialization.Codec;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public enum MusicToastDisplayState implements StringRepresentable {
    NEVER("never", "options.musicToast.never"),
    PAUSE("pause", "options.musicToast.pauseMenu"),

@@ -10,10 +10,10 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SpectatorMenu {
    static final Identifier CLOSE_SPRITE = Identifier.withDefaultNamespace("spectator/close");
    static final Identifier SCROLL_LEFT_SPRITE = Identifier.withDefaultNamespace("spectator/scroll_left");
@@ -117,7 +117,7 @@ public class SpectatorMenu {
       return new SpectatorPage(this.getItems(), this.selectedSlot);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class CloseSpectatorItem implements SpectatorMenuItem {
       @Override
       public void selectItem(SpectatorMenu p_101823_) {
@@ -142,7 +142,7 @@ public class SpectatorMenu {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class ScrollMenuItem implements SpectatorMenuItem {
       private final int direction;
       private final boolean enabled;

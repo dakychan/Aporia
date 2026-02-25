@@ -35,13 +35,13 @@ import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.FileUtil;
 import net.minecraft.util.StrictJsonParser;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.io.IOUtils;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ShaderManager extends SimplePreparableReloadListener<ShaderManager.Configs> implements AutoCloseable {
    static final Logger LOGGER = LogUtils.getLogger();
    public static final int MAX_LOG_LENGTH = 32768;
@@ -207,7 +207,7 @@ public class ShaderManager extends SimplePreparableReloadListener<ShaderManager.
       return this.compilationCache.getShaderSource(p_460967_, p_393108_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class CompilationCache implements AutoCloseable {
       private final ShaderManager.Configs configs;
       final Map<Identifier, Optional<PostChain>> postChains = new HashMap<>();
@@ -248,19 +248,19 @@ public class ShaderManager extends SimplePreparableReloadListener<ShaderManager.
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class CompilationException extends Exception {
       public CompilationException(String p_366142_) {
          super(p_366142_);
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Configs(Map<ShaderManager.ShaderSourceKey, String> shaderSources, Map<Identifier, PostChainConfig> postChains) {
       public static final ShaderManager.Configs EMPTY = new ShaderManager.Configs(Map.of(), Map.of());
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record ShaderSourceKey(Identifier id, ShaderType type) {
       @Override
       public String toString() {

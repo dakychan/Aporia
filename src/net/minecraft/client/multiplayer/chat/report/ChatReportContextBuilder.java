@@ -12,10 +12,10 @@ import net.minecraft.client.multiplayer.chat.ChatLog;
 import net.minecraft.client.multiplayer.chat.LoggedChatMessage;
 import net.minecraft.network.chat.MessageSignature;
 import net.minecraft.network.chat.PlayerChatMessage;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ChatReportContextBuilder {
    final int leadingCount;
    private final List<ChatReportContextBuilder.Collector> activeCollectors = new ArrayList<>();
@@ -65,7 +65,7 @@ public class ChatReportContextBuilder {
       return !this.activeCollectors.isEmpty();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class Collector {
       private final Set<MessageSignature> lastSeenSignatures;
       private PlayerChatMessage lastChainMessage;
@@ -104,7 +104,7 @@ public class ChatReportContextBuilder {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Handler {
       void accept(int var1, LoggedChatMessage.Player var2);
    }

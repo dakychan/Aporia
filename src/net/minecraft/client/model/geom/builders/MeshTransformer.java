@@ -1,10 +1,10 @@
 package net.minecraft.client.model.geom.builders;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 
 @FunctionalInterface
-@OnlyIn(Dist.CLIENT)
+
 public interface MeshTransformer {
    MeshTransformer IDENTITY = p_389330_ -> p_389330_;
 

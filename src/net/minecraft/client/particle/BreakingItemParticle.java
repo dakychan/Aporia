@@ -13,10 +13,10 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class BreakingItemParticle extends SingleQuadParticle {
    private final float uo;
    private final float vo;
@@ -75,7 +75,7 @@ public class BreakingItemParticle extends SingleQuadParticle {
       return this.layer;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class CobwebProvider extends BreakingItemParticle.ItemParticleProvider<SimpleParticleType> {
       public Particle createParticle(
          SimpleParticleType p_329960_,
@@ -92,7 +92,7 @@ public class BreakingItemParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public abstract static class ItemParticleProvider<T extends ParticleOptions> implements ParticleProvider<T> {
       private final ItemStackRenderState scratchRenderState = new ItemStackRenderState();
 
@@ -103,7 +103,7 @@ public class BreakingItemParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider extends BreakingItemParticle.ItemParticleProvider<ItemParticleOption> {
       public Particle createParticle(
          ItemParticleOption p_424773_,
@@ -122,7 +122,7 @@ public class BreakingItemParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class SlimeProvider extends BreakingItemParticle.ItemParticleProvider<SimpleParticleType> {
       public Particle createParticle(
          SimpleParticleType p_105705_,
@@ -139,7 +139,7 @@ public class BreakingItemParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class SnowballProvider extends BreakingItemParticle.ItemParticleProvider<SimpleParticleType> {
       public Particle createParticle(
          SimpleParticleType p_105724_,

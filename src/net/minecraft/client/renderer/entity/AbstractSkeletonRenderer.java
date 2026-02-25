@@ -8,10 +8,10 @@ import net.minecraft.client.renderer.entity.state.SkeletonRenderState;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public abstract class AbstractSkeletonRenderer<T extends AbstractSkeleton, S extends SkeletonRenderState> extends HumanoidMobRenderer<T, S, SkeletonModel<S>> {
    public AbstractSkeletonRenderer(EntityRendererProvider.Context p_362142_, ModelLayerLocation p_369786_, ArmorModelSet<ModelLayerLocation> p_424115_) {
       this(p_362142_, p_424115_, new SkeletonModel<>(p_362142_.bakeLayer(p_369786_)));

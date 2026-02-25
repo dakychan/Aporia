@@ -3,11 +3,11 @@ package net.minecraft.client;
 import com.google.common.collect.Lists;
 import java.util.List;
 import net.minecraft.network.chat.FormattedText;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ComponentCollector {
    private final List<FormattedText> parts = Lists.newArrayList();
 

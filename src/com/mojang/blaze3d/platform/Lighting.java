@@ -8,13 +8,13 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import java.nio.ByteBuffer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.dimension.DimensionType.CardinalLightType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
 
-@OnlyIn(Dist.CLIENT)
+
 public class Lighting implements AutoCloseable {
    private static final Vector3f DIFFUSE_LIGHT_0 = new Vector3f(0.2F, 1.0F, -0.7F).normalize();
    private static final Vector3f DIFFUSE_LIGHT_1 = new Vector3f(-0.2F, 1.0F, 0.7F).normalize();
@@ -92,7 +92,7 @@ public class Lighting implements AutoCloseable {
       this.buffer.close();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Entry {
       LEVEL,
       ITEMS_FLAT,

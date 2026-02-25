@@ -8,10 +8,10 @@ import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.resources.model.AtlasManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class FeatureRenderDispatcher implements AutoCloseable {
    private final SubmitNodeStorage submitNodeStorage;
    private final BlockRenderDispatcher blockRenderDispatcher;

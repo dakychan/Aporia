@@ -7,13 +7,13 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.nio.ByteBuffer;
 import net.minecraft.client.renderer.SpriteCoordinateExpander;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TextureAtlasSprite implements AutoCloseable {
    private final Identifier atlasLocation;
    private final SpriteContents contents;

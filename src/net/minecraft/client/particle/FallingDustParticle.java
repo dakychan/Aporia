@@ -9,11 +9,11 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class FallingDustParticle extends SingleQuadParticle {
    private final float rotSpeed;
    private final SpriteSet sprites;
@@ -66,7 +66,7 @@ public class FallingDustParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<BlockParticleOption> {
       private final SpriteSet sprite;
 

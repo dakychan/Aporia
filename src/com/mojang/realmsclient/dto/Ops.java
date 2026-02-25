@@ -6,11 +6,11 @@ import com.mojang.logging.LogUtils;
 import java.util.HashSet;
 import java.util.Set;
 import net.minecraft.util.LenientJsonParser;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public record Ops(Set<String> ops) {
    private static final Logger LOGGER = LogUtils.getLogger();
 

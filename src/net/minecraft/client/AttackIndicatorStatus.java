@@ -4,10 +4,10 @@ import com.mojang.serialization.Codec;
 import java.util.function.IntFunction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.ByIdMap;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public enum AttackIndicatorStatus {
    OFF(0, "options.off"),
    CROSSHAIR(1, "options.attack.crosshair"),

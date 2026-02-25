@@ -3,10 +3,10 @@ package net.minecraft.client.particle;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SonicBoomParticle extends HugeExplosionParticle {
    protected SonicBoomParticle(ClientLevel p_234028_, double p_234029_, double p_234030_, double p_234031_, double p_234032_, SpriteSet p_234033_) {
       super(p_234028_, p_234029_, p_234030_, p_234031_, p_234032_, p_234033_);
@@ -15,7 +15,7 @@ public class SonicBoomParticle extends HugeExplosionParticle {
       this.setSpriteFromAge(p_234033_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprites;
 

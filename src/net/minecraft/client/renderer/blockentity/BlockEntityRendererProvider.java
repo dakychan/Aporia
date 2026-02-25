@@ -12,15 +12,15 @@ import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.resources.model.MaterialSet;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 
 @FunctionalInterface
-@OnlyIn(Dist.CLIENT)
+
 public interface BlockEntityRendererProvider<T extends BlockEntity, S extends BlockEntityRenderState> {
    BlockEntityRenderer<T, S> create(BlockEntityRendererProvider.Context var1);
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Context(
       BlockEntityRenderDispatcher blockEntityRenderDispatcher,
       BlockRenderDispatcher blockRenderDispatcher,

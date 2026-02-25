@@ -10,13 +10,13 @@ import com.mojang.blaze3d.vertex.PoseStack.Pose;
 import java.lang.reflect.Type;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public record ItemTransform(Vector3fc rotation, Vector3fc translation, Vector3fc scale) {
    public static final ItemTransform NO_TRANSFORM = new ItemTransform(new Vector3f(), new Vector3f(), new Vector3f(1.0F, 1.0F, 1.0F));
 
@@ -46,7 +46,7 @@ public record ItemTransform(Vector3fc rotation, Vector3fc translation, Vector3fc
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    protected static class Deserializer implements JsonDeserializer<ItemTransform> {
       private static final Vector3f DEFAULT_ROTATION = new Vector3f(0.0F, 0.0F, 0.0F);
       private static final Vector3f DEFAULT_TRANSLATION = new Vector3f(0.0F, 0.0F, 0.0F);

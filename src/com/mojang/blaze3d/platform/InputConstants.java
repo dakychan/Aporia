@@ -21,8 +21,8 @@ import java.util.function.Supplier;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWCharModsCallbackI;
@@ -32,7 +32,7 @@ import org.lwjgl.glfw.GLFWKeyCallbackI;
 import org.lwjgl.glfw.GLFWMouseButtonCallbackI;
 import org.lwjgl.glfw.GLFWScrollCallbackI;
 
-@OnlyIn(Dist.CLIENT)
+
 public class InputConstants {
    private static final @Nullable MethodHandle GLFW_RAW_MOUSE_MOTION_SUPPORTED;
    private static final int GLFW_RAW_MOUSE_MOTION;
@@ -254,7 +254,7 @@ public class InputConstants {
       UNKNOWN = InputConstants.Type.KEYSYM.getOrCreate(-1);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static final class Key {
       private final String name;
       private final InputConstants.Type type;
@@ -317,7 +317,7 @@ public class InputConstants {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Type {
       KEYSYM("key.keyboard", (p_288232_, p_288233_) -> {
          if ("key.keyboard.unknown".equals(p_288233_)) {
@@ -500,7 +500,7 @@ public class InputConstants {
 
    @Retention(RetentionPolicy.CLASS)
    @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD, ElementType.TYPE_USE})
-   @OnlyIn(Dist.CLIENT)
+   
    public @interface Value {
    }
 }

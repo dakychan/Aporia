@@ -14,10 +14,10 @@ import net.minecraft.client.renderer.entity.state.VexRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class VexModel extends EntityModel<VexRenderState> implements ArmedModel<VexRenderState> {
    private final ModelPart body = this.root.getChild("body");
    private final ModelPart rightArm = this.body.getChild("right_arm");

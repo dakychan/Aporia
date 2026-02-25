@@ -4,10 +4,10 @@ import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.Direction;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class CopperGolemStatueModel extends Model<Direction> {
    public CopperGolemStatueModel(ModelPart p_453702_) {
       super(p_453702_, RenderTypes::entityCutoutNoCull);

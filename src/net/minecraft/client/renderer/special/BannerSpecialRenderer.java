@@ -12,12 +12,12 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class BannerSpecialRenderer implements SpecialModelRenderer<BannerPatternLayers> {
    private final BannerRenderer bannerRenderer;
    private final DyeColor baseColor;
@@ -50,7 +50,7 @@ public class BannerSpecialRenderer implements SpecialModelRenderer<BannerPattern
       this.bannerRenderer.getExtents(p_456720_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked(DyeColor baseColor) implements SpecialModelRenderer.Unbaked {
       public static final MapCodec<BannerSpecialRenderer.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
          p_376470_ -> p_376470_.group(DyeColor.CODEC.fieldOf("color").forGetter(BannerSpecialRenderer.Unbaked::baseColor))

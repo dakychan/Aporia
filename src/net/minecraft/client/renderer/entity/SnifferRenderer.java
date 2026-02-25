@@ -6,10 +6,10 @@ import net.minecraft.client.renderer.entity.state.SnifferRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.animal.sniffer.Sniffer;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SnifferRenderer extends AgeableMobRenderer<Sniffer, SnifferRenderState, SnifferModel> {
    private static final Identifier SNIFFER_LOCATION = Identifier.withDefaultNamespace("textures/entity/sniffer/sniffer.png");
 

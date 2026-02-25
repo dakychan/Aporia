@@ -6,10 +6,10 @@ import net.minecraft.client.renderer.entity.layers.LlamaDecorLayer;
 import net.minecraft.client.renderer.entity.state.LlamaRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.animal.equine.Llama;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class LlamaRenderer extends AgeableMobRenderer<Llama, LlamaRenderState, LlamaModel> {
    private static final Identifier CREAMY = Identifier.withDefaultNamespace("textures/entity/llama/creamy.png");
    private static final Identifier WHITE = Identifier.withDefaultNamespace("textures/entity/llama/white.png");

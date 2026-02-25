@@ -26,8 +26,8 @@ import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import net.minecraft.util.ARGB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL11C;
@@ -37,7 +37,7 @@ import org.lwjgl.opengl.GL32C;
 import org.lwjgl.opengl.GL33C;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GlCommandEncoder implements CommandEncoder {
    private static final Logger LOGGER = LogUtils.getLogger();
    private final GlDevice device;

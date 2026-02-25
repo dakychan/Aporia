@@ -7,11 +7,11 @@ import com.mojang.realmsclient.util.JsonUtils;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.util.LenientJsonParser;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public record WorldTemplatePaginatedList(List<WorldTemplate> templates, int page, int size, int total) {
    private static final Logger LOGGER = LogUtils.getLogger();
 

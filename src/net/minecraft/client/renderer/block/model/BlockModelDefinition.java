@@ -21,11 +21,11 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.StateHolder;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public record BlockModelDefinition(
    Optional<BlockModelDefinition.SimpleModelSelectors> simpleModels, Optional<BlockModelDefinition.MultiPartDefinition> multiPart
 ) {
@@ -62,7 +62,7 @@ public record BlockModelDefinition(
       return map;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record MultiPartDefinition(List<Selector> selectors) {
       public static final Codec<BlockModelDefinition.MultiPartDefinition> CODEC = ExtraCodecs.nonEmptyList(Selector.CODEC.listOf())
          .xmap(BlockModelDefinition.MultiPartDefinition::new, BlockModelDefinition.MultiPartDefinition::selectors);
@@ -78,7 +78,7 @@ public record BlockModelDefinition(
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record SimpleModelSelectors(Map<String, BlockStateModel.Unbaked> models) {
       public static final Codec<BlockModelDefinition.SimpleModelSelectors> CODEC = ExtraCodecs.nonEmptyMap(
             Codec.unboundedMap(Codec.STRING, BlockStateModel.Unbaked.CODEC)

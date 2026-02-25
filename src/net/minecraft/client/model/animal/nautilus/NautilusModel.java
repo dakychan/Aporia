@@ -12,10 +12,10 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.NautilusRenderState;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class NautilusModel extends EntityModel<NautilusRenderState> {
    private static final float SWIM_ANIMATION_SPEED_MAX = 2.0F;
    private static final float SWIM_ANIMATION_SCALE_FACTOR = 3.0F;

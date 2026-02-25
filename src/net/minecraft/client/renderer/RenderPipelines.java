@@ -15,10 +15,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class RenderPipelines {
    private static final Map<Identifier, RenderPipeline> PIPELINES_BY_LOCATION = new HashMap<>();
    private static final Snippet MATRICES_PROJECTION_SNIPPET = RenderPipeline.builder(new Snippet[0])

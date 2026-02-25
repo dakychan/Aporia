@@ -14,10 +14,10 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class DripParticle extends SingleQuadParticle {
    private final Fluid type;
    protected boolean isGlowing;
@@ -77,7 +77,7 @@ public class DripParticle extends SingleQuadParticle {
    protected void postMoveUpdate() {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class CoolingDripHangParticle extends DripParticle.DripHangParticle {
       CoolingDripHangParticle(
          ClientLevel p_106068_, double p_106069_, double p_106070_, double p_106071_, Fluid p_106072_, ParticleOptions p_106073_, TextureAtlasSprite p_422484_
@@ -94,7 +94,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class DripHangParticle extends DripParticle {
       private final ParticleOptions fallingParticle;
 
@@ -123,7 +123,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class DripLandParticle extends DripParticle {
       DripLandParticle(ClientLevel p_106102_, double p_106103_, double p_106104_, double p_106105_, Fluid p_106106_, TextureAtlasSprite p_428791_) {
          super(p_106102_, p_106103_, p_106104_, p_106105_, p_106106_, p_428791_);
@@ -131,7 +131,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class DripstoneFallAndLandParticle extends DripParticle.FallAndLandParticle {
       DripstoneFallAndLandParticle(
          ClientLevel p_171930_, double p_171931_, double p_171932_, double p_171933_, Fluid p_171934_, ParticleOptions p_171935_, TextureAtlasSprite p_426375_
@@ -151,7 +151,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class DripstoneLavaFallProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -178,7 +178,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class DripstoneLavaHangProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -203,7 +203,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class DripstoneWaterFallProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -230,7 +230,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class DripstoneWaterHangProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -257,7 +257,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class FallAndLandParticle extends DripParticle.FallingParticle {
       protected final ParticleOptions landParticle;
 
@@ -278,7 +278,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class FallingParticle extends DripParticle {
       FallingParticle(ClientLevel p_106132_, double p_106133_, double p_106134_, double p_106135_, Fluid p_106136_, TextureAtlasSprite p_431130_) {
          super(p_106132_, p_106133_, p_106134_, p_106135_, p_106136_, p_431130_);
@@ -292,7 +292,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class HoneyFallAndLandParticle extends DripParticle.FallAndLandParticle {
       HoneyFallAndLandParticle(
          ClientLevel p_106146_, double p_106147_, double p_106148_, double p_106149_, Fluid p_106150_, ParticleOptions p_106151_, TextureAtlasSprite p_431727_
@@ -311,7 +311,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class HoneyFallProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -339,7 +339,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class HoneyHangProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -368,7 +368,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class HoneyLandProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -394,7 +394,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class LavaFallProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -421,7 +421,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class LavaHangProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -446,7 +446,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class LavaLandProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -471,7 +471,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class NectarFallProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -498,7 +498,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class ObsidianTearFallProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -527,7 +527,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class ObsidianTearHangProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -557,7 +557,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class ObsidianTearLandProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -584,7 +584,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class SporeBlossomFallProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -611,7 +611,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class WaterFallProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -638,7 +638,7 @@ public class DripParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class WaterHangProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 

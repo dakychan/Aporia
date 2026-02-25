@@ -6,10 +6,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import javax.sound.sampled.AudioFormat;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class LoopingAudioStream implements AudioStream {
    private final LoopingAudioStream.AudioStreamProvider provider;
    private AudioStream stream;
@@ -47,12 +47,12 @@ public class LoopingAudioStream implements AudioStream {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface AudioStreamProvider {
       AudioStream create(InputStream var1) throws IOException;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class NoCloseBuffer extends FilterInputStream {
       NoCloseBuffer(InputStream p_120172_) {
          super(p_120172_);

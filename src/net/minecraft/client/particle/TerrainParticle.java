@@ -9,11 +9,11 @@ import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TerrainParticle extends SingleQuadParticle {
    private final SingleQuadParticle.Layer layer;
    private final BlockPos pos;
@@ -112,7 +112,7 @@ public class TerrainParticle extends SingleQuadParticle {
          : null;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class CrumblingProvider implements ParticleProvider<BlockParticleOption> {
       public @Nullable Particle createParticle(
          BlockParticleOption p_429437_,
@@ -135,7 +135,7 @@ public class TerrainParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class DustPillarProvider implements ParticleProvider<BlockParticleOption> {
       public @Nullable Particle createParticle(
          BlockParticleOption p_425026_,
@@ -158,7 +158,7 @@ public class TerrainParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<BlockParticleOption> {
       public @Nullable Particle createParticle(
          BlockParticleOption p_108304_,

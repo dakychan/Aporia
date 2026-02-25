@@ -5,10 +5,10 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class NoteParticle extends SingleQuadParticle {
    NoteParticle(ClientLevel p_107167_, double p_107168_, double p_107169_, double p_107170_, double p_107171_, TextureAtlasSprite p_422471_) {
       super(p_107167_, p_107168_, p_107169_, p_107170_, 0.0, 0.0, 0.0, p_422471_);
@@ -35,7 +35,7 @@ public class NoteParticle extends SingleQuadParticle {
       return this.quadSize * Mth.clamp((this.age + p_107182_) / this.lifetime * 32.0F, 0.0F, 1.0F);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 

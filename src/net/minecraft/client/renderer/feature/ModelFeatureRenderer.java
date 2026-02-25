@@ -20,11 +20,11 @@ import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.resources.model.ModelBakery;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3f;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ModelFeatureRenderer {
    private final PoseStack poseStack = new PoseStack();
 
@@ -119,11 +119,11 @@ public class ModelFeatureRenderer {
       this.poseStack.popPose();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record CrumblingOverlay(int progress, Pose cameraPose) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Storage {
       final Map<RenderType, List<SubmitNodeStorage.ModelSubmit<?>>> opaqueModelSubmits = new HashMap<>();
       final List<SubmitNodeStorage.TranslucentModelSubmit<?>> translucentModelSubmits = new ArrayList<>();

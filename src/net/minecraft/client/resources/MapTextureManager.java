@@ -10,10 +10,10 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class MapTextureManager implements AutoCloseable {
    private final Int2ObjectMap<MapTextureManager.MapInstance> maps = new Int2ObjectOpenHashMap();
    final TextureManager textureManager;
@@ -59,7 +59,7 @@ public class MapTextureManager implements AutoCloseable {
       this.resetData();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class MapInstance implements AutoCloseable {
       private MapItemSavedData data;
       private final DynamicTexture texture;

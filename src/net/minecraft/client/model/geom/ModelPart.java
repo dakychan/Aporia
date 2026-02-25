@@ -15,8 +15,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -24,7 +24,7 @@ import org.joml.Vector3f;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public final class ModelPart {
    public static final float DEFAULT_SCALE = 1.0F;
    public float x;
@@ -228,7 +228,7 @@ public final class ModelPart {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Cube {
       public final ModelPart.Polygon[] polygons;
       public final float minX;
@@ -403,7 +403,7 @@ public final class ModelPart {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Polygon(ModelPart.Vertex[] vertices, Vector3fc normal) {
       public Polygon(
          ModelPart.Vertex[] p_104362_,
@@ -439,7 +439,7 @@ public final class ModelPart {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Vertex(float x, float y, float z, float u, float v) {
       public static final float SCALE_FACTOR = 16.0F;
 
@@ -461,7 +461,7 @@ public final class ModelPart {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Visitor {
       void visit(Pose var1, String var2, int var3, ModelPart.Cube var4);
    }

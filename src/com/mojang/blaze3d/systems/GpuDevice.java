@@ -15,11 +15,11 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.OptionalDouble;
 import java.util.function.Supplier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 @DontObfuscate
 public interface GpuDevice {
    CommandEncoder createCommandEncoder();

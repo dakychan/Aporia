@@ -16,11 +16,11 @@ import net.minecraft.client.resources.model.UnbakedGeometry;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.GsonHelper;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record BlockModel(
    @Nullable UnbakedGeometry geometry,
    UnbakedModel.@Nullable GuiLight guiLight,
@@ -42,7 +42,7 @@ public record BlockModel(
       return GsonHelper.fromJson(GSON, p_111462_, BlockModel.class);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Deserializer implements JsonDeserializer<BlockModel> {
       public BlockModel deserialize(JsonElement p_111498_, Type p_111499_, JsonDeserializationContext p_111500_) throws JsonParseException {
          JsonObject jsonobject = p_111498_.getAsJsonObject();

@@ -7,12 +7,12 @@ import java.util.Map;
 import net.minecraft.core.BlockMath;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public class BlockModelRotation implements ModelState {
    private static final Map<OctahedralGroup, BlockModelRotation> BY_GROUP_ORDINAL = Util.makeEnumMap(OctahedralGroup.class, BlockModelRotation::new);
    public static final BlockModelRotation IDENTITY = get(OctahedralGroup.IDENTITY);
@@ -55,7 +55,7 @@ public class BlockModelRotation implements ModelState {
       return "simple[" + this.orientation.getSerializedName() + "]";
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record WithUvLock(BlockModelRotation parent) implements ModelState {
       @Override
       public Transformation transformation() {

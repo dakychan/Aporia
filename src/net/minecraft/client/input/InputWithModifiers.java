@@ -5,10 +5,10 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public interface InputWithModifiers {
    int NOT_DIGIT = -1;
 
@@ -89,7 +89,7 @@ public interface InputWithModifiers {
 
    @Retention(RetentionPolicy.CLASS)
    @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD, ElementType.TYPE_USE})
-   @OnlyIn(Dist.CLIENT)
+   
    public @interface Modifiers {
    }
 }

@@ -13,10 +13,10 @@ import net.minecraft.client.gui.screens.social.PlayerEntry;
 import net.minecraft.client.multiplayer.chat.report.ReportingContext;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ReportPlayerScreen extends Screen {
    private static final Component TITLE = Component.translatable("gui.abuseReport.title");
    private static final Component MESSAGE = Component.translatable("gui.abuseReport.message");

@@ -10,11 +10,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class SystemToast implements Toast {
    private static final Identifier BACKGROUND_SPRITE = Identifier.withDefaultNamespace("toast/system");
    private static final int MAX_LINE_SIZE = 200;
@@ -189,7 +189,7 @@ public class SystemToast implements Toast {
       );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class SystemToastId {
       public static final SystemToast.SystemToastId NARRATOR_TOGGLE = new SystemToast.SystemToastId();
       public static final SystemToast.SystemToastId WORLD_BACKUP = new SystemToast.SystemToastId();

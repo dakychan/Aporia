@@ -23,11 +23,11 @@ import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class AbstractWidget implements Renderable, GuiEventListener, LayoutElement, NarratableEntry {
    protected int width;
    protected int height;
@@ -310,7 +310,7 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, La
       this.tabOrderGroup = p_268123_;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public abstract static class WithInactiveMessage extends AbstractWidget {
       private Component inactiveMessage;
 

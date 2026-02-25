@@ -27,11 +27,11 @@ import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 class RealmsPlayersTab extends GridLayoutTab implements RealmsConfigurationTab {
    static final Logger LOGGER = LogUtils.getLogger();
    static final Component TITLE = Component.translatable("mco.configure.world.players.title");
@@ -79,11 +79,11 @@ class RealmsPlayersTab extends GridLayoutTab implements RealmsConfigurationTab {
       this.invitedList.updateList(p_408665_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    abstract static class Entry extends net.minecraft.client.gui.components.ContainerObjectSelectionList.Entry<RealmsPlayersTab.Entry> {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class HeaderEntry extends RealmsPlayersTab.Entry {
       private String cachedNumberOfInvites = "";
       private final FocusableTextWidget invitedWidget;
@@ -125,7 +125,7 @@ class RealmsPlayersTab extends GridLayoutTab implements RealmsConfigurationTab {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class InvitedObjectSelectionList extends ContainerObjectSelectionList<RealmsPlayersTab.Entry> {
       private static final int PLAYER_ENTRY_HEIGHT = 36;
 
@@ -161,7 +161,7 @@ class RealmsPlayersTab extends GridLayoutTab implements RealmsConfigurationTab {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class PlayerEntry extends RealmsPlayersTab.Entry {
       protected static final int SKIN_FACE_SIZE = 32;
       private static final Component NORMAL_USER_TEXT = Component.translatable("mco.configure.world.invites.normal.tooltip");

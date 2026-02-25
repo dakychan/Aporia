@@ -7,10 +7,10 @@ import net.minecraft.client.renderer.entity.layers.BreezeWindLayer;
 import net.minecraft.client.renderer.entity.state.BreezeRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.monster.breeze.Breeze;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class BreezeRenderer extends MobRenderer<Breeze, BreezeRenderState, BreezeModel> {
    private static final Identifier TEXTURE_LOCATION = Identifier.withDefaultNamespace("textures/entity/breeze/breeze.png");
 

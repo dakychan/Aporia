@@ -18,11 +18,11 @@ import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public record Unstitcher(Identifier resource, List<Unstitcher.Region> regions, double xDivisor, double yDivisor) implements SpriteSource {
    static final Logger LOGGER = LogUtils.getLogger();
    public static final MapCodec<Unstitcher> MAP_CODEC = RecordCodecBuilder.mapCodec(
@@ -55,7 +55,7 @@ public record Unstitcher(Identifier resource, List<Unstitcher.Region> regions, d
       return MAP_CODEC;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Region(Identifier sprite, double x, double y, double width, double height) {
       public static final Codec<Unstitcher.Region> CODEC = RecordCodecBuilder.create(
          p_448421_ -> p_448421_.group(
@@ -69,7 +69,7 @@ public record Unstitcher(Identifier resource, List<Unstitcher.Region> regions, d
       );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class RegionInstance implements SpriteSource.DiscardableLoader {
       private final LazyLoadedImage image;
       private final Unstitcher.Region region;

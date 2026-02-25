@@ -3,8 +3,8 @@ package com.mojang.blaze3d.buffers;
 import com.mojang.blaze3d.DontObfuscate;
 import java.nio.ByteBuffer;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4fc;
 import org.joml.Vector2fc;
 import org.joml.Vector2ic;
@@ -14,7 +14,7 @@ import org.joml.Vector4fc;
 import org.joml.Vector4ic;
 import org.lwjgl.system.MemoryStack;
 
-@OnlyIn(Dist.CLIENT)
+
 @DontObfuscate
 public class Std140Builder {
    private final ByteBuffer buffer;

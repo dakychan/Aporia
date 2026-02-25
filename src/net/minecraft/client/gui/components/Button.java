@@ -6,11 +6,11 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class Button extends AbstractButton {
    public static final int SMALL_WIDTH = 120;
    public static final int DEFAULT_WIDTH = 150;
@@ -46,7 +46,7 @@ public abstract class Button extends AbstractButton {
       this.defaultButtonNarrationText(p_259196_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder {
       private final Component message;
       private final Button.OnPress onPress;
@@ -100,17 +100,17 @@ public abstract class Button extends AbstractButton {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface CreateNarration {
       MutableComponent createNarrationMessage(Supplier<MutableComponent> var1);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface OnPress {
       void onPress(Button var1);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Plain extends Button {
       protected Plain(
          int p_455297_, int p_455388_, int p_459653_, int p_452847_, Component p_459347_, Button.OnPress p_453378_, Button.CreateNarration p_456163_

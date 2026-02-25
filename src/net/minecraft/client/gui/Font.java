@@ -26,12 +26,12 @@ import net.minecraft.util.FormattedCharSink;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringDecomposer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class Font {
    private static final float EFFECT_DEPTH = 0.01F;
    private static final float OVER_EFFECT_DEPTH = 0.01F;
@@ -225,14 +225,14 @@ public class Font {
       return this.splitter;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum DisplayMode {
       NORMAL,
       SEE_THROUGH,
       POLYGON_OFFSET;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface GlyphVisitor {
       static Font.GlyphVisitor forMultiBufferSource(
          final MultiBufferSource p_409617_, final Matrix4f p_408497_, final Font.DisplayMode p_409313_, final int p_408611_
@@ -265,14 +265,14 @@ public class Font {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface PreparedText {
       void visit(Font.GlyphVisitor var1);
 
       @Nullable ScreenRectangle bounds();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class PreparedTextBuilder implements FormattedCharSink, Font.PreparedText {
       private final boolean drawShadow;
       private final int color;
@@ -445,7 +445,7 @@ public class Font {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Provider {
       GlyphSource glyphs(FontDescription var1);
 

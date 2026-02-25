@@ -2,11 +2,11 @@ package net.minecraft.client.renderer.chunk;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.vertex.VertexFormat.IndexType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public final class SectionBuffers implements AutoCloseable {
    private GpuBuffer vertexBuffer;
    private @Nullable GpuBuffer indexBuffer;

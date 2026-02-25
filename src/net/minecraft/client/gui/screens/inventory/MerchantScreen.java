@@ -16,10 +16,10 @@ import net.minecraft.world.inventory.MerchantMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class MerchantScreen extends AbstractContainerScreen<MerchantMenu> {
    private static final Identifier OUT_OF_STOCK_SPRITE = Identifier.withDefaultNamespace("container/villager/out_of_stock");
    private static final Identifier EXPERIENCE_BAR_BACKGROUND_SPRITE = Identifier.withDefaultNamespace("container/villager/experience_bar_background");
@@ -296,7 +296,7 @@ public class MerchantScreen extends AbstractContainerScreen<MerchantMenu> {
       return super.mouseReleased(p_452907_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class TradeOfferButton extends Button.Plain {
       final int index;
 

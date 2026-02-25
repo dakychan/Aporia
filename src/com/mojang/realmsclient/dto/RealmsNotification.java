@@ -19,12 +19,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.LenientJsonParser;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsNotification {
    static final Logger LOGGER = LogUtils.getLogger();
    private static final String NOTIFICATION_UUID = "notificationUuid";
@@ -90,7 +90,7 @@ public class RealmsNotification {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class InfoPopup extends RealmsNotification {
       private static final String TITLE = "title";
       private static final String MESSAGE = "message";
@@ -153,7 +153,7 @@ public class RealmsNotification {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record UrlButton(String url, RealmsText urlText) {
       private static final String URL = "url";
       private static final String URL_TEXT = "urlText";
@@ -165,7 +165,7 @@ public class RealmsNotification {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class VisitUrl extends RealmsNotification {
       private static final String URL = "url";
       private static final String BUTTON_TEXT = "buttonText";

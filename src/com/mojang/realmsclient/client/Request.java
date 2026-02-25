@@ -11,11 +11,11 @@ import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class Request<T extends Request<T>> {
    protected HttpURLConnection connection;
    private boolean connected;
@@ -203,7 +203,7 @@ public abstract class Request<T extends Request<T>> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Delete extends Request<Request.Delete> {
       public Delete(String p_87359_, int p_87360_, int p_87361_) {
          super(p_87359_, p_87360_, p_87361_);
@@ -221,7 +221,7 @@ public abstract class Request<T extends Request<T>> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Get extends Request<Request.Get> {
       public Get(String p_87365_, int p_87366_, int p_87367_) {
          super(p_87365_, p_87366_, p_87367_);
@@ -240,7 +240,7 @@ public abstract class Request<T extends Request<T>> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Post extends Request<Request.Post> {
       private final String content;
 
@@ -271,7 +271,7 @@ public abstract class Request<T extends Request<T>> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Put extends Request<Request.Put> {
       private final String content;
 

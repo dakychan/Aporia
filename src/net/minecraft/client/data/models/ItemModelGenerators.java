@@ -48,10 +48,10 @@ import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.item.equipment.trim.MaterialAssetGroup;
 import net.minecraft.world.item.equipment.trim.TrimMaterial;
 import net.minecraft.world.item.equipment.trim.TrimMaterials;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ItemModelGenerators {
    private static final ItemTintSource BLANK_LAYER = ItemModelUtils.constantTint(-1);
    public static final Identifier TRIM_PREFIX_HELMET = prefixForSlotTrim("helmet");
@@ -917,7 +917,7 @@ public class ItemModelGenerators {
       this.declareCustomModelItem(Items.LEAD);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record TrimMaterialData(MaterialAssetGroup assets, ResourceKey<TrimMaterial> materialKey) {
    }
 }

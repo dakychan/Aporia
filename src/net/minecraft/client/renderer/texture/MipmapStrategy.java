@@ -2,10 +2,10 @@ package net.minecraft.client.renderer.texture;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public enum MipmapStrategy implements StringRepresentable {
    AUTO("auto"),
    MEAN("mean"),

@@ -10,11 +10,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.SequencedMap;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface MultiBufferSource {
    static MultiBufferSource.BufferSource immediate(ByteBufferBuilder p_344614_) {
       return immediateWithBuffers(Object2ObjectSortedMaps.emptyMap(), p_344614_);
@@ -26,7 +26,7 @@ public interface MultiBufferSource {
 
    VertexConsumer getBuffer(RenderType var1);
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class BufferSource implements MultiBufferSource {
       protected final ByteBufferBuilder sharedBuffer;
       protected final SequencedMap<RenderType, ByteBufferBuilder> fixedBuffers;

@@ -21,13 +21,13 @@ import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerData.Type;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsServer extends ValueObject implements ReflectionBasedSerialization {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final int NO_VALUE = -1;
@@ -287,7 +287,7 @@ public class RealmsServer extends ValueObject implements ReflectionBasedSerializ
       return new ServerData(Objects.requireNonNullElse(this.name, "unknown server"), p_87523_, Type.REALM);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Compatibility {
       UNVERIFIABLE,
       INCOMPATIBLE,
@@ -309,7 +309,7 @@ public class RealmsServer extends ValueObject implements ReflectionBasedSerializ
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class McoServerComparator implements Comparator<RealmsServer> {
       private final String refOwner;
 
@@ -330,14 +330,14 @@ public class RealmsServer extends ValueObject implements ReflectionBasedSerializ
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum State {
       CLOSED,
       OPEN,
       UNINITIALIZED;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum WorldType {
       NORMAL("normal"),
       MINIGAME("minigame"),

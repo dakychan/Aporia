@@ -19,12 +19,12 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.realms.RealmsScreen;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsDownloadLatestWorldScreen extends RealmsScreen {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final ReentrantLock DOWNLOAD_LOCK = new ReentrantLock();
@@ -264,7 +264,7 @@ public class RealmsDownloadLatestWorldScreen extends RealmsScreen {
       this.status = Component.translatable("mco.download.cancelled");
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class DownloadStatus {
       public volatile long bytesWritten;
       public volatile long totalBytes;

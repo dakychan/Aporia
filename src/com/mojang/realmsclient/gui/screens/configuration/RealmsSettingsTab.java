@@ -24,11 +24,11 @@ import net.minecraft.client.gui.layouts.GridLayout.RowHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsSettingsTab extends GridLayoutTab implements RealmsConfigurationTab {
    private static final int COMPONENT_WIDTH = 212;
    private static final int EXTRA_SPACING = 2;
@@ -202,7 +202,7 @@ public class RealmsSettingsTab extends GridLayoutTab implements RealmsConfigurat
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record RegionSelection(RegionSelectionPreference preference, @Nullable RealmsRegion region) {
    }
 }

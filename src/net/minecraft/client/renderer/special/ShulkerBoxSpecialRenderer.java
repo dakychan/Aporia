@@ -13,11 +13,11 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ShulkerBoxSpecialRenderer implements NoDataSpecialModelRenderer {
    private final ShulkerBoxRenderer shulkerBoxRenderer;
    private final float openness;
@@ -43,7 +43,7 @@ public class ShulkerBoxSpecialRenderer implements NoDataSpecialModelRenderer {
       this.shulkerBoxRenderer.getExtents(this.orientation, this.openness, p_457929_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked(Identifier texture, float openness, Direction orientation) implements SpecialModelRenderer.Unbaked {
       public static final MapCodec<ShulkerBoxSpecialRenderer.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
          p_448370_ -> p_448370_.group(

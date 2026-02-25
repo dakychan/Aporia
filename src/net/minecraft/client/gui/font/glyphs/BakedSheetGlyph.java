@@ -9,11 +9,11 @@ import net.minecraft.client.gui.font.GlyphRenderTypes;
 import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.network.chat.Style;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 
-@OnlyIn(Dist.CLIENT)
+
 public class BakedSheetGlyph implements BakedGlyph, EffectGlyph {
    public static final float Z_FIGHTER = 0.001F;
    final GlyphInfo info;
@@ -190,7 +190,7 @@ public class BakedSheetGlyph implements BakedGlyph, EffectGlyph {
       return new BakedSheetGlyph.EffectInstance(this, p_427340_, p_423280_, p_424457_, p_427022_, p_424759_, p_429013_, p_427342_, p_425149_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record EffectInstance(BakedSheetGlyph glyph, float x0, float y0, float x1, float y1, float depth, int color, int shadowColor, float shadowOffset)
       implements TextRenderable {
       @Override
@@ -238,7 +238,7 @@ public class BakedSheetGlyph implements BakedGlyph, EffectGlyph {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record GlyphInstance(float x, float y, int color, int shadowColor, BakedSheetGlyph glyph, Style style, float boldOffset, float shadowOffset)
       implements TextRenderable.Styled {
       @Override

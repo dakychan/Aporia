@@ -27,12 +27,12 @@ import net.minecraft.server.Services;
 import net.minecraft.util.Util;
 import net.minecraft.world.entity.player.PlayerModelType;
 import net.minecraft.world.entity.player.PlayerSkin;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class SkinManager {
    static final Logger LOGGER = LogUtils.getLogger();
    private final Services services;
@@ -138,11 +138,11 @@ public class SkinManager {
          );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record CacheKey(UUID profileId, @Nullable Property packedTextures) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class TextureCache {
       private final Path root;
       private final Type type;

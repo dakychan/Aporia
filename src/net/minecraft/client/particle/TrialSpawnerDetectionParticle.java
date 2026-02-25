@@ -4,10 +4,10 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class TrialSpawnerDetectionParticle extends SingleQuadParticle {
    private final SpriteSet sprites;
    private static final int BASE_LIFETIME = 8;
@@ -67,7 +67,7 @@ public class TrialSpawnerDetectionParticle extends SingleQuadParticle {
       return this.quadSize * Mth.clamp((this.age + p_313241_) / this.lifetime * 32.0F, 0.0F, 1.0F);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprites;
 

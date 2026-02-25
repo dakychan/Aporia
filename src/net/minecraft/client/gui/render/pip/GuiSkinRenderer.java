@@ -9,11 +9,11 @@ import net.minecraft.client.gui.render.state.pip.GuiSkinRenderState;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4fStack;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GuiSkinRenderer extends PictureInPictureRenderer<GuiSkinRenderState> {
    public GuiSkinRenderer(MultiBufferSource.BufferSource p_406595_) {
       super(p_406595_);

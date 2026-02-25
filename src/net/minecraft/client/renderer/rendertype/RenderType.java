@@ -19,13 +19,13 @@ import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4fStack;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RenderType {
    private static final int MEGABYTE = 1048576;
    public static final int BIG_BUFFER_SIZE = 4194304;

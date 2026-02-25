@@ -14,11 +14,11 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.ArrayUtils;
 
-@OnlyIn(Dist.CLIENT)
+
 public class KeyBindsList extends ContainerObjectSelectionList<KeyBindsList.Entry> {
    private static final int ITEM_HEIGHT = 20;
    final KeyBindsScreen keyBindsScreen;
@@ -62,7 +62,7 @@ public class KeyBindsList extends ContainerObjectSelectionList<KeyBindsList.Entr
       return 340;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class CategoryEntry extends KeyBindsList.Entry {
       private final FocusableTextWidget categoryName;
 
@@ -94,12 +94,12 @@ public class KeyBindsList extends ContainerObjectSelectionList<KeyBindsList.Entr
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public abstract static class Entry extends ContainerObjectSelectionList.Entry<KeyBindsList.Entry> {
       abstract void refreshEntry();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class KeyEntry extends KeyBindsList.Entry {
       private static final Component RESET_BUTTON_TITLE = Component.translatable("controls.reset");
       private static final int PADDING = 10;

@@ -11,11 +11,11 @@ import java.nio.ByteBuffer;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.function.Supplier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 @DontObfuscate
 public interface CommandEncoder {
    RenderPass createRenderPass(Supplier<String> var1, GpuTextureView var2, OptionalInt var3);

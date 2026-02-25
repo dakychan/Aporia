@@ -1,10 +1,10 @@
 package net.minecraft.client;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector2i;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ScrollWheelHandler {
    private double accumulatedScrollX;
    private double accumulatedScrollY;

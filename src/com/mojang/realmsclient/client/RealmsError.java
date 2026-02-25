@@ -9,12 +9,12 @@ import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.util.LenientJsonParser;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface RealmsError {
    Component NO_MESSAGE = Component.translatable("mco.errorMessage.noDetails");
    Logger LOGGER = LogUtils.getLogger();
@@ -47,7 +47,7 @@ public interface RealmsError {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record AuthenticationError(String message) implements RealmsError {
       public static final int ERROR_CODE = 401;
 
@@ -67,7 +67,7 @@ public interface RealmsError {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record CustomError(int httpCode, @Nullable Component payload) implements RealmsError {
       public static final RealmsError.CustomError SERVICE_BUSY = new RealmsError.CustomError(429, Component.translatable("mco.errorMessage.serviceBusy"));
       public static final Component RETRY_MESSAGE = Component.translatable("mco.errorMessage.retry");
@@ -123,7 +123,7 @@ public interface RealmsError {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record ErrorWithJsonPayload(int httpCode, int code, @Nullable String reason, @Nullable String message) implements RealmsError {
       @Override
       public int errorCode() {
@@ -153,7 +153,7 @@ public interface RealmsError {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record ErrorWithRawPayload(int httpCode, String payload) implements RealmsError {
       @Override
       public int errorCode() {

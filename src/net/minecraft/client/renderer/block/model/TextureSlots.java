@@ -19,12 +19,12 @@ import net.minecraft.client.resources.model.Material;
 import net.minecraft.client.resources.model.ModelDebugName;
 import net.minecraft.client.resources.model.ModelManager;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TextureSlots {
    public static final TextureSlots EMPTY = new TextureSlots(Map.of());
    private static final char REFERENCE_CHAR = '#';
@@ -69,11 +69,11 @@ public class TextureSlots {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Data(Map<String, TextureSlots.SlotContents> values) {
       public static final TextureSlots.Data EMPTY = new TextureSlots.Data(Map.of());
 
-      @OnlyIn(Dist.CLIENT)
+      
       public static class Builder {
          private final Map<String, TextureSlots.SlotContents> textureMap = new HashMap<>();
 
@@ -93,11 +93,11 @@ public class TextureSlots {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Reference(String target) implements TextureSlots.SlotContents {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Resolver {
       private static final Logger LOGGER = LogUtils.getLogger();
       private final List<TextureSlots.Data> entries = new ArrayList<>();
@@ -175,11 +175,11 @@ public class TextureSlots {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public sealed interface SlotContents permits TextureSlots.Value, TextureSlots.Reference {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Value(Material material) implements TextureSlots.SlotContents {
    }
 }

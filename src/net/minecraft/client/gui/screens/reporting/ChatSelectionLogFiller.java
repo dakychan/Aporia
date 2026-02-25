@@ -9,11 +9,11 @@ import net.minecraft.client.multiplayer.chat.report.ReportingContext;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.PlayerChatMessage;
 import net.minecraft.network.chat.SignedMessageLink;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ChatSelectionLogFiller {
    private final ChatLog log;
    private final ChatReportContextBuilder contextBuilder;
@@ -74,7 +74,7 @@ public class ChatSelectionLogFiller {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Output {
       void acceptMessage(int var1, LoggedChatMessage.Player var2);
 

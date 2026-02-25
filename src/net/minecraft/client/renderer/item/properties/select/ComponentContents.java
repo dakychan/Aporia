@@ -10,11 +10,11 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record ComponentContents<T>(DataComponentType<T> componentType) implements SelectItemModelProperty<T> {
    private static final SelectItemModelProperty.Type<? extends ComponentContents<?>, ?> TYPE = createType();
 

@@ -22,11 +22,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.metadata.MetadataSectionType;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class AtlasManager implements PreparableReloadListener, MaterialSet, AutoCloseable {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final List<AtlasManager.AtlasConfig> KNOWN_ATLASES = List.of(
@@ -159,14 +159,14 @@ public class AtlasManager implements PreparableReloadListener, MaterialSet, Auto
          );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record AtlasConfig(Identifier textureId, Identifier definitionLocation, boolean createMipmaps, Set<MetadataSectionType<?>> additionalMetadata) {
       public AtlasConfig(Identifier p_459311_, Identifier p_453131_, boolean p_423864_) {
          this(p_459311_, p_453131_, p_423864_, Set.of());
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record AtlasEntry(TextureAtlas atlas, AtlasManager.AtlasConfig config) implements AutoCloseable {
       @Override
       public void close() {
@@ -179,7 +179,7 @@ public class AtlasManager implements PreparableReloadListener, MaterialSet, Auto
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record PendingStitch(AtlasManager.AtlasEntry entry, CompletableFuture<SpriteLoader.Preparations> preparations) {
       public void joinAndUpload(Map<Material, TextureAtlasSprite> p_428167_) {
          SpriteLoader.Preparations spriteloader$preparations = this.preparations.join();
@@ -188,7 +188,7 @@ public class AtlasManager implements PreparableReloadListener, MaterialSet, Auto
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class PendingStitchResults {
       final List<AtlasManager.PendingStitch> pendingStitches;
       private final Map<Identifier, CompletableFuture<SpriteLoader.Preparations>> stitchFuturesById;

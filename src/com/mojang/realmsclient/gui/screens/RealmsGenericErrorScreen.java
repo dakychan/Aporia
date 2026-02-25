@@ -13,10 +13,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.network.chat.Style;
 import net.minecraft.realms.RealmsScreen;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class RealmsGenericErrorScreen extends RealmsScreen {
    private static final Component GENERIC_TITLE = Component.translatable("mco.errorMessage.generic");
    private final Screen nextScreen;
@@ -63,7 +63,7 @@ public class RealmsGenericErrorScreen extends RealmsScreen {
       this.splitDetail.visitLines(TextAlignment.CENTER, this.width / 2, 100, 9, activetextcollector);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record ErrorMessage(Component title, Component detail) {
       static RealmsGenericErrorScreen.ErrorMessage forServiceError(RealmsServiceException p_455496_) {
          RealmsError realmserror = p_455496_.realmsError;

@@ -31,8 +31,8 @@ import net.minecraft.client.renderer.ShaderDefines;
 import net.minecraft.client.renderer.ShaderManager.CompilationException;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -41,7 +41,7 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GLCapabilities;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GlDevice implements GpuDevice {
    private static final Logger LOGGER = LogUtils.getLogger();
    protected static boolean USE_GL_ARB_vertex_attrib_binding = true;
@@ -457,7 +457,7 @@ public class GlDevice implements GpuDevice {
       return this.bufferStorage;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record ShaderCompilationKey(Identifier id, ShaderType type, ShaderDefines defines) {
       @Override
       public String toString() {

@@ -1,10 +1,10 @@
 package com.mojang.blaze3d.buffers;
 
 import com.mojang.blaze3d.DontObfuscate;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 @DontObfuscate
 public record GpuBufferSlice(GpuBuffer buffer, long offset, long length) {
    public GpuBufferSlice slice(long p_457630_, long p_451935_) {

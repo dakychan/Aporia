@@ -2,10 +2,10 @@ package net.minecraft.client.renderer.item;
 
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class TrackingItemStackRenderState extends ItemStackRenderState {
    private final List<Object> modelIdentityElements = new ArrayList<>();
 

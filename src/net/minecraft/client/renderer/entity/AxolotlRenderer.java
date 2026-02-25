@@ -9,10 +9,10 @@ import net.minecraft.client.renderer.entity.state.AxolotlRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.world.entity.animal.axolotl.Axolotl;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class AxolotlRenderer extends AgeableMobRenderer<Axolotl, AxolotlRenderState, AxolotlModel> {
    private static final Map<Axolotl.Variant, Identifier> TEXTURE_BY_TYPE = Util.make(
       Maps.newHashMap(),

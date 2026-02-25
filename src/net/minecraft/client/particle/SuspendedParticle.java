@@ -7,10 +7,10 @@ import net.minecraft.core.particles.ParticleLimit;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SuspendedParticle extends SingleQuadParticle {
    SuspendedParticle(ClientLevel p_172409_, double p_172411_, double p_172412_, double p_172413_, TextureAtlasSprite p_428743_) {
       super(p_172409_, p_172411_, p_172412_ - 0.125, p_172413_, p_428743_);
@@ -46,7 +46,7 @@ public class SuspendedParticle extends SingleQuadParticle {
       return SingleQuadParticle.Layer.OPAQUE;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class CrimsonSporeProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -74,7 +74,7 @@ public class SuspendedParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class SporeBlossomAirProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -106,7 +106,7 @@ public class SuspendedParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class UnderwaterProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -131,7 +131,7 @@ public class SuspendedParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class WarpedSporeProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 

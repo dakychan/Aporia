@@ -9,10 +9,10 @@ import net.minecraft.world.entity.player.StackedItemContents;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
 import net.minecraft.world.item.crafting.display.RecipeDisplayEntry;
 import net.minecraft.world.item.crafting.display.RecipeDisplayId;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class RecipeCollection {
    public static final RecipeCollection EMPTY = new RecipeCollection(List.of());
    private final List<RecipeDisplayEntry> entries;
@@ -73,7 +73,7 @@ public class RecipeCollection {
       return list;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum CraftableStatus {
       ANY,
       CRAFTABLE,

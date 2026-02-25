@@ -34,12 +34,12 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ParticleResources implements PreparableReloadListener {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final FileToIdConverter PARTICLE_LISTER = FileToIdConverter.json("particles");
@@ -189,7 +189,7 @@ public class ParticleResources implements PreparableReloadListener {
    ) {
       ResourceManager resourcemanager = p_422482_.resourceManager();
 
-      @OnlyIn(Dist.CLIENT)
+      
       record ParticleDefinition(Identifier id, Optional<List<Identifier>> sprites) {
       }
 
@@ -269,7 +269,7 @@ public class ParticleResources implements PreparableReloadListener {
       return this.providers;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class MutableSpriteSet implements SpriteSet {
       private List<TextureAtlasSprite> sprites;
 
@@ -294,7 +294,7 @@ public class ParticleResources implements PreparableReloadListener {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    interface SpriteParticleRegistration<T extends ParticleOptions> {
       ParticleProvider<T> create(SpriteSet var1);
    }

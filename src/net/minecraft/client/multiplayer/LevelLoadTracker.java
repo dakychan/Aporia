@@ -12,12 +12,12 @@ import net.minecraft.server.level.progress.LevelLoadProgressTracker;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class LevelLoadTracker implements LevelLoadListener {
    static final Logger LOGGER = LogUtils.getLogger();
    private static final long CLIENT_WAIT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(30L);
@@ -102,11 +102,11 @@ public class LevelLoadTracker implements LevelLoadListener {
       return this.serverStage != null;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record ClientLevelReady(long readyAt) implements LevelLoadTracker.ClientState {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    sealed interface ClientState permits LevelLoadTracker.WaitingForServer, LevelLoadTracker.WaitingForPlayerChunk, LevelLoadTracker.ClientLevelReady {
       default LevelLoadTracker.ClientState tick() {
          return this;
@@ -117,7 +117,7 @@ public class LevelLoadTracker implements LevelLoadListener {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record WaitingForPlayerChunk(LocalPlayer player, ClientLevel level, LevelRenderer levelRenderer, long timeoutAfter) implements LevelLoadTracker.ClientState {
       @Override
       public LevelLoadTracker.ClientState tick() {
@@ -137,7 +137,7 @@ public class LevelLoadTracker implements LevelLoadListener {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record WaitingForServer(LocalPlayer player, ClientLevel level, LevelRenderer levelRenderer, long timeoutAfter) implements LevelLoadTracker.ClientState {
       @Override
       public LevelLoadTracker.ClientState loadingPacketsReceived() {

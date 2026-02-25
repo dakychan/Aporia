@@ -7,10 +7,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.util.TimeUtil;
 import net.minecraft.util.debugchart.SampleStorage;
 import net.minecraft.util.debugchart.TpsDebugDimensions;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class TpsDebugChart extends AbstractDebugChart {
    private static final int TICK_METHOD_COLOR = -6745839;
    private static final int TASK_COLOR = -4548257;

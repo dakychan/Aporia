@@ -11,11 +11,11 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class Checkbox extends AbstractButton {
    private static final Identifier CHECKBOX_SELECTED_HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("widget/checkbox_selected_highlighted");
    private static final Identifier CHECKBOX_SELECTED_SPRITE = Identifier.withDefaultNamespace("widget/checkbox_selected");
@@ -110,7 +110,7 @@ public class Checkbox extends AbstractButton {
       this.textWidget.visitLines(p_283124_.textRendererForWidget(this, GuiGraphics.HoveredTextEffects.notClickable(this.isHovered())));
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder {
       private final Component message;
       private final Font font;
@@ -172,7 +172,7 @@ public class Checkbox extends AbstractButton {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface OnValueChange {
       Checkbox.OnValueChange NOP = (p_310417_, p_311975_) -> {};
 

@@ -22,11 +22,11 @@ import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class WorldCreationUiState {
    private static final Component DEFAULT_WORLD_NAME = Component.translatable("selectWorld.newWorld");
    private final List<Consumer<WorldCreationUiState>> listeners = new ArrayList<>();
@@ -281,7 +281,7 @@ public class WorldCreationUiState {
       return this.gameRules;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum SelectedGameMode {
       SURVIVAL("survival", GameType.SURVIVAL),
       HARDCORE("hardcore", GameType.SURVIVAL),
@@ -303,7 +303,7 @@ public class WorldCreationUiState {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record WorldTypeEntry(@Nullable Holder<WorldPreset> preset) {
       private static final Component CUSTOM_WORLD_DESCRIPTION = Component.translatable("generator.custom");
 

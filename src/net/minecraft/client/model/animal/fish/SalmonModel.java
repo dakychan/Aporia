@@ -10,10 +10,10 @@ import net.minecraft.client.model.geom.builders.MeshTransformer;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.SalmonRenderState;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SalmonModel extends EntityModel<SalmonRenderState> {
    public static final MeshTransformer SMALL_TRANSFORMER = MeshTransformer.scaling(0.5F);
    public static final MeshTransformer LARGE_TRANSFORMER = MeshTransformer.scaling(1.5F);

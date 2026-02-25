@@ -11,11 +11,11 @@ import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.OptionsSubScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class OptionsList extends ContainerObjectSelectionList<OptionsList.AbstractEntry> {
    private static final int BIG_BUTTON_WIDTH = 310;
    private static final int DEFAULT_ITEM_HEIGHT = 25;
@@ -103,11 +103,11 @@ public class OptionsList extends ContainerObjectSelectionList<OptionsList.Abstra
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    protected abstract static class AbstractEntry extends ContainerObjectSelectionList.Entry<OptionsList.AbstractEntry> {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    protected static class Entry extends OptionsList.AbstractEntry {
       final List<OptionsList.OptionInstanceWidget> children;
       private final Screen screen;
@@ -182,7 +182,7 @@ public class OptionsList extends ContainerObjectSelectionList<OptionsList.Abstra
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    protected static class HeaderEntry extends OptionsList.AbstractEntry {
       private final Screen screen;
       private final int paddingTop;
@@ -211,7 +211,7 @@ public class OptionsList extends ContainerObjectSelectionList<OptionsList.Abstra
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record OptionInstanceWidget(AbstractWidget widget, @Nullable OptionInstance<?> optionInstance) {
       public OptionInstanceWidget(AbstractWidget p_459261_) {
          this(p_459261_, null);

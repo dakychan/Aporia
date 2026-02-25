@@ -16,10 +16,10 @@ import net.minecraft.world.level.block.CopperGolemStatueBlock;
 import net.minecraft.world.level.block.SkullBlock;
 import net.minecraft.world.level.block.WeatheringCopper;
 import net.minecraft.world.level.block.state.properties.WoodType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SpecialModelRenderers {
    private static final ExtraCodecs.LateBoundIdMapper<Identifier, MapCodec<? extends SpecialModelRenderer.Unbaked>> ID_MAPPER = new ExtraCodecs.LateBoundIdMapper<>();
    public static final Codec<SpecialModelRenderer.Unbaked> CODEC = ID_MAPPER.codec(Identifier.CODEC)

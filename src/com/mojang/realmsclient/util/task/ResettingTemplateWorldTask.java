@@ -4,10 +4,10 @@ import com.mojang.realmsclient.client.RealmsClient;
 import com.mojang.realmsclient.dto.WorldTemplate;
 import com.mojang.realmsclient.exception.RealmsServiceException;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ResettingTemplateWorldTask extends ResettingWorldTask {
    private final WorldTemplate template;
 

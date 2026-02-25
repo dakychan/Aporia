@@ -1,10 +1,10 @@
 package com.mojang.realmsclient.client;
 
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class UploadStatus {
    private volatile long bytesWritten;
    private volatile long totalBytes;

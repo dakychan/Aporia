@@ -1,11 +1,11 @@
 package com.mojang.blaze3d.platform.cursor;
 
 import com.mojang.blaze3d.platform.Window;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.lwjgl.glfw.GLFW;
 
-@OnlyIn(Dist.CLIENT)
+
 public class CursorType {
    public static final CursorType DEFAULT = new CursorType("default", 0L);
    private final String name;

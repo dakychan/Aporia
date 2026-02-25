@@ -18,11 +18,11 @@ import net.minecraft.client.resources.SkinManager;
 import net.minecraft.server.players.ProfileResolver;
 import net.minecraft.world.entity.player.PlayerSkin;
 import net.minecraft.world.item.component.ResolvableProfile;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class PlayerSkinRenderCache {
    public static final RenderType DEFAULT_PLAYER_SKIN_RENDER_TYPE = playerSkinRenderType(DefaultPlayerSkin.getDefaultSkin());
    public static final Duration CACHE_DURATION = Duration.ofMinutes(5L);
@@ -88,7 +88,7 @@ public class PlayerSkinRenderCache {
       return SkullBlockRenderer.getPlayerSkinRenderType(p_427081_.body().texturePath());
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public final class RenderInfo {
       private final GameProfile gameProfile;
       private final PlayerSkin playerSkin;

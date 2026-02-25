@@ -5,11 +5,11 @@ import com.mojang.blaze3d.font.UnbakedGlyph;
 import com.mojang.blaze3d.font.UnbakedGlyph.Stitcher;
 import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.network.chat.Style;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class EmptyGlyph implements UnbakedGlyph {
    final GlyphInfo info;
 

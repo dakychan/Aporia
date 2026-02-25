@@ -17,11 +17,11 @@ import net.minecraft.util.Util;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class LocalTime implements SelectItemModelProperty<String> {
    public static final String ROOT_LOCALE = "";
    private static final long UPDATE_INTERVAL_MS = TimeUnit.SECONDS.toMillis(1L);
@@ -99,7 +99,7 @@ public class LocalTime implements SelectItemModelProperty<String> {
       return VALUE_CODEC;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Data(String format, String localeId, Optional<TimeZone> timeZone) {
    }
 }

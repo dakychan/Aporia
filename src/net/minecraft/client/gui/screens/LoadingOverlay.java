@@ -23,10 +23,10 @@ import net.minecraft.server.packs.resources.ResourceProvider;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class LoadingOverlay extends Overlay {
    public static final Identifier MOJANG_STUDIOS_LOGO_LOCATION = Identifier.withDefaultNamespace("textures/gui/title/mojangstudios.png");
    private static final int LOGO_BACKGROUND_COLOR = ARGB.color(255, 239, 50, 61);
@@ -164,7 +164,7 @@ public class LoadingOverlay extends Overlay {
       return true;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class LogoTexture extends ReloadableTexture {
       public LogoTexture() {
          super(LoadingOverlay.MOJANG_STUDIOS_LOGO_LOCATION);

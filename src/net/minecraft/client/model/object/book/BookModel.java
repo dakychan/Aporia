@@ -9,10 +9,10 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class BookModel extends Model<BookModel.State> {
    private static final String LEFT_PAGES = "left_pages";
    private static final String RIGHT_PAGES = "right_pages";
@@ -70,7 +70,7 @@ public class BookModel extends Model<BookModel.State> {
       this.flipPage2.x = Mth.sin(f);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record State(float animationPos, float pageFlip1, float pageFlip2, float open) {
    }
 }

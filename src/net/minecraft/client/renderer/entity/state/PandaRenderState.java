@@ -1,10 +1,10 @@
 package net.minecraft.client.renderer.entity.state;
 
 import net.minecraft.world.entity.animal.panda.Panda;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class PandaRenderState extends HoldingEntityRenderState {
    public Panda.Gene variant = Panda.Gene.NORMAL;
    public boolean isUnhappy;

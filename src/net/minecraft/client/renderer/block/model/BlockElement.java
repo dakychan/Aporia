@@ -13,13 +13,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import net.minecraft.core.Direction;
 import net.minecraft.util.GsonHelper;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record BlockElement(
    Vector3fc from, Vector3fc to, Map<Direction, BlockElementFace> faces, @Nullable BlockElementRotation rotation, boolean shade, int lightEmission
 ) {
@@ -31,7 +31,7 @@ public record BlockElement(
       this(p_392948_, p_392099_, p_363694_, null, true, 0);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    protected static class Deserializer implements JsonDeserializer<BlockElement> {
       private static final boolean DEFAULT_SHADE = true;
       private static final int DEFAULT_LIGHT_EMISSION = 0;

@@ -2,12 +2,12 @@ package com.mojang.blaze3d.vertex;
 
 import com.google.common.primitives.Floats;
 import it.unimi.dsi.fastutil.ints.IntArrays;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface VertexSorting {
    VertexSorting DISTANCE_TO_ORIGIN = byDistance(0.0F, 0.0F, 0.0F);
    VertexSorting ORTHOGRAPHIC_Z = byDistance((VertexSorting.DistanceFunction)(p_277433_ -> -p_277433_.z()));
@@ -38,7 +38,7 @@ public interface VertexSorting {
    int[] sort(CompactVectorArray var1);
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface DistanceFunction {
       float apply(Vector3f var1);
    }

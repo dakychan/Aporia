@@ -19,11 +19,11 @@ import net.minecraft.client.resources.language.LanguageInfo;
 import net.minecraft.client.resources.language.LanguageManager;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class LanguageSelectScreen extends OptionsSubScreen {
    private static final Component WARNING_LABEL = Component.translatable("options.languageAccuracyWarning").withColor(-4539718);
    private static final int FOOTER_HEIGHT = 53;
@@ -109,7 +109,7 @@ public class LanguageSelectScreen extends OptionsSubScreen {
       return !(this.lastScreen instanceof AccessibilityOnboardingScreen);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class LanguageSelectionList extends ObjectSelectionList<LanguageSelectScreen.LanguageSelectionList.Entry> {
       public LanguageSelectionList(final Minecraft p_343433_) {
          super(p_343433_, LanguageSelectScreen.this.width, LanguageSelectScreen.this.height - 33 - 53, 33, 18);
@@ -152,7 +152,7 @@ public class LanguageSelectScreen extends OptionsSubScreen {
          return super.getRowWidth() + 50;
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       public class Entry extends ObjectSelectionList.Entry<LanguageSelectScreen.LanguageSelectionList.Entry> {
          final String code;
          private final Component language;

@@ -109,12 +109,12 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.ticks.BlackholeTickAccess;
 import net.minecraft.world.ticks.LevelTickAccess;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel> {
    private static final Logger LOGGER = LogUtils.getLogger();
    public static final Component DEFAULT_QUIT_MESSAGE = Component.translatable("multiplayer.status.quitting");
@@ -1079,7 +1079,7 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
       this.explosionTracker.track(p_429129_, p_428744_, p_431051_, p_431683_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class ClientLevelData implements WritableLevelData {
       private final boolean hardcore;
       private final boolean isFlat;
@@ -1176,7 +1176,7 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    final class EntityCallbacks implements LevelCallback<Entity> {
       public void onCreated(Entity p_171696_) {
       }

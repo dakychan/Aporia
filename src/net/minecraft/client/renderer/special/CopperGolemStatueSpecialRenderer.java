@@ -15,11 +15,11 @@ import net.minecraft.world.entity.animal.golem.CopperGolemOxidationLevels;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.level.block.CopperGolemStatueBlock;
 import net.minecraft.world.level.block.WeatheringCopper;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public class CopperGolemStatueSpecialRenderer implements NoDataSpecialModelRenderer {
    private static final Direction MODEL_STATE = Direction.SOUTH;
    private final CopperGolemStatueModel model;
@@ -53,7 +53,7 @@ public class CopperGolemStatueSpecialRenderer implements NoDataSpecialModelRende
       p_430903_.scale(-1.0F, -1.0F, 1.0F);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked(Identifier texture, CopperGolemStatueBlock.Pose pose) implements SpecialModelRenderer.Unbaked {
       public static final MapCodec<CopperGolemStatueSpecialRenderer.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
          p_448368_ -> p_448368_.group(

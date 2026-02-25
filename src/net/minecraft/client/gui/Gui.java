@@ -73,16 +73,16 @@ import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerScoreEntry;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
-import ru.module.ModuleManager;
-import ru.ui.clickgui.ClickGuiScreen;
-import ru.ui.notify.NotifyRenderer;
+import cc.apr.module.ModuleManager;
+import cc.apr.ui.clickgui.ClickGuiScreen;
+import cc.apr.ui.notify.NotifyRenderer;
 
-@OnlyIn(Dist.CLIENT)
+
 public class Gui {
    private static final Identifier CROSSHAIR_SPRITE = Identifier.withDefaultNamespace("hud/crosshair");
    private static final Identifier CROSSHAIR_ATTACK_INDICATOR_FULL_SPRITE = Identifier.withDefaultNamespace("hud/crosshair_attack_indicator_full");
@@ -672,7 +672,7 @@ public class Gui {
       Scoreboard scoreboard = p_283455_.getScoreboard();
       NumberFormat numberformat = p_283455_.numberFormatOrDefault(StyledFormat.SIDEBAR_DEFAULT);
 
-      @OnlyIn(Dist.CLIENT)
+      
       record DisplayEntry(Component name, Component score, int scoreWidth) {
       }
 
@@ -1317,7 +1317,7 @@ public class Gui {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static enum ContextualInfo {
       EMPTY,
       EXPERIENCE,
@@ -1325,7 +1325,7 @@ public class Gui {
       JUMPABLE_VEHICLE;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static enum HeartType {
       CONTAINER(
          Identifier.withDefaultNamespace("hud/heart/container"),
@@ -1447,7 +1447,7 @@ public class Gui {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface RenderFunction {
       void render(GuiGraphics var1, DeltaTracker var2);
    }

@@ -6,11 +6,11 @@ import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.SampledFloat;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class Sound implements Weighted<Sound> {
    public static final FileToIdConverter SOUND_LISTER = new FileToIdConverter("sounds", ".ogg");
    private final Identifier location;
@@ -95,7 +95,7 @@ public class Sound implements Weighted<Sound> {
       return "Sound[" + this.location + "]";
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Type {
       FILE("file"),
       SOUND_EVENT("event");

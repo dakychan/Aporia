@@ -2,10 +2,10 @@ package com.mojang.blaze3d.buffers;
 
 import com.mojang.blaze3d.DontObfuscate;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 @DontObfuscate
 public class Std140SizeCalculator {
    private int size;

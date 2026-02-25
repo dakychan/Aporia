@@ -23,11 +23,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.CommonLinks;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class SocialInteractionsScreen extends Screen {
    private static final Component TITLE = Component.translatable("gui.socialInteractions.title");
    private static final Identifier BACKGROUND_SPRITE = Identifier.withDefaultNamespace("social_interactions/background");
@@ -292,7 +292,7 @@ public class SocialInteractionsScreen extends Screen {
       this.socialInteractionsPlayerList.removePlayer(p_100780_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Page {
       ALL,
       HIDDEN,

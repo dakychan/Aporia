@@ -2,10 +2,10 @@ package net.minecraft.client.entity;
 
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ClientAvatarState {
    private Vec3 deltaMovementOnPreviousTick = Vec3.ZERO;
    private float walkDist;

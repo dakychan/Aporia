@@ -12,11 +12,11 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class MusicManager {
    private static final int STARTING_DELAY = 100;
    private final RandomSource random = RandomSource.create();
@@ -155,7 +155,7 @@ public class MusicManager {
       this.nextSongDelay = this.gameMusicFrequency.getNextSongDelay(this.minecraft.getSituationalMusic(), this.random);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum MusicFrequency implements StringRepresentable {
       DEFAULT("DEFAULT", "options.music_frequency.default", 20),
       FREQUENT("FREQUENT", "options.music_frequency.frequent", 10),

@@ -10,10 +10,10 @@ import net.minecraft.client.renderer.entity.state.EquineRenderState;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class UndeadHorseRenderer extends AbstractHorseRenderer<AbstractHorse, EquineRenderState, AbstractEquineModel<EquineRenderState>> {
    private final Identifier texture;
 
@@ -50,7 +50,7 @@ public class UndeadHorseRenderer extends AbstractHorseRenderer<AbstractHorse, Eq
       return new EquineRenderState();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Type {
       SKELETON(
          Identifier.withDefaultNamespace("textures/entity/horse/horse_skeleton.png"),

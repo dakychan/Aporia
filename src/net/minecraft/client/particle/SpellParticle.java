@@ -8,10 +8,10 @@ import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.particles.SpellParticleOption;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SpellParticle extends SingleQuadParticle {
    private static final RandomSource RANDOM = RandomSource.create();
    private final SpriteSet sprites;
@@ -71,7 +71,7 @@ public class SpellParticle extends SingleQuadParticle {
          && localplayer.isScoping();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class InstantProvider implements ParticleProvider<SpellParticleOption> {
       private final SpriteSet sprite;
 
@@ -97,7 +97,7 @@ public class SpellParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class MobEffectProvider implements ParticleProvider<ColorParticleOption> {
       private final SpriteSet sprite;
 
@@ -123,7 +123,7 @@ public class SpellParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -146,7 +146,7 @@ public class SpellParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class WitchProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 

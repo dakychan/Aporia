@@ -24,11 +24,11 @@ import net.minecraft.world.item.crafting.display.RecipeDisplayId;
 import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
 import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
 import net.minecraft.world.item.crafting.display.SlotDisplay;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class OverlayRecipeComponent implements Renderable, GuiEventListener {
    private static final Identifier OVERLAY_RECIPE_SPRITE = Identifier.withDefaultNamespace("recipe_book/overlay_recipe");
    private static final int MAX_ROW = 4;
@@ -160,7 +160,7 @@ public class OverlayRecipeComponent implements Renderable, GuiEventListener {
       return false;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class OverlayCraftingRecipeButton extends OverlayRecipeComponent.OverlayRecipeButton {
       private static final Identifier ENABLED_SPRITE = Identifier.withDefaultNamespace("recipe_book/crafting_overlay");
       private static final Identifier HIGHLIGHTED_ENABLED_SPRITE = Identifier.withDefaultNamespace("recipe_book/crafting_overlay_highlighted");
@@ -226,7 +226,7 @@ public class OverlayRecipeComponent implements Renderable, GuiEventListener {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    abstract class OverlayRecipeButton extends AbstractWidget {
       final RecipeDisplayId recipe;
       private final boolean isCraftable;
@@ -274,7 +274,7 @@ public class OverlayRecipeComponent implements Renderable, GuiEventListener {
          }
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       protected record Pos(int x, int y, List<ItemStack> ingredients) {
          public Pos(int x, int y, List<ItemStack> ingredients) {
             if (ingredients.isEmpty()) {
@@ -292,7 +292,7 @@ public class OverlayRecipeComponent implements Renderable, GuiEventListener {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class OverlaySmeltingRecipeButton extends OverlayRecipeComponent.OverlayRecipeButton {
       private static final Identifier ENABLED_SPRITE = Identifier.withDefaultNamespace("recipe_book/furnace_overlay");
       private static final Identifier HIGHLIGHTED_ENABLED_SPRITE = Identifier.withDefaultNamespace("recipe_book/furnace_overlay_highlighted");

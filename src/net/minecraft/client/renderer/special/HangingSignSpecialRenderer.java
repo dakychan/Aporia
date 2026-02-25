@@ -14,11 +14,11 @@ import net.minecraft.client.resources.model.MaterialSet;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.level.block.state.properties.WoodType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public class HangingSignSpecialRenderer implements NoDataSpecialModelRenderer {
    private final MaterialSet materials;
    private final Model.Simple model;
@@ -45,7 +45,7 @@ public class HangingSignSpecialRenderer implements NoDataSpecialModelRenderer {
       this.model.root().getExtentsForGui(posestack, p_455122_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked(WoodType woodType, Optional<Identifier> texture) implements SpecialModelRenderer.Unbaked {
       public static final MapCodec<HangingSignSpecialRenderer.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
          p_448369_ -> p_448369_.group(

@@ -1,10 +1,10 @@
 package com.mojang.realmsclient;
 
 import java.util.Locale;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public enum Unit {
    B,
    KB,

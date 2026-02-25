@@ -5,11 +5,11 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface TextRenderable {
    void render(Matrix4f var1, VertexConsumer var2, int var3, boolean var4);
 
@@ -27,7 +27,7 @@ public interface TextRenderable {
 
    float bottom();
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Styled extends ActiveArea, TextRenderable {
       @Override
       default float activeLeft() {

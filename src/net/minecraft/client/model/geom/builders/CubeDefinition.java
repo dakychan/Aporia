@@ -3,13 +3,13 @@ package net.minecraft.client.model.geom.builders;
 import java.util.Set;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.core.Direction;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public final class CubeDefinition {
    private final @Nullable String comment;
    private final Vector3fc origin;

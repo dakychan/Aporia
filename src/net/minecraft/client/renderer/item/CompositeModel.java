@@ -8,11 +8,11 @@ import net.minecraft.client.resources.model.ResolvableModel;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class CompositeModel implements ItemModel {
    private final List<ItemModel> models;
 
@@ -38,7 +38,7 @@ public class CompositeModel implements ItemModel {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked(List<ItemModel.Unbaked> models) implements ItemModel.Unbaked {
       public static final MapCodec<CompositeModel.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
          p_375773_ -> p_375773_.group(ItemModels.CODEC.listOf().fieldOf("models").forGetter(CompositeModel.Unbaked::models))

@@ -6,10 +6,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public enum FontOption implements StringRepresentable {
    UNIFORM("uniform"),
    JAPANESE_VARIANTS("jp");
@@ -26,7 +26,7 @@ public enum FontOption implements StringRepresentable {
       return this.name;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Filter {
       private final Map<FontOption, Boolean> values;
       public static final Codec<FontOption.Filter> CODEC = Codec.unboundedMap(FontOption.CODEC, Codec.BOOL)

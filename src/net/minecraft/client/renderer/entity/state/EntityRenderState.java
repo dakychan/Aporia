@@ -7,11 +7,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class EntityRenderState {
    public static final int NO_OUTLINE = 0;
    public EntityType<?> entityType;
@@ -44,7 +44,7 @@ public class EntityRenderState {
       p_392281_.setDetail("Entity's Exact location", String.format(Locale.ROOT, "%.2f, %.2f, %.2f", this.x, this.y, this.z));
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class LeashState {
       public Vec3 offset = Vec3.ZERO;
       public Vec3 start = Vec3.ZERO;
@@ -56,7 +56,7 @@ public class EntityRenderState {
       public boolean slack = true;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record ShadowPiece(float relativeX, float relativeY, float relativeZ, VoxelShape shapeBelow, float alpha) {
    }
 }

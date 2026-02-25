@@ -14,10 +14,10 @@ import net.minecraft.data.DataGenerator;
 import net.minecraft.obfuscate.DontObfuscate;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class Main {
    @DontObfuscate
    @net.minecraft.SuppressForbidden(reason = "System.out needed before bootstrap")

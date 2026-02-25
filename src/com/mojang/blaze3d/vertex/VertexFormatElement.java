@@ -4,11 +4,11 @@ import com.mojang.blaze3d.DontObfuscate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 @DontObfuscate
 public record VertexFormatElement(int id, int index, VertexFormatElement.Type type, VertexFormatElement.Usage usage, int count) {
    public static final int MAX_COUNT = 32;
@@ -75,7 +75,7 @@ public record VertexFormatElement(int id, int index, VertexFormatElement.Type ty
       return ELEMENTS.stream().filter(p_447710_ -> (p_344546_ & p_447710_.mask()) != 0);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    @DontObfuscate
    public static enum Type {
       FLOAT(4, "Float"),
@@ -104,7 +104,7 @@ public record VertexFormatElement(int id, int index, VertexFormatElement.Type ty
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    @DontObfuscate
    public static enum Usage {
       POSITION("Position"),

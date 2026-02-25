@@ -12,11 +12,11 @@ import net.minecraft.util.RegistryContextSwapper;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface ItemModel {
    void update(
       ItemStackRenderState var1,
@@ -28,7 +28,7 @@ public interface ItemModel {
       int var7
    );
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record BakingContext(
       ModelBaker blockModelBaker,
       EntityModelSet entityModelSet,
@@ -39,7 +39,7 @@ public interface ItemModel {
    ) implements SpecialModelRenderer.BakingContext {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Unbaked extends ResolvableModel {
       MapCodec<? extends ItemModel.Unbaked> type();
 

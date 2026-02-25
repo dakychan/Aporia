@@ -1,10 +1,10 @@
 package net.minecraft.client.gui.layouts;
 
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public abstract class AbstractLayout implements Layout {
    private int x;
    private int y;
@@ -56,7 +56,7 @@ public abstract class AbstractLayout implements Layout {
       return this.height;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    protected abstract static class AbstractChildWrapper {
       public final LayoutElement child;
       public final LayoutSettings.LayoutSettingsImpl layoutSettings;

@@ -5,10 +5,10 @@ import net.minecraft.client.model.monster.ravager.RavagerModel;
 import net.minecraft.client.renderer.entity.state.RavagerRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.monster.Ravager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class RavagerRenderer extends MobRenderer<Ravager, RavagerRenderState, RavagerModel> {
    private static final Identifier TEXTURE_LOCATION = Identifier.withDefaultNamespace("textures/entity/illager/ravager.png");
 

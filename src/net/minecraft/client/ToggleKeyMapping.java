@@ -2,10 +2,10 @@ package net.minecraft.client;
 
 import com.mojang.blaze3d.platform.InputConstants.Type;
 import java.util.function.BooleanSupplier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ToggleKeyMapping extends KeyMapping {
    private final BooleanSupplier needsToggle;
    private boolean releasedByScreenWhenDown;

@@ -12,11 +12,11 @@ import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.realms.RealmsScreen;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsNotificationsScreen extends RealmsScreen {
    private static final Identifier UNSEEN_NOTIFICATION_SPRITE = Identifier.withDefaultNamespace("icon/unseen_notification");
    private static final Identifier NEWS_SPRITE = Identifier.withDefaultNamespace("icon/news");
@@ -166,7 +166,7 @@ public class RealmsNotificationsScreen extends RealmsScreen {
       });
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    interface DataFetcherConfiguration {
       DataFetcher.Subscription initDataFetcher(RealmsDataFetcher var1);
 

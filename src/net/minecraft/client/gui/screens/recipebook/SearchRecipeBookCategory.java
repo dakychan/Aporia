@@ -4,10 +4,10 @@ import java.util.List;
 import net.minecraft.world.item.crafting.ExtendedRecipeBookCategory;
 import net.minecraft.world.item.crafting.RecipeBookCategories;
 import net.minecraft.world.item.crafting.RecipeBookCategory;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public enum SearchRecipeBookCategory implements ExtendedRecipeBookCategory {
    CRAFTING(
       RecipeBookCategories.CRAFTING_EQUIPMENT,

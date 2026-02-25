@@ -6,10 +6,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class WaterDropParticle extends SingleQuadParticle {
    protected WaterDropParticle(ClientLevel p_108484_, double p_108485_, double p_108486_, double p_108487_, TextureAtlasSprite p_428471_) {
       super(p_108484_, p_108485_, p_108486_, p_108487_, 0.0, 0.0, 0.0, p_428471_);
@@ -62,7 +62,7 @@ public class WaterDropParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 

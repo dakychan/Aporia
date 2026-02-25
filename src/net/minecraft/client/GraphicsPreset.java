@@ -8,11 +8,11 @@ import net.minecraft.client.gui.screens.options.OptionsSubScreen;
 import net.minecraft.server.level.ParticleStatus;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public enum GraphicsPreset implements StringRepresentable {
    FAST("fast", "options.graphics.fast"),
    FANCY("fancy", "options.graphics.fancy"),

@@ -3,10 +3,10 @@ package net.minecraft.client.particle;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class AshParticle extends BaseAshSmokeParticle {
    protected AshParticle(
       ClientLevel p_105514_,
@@ -22,7 +22,7 @@ public class AshParticle extends BaseAshSmokeParticle {
       super(p_105514_, p_105515_, p_105516_, p_105517_, 0.1F, -0.1F, 0.1F, p_105518_, p_105519_, p_105520_, p_105521_, p_105522_, 0.5F, 20, 0.1F, false);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprites;
 

@@ -25,12 +25,12 @@ import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.StrictJsonParser;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class PeriodicNotificationManager
    extends SimplePreparableReloadListener<Map<String, List<PeriodicNotificationManager.Notification>>>
    implements AutoCloseable {
@@ -123,7 +123,7 @@ public class PeriodicNotificationManager
       return p_205311_.stream().mapToLong(p_205305_ -> p_205305_.delay).min().orElse(0L);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Notification(long delay, long period, String title, String message) {
       public Notification(final long delay, final long period, final String title, final String message) {
          this.delay = delay != 0L ? delay : period;
@@ -133,7 +133,7 @@ public class PeriodicNotificationManager
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class NotificationTask extends TimerTask {
       private final Minecraft minecraft = Minecraft.getInstance();
       private final List<PeriodicNotificationManager.Notification> notifications;

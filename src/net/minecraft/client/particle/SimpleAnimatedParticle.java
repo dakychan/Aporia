@@ -1,10 +1,10 @@
 package net.minecraft.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public abstract class SimpleAnimatedParticle extends SingleQuadParticle {
    protected final SpriteSet sprites;
    private float fadeR;

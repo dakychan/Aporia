@@ -4,10 +4,10 @@ import com.google.common.collect.Maps;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.function.Consumer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ScreenNarrationCollector {
    int generation;
    final Map<ScreenNarrationCollector.EntryKey, ScreenNarrationCollector.NarrationEntry> entries = Maps.newTreeMap(
@@ -42,11 +42,11 @@ public class ScreenNarrationCollector {
       return stringbuilder.toString();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record EntryKey(NarratedElementType type, int depth) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class NarrationEntry {
       NarrationThunk<?> contents = NarrationThunk.EMPTY;
       int generation = -1;
@@ -65,7 +65,7 @@ public class ScreenNarrationCollector {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class Output implements NarrationElementOutput {
       private final int depth;
 

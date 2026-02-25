@@ -5,10 +5,10 @@ import net.minecraft.client.model.monster.ghast.GhastModel;
 import net.minecraft.client.renderer.entity.state.GhastRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.monster.Ghast;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class GhastRenderer extends MobRenderer<Ghast, GhastRenderState, GhastModel> {
    private static final Identifier GHAST_LOCATION = Identifier.withDefaultNamespace("textures/entity/ghast/ghast.png");
    private static final Identifier GHAST_SHOOTING_LOCATION = Identifier.withDefaultNamespace("textures/entity/ghast/ghast_shooting.png");

@@ -1,11 +1,11 @@
 package com.mojang.blaze3d.systems;
 
 import java.util.OptionalLong;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TimerQuery {
    private @Nullable CommandEncoder activeEncoder;
    private @Nullable GpuQuery activeGpuQuery;
@@ -41,7 +41,7 @@ public class TimerQuery {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class FrameProfile {
       private static final long NO_RESULT = 0L;
       private static final long CANCELLED_RESULT = -1L;
@@ -90,7 +90,7 @@ public class TimerQuery {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class TimerQueryLazyLoader {
       static final TimerQuery INSTANCE = instantiate();
 

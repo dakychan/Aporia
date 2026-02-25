@@ -3,11 +3,11 @@ package net.minecraft.client.renderer.rendertype;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TextureTransform {
    public static final double MAX_ENCHANTMENT_GLINT_SPEED_MILLIS = 8.0;
    private final String name;
@@ -40,7 +40,7 @@ public class TextureTransform {
       return matrix4f;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static final class OffsetTextureTransform extends TextureTransform {
       public OffsetTextureTransform(float p_454869_, float p_455303_) {
          super("offset_texturing", () -> new Matrix4f().translation(p_454869_, p_455303_, 0.0F));

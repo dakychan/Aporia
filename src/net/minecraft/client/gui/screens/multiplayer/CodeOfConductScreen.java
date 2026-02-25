@@ -10,11 +10,11 @@ import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerList;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class CodeOfConductScreen extends WarningScreen {
    private static final Component TITLE = Component.translatable("multiplayer.codeOfConduct.title").withStyle(net.minecraft.ChatFormatting.BOLD);
    private static final Component CHECK = Component.translatable("multiplayer.codeOfConduct.check");

@@ -7,10 +7,10 @@ import net.minecraft.client.renderer.entity.state.TntRenderState;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.item.PrimedTnt;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class TntRenderer extends EntityRenderer<PrimedTnt, TntRenderState> {
    public TntRenderer(EntityRendererProvider.Context p_174426_) {
       super(p_174426_);

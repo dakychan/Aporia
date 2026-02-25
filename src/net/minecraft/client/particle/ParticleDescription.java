@@ -7,10 +7,10 @@ import com.google.gson.JsonObject;
 import java.util.List;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.GsonHelper;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ParticleDescription {
    private final List<Identifier> textures;
 

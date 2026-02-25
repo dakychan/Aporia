@@ -17,10 +17,10 @@ import net.minecraft.world.entity.animal.golem.CopperGolem;
 import net.minecraft.world.entity.animal.golem.CopperGolemOxidationLevels;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.component.BlockItemStateProperties;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class CopperGolemRenderer extends MobRenderer<CopperGolem, CopperGolemRenderState, CopperGolemModel> {
    public CopperGolemRenderer(EntityRendererProvider.Context p_428998_) {
       super(p_428998_, new CopperGolemModel(p_428998_.bakeLayer(ModelLayers.COPPER_GOLEM)), 0.5F);

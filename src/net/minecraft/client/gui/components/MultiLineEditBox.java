@@ -13,10 +13,10 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class MultiLineEditBox extends AbstractTextAreaWidget {
    private static final int CURSOR_INSERT_WIDTH = 1;
    private static final int CURSOR_COLOR = -3092272;
@@ -259,7 +259,7 @@ public class MultiLineEditBox extends AbstractTextAreaWidget {
       return new MultiLineEditBox.Builder();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder {
       private int x;
       private int y;

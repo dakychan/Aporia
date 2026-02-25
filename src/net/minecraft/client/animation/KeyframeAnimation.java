@@ -7,11 +7,11 @@ import java.util.function.Function;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.AnimationState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3f;
 
-@OnlyIn(Dist.CLIENT)
+
 public class KeyframeAnimation {
    private final AnimationDefinition definition;
    private final List<KeyframeAnimation.Entry> entries;
@@ -73,7 +73,7 @@ public class KeyframeAnimation {
       return this.definition.looping() ? f % this.definition.lengthInSeconds() : f;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Entry(ModelPart part, AnimationChannel.Target target, Keyframe[] keyframes) {
       public void apply(float p_409122_, float p_408445_, Vector3f p_410397_) {
          int i = Math.max(0, Mth.binarySearch(0, this.keyframes.length, p_406117_ -> p_409122_ <= this.keyframes[p_406117_].timestamp()) - 1);

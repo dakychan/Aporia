@@ -25,12 +25,12 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.ARGB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public record PalettedPermutations(List<Identifier> textures, Identifier paletteKey, Map<String, Identifier> permutations, String separator)
    implements SpriteSource {
    static final Logger LOGGER = LogUtils.getLogger();
@@ -147,7 +147,7 @@ public record PalettedPermutations(List<Identifier> textures, Identifier palette
       return MAP_CODEC;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record PalettedSpriteSupplier(LazyLoadedImage baseImage, Supplier<IntUnaryOperator> palette, Identifier permutationLocation)
       implements SpriteSource.DiscardableLoader {
       @Override

@@ -15,11 +15,11 @@ import net.minecraft.client.resources.model.ResolvableModel;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RangeSelectItemModel implements ItemModel {
    private static final int LINEAR_SEARCH_THRESHOLD = 16;
    private final RangeSelectItemModelProperty property;
@@ -79,7 +79,7 @@ public class RangeSelectItemModel implements ItemModel {
       itemmodel.update(p_376727_, p_377507_, p_377370_, p_377791_, p_377343_, p_427086_, p_376528_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Entry(float threshold, ItemModel.Unbaked model) {
       public static final Codec<RangeSelectItemModel.Entry> CODEC = RecordCodecBuilder.create(
          p_375497_ -> p_375497_.group(
@@ -91,7 +91,7 @@ public class RangeSelectItemModel implements ItemModel {
       public static final Comparator<RangeSelectItemModel.Entry> BY_THRESHOLD = Comparator.comparingDouble(RangeSelectItemModel.Entry::threshold);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked(RangeSelectItemModelProperty property, float scale, List<RangeSelectItemModel.Entry> entries, Optional<ItemModel.Unbaked> fallback)
       implements ItemModel.Unbaked {
       public static final MapCodec<RangeSelectItemModel.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(

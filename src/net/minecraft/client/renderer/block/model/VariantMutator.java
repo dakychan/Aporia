@@ -3,11 +3,11 @@ package net.minecraft.client.renderer.block.model;
 import com.mojang.math.Quadrant;
 import java.util.function.UnaryOperator;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 
 @FunctionalInterface
-@OnlyIn(Dist.CLIENT)
+
 public interface VariantMutator extends UnaryOperator<Variant> {
    VariantMutator.VariantProperty<Quadrant> X_ROT = Variant::withXRot;
    VariantMutator.VariantProperty<Quadrant> Y_ROT = Variant::withYRot;
@@ -20,7 +20,7 @@ public interface VariantMutator extends UnaryOperator<Variant> {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface VariantProperty<T> {
       Variant apply(Variant var1, T var2);
 

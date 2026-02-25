@@ -18,12 +18,12 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ShieldSpecialRenderer implements SpecialModelRenderer<DataComponentMap> {
    private final MaterialSet materials;
    private final ShieldModel model;
@@ -111,7 +111,7 @@ public class ShieldSpecialRenderer implements SpecialModelRenderer<DataComponent
       this.model.root().getExtentsForGui(posestack, p_451958_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked() implements SpecialModelRenderer.Unbaked {
       public static final ShieldSpecialRenderer.Unbaked INSTANCE = new ShieldSpecialRenderer.Unbaked();
       public static final MapCodec<ShieldSpecialRenderer.Unbaked> MAP_CODEC = MapCodec.unit(INSTANCE);

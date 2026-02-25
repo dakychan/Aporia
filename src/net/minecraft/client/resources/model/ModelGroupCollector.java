@@ -14,10 +14,10 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ModelGroupCollector {
    static final int SINGLETON_MODEL_GROUP = -1;
    private static final int INVISIBLE_MODEL_GROUP = 0;
@@ -54,7 +54,7 @@ public class ModelGroupCollector {
       return object2intmap;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record GroupKey(Object equalityGroup, List<Object> coloringValues) {
       public static ModelGroupCollector.GroupKey create(BlockState p_367993_, BlockStateModel.UnbakedRoot p_396888_, List<Property<?>> p_363265_) {
          List<Object> list = getColoringValues(p_367993_, p_363265_);

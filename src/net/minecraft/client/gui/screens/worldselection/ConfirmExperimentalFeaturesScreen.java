@@ -23,11 +23,11 @@ import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.network.chat.Style;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.world.flag.FeatureFlags;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ConfirmExperimentalFeaturesScreen extends Screen {
    private static final Component TITLE = Component.translatable("selectWorld.experimental.title");
    private static final Component MESSAGE = Component.translatable("selectWorld.experimental.message");
@@ -81,7 +81,7 @@ public class ConfirmExperimentalFeaturesScreen extends Screen {
       this.callback.accept(false);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class DetailsScreen extends Screen {
       private static final Component TITLE = Component.translatable("selectWorld.experimental.details.title");
       final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this);
@@ -117,7 +117,7 @@ public class ConfirmExperimentalFeaturesScreen extends Screen {
          this.minecraft.setScreen(ConfirmExperimentalFeaturesScreen.this);
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       class PackList extends ObjectSelectionList<ConfirmExperimentalFeaturesScreen.DetailsScreen.PackListEntry> {
          public PackList(final Minecraft p_249776_, final Collection<Pack> p_251183_) {
             super(p_249776_, DetailsScreen.this.width, DetailsScreen.this.layout.getContentHeight(), DetailsScreen.this.layout.getHeaderHeight(), 33);
@@ -140,7 +140,7 @@ public class ConfirmExperimentalFeaturesScreen extends Screen {
          }
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       class PackListEntry extends ObjectSelectionList.Entry<ConfirmExperimentalFeaturesScreen.DetailsScreen.PackListEntry> {
          private final Component packId;
          private final Component message;

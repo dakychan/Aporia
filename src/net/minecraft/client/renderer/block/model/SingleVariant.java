@@ -6,10 +6,10 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ResolvableModel;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SingleVariant implements BlockStateModel {
    private final BlockModelPart model;
 
@@ -27,7 +27,7 @@ public class SingleVariant implements BlockStateModel {
       return this.model.particleIcon();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked(Variant variant) implements BlockStateModel.Unbaked {
       public static final Codec<SingleVariant.Unbaked> CODEC = Variant.CODEC.xmap(SingleVariant.Unbaked::new, SingleVariant.Unbaked::variant);
 

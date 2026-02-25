@@ -141,11 +141,16 @@ public abstract class StateHolder<O, S> {
          ObjectIterator var3 = this.values.entrySet().iterator();
 
          while (var3.hasNext()) {
-            Entry<Property<?>, Comparable<?>> entry = (Entry<Property<?>, Comparable<?>>)var3.next();
+            Entry<Property<?>, Comparable<?>> entry = (Entry<Property<?>, Comparable<?>>) var3.next();
             Property<?> property = entry.getKey();
-            map.put(property, property.getPossibleValues().stream().map(p_360554_ -> p_61134_.get(this.makeNeighbourValues(property, p_360554_))).toArray());
-         }
+            List<S> valuesList = property.getPossibleValues().stream()
+                    .map(p_360554_ -> p_61134_.get(this.makeNeighbourValues(property, p_360554_)))
+                    .collect(Collectors.toList());
 
+            @SuppressWarnings("unchecked")
+            S[] valuesArray = (S[])valuesList.toArray();
+            map.put(property, valuesArray);
+         }
          this.neighbours = map;
       }
    }

@@ -8,10 +8,10 @@ import net.minecraft.gizmos.Gizmos;
 import net.minecraft.gizmos.TextGizmo;
 import net.minecraft.util.Util;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class GameTestBlockHighlightRenderer {
    private static final int SHOW_POS_DURATION_MS = 10000;
    private static final float PADDING = 0.02F;
@@ -40,7 +40,7 @@ public class GameTestBlockHighlightRenderer {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Marker(int color, String text, long removeAtTime) {
    }
 }

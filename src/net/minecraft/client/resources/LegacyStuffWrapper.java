@@ -5,10 +5,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class LegacyStuffWrapper {
    @Deprecated
    public static int[] getPixels(ResourceManager p_118727_, Identifier p_458530_) throws IOException {

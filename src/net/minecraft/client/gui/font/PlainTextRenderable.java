@@ -1,11 +1,11 @@
 package net.minecraft.client.gui.font;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface PlainTextRenderable extends TextRenderable.Styled {
    float DEFAULT_WIDTH = 8.0F;
    float DEFAULT_HEIGHT = 8.0F;

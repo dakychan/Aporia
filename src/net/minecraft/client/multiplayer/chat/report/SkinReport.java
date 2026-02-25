@@ -12,12 +12,12 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.reporting.SkinReportScreen;
 import net.minecraft.core.ClientAsset;
 import net.minecraft.world.entity.player.PlayerSkin;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class SkinReport extends Report {
    final Supplier<PlayerSkin> skinGetter;
 
@@ -43,7 +43,7 @@ public class SkinReport extends Report {
       return new SkinReportScreen(p_297640_, p_297669_, this);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder extends Report.Builder<SkinReport> {
       public Builder(SkinReport p_297260_, AbuseReportLimits p_298411_) {
          super(p_297260_, p_298411_);

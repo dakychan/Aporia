@@ -51,12 +51,12 @@ import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.LenientJsonParser;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsClient {
    public static final RealmsClient.Environment ENVIRONMENT = Optional.ofNullable(System.getenv("realms.environment"))
       .or(() -> Optional.ofNullable(System.getProperty("realms.environment")))
@@ -526,14 +526,14 @@ public class RealmsClient {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum CompatibleVersionResponse {
       COMPATIBLE,
       OUTDATED,
       OTHER;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Environment {
       PRODUCTION("pc.realms.minecraft.net", "java.frontendlegacy.realms.minecraft-services.net", "https"),
       STAGE("pc-stage.realms.minecraft.net", "java.frontendlegacy.stage-c2a40e62.realms.minecraft-services.net", "https"),

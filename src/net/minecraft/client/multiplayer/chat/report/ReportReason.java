@@ -3,10 +3,10 @@ package net.minecraft.client.multiplayer.chat.report;
 import java.util.List;
 import java.util.Locale;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public enum ReportReason {
    I_WANT_TO_REPORT_THEM("i_want_to_report_them"),
    HATE_SPEECH("hate_speech"),

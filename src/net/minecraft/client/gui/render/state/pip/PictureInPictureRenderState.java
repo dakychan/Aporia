@@ -2,12 +2,12 @@ package net.minecraft.client.gui.render.state.pip;
 
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.state.ScreenArea;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix3x2f;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface PictureInPictureRenderState extends ScreenArea {
    Matrix3x2f IDENTITY_POSE = new Matrix3x2f();
 

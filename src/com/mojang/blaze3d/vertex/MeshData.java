@@ -3,13 +3,13 @@ package com.mojang.blaze3d.vertex;
 import it.unimi.dsi.fastutil.ints.IntConsumer;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
 
-@OnlyIn(Dist.CLIENT)
+
 public class MeshData implements AutoCloseable {
    private final ByteBufferBuilder.Result vertexBuffer;
    private ByteBufferBuilder.@Nullable Result indexBuffer;
@@ -81,11 +81,11 @@ public class MeshData implements AutoCloseable {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record DrawState(VertexFormat format, int vertexCount, int indexCount, VertexFormat.Mode mode, VertexFormat.IndexType indexType) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record SortState(CompactVectorArray centroids, VertexFormat.IndexType indexType) {
       public ByteBufferBuilder.@Nullable Result buildSortedIndexBuffer(ByteBufferBuilder p_342323_, VertexSorting p_342363_) {
          int[] aint = p_342363_.sort(this.centroids);

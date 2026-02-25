@@ -9,10 +9,10 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class TextFieldHelper {
    private final Supplier<String> getMessageFn;
    private final Consumer<String> setMessageFn;
@@ -284,7 +284,7 @@ public class TextFieldHelper {
       return this.cursorPos != this.selectionPos;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum CursorStep {
       CHARACTER,
       WORD;

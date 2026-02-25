@@ -11,11 +11,11 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class PopupScreen extends Screen {
    private static final Identifier BACKGROUND_SPRITE = Identifier.withDefaultNamespace("popup/background");
    private static final int SPACING = 12;
@@ -127,7 +127,7 @@ public class PopupScreen extends Screen {
       this.minecraft.setScreen(this.backgroundScreen);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder {
       private final Screen backgroundScreen;
       private final Component title;
@@ -176,7 +176,7 @@ public class PopupScreen extends Screen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record ButtonOption(Component message, Consumer<PopupScreen> action) {
    }
 }

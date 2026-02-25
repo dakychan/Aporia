@@ -24,11 +24,11 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.util.StringUtil;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class EditBox extends AbstractWidget {
    private static final WidgetSprites SPRITES = new WidgetSprites(
       Identifier.withDefaultNamespace("widget/text_field"), Identifier.withDefaultNamespace("widget/text_field_highlighted")
@@ -619,7 +619,7 @@ public class EditBox extends AbstractWidget {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface TextFormatter {
       @Nullable FormattedCharSequence format(String var1, int var2);
    }

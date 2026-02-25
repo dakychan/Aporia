@@ -5,10 +5,10 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class CritParticle extends SingleQuadParticle {
    CritParticle(
       ClientLevel p_105919_,
@@ -56,7 +56,7 @@ public class CritParticle extends SingleQuadParticle {
       return SingleQuadParticle.Layer.OPAQUE;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class DamageIndicatorProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -83,7 +83,7 @@ public class CritParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class MagicProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -109,7 +109,7 @@ public class CritParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 

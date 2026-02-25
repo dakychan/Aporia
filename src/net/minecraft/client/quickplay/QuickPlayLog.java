@@ -17,12 +17,12 @@ import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.GameType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class QuickPlayLog {
    private static final QuickPlayLog INACTIVE = new QuickPlayLog("") {
       @Override
@@ -82,7 +82,7 @@ public class QuickPlayLog {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record QuickPlayEntry(QuickPlayLog.QuickPlayWorld quickPlayWorld, Instant lastPlayedTime, GameType gamemode) {
       public static final Codec<QuickPlayLog.QuickPlayEntry> CODEC = RecordCodecBuilder.create(
          p_279196_ -> p_279196_.group(
@@ -94,7 +94,7 @@ public class QuickPlayLog {
       );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record QuickPlayWorld(QuickPlayLog.Type type, String id, String name) {
       public static final MapCodec<QuickPlayLog.QuickPlayWorld> MAP_CODEC = RecordCodecBuilder.mapCodec(
          p_296245_ -> p_296245_.group(
@@ -106,7 +106,7 @@ public class QuickPlayLog {
       );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Type implements StringRepresentable {
       SINGLEPLAYER("singleplayer"),
       MULTIPLAYER("multiplayer"),

@@ -4,12 +4,12 @@ import java.util.EnumMap;
 import java.util.Map;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public enum FaceInfo {
    DOWN(
       new FaceInfo.VertexInfo(FaceInfo.Extent.MIN_X, FaceInfo.Extent.MIN_Y, FaceInfo.Extent.MAX_Z),
@@ -70,7 +70,7 @@ public enum FaceInfo {
       return this.infos[p_108983_];
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Extent {
       MIN_X,
       MIN_Y,
@@ -102,7 +102,7 @@ public enum FaceInfo {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record VertexInfo(FaceInfo.Extent xFace, FaceInfo.Extent yFace, FaceInfo.Extent zFace) {
       public Vector3f select(Vector3fc p_454828_, Vector3fc p_451997_) {
          return new Vector3f(this.xFace.select(p_454828_, p_451997_), this.yFace.select(p_454828_, p_451997_), this.zFace.select(p_454828_, p_451997_));

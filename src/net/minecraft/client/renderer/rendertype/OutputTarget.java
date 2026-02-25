@@ -3,11 +3,11 @@ package net.minecraft.client.renderer.rendertype;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class OutputTarget {
    private final String name;
    private final Supplier<@Nullable RenderTarget> renderTargetSupplier;

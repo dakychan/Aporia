@@ -34,12 +34,12 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.util.profiling.Zone;
 import net.minecraft.util.valueproviders.ConstantFloat;
 import net.minecraft.util.valueproviders.MultipliedFloats;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class SoundManager extends SimplePreparableReloadListener<SoundManager.Preparations> {
    public static final Identifier EMPTY_SOUND_LOCATION = Identifier.withDefaultNamespace("empty");
    public static final Sound EMPTY_SOUND = new Sound(EMPTY_SOUND_LOCATION, ConstantFloat.of(1.0F), ConstantFloat.of(1.0F), 1, Sound.Type.FILE, false, false, 16);
@@ -219,7 +219,7 @@ public class SoundManager extends SimplePreparableReloadListener<SoundManager.Pr
       this.soundEngine.reload();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    protected static class Preparations {
       final Map<Identifier, WeighedSoundEvents> registry = Maps.newHashMap();
       private Map<Identifier, Resource> soundCache = Map.of();

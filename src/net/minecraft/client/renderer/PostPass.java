@@ -26,11 +26,11 @@ import java.util.OptionalInt;
 import java.util.Map.Entry;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.lwjgl.system.MemoryStack;
 
-@OnlyIn(Dist.CLIENT)
+
 public class PostPass implements AutoCloseable {
    private static final int UBO_SIZE_PER_SAMPLER = new Std140SizeCalculator().putVec2().get();
    private final String name;
@@ -201,7 +201,7 @@ public class PostPass implements AutoCloseable {
       this.infoUbo.close();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Input {
       void addToPass(FramePass var1, Map<Identifier, ResourceHandle<RenderTarget>> var2);
 
@@ -215,11 +215,11 @@ public class PostPass implements AutoCloseable {
       boolean bilinear();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record InputTexture(String samplerName, GpuTextureView view, GpuSampler sampler) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record TargetInput(String samplerName, Identifier targetId, boolean depthBuffer, boolean bilinear) implements PostPass.Input {
       private ResourceHandle<RenderTarget> getHandle(Map<Identifier, ResourceHandle<RenderTarget>> p_369908_) {
          ResourceHandle<RenderTarget> resourcehandle = p_369908_.get(this.targetId);
@@ -248,7 +248,7 @@ public class PostPass implements AutoCloseable {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record TextureInput(String samplerName, AbstractTexture texture, int width, int height, boolean bilinear) implements PostPass.Input {
       @Override
       public void addToPass(FramePass p_364568_, Map<Identifier, ResourceHandle<RenderTarget>> p_370060_) {

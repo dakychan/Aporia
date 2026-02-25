@@ -9,11 +9,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TutorialToast implements Toast {
    private static final Identifier BACKGROUND_SPRITE = Identifier.withDefaultNamespace("toast/tutorial");
    public static final int PROGRESS_BAR_WIDTH = 154;
@@ -113,7 +113,7 @@ public class TutorialToast implements Toast {
       this.progress = p_94963_;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Icons {
       MOVEMENT_KEYS(Identifier.withDefaultNamespace("toast/movement_keys")),
       MOUSE(Identifier.withDefaultNamespace("toast/mouse")),

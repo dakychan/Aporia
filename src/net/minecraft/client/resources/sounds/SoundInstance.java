@@ -5,11 +5,11 @@ import net.minecraft.client.sounds.WeighedSoundEvents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface SoundInstance {
    Identifier getIdentifier();
 
@@ -49,7 +49,7 @@ public interface SoundInstance {
       return RandomSource.create();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Attenuation {
       NONE,
       LINEAR;

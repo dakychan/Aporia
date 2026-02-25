@@ -38,12 +38,12 @@ import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorPreset;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraft.world.level.levelgen.structure.StructureSet;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class PresetFlatWorldScreen extends Screen {
    static final Identifier SLOT_SPRITE = Identifier.withDefaultNamespace("container/slot");
    static final Logger LOGGER = LogUtils.getLogger();
@@ -245,7 +245,7 @@ public class PresetFlatWorldScreen extends Screen {
       this.selectButton.active = p_96450_ || this.export.getValue().length() > 1;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class PresetsList extends ObjectSelectionList<PresetFlatWorldScreen.PresetsList.Entry> {
       public PresetsList(final RegistryAccess p_259278_, final FeatureFlagSet p_259076_) {
          super(PresetFlatWorldScreen.this.minecraft, PresetFlatWorldScreen.this.width, PresetFlatWorldScreen.this.height - 117, 80, 24);
@@ -290,7 +290,7 @@ public class PresetFlatWorldScreen extends Screen {
          }
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       public class Entry extends ObjectSelectionList.Entry<PresetFlatWorldScreen.PresetsList.Entry> {
          private static final Identifier STATS_ICON_LOCATION = Identifier.withDefaultNamespace("textures/gui/container/stats_icons.png");
          private final FlatLevelGeneratorPreset preset;

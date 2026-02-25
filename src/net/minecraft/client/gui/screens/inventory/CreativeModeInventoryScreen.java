@@ -50,11 +50,11 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class CreativeModeInventoryScreen extends AbstractContainerScreen<CreativeModeInventoryScreen.ItemPickerMenu> {
    private static final Identifier SCROLLER_SPRITE = Identifier.withDefaultNamespace("container/creative_inventory/scroller");
    private static final Identifier SCROLLER_DISABLED_SPRITE = Identifier.withDefaultNamespace("container/creative_inventory/scroller_disabled");
@@ -846,7 +846,7 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class CustomCreativeSlot extends Slot {
       public CustomCreativeSlot(Container p_98633_, int p_98634_, int p_98635_, int p_98636_) {
          super(p_98633_, p_98634_, p_98635_, p_98636_);
@@ -861,7 +861,7 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class ItemPickerMenu extends AbstractContainerMenu {
       public final NonNullList<ItemStack> items = NonNullList.create();
       private final AbstractContainerMenu inventoryMenu;
@@ -954,7 +954,7 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class SlotWrapper extends Slot {
       final Slot target;
 

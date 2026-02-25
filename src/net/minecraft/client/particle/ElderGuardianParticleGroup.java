@@ -14,10 +14,10 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Unit;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ElderGuardianParticleGroup extends ParticleGroup<ElderGuardianParticle> {
    public ElderGuardianParticleGroup(ParticleEngine p_426151_) {
       super(p_426151_);
@@ -33,7 +33,7 @@ public class ElderGuardianParticleGroup extends ParticleGroup<ElderGuardianParti
       );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record ElderGuardianParticleRenderState(Model<Unit> model, PoseStack poseStack, RenderType renderType, int color) {
       public static ElderGuardianParticleGroup.ElderGuardianParticleRenderState fromParticle(ElderGuardianParticle p_430389_, Camera p_426661_, float p_425549_) {
          float f = (p_430389_.age + p_425549_) / p_430389_.lifetime;
@@ -50,7 +50,7 @@ public class ElderGuardianParticleGroup extends ParticleGroup<ElderGuardianParti
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record State(List<ElderGuardianParticleGroup.ElderGuardianParticleRenderState> states) implements ParticleGroupRenderState {
       @Override
       public void submit(SubmitNodeCollector p_429145_, CameraRenderState p_425722_) {

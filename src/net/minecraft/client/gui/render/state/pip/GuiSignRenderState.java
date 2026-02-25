@@ -3,11 +3,11 @@ package net.minecraft.client.gui.render.state.pip;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.model.Model;
 import net.minecraft.world.level.block.state.properties.WoodType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record GuiSignRenderState(
    Model.Simple signModel,
    WoodType woodType,

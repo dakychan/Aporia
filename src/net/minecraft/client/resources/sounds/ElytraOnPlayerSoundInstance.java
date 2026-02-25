@@ -4,10 +4,10 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ElytraOnPlayerSoundInstance extends AbstractTickableSoundInstance {
    public static final int DELAY = 20;
    private final LocalPlayer player;

@@ -8,10 +8,10 @@ import net.minecraft.client.renderer.block.model.VariantMutator;
 import net.minecraft.client.resources.model.WeightedVariants;
 import net.minecraft.util.random.Weighted;
 import net.minecraft.util.random.WeightedList;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public record MultiVariant(WeightedList<Variant> variants) {
    public MultiVariant(WeightedList<Variant> variants) {
       if (variants.isEmpty()) {

@@ -7,11 +7,11 @@ import java.util.Collection;
 import java.util.List;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.core.Direction;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class QuadCollection {
    public static final QuadCollection EMPTY = new QuadCollection(List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
    private final List<BakedQuad> all;
@@ -59,7 +59,7 @@ public class QuadCollection {
       return this.all;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder {
       private final com.google.common.collect.ImmutableList.Builder<BakedQuad> unculledFaces = ImmutableList.builder();
       private final Multimap<Direction, BakedQuad> culledFaces = ArrayListMultimap.create();

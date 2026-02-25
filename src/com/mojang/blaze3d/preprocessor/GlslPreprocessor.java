@@ -9,11 +9,11 @@ import java.util.regex.Pattern;
 import net.minecraft.client.renderer.ShaderDefines;
 import net.minecraft.util.FileUtil;
 import net.minecraft.util.StringUtil;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class GlslPreprocessor {
    private static final String C_COMMENT = "/\\*(?:[^*]|\\*+[^*/])*\\*+/";
    private static final String LINE_COMMENT = "//[^\\v]*";
@@ -135,7 +135,7 @@ public abstract class GlslPreprocessor {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static final class Context {
       int glslVersion;
       int sourceId;

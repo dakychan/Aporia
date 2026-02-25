@@ -14,11 +14,11 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 @DontObfuscate
 public class VertexFormat {
    public static final int UNKNOWN_ELEMENT = -1;
@@ -140,7 +140,7 @@ public class VertexFormat {
       return this.immediateDrawIndexBuffer;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    @DontObfuscate
    public static class Builder {
       private final com.google.common.collect.ImmutableMap.Builder<String, VertexFormatElement> elements = ImmutableMap.builder();
@@ -170,7 +170,7 @@ public class VertexFormat {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum IndexType {
       SHORT(2),
       INT(4);
@@ -186,7 +186,7 @@ public class VertexFormat {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Mode {
       LINES(2, 2, false),
       DEBUG_LINES(2, 2, false),

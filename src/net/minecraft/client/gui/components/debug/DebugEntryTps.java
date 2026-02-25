@@ -9,11 +9,11 @@ import net.minecraft.server.ServerTickRateManager;
 import net.minecraft.world.TickRateManager;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DebugEntryTps implements DebugScreenEntry {
    @Override
    public void display(DebugScreenDisplayer p_430193_, @Nullable Level p_425859_, @Nullable LevelChunk p_428357_, @Nullable LevelChunk p_426395_) {

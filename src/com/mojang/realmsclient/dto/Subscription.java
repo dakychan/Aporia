@@ -5,12 +5,12 @@ import com.mojang.logging.LogUtils;
 import com.mojang.realmsclient.util.JsonUtils;
 import java.time.Instant;
 import net.minecraft.util.LenientJsonParser;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public record Subscription(Instant startDate, int daysLeft, Subscription.SubscriptionType type) {
    private static final Logger LOGGER = LogUtils.getLogger();
 
@@ -39,7 +39,7 @@ public record Subscription(Instant startDate, int daysLeft, Subscription.Subscri
       return Subscription.SubscriptionType.NORMAL;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum SubscriptionType {
       NORMAL,
       RECURRING;

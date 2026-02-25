@@ -14,10 +14,10 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.model.npc.VillagerModel;
 import net.minecraft.client.renderer.entity.state.WitchRenderState;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class WitchModel extends EntityModel<WitchRenderState> implements HeadedModel, VillagerLikeModel<WitchRenderState> {
    protected final ModelPart nose;
    private final ModelPart head;

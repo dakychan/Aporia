@@ -6,12 +6,12 @@ import com.google.gson.stream.JsonWriter;
 import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public enum ServiceQuality {
    GREAT(1, "icon/ping_5"),
    GOOD(2, "icon/ping_4"),
@@ -45,7 +45,7 @@ public enum ServiceQuality {
       return this.icon;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class RealmsServiceQualityJsonAdapter extends TypeAdapter<ServiceQuality> {
       private static final Logger LOGGER = LogUtils.getLogger();
 

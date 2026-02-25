@@ -27,10 +27,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.WoodType;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class HangingSignRenderer extends AbstractSignRenderer {
    private static final String PLANK = "plank";
    private static final String V_CHAINS = "vChains";
@@ -159,7 +159,7 @@ public class HangingSignRenderer extends AbstractSignRenderer {
       return LayerDefinition.create(meshdefinition, 64, 32);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum AttachmentType implements StringRepresentable {
       WALL("wall"),
       CEILING("ceiling"),
@@ -185,7 +185,7 @@ public class HangingSignRenderer extends AbstractSignRenderer {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record ModelKey(WoodType woodType, HangingSignRenderer.AttachmentType attachmentType) {
    }
 }

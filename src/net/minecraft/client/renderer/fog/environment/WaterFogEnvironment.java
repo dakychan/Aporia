@@ -8,11 +8,11 @@ import net.minecraft.client.renderer.fog.FogData;
 import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.material.FogType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class WaterFogEnvironment extends FogEnvironment {
    @Override
    public void setupFog(FogData p_406618_, Camera p_460285_, ClientLevel p_406286_, float p_408021_, DeltaTracker p_407294_) {

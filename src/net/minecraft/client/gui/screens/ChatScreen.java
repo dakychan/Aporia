@@ -19,14 +19,14 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.util.StringUtil;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
-import ru.module.Module;
-import ru.module.ModuleManager;
+import cc.apr.module.Module;
+import cc.apr.module.ModuleManager;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ChatScreen extends Screen {
    public static final double MOUSE_SCROLL_SPEED = 7.0;
    private static final Component USAGE_TEXT = Component.translatable("chat_screen.usage");
@@ -313,12 +313,12 @@ public class ChatScreen extends Screen {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface ChatConstructor<T extends ChatScreen> {
       T create(String var1, boolean var2);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    protected static enum ExitReason {
       INTENTIONAL,
       INTERRUPTED,

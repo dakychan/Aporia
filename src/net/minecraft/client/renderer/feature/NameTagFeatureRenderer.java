@@ -13,12 +13,12 @@ import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class NameTagFeatureRenderer {
    public void render(SubmitNodeCollection p_423188_, MultiBufferSource.BufferSource p_424217_, Font p_425377_) {
       NameTagFeatureRenderer.Storage nametagfeaturerenderer$storage = p_423188_.getNameTagSubmits();
@@ -55,7 +55,7 @@ public class NameTagFeatureRenderer {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Storage {
       final List<SubmitNodeStorage.NameTagSubmit> nameTagSubmitsSeethrough = new ArrayList<>();
       final List<SubmitNodeStorage.NameTagSubmit> nameTagSubmitsNormal = new ArrayList<>();

@@ -1,10 +1,10 @@
 package net.minecraft.client.gui.components;
 
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public record WidgetSprites(Identifier enabled, Identifier disabled, Identifier enabledFocused, Identifier disabledFocused) {
    public WidgetSprites(Identifier p_451229_) {
       this(p_451229_, p_451229_, p_451229_, p_451229_);

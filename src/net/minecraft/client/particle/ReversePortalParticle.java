@@ -4,10 +4,10 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ReversePortalParticle extends PortalParticle {
    ReversePortalParticle(
       ClientLevel p_107590_,
@@ -45,7 +45,7 @@ public class ReversePortalParticle extends PortalParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class ReversePortalProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 

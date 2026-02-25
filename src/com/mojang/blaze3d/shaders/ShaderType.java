@@ -3,11 +3,11 @@ package com.mojang.blaze3d.shaders;
 import com.mojang.blaze3d.DontObfuscate;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 @DontObfuscate
 public enum ShaderType {
    VERTEX("vertex", ".vsh"),

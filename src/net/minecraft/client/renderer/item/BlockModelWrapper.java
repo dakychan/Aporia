@@ -30,12 +30,12 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class BlockModelWrapper implements ItemModel {
    private static final Function<ItemStack, RenderType> ITEM_RENDER_TYPE_GETTER = p_448356_ -> Sheets.translucentItemSheet();
    private static final Function<ItemStack, RenderType> BLOCK_RENDER_TYPE_GETTER = p_448355_ -> {
@@ -153,7 +153,7 @@ public class BlockModelWrapper implements ItemModel {
       return p_377482_.is(ItemTags.COMPASSES) || p_377482_.is(Items.CLOCK);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked(Identifier model, List<ItemTintSource> tints) implements ItemModel.Unbaked {
       public static final MapCodec<BlockModelWrapper.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
          p_448357_ -> p_448357_.group(

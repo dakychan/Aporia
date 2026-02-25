@@ -16,11 +16,11 @@ import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.SpecialDates;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class SplashManager extends SimplePreparableReloadListener<List<Component>> {
    private static final Style DEFAULT_STYLE = Style.EMPTY.withColor(-256);
    public static final Component CHRISTMAS = literalSplash("Merry X-mas!");

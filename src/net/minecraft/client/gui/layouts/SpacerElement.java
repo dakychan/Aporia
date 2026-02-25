@@ -2,10 +2,10 @@ package net.minecraft.client.gui.layouts;
 
 import java.util.function.Consumer;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SpacerElement implements LayoutElement {
    private int x;
    private int y;

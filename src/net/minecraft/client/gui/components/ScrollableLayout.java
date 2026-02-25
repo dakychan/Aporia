@@ -14,11 +14,11 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.navigation.ScreenDirection;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.network.chat.CommonComponents;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ScrollableLayout implements Layout {
    private static final int SCROLLBAR_SPACING = 4;
    private static final int SCROLLBAR_RESERVE = 10;
@@ -87,7 +87,7 @@ public class ScrollableLayout implements Layout {
       return this.container.getHeight();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class Container extends AbstractContainerWidget {
       private final Minecraft minecraft;
       private final List<AbstractWidget> children = new ArrayList<>();

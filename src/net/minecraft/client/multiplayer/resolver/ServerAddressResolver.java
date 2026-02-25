@@ -5,12 +5,12 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Optional;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
 @FunctionalInterface
-@OnlyIn(Dist.CLIENT)
+
 public interface ServerAddressResolver {
    Logger LOGGER = LogUtils.getLogger();
    ServerAddressResolver SYSTEM = p_171878_ -> {

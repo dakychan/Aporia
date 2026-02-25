@@ -8,17 +8,17 @@ import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.StateHolder;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public record CombinedCondition(CombinedCondition.Operation operation, List<Condition> terms) implements Condition {
    @Override
    public <O, S extends StateHolder<O, S>> Predicate<S> instantiate(StateDefinition<O, S> p_394518_) {
       return this.operation.apply(Lists.transform(this.terms, p_397724_ -> p_397724_.instantiate(p_394518_)));
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Operation implements StringRepresentable {
       AND("AND") {
          @Override

@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
@@ -14,7 +14,7 @@ import org.joml.Quaternionfc;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public class PoseStack {
    private final List<PoseStack.Pose> poses = new ArrayList<>(16);
    private int lastIndex;
@@ -81,7 +81,7 @@ public class PoseStack {
       this.last().mulPose(p_393889_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static final class Pose {
       private final Matrix4f pose = new Matrix4f();
       private final Matrix3f normal = new Matrix3f();

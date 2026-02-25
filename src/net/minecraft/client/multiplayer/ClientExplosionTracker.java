@@ -10,10 +10,10 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.random.WeightedList;
 import net.minecraft.util.random.WeightedRandom;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ClientExplosionTracker {
    private static final int MAX_PARTICLES_PER_TICK = 512;
    private final List<ClientExplosionTracker.ExplosionInfo> explosions = new ArrayList<>();
@@ -56,7 +56,7 @@ public class ClientExplosionTracker {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record ExplosionInfo(Vec3 center, float radius, int blockCount, WeightedList<ExplosionParticleInfo> blockParticles) {
    }
 }

@@ -6,10 +6,10 @@ import net.minecraft.client.renderer.block.model.BlockStateModel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.random.WeightedList;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class WeightedVariants implements BlockStateModel {
    private final WeightedList<BlockStateModel> list;
    private final TextureAtlasSprite particleIcon;
@@ -30,7 +30,7 @@ public class WeightedVariants implements BlockStateModel {
       this.list.getRandomOrThrow(p_397916_).collectParts(p_397916_, p_394308_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked(WeightedList<BlockStateModel.Unbaked> entries) implements BlockStateModel.Unbaked {
       @Override
       public BlockStateModel bake(ModelBaker p_392595_) {

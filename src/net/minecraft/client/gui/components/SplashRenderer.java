@@ -8,11 +8,11 @@ import net.minecraft.client.resources.SplashManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix3x2f;
 
-@OnlyIn(Dist.CLIENT)
+
 public class SplashRenderer {
    public static final SplashRenderer CHRISTMAS = new SplashRenderer(SplashManager.CHRISTMAS);
    public static final SplashRenderer NEW_YEAR = new SplashRenderer(SplashManager.NEW_YEAR);

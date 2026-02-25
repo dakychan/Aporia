@@ -17,10 +17,10 @@ import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.resources.model.ModelBakery;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ModelPartFeatureRenderer {
    private final PoseStack poseStack = new PoseStack();
 
@@ -90,7 +90,7 @@ public class ModelPartFeatureRenderer {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Storage {
       final Map<RenderType, List<SubmitNodeStorage.ModelPartSubmit>> modelPartSubmits = new HashMap<>();
       private final Set<RenderType> modelPartSubmitsUsage = new ObjectOpenHashSet();

@@ -7,11 +7,11 @@ import net.minecraft.client.Options;
 import net.minecraft.client.TextureFilteringMethod;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DebugEntrySimplePerformanceImpactors implements DebugScreenEntry {
    @Override
    public void display(DebugScreenDisplayer p_428126_, @Nullable Level p_422748_, @Nullable LevelChunk p_424513_, @Nullable LevelChunk p_425623_) {

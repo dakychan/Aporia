@@ -21,11 +21,11 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.flat.FlatLayerInfo;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class CreateFlatWorldScreen extends Screen {
    private static final Component TITLE = Component.translatable("createWorld.customize.flat.title");
    static final Identifier SLOT_SPRITE = Identifier.withDefaultNamespace("container/slot");
@@ -125,7 +125,7 @@ public class CreateFlatWorldScreen extends Screen {
       this.minecraft.setScreen(this.parent);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class DetailsList extends ObjectSelectionList<CreateFlatWorldScreen.DetailsList.Entry> {
       static final Component LAYER_MATERIAL_TITLE = Component.translatable("createWorld.customize.flat.tile").withStyle(net.minecraft.ChatFormatting.UNDERLINE);
       static final Component HEIGHT_TITLE = Component.translatable("createWorld.customize.flat.height").withStyle(net.minecraft.ChatFormatting.UNDERLINE);
@@ -170,11 +170,11 @@ public class CreateFlatWorldScreen extends Screen {
          CreateFlatWorldScreen.this.updateButtonValidity();
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       abstract static class Entry extends ObjectSelectionList.Entry<CreateFlatWorldScreen.DetailsList.Entry> {
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       static class HeaderEntry extends CreateFlatWorldScreen.DetailsList.Entry {
          private final Font font;
 
@@ -200,7 +200,7 @@ public class CreateFlatWorldScreen extends Screen {
          }
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       class LayerEntry extends CreateFlatWorldScreen.DetailsList.Entry {
          final FlatLayerInfo layerInfo;
          private final int index;

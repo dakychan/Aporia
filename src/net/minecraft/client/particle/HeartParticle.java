@@ -5,10 +5,10 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class HeartParticle extends SingleQuadParticle {
    HeartParticle(ClientLevel p_106847_, double p_106848_, double p_106849_, double p_106850_, TextureAtlasSprite p_428138_) {
       super(p_106847_, p_106848_, p_106849_, p_106850_, 0.0, 0.0, 0.0, p_428138_);
@@ -33,7 +33,7 @@ public class HeartParticle extends SingleQuadParticle {
       return this.quadSize * Mth.clamp((this.age + p_106860_) / this.lifetime * 32.0F, 0.0F, 1.0F);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class AngryVillagerProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -58,7 +58,7 @@ public class HeartParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 

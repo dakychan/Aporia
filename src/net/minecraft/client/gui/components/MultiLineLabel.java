@@ -10,11 +10,11 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface MultiLineLabel {
    MultiLineLabel EMPTY = new MultiLineLabel() {
       @Override
@@ -120,7 +120,7 @@ public interface MultiLineLabel {
 
    int getWidth();
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record TextAndWidth(FormattedCharSequence text, int width) {
    }
 }

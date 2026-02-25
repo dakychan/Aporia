@@ -3,12 +3,12 @@ package com.mojang.realmsclient.dto;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import com.mojang.realmsclient.util.JsonUtils;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public record WorldTemplate(
    String id,
    String name,
@@ -42,7 +42,7 @@ public record WorldTemplate(
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum WorldTemplateType {
       WORLD_TEMPLATE,
       MINIGAME,

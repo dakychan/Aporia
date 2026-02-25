@@ -8,11 +8,11 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
 import java.util.function.Supplier;
 import net.minecraft.client.gui.font.GlyphStitcher;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public enum SpecialGlyphs implements GlyphInfo {
    WHITE(() -> generate(5, 8, (p_232613_, p_232614_) -> -1)),
    MISSING(() -> {
@@ -88,7 +88,7 @@ public enum SpecialGlyphs implements GlyphInfo {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    interface PixelProvider {
       int getColor(int var1, int var2);
    }

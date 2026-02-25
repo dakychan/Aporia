@@ -1,11 +1,11 @@
 package net.minecraft.client.multiplayer;
 
 import java.util.function.Function;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class CacheSlot<C extends CacheSlot.Cleaner<C>, D> {
    private final Function<C, D> operation;
    private @Nullable C context;
@@ -33,7 +33,7 @@ public class CacheSlot<C extends CacheSlot.Cleaner<C>, D> {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Cleaner<C extends CacheSlot.Cleaner<C>> {
       void registerForCleaning(CacheSlot<C, ?> var1);
    }

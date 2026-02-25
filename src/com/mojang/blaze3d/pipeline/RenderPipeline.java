@@ -15,11 +15,11 @@ import java.util.Map.Entry;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.renderer.ShaderDefines;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 @DontObfuscate
 public class RenderPipeline {
    private final Identifier location;
@@ -187,7 +187,7 @@ public class RenderPipeline {
       return renderpipeline$builder;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    @DontObfuscate
    public static class Builder {
       private static int nextPipelineSortKey;
@@ -498,7 +498,7 @@ public class RenderPipeline {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    @DontObfuscate
    public record Snippet(
       Optional<Identifier> vertexShader,
@@ -519,7 +519,7 @@ public class RenderPipeline {
    ) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    @DontObfuscate
    public record UniformDescription(String name, UniformType type, @Nullable TextureFormat textureFormat) {
       public UniformDescription(String p_396501_, UniformType p_396078_) {

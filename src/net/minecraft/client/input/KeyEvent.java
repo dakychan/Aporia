@@ -5,10 +5,10 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public record KeyEvent(@Value int key, int scancode, @InputWithModifiers.Modifiers int modifiers) implements InputWithModifiers {
    @Override
    public int input() {
@@ -17,7 +17,7 @@ public record KeyEvent(@Value int key, int scancode, @InputWithModifiers.Modifie
 
    @Retention(RetentionPolicy.CLASS)
    @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD, ElementType.TYPE_USE})
-   @OnlyIn(Dist.CLIENT)
+   
    public @interface Action {
    }
 }

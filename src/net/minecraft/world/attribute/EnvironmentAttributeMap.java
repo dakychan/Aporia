@@ -16,9 +16,13 @@ import org.jspecify.annotations.Nullable;
 
 public final class EnvironmentAttributeMap {
    public static final EnvironmentAttributeMap EMPTY = new EnvironmentAttributeMap(Map.of());
+   @SuppressWarnings({"unchecked", "rawtypes"})
    public static final Codec<EnvironmentAttributeMap> CODEC = Codec.lazyInitialized(
-      () -> Codec.dispatchedMap(EnvironmentAttributes.CODEC, Util.memoize(EnvironmentAttributeMap.Entry::createCodec))
-         .xmap(EnvironmentAttributeMap::new, p_459564_ -> p_459564_.entries)
+           () -> Codec.dispatchedMap(EnvironmentAttributes.CODEC, Util.memoize(EnvironmentAttributeMap.Entry::createCodec))
+                   .xmap(
+                           map -> new EnvironmentAttributeMap((Map) map),
+                           map -> (Map) map.entries
+                   )
    );
    public static final Codec<EnvironmentAttributeMap> NETWORK_CODEC = CODEC.xmap(
       EnvironmentAttributeMap::filterSyncable, EnvironmentAttributeMap::filterSyncable

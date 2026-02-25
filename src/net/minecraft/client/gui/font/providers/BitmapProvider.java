@@ -25,12 +25,12 @@ import net.minecraft.client.gui.font.CodepointMap;
 import net.minecraft.client.gui.font.glyphs.BakedGlyph;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class BitmapProvider implements GlyphProvider {
    static final Logger LOGGER = LogUtils.getLogger();
    private final NativeImage image;
@@ -53,7 +53,7 @@ public class BitmapProvider implements GlyphProvider {
       return IntSets.unmodifiable(this.glyphs.keySet());
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Definition(Identifier file, int height, int ascent, int[][] codepointGrid) implements GlyphProviderDefinition {
       private static final Codec<int[][]> CODEPOINT_GRID_CODEC = Codec.STRING.listOf().xmap(p_286900_ -> {
          int i = p_286900_.size();
@@ -181,7 +181,7 @@ public class BitmapProvider implements GlyphProvider {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Glyph(float scale, NativeImage image, int offsetX, int offsetY, int width, int height, int advance, int ascent) implements UnbakedGlyph {
       public GlyphInfo info() {
          return GlyphInfo.simple(this.advance);

@@ -5,11 +5,11 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import net.minecraft.client.GameNarrator;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RepeatedNarrator {
    private final float permitsPerSecond;
    private final AtomicReference<RepeatedNarrator.@Nullable Params> params = new AtomicReference<>();
@@ -30,7 +30,7 @@ public class RepeatedNarrator {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Params {
       final Component narration;
       final RateLimiter rateLimiter;

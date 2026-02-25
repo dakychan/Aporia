@@ -8,6 +8,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import net.minecraft.ReportedException;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 

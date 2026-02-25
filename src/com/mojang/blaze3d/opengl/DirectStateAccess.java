@@ -4,8 +4,8 @@ import com.mojang.blaze3d.GraphicsWorkarounds;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import java.nio.ByteBuffer;
 import java.util.Set;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.opengl.ARBBufferStorage;
 import org.lwjgl.opengl.ARBDirectStateAccess;
@@ -13,7 +13,7 @@ import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GL31;
 import org.lwjgl.opengl.GLCapabilities;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class DirectStateAccess {
    public static DirectStateAccess create(GLCapabilities p_396229_, Set<String> p_397048_, GraphicsWorkarounds p_426409_) {
       if (p_396229_.GL_ARB_direct_state_access && GlDevice.USE_GL_ARB_direct_state_access && !p_426409_.isGlOnDx12()) {
@@ -50,7 +50,7 @@ public abstract class DirectStateAccess {
 
    abstract void copyBufferSubData(int var1, int var2, long var3, long var5, long var7);
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Core extends DirectStateAccess {
       @Override
       int createBuffer() {
@@ -138,7 +138,7 @@ public abstract class DirectStateAccess {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Emulated extends DirectStateAccess {
       private int selectBufferBindTarget(@GpuBuffer.Usage int p_423808_) {
          if ((p_423808_ & 32) != 0) {

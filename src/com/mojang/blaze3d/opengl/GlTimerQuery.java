@@ -3,12 +3,12 @@ package com.mojang.blaze3d.opengl;
 import com.mojang.blaze3d.systems.GpuQuery;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.OptionalLong;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.lwjgl.opengl.ARBTimerQuery;
 import org.lwjgl.opengl.GL32C;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GlTimerQuery implements GpuQuery {
    private final int queryId;
    private boolean closed;

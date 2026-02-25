@@ -3,10 +3,10 @@ package net.minecraft.client.renderer.chunk;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public final class TranslucencyPointOfView {
    private int x;
    private int y;

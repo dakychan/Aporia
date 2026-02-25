@@ -6,11 +6,11 @@ import net.minecraft.client.gui.components.ComponentRenderUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MessageSignature;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record GuiMessage(int addedTime, Component content, @Nullable MessageSignature signature, @Nullable GuiMessageTag tag) {
    private static final int MESSAGE_TAG_MARGIN_LEFT = 4;
 
@@ -22,7 +22,7 @@ public record GuiMessage(int addedTime, Component content, @Nullable MessageSign
       return ComponentRenderUtils.wrapComponents(this.content, p_458191_, p_450880_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Line(int addedTime, FormattedCharSequence content, @Nullable GuiMessageTag tag, boolean endOfEntry) {
       public int getTagIconLeft(Font p_450631_) {
          return p_450631_.width(this.content) + 4;

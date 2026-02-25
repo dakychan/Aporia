@@ -1,10 +1,10 @@
 package com.mojang.realmsclient.gui.screens;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record UploadResult(int statusCode, @Nullable String errorMessage) {
    public @Nullable String getSimplifiedErrorMessage() {
       if (this.statusCode >= 200 && this.statusCode < 300) {
@@ -14,7 +14,7 @@ public record UploadResult(int statusCode, @Nullable String errorMessage) {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder {
       private int statusCode = -1;
       private @Nullable String errorMessage;

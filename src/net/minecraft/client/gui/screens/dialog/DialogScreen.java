@@ -26,12 +26,12 @@ import net.minecraft.server.dialog.Dialog;
 import net.minecraft.server.dialog.DialogAction;
 import net.minecraft.server.dialog.Input;
 import net.minecraft.server.dialog.body.DialogBody;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class DialogScreen<T extends Dialog> extends Screen {
    public static final Component DISCONNECT = Component.translatable("menu.custom_screen_info.disconnect");
    private static final int WARNING_BUTTON_SIZE = 20;
@@ -213,7 +213,7 @@ public abstract class DialogScreen<T extends Dialog> extends Screen {
       return gridlayout;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class WarningScreen extends ConfirmScreen {
       private final MutableObject<@Nullable Screen> returnScreen;
 

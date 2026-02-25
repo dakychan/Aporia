@@ -1,10 +1,10 @@
 package net.minecraft.client.gui;
 
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public enum TextAlignment {
    LEFT {
       @Override

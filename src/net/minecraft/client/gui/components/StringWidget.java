@@ -7,10 +7,10 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class StringWidget extends AbstractStringWidget {
    private static final int TEXT_MARGIN = 2;
    private int maxWidth = 0;
@@ -88,7 +88,7 @@ public class StringWidget extends AbstractStringWidget {
       return Language.getInstance().getVisualOrder(FormattedText.composite(formattedtext, CommonComponents.ELLIPSIS));
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum TextOverflow {
       CLAMPED,
       SCROLLING;

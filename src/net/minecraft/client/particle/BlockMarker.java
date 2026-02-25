@@ -6,10 +6,10 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class BlockMarker extends SingleQuadParticle {
    private final SingleQuadParticle.Layer layer;
 
@@ -31,7 +31,7 @@ public class BlockMarker extends SingleQuadParticle {
       return 0.5F;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<BlockParticleOption> {
       public Particle createParticle(
          BlockParticleOption p_194277_,

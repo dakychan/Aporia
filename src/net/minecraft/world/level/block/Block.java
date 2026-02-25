@@ -575,8 +575,9 @@ public class Block extends BlockBehaviour implements ItemLike {
       };
    }
 
-   private static <S extends StateHolder<?, S>, T extends Comparable<T>> S setValueHelper(S p_392443_, Property<T> p_392291_, Object p_395700_) {
-      return p_392443_.setValue(p_392291_, (Comparable)p_395700_);
+   private static <S extends StateHolder<?, S>, T extends Comparable<T>>
+   S setValueHelper(S state, Property<T> property, T value) {
+      return state.setValue(property, value);
    }
 
    @Deprecated

@@ -17,15 +17,15 @@ import net.minecraft.data.AtlasIds;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 
 @FunctionalInterface
-@OnlyIn(Dist.CLIENT)
+
 public interface EntityRendererProvider<T extends Entity> {
    EntityRenderer<T, ?> create(EntityRendererProvider.Context var1);
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Context {
       private final EntityRenderDispatcher entityRenderDispatcher;
       private final ItemModelResolver itemModelResolver;

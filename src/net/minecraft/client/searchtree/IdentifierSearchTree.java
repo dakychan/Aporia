@@ -5,10 +5,10 @@ import java.util.Locale;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public interface IdentifierSearchTree<T> {
    static <T> IdentifierSearchTree<T> empty() {
       return new IdentifierSearchTree<T>() {

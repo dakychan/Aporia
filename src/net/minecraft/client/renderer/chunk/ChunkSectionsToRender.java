@@ -18,10 +18,10 @@ import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public record ChunkSectionsToRender(
    GpuTextureView textureView,
    EnumMap<ChunkSectionLayer, List<Draw<GpuBufferSlice[]>>> drawsPerLayer,

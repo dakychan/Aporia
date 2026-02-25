@@ -30,12 +30,12 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.network.EventLoopGroupHolder;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList.Entry> {
    static final Identifier INCOMPATIBLE_SPRITE = Identifier.withDefaultNamespace("server_list/incompatible");
    static final Identifier UNREACHABLE_SPRITE = Identifier.withDefaultNamespace("server_list/unreachable");
@@ -143,7 +143,7 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
    public void removed() {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public abstract static class Entry extends ObjectSelectionList.Entry<ServerSelectionList.Entry> implements AutoCloseable {
       @Override
       public void close() {
@@ -154,7 +154,7 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
       public abstract void join();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class LANHeader extends ServerSelectionList.Entry {
       private final Minecraft minecraft = Minecraft.getInstance();
       private final LoadingDotsWidget loadingDotsWidget = new LoadingDotsWidget(this.minecraft.font, ServerSelectionList.SCANNING_LABEL);
@@ -180,7 +180,7 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class NetworkServerEntry extends ServerSelectionList.Entry {
       private static final int ICON_WIDTH = 32;
       private static final Component LAN_SERVER_HEADER = Component.translatable("lanServer.title");
@@ -246,7 +246,7 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class OnlineServerEntry extends ServerSelectionList.Entry implements SelectableEntry {
       private static final int ICON_SIZE = 32;
       private static final int SPACING = 5;

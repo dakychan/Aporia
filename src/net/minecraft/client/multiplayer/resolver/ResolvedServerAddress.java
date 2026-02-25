@@ -1,10 +1,10 @@
 package net.minecraft.client.multiplayer.resolver;
 
 import java.net.InetSocketAddress;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public interface ResolvedServerAddress {
    String getHostName();
 

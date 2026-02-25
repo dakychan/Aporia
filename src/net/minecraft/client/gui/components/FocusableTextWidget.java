@@ -7,10 +7,10 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.ARGB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class FocusableTextWidget extends MultiLineTextWidget {
    public static final int DEFAULT_PADDING = 4;
    private final int padding;
@@ -125,14 +125,14 @@ public class FocusableTextWidget extends MultiLineTextWidget {
       return new FocusableTextWidget.Builder(p_453533_, p_455157_, p_456785_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum BackgroundFill {
       ALWAYS,
       ON_FOCUS,
       NEVER;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder {
       private final Component message;
       private final Font font;

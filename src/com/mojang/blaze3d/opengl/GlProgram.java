@@ -12,13 +12,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import net.minecraft.client.renderer.ShaderManager.CompilationException;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.opengl.GL31;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GlProgram implements AutoCloseable {
    private static final Logger LOGGER = LogUtils.getLogger();
    public static Set<String> BUILT_IN_UNIFORMS = Sets.newHashSet(new String[]{"Projection", "Lighting", "Fog", "Globals"});

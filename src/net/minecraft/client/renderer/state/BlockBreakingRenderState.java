@@ -3,10 +3,10 @@ package net.minecraft.client.renderer.state;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.block.MovingBlockRenderState;
 import net.minecraft.core.BlockPos;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class BlockBreakingRenderState extends MovingBlockRenderState {
    public int progress;
 

@@ -10,10 +10,10 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.ParrotRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.animal.parrot.Parrot;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ParrotModel extends EntityModel<ParrotRenderState> {
    private static final String FEATHER = "feather";
    private final ModelPart body;
@@ -167,7 +167,7 @@ public class ParrotModel extends EntityModel<ParrotRenderState> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Pose {
       FLYING,
       STANDING,

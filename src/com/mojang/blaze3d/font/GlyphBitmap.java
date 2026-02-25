@@ -1,10 +1,10 @@
 package com.mojang.blaze3d.font;
 
 import com.mojang.blaze3d.textures.GpuTexture;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public interface GlyphBitmap {
    int getPixelWidth();
 

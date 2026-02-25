@@ -2,11 +2,11 @@ package net.minecraft.client.renderer.state;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record BlockOutlineRenderState(
    BlockPos pos,
    boolean isTranslucent,

@@ -21,12 +21,12 @@ import net.minecraft.client.server.LanServer;
 import net.minecraft.client.server.LanServerDetection;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class JoinMultiplayerScreen extends Screen {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final int TOP_ROW_BUTTON_WIDTH = 100;

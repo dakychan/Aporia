@@ -6,15 +6,15 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4fc;
 import org.joml.Vector2fc;
 import org.joml.Vector3fc;
 import org.joml.Vector3ic;
 import org.joml.Vector4fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface UniformValue {
    Codec<UniformValue> CODEC = UniformValue.Type.CODEC.dispatch(UniformValue::type, p_409803_ -> p_409803_.valueCodec);
 
@@ -24,7 +24,7 @@ public interface UniformValue {
 
    UniformValue.Type type();
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record FloatUniform(float value) implements UniformValue {
       public static final Codec<UniformValue.FloatUniform> CODEC = Codec.FLOAT.xmap(UniformValue.FloatUniform::new, UniformValue.FloatUniform::value);
 
@@ -44,7 +44,7 @@ public interface UniformValue {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record IVec3Uniform(Vector3ic value) implements UniformValue {
       public static final Codec<UniformValue.IVec3Uniform> CODEC = ExtraCodecs.VECTOR3I.xmap(UniformValue.IVec3Uniform::new, UniformValue.IVec3Uniform::value);
 
@@ -64,7 +64,7 @@ public interface UniformValue {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record IntUniform(int value) implements UniformValue {
       public static final Codec<UniformValue.IntUniform> CODEC = Codec.INT.xmap(UniformValue.IntUniform::new, UniformValue.IntUniform::value);
 
@@ -84,7 +84,7 @@ public interface UniformValue {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Matrix4x4Uniform(Matrix4fc value) implements UniformValue {
       public static final Codec<UniformValue.Matrix4x4Uniform> CODEC = ExtraCodecs.MATRIX4F
          .xmap(UniformValue.Matrix4x4Uniform::new, UniformValue.Matrix4x4Uniform::value);
@@ -105,7 +105,7 @@ public interface UniformValue {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Type implements StringRepresentable {
       INT("int", UniformValue.IntUniform.CODEC),
       IVEC3("ivec3", UniformValue.IVec3Uniform.CODEC),
@@ -130,7 +130,7 @@ public interface UniformValue {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Vec2Uniform(Vector2fc value) implements UniformValue {
       public static final Codec<UniformValue.Vec2Uniform> CODEC = ExtraCodecs.VECTOR2F.xmap(UniformValue.Vec2Uniform::new, UniformValue.Vec2Uniform::value);
 
@@ -150,7 +150,7 @@ public interface UniformValue {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Vec3Uniform(Vector3fc value) implements UniformValue {
       public static final Codec<UniformValue.Vec3Uniform> CODEC = ExtraCodecs.VECTOR3F.xmap(UniformValue.Vec3Uniform::new, UniformValue.Vec3Uniform::value);
 
@@ -170,7 +170,7 @@ public interface UniformValue {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Vec4Uniform(Vector4fc value) implements UniformValue {
       public static final Codec<UniformValue.Vec4Uniform> CODEC = ExtraCodecs.VECTOR4F.xmap(UniformValue.Vec4Uniform::new, UniformValue.Vec4Uniform::value);
 

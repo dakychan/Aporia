@@ -21,13 +21,13 @@ import java.util.function.Supplier;
 import net.minecraft.client.User;
 import net.minecraft.util.LenientJsonParser;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.io.input.CountingInputStream;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class FileUpload implements AutoCloseable {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final int MAX_RETRIES = 5;
@@ -146,7 +146,7 @@ public class FileUpload implements AutoCloseable {
       return p_452721_.headers().firstValueAsLong("Retry-After").orElse(0L);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class UploadCountingInputStream extends CountingInputStream {
       private final UploadStatus uploadStatus;
 

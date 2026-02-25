@@ -7,11 +7,11 @@ import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface Toast {
    Object NO_TOKEN = new Object();
    int DEFAULT_WIDTH = 160;
@@ -54,7 +54,7 @@ public interface Toast {
    default void onFinishedRendering() {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Visibility {
       SHOW(SoundEvents.UI_TOAST_IN),
       HIDE(SoundEvents.UI_TOAST_OUT);

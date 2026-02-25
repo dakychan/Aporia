@@ -15,11 +15,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public final class RenderSetup {
    final RenderPipeline pipeline;
    final Map<String, RenderSetup.TextureBinding> textures;
@@ -118,7 +118,7 @@ public final class RenderSetup {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum OutlineProperty {
       NONE("none"),
       IS_OUTLINE("is_outline"),
@@ -136,7 +136,7 @@ public final class RenderSetup {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class RenderSetupBuilder {
       private final RenderPipeline pipeline;
       private boolean useLightmap = false;
@@ -226,11 +226,11 @@ public final class RenderSetup {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record TextureAndSampler(GpuTextureView textureView, GpuSampler sampler) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record TextureBinding(Identifier location, Supplier<@Nullable GpuSampler> sampler) {
    }
 }

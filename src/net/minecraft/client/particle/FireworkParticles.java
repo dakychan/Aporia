@@ -18,12 +18,12 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.component.FireworkExplosion;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class FireworkParticles {
-   @OnlyIn(Dist.CLIENT)
+   
    public static class FlashProvider implements ParticleProvider<ColorParticleOption> {
       private final SpriteSet sprite;
 
@@ -51,7 +51,7 @@ public class FireworkParticles {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class OverlayParticle extends SingleQuadParticle {
       OverlayParticle(ClientLevel p_106677_, double p_106678_, double p_106679_, double p_106680_, TextureAtlasSprite p_426888_) {
          super(p_106677_, p_106678_, p_106679_, p_106680_, p_426888_);
@@ -75,7 +75,7 @@ public class FireworkParticles {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class SparkParticle extends SimpleAnimatedParticle {
       private boolean trail;
       private boolean twinkle;
@@ -144,7 +144,7 @@ public class FireworkParticles {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class SparkProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprites;
 
@@ -171,7 +171,7 @@ public class FireworkParticles {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Starter extends NoRenderParticle {
       private static final double[][] CREEPER_PARTICLE_COORDS = new double[][]{
          {0.0, 0.2}, {0.2, 0.2}, {0.2, 0.6}, {0.6, 0.6}, {0.6, 0.2}, {0.2, 0.2}, {0.2, 0.0}, {0.4, 0.0}, {0.4, -0.6}, {0.2, -0.6}, {0.2, -0.4}, {0.0, -0.4}

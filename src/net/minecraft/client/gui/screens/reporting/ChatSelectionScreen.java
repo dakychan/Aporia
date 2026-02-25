@@ -32,11 +32,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.PlayerSkin;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ChatSelectionScreen extends Screen {
    static final Identifier CHECKMARK_SPRITE = Identifier.withDefaultNamespace("icon/checkmark");
    private static final Component TITLE = Component.translatable("gui.chatSelection.title");
@@ -118,7 +118,7 @@ public class ChatSelectionScreen extends Screen {
       return CommonComponents.joinForNarration(super.getNarrationMessage(), CONTEXT_INFO);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class ChatSelectionList extends ObjectSelectionList<ChatSelectionScreen.ChatSelectionList.Entry> implements ChatSelectionLogFiller.Output {
       public static final int ITEM_HEIGHT = 16;
       private ChatSelectionScreen.ChatSelectionList.@Nullable Heading previousHeading;
@@ -225,7 +225,7 @@ public class ChatSelectionScreen extends Screen {
          return this.getBottom() + 9;
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       public class DividerEntry extends ChatSelectionScreen.ChatSelectionList.Entry {
          private final Component text;
 
@@ -249,7 +249,7 @@ public class ChatSelectionScreen extends Screen {
          }
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       public abstract static class Entry extends ObjectSelectionList.Entry<ChatSelectionScreen.ChatSelectionList.Entry> {
          @Override
          public Component getNarration() {
@@ -274,14 +274,14 @@ public class ChatSelectionScreen extends Screen {
          }
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       record Heading(UUID sender, ChatSelectionScreen.ChatSelectionList.Entry entry) {
          public boolean canCombine(ChatSelectionScreen.ChatSelectionList.Heading p_239748_) {
             return p_239748_.sender.equals(this.sender);
          }
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       public class MessageEntry extends ChatSelectionScreen.ChatSelectionList.Entry {
          private static final int CHECKMARK_WIDTH = 9;
          private static final int CHECKMARK_HEIGHT = 8;
@@ -411,7 +411,7 @@ public class ChatSelectionScreen extends Screen {
          }
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       public class MessageHeadingEntry extends ChatSelectionScreen.ChatSelectionList.Entry {
          private static final int FACE_SIZE = 12;
          private static final int PADDING = 4;
@@ -435,7 +435,7 @@ public class ChatSelectionScreen extends Screen {
          }
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       public static class PaddingEntry extends ChatSelectionScreen.ChatSelectionList.Entry {
          @Override
          public void renderContent(GuiGraphics p_282007_, int p_240110_, int p_240111_, boolean p_240117_, float p_240118_) {

@@ -11,11 +11,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ChannelAccess {
    private final Set<ChannelAccess.ChannelHandle> channels = Sets.newIdentityHashSet();
    final Library library;
@@ -65,7 +65,7 @@ public class ChannelAccess {
       this.channels.clear();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class ChannelHandle {
       @Nullable Channel channel;
       private boolean stopped;

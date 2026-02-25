@@ -8,12 +8,12 @@ import java.time.Instant;
 import java.util.UUID;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.reporting.NameReportScreen;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class NameReport extends Report {
    private final String reportedName;
 
@@ -38,7 +38,7 @@ public class NameReport extends Report {
       return new NameReportScreen(p_300004_, p_297616_, this);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder extends Report.Builder<NameReport> {
       public Builder(NameReport p_297219_, AbuseReportLimits p_298998_) {
          super(p_297219_, p_298998_);

@@ -6,10 +6,10 @@ import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class FlyStraightTowardsParticle extends SingleQuadParticle {
    private final double xStart;
    private final double yStart;
@@ -82,7 +82,7 @@ public class FlyStraightTowardsParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class OminousSpawnProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 

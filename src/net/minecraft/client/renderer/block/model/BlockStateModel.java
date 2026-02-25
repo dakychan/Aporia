@@ -17,10 +17,10 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.random.Weighted;
 import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public interface BlockStateModel {
    void collectParts(RandomSource var1, List<BlockModelPart> var2);
 
@@ -32,7 +32,7 @@ public interface BlockStateModel {
 
    TextureAtlasSprite particleIcon();
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class SimpleCachedUnbakedRoot implements BlockStateModel.UnbakedRoot {
       final BlockStateModel.Unbaked contents;
       private final ModelBaker.SharedOperationKey<BlockStateModel> bakingKey = new ModelBaker.SharedOperationKey<BlockStateModel>() {
@@ -61,7 +61,7 @@ public interface BlockStateModel {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Unbaked extends ResolvableModel {
       Codec<Weighted<Variant>> ELEMENT_CODEC = RecordCodecBuilder.create(
          p_396421_ -> p_396421_.group(
@@ -103,7 +103,7 @@ public interface BlockStateModel {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface UnbakedRoot extends ResolvableModel {
       BlockStateModel bake(BlockState var1, ModelBaker var2);
 

@@ -1,9 +1,9 @@
 package net.minecraft.client.gui.layouts;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public interface LayoutSettings {
    LayoutSettings padding(int var1);
 
@@ -61,7 +61,7 @@ public interface LayoutSettings {
       return new LayoutSettings.LayoutSettingsImpl();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class LayoutSettingsImpl implements LayoutSettings {
       public int paddingLeft;
       public int paddingTop;

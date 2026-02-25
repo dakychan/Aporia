@@ -1,11 +1,11 @@
 package com.mojang.realmsclient.dto;
 
 import com.google.gson.annotations.SerializedName;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record RealmsSlotUpdateDto(
    @SerializedName("slotId") int slotId,
    @SerializedName("spawnProtection") int spawnProtection,

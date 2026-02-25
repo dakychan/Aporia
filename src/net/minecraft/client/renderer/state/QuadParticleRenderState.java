@@ -19,15 +19,15 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.feature.ParticleFeatureRenderer;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class QuadParticleRenderState implements SubmitNodeCollector.ParticleGroupRenderer, ParticleGroupRenderState {
    private static final int INITIAL_PARTICLE_CAPACITY = 1024;
    private static final int FLOATS_PER_PARTICLE = 12;
@@ -230,7 +230,7 @@ public class QuadParticleRenderState implements SubmitNodeCollector.ParticleGrou
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface ParticleConsumer {
       void consume(
          float var1,
@@ -250,15 +250,15 @@ public class QuadParticleRenderState implements SubmitNodeCollector.ParticleGrou
       );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record PreparedBuffers(int indexCount, GpuBufferSlice dynamicTransforms, Map<SingleQuadParticle.Layer, QuadParticleRenderState.PreparedLayer> layers) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record PreparedLayer(int vertexOffset, int indexCount) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Storage {
       private int capacity = 1024;
       private float[] floatValues = new float[12288];

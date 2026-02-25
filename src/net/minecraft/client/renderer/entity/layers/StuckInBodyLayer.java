@@ -12,10 +12,10 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public abstract class StuckInBodyLayer<M extends PlayerModel, S> extends RenderLayer<AvatarRenderState, M> {
    private final Model<S> model;
    private final S modelState;
@@ -87,7 +87,7 @@ public abstract class StuckInBodyLayer<M extends PlayerModel, S> extends RenderL
       return p_362675_ > 0.5F ? 1.0F : 0.5F;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum PlacementStyle {
       IN_CUBE,
       ON_SURFACE;

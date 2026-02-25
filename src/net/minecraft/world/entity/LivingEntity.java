@@ -804,8 +804,8 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
             this.setPosToBed(p_390515_);
          }
       }, this::clearSleepingPos);
-      p_406679_.<Dynamic>read("Brain", Codec.PASSTHROUGH).ifPresent(p_405289_ -> this.brain = this.makeBrain((Dynamic<?>)p_405289_));
-      this.lastHurtByPlayer = EntityReference.read(p_406679_, "last_hurt_by_player");
+      p_406679_.read("Brain", Codec.PASSTHROUGH).ifPresent(p_405289_ ->
+              this.brain = this.makeBrain((Dynamic<?>)p_405289_));      this.lastHurtByPlayer = EntityReference.read(p_406679_, "last_hurt_by_player");
       this.lastHurtByPlayerMemoryTime = p_406679_.getIntOr("last_hurt_by_player_memory_time", 0);
       this.lastHurtByMob = EntityReference.read(p_406679_, "last_hurt_by_mob");
       this.lastHurtByMobTimestamp = p_406679_.getIntOr("ticks_since_last_hurt_by_mob", 0) + this.tickCount;

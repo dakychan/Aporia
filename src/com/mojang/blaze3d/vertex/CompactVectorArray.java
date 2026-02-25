@@ -1,11 +1,11 @@
 package com.mojang.blaze3d.vertex;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public class CompactVectorArray {
    private final float[] contents;
 

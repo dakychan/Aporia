@@ -9,11 +9,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class BlockTintCache {
    private static final int MAX_CACHE_ENTRIES = 256;
    private final ThreadLocal<BlockTintCache.LatestCacheInfo> latestChunkOnThread = ThreadLocal.withInitial(BlockTintCache.LatestCacheInfo::new);
@@ -119,7 +119,7 @@ public class BlockTintCache {
       return blocktintcache$cachedata2;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class CacheData {
       private final Int2ObjectArrayMap<int[]> cache = new Int2ObjectArrayMap(16);
       private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -165,7 +165,7 @@ public class BlockTintCache {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class LatestCacheInfo {
       public int x = Integer.MIN_VALUE;
       public int z = Integer.MIN_VALUE;

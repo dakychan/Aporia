@@ -4,11 +4,11 @@ import com.mojang.blaze3d.textures.AddressMode;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuSampler;
 import java.util.OptionalDouble;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.lwjgl.opengl.GL33C;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GlSampler extends GpuSampler {
    private final int id;
    private final AddressMode addressModeU;

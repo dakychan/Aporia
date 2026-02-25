@@ -3,11 +3,11 @@ package net.minecraft.client.gui.render.state.pip;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.model.player.PlayerModel;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record GuiSkinRenderState(
    PlayerModel playerModel,
    Identifier texture,

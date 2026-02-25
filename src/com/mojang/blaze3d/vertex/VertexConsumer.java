@@ -4,8 +4,8 @@ import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.util.ARGB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix3x2fc;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
@@ -13,7 +13,7 @@ import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface VertexConsumer {
    VertexConsumer addVertex(float var1, float var2, float var3);
 

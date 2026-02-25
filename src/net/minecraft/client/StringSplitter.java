@@ -11,13 +11,13 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.FormattedCharSink;
 import net.minecraft.util.StringDecomposer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.mutable.MutableFloat;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class StringSplitter {
    final StringSplitter.WidthProvider widthProvider;
 
@@ -238,7 +238,7 @@ public class StringSplitter {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class FlatComponents {
       final List<StringSplitter.LineComponent> parts;
       private String flatParts;
@@ -306,7 +306,7 @@ public class StringSplitter {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class LineBreakFinder implements FormattedCharSink {
       private final float maxWidth;
       private int lineBreak = -1;
@@ -367,7 +367,7 @@ public class StringSplitter {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class LineComponent implements FormattedText {
       final String contents;
       final Style style;
@@ -389,12 +389,12 @@ public class StringSplitter {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface LinePosConsumer {
       void accept(Style var1, int var2, int var3);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class WidthLimitedCharSink implements FormattedCharSink {
       private float maxWidth;
       private int position;
@@ -424,7 +424,7 @@ public class StringSplitter {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface WidthProvider {
       float getWidth(int var1, Style var2);
    }

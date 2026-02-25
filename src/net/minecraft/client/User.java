@@ -3,10 +3,10 @@ package net.minecraft.client;
 import com.mojang.util.UndashedUuid;
 import java.util.Optional;
 import java.util.UUID;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class User {
    private final String name;
    private final UUID uuid;

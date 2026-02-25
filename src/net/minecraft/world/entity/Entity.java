@@ -2057,7 +2057,7 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
             this.hasVisualFire = p_408698_.getBooleanOr("HasVisualFire", false);
             this.customData = p_408698_.<CustomData>read("data", CustomData.CODEC).orElse(CustomData.EMPTY);
             this.tags.clear();
-            p_408698_.<Collection<? extends E>>read("Tags", TAG_LIST_CODEC).ifPresent(this.tags::addAll);
+            p_408698_.read("Tags", TAG_LIST_CODEC).ifPresent(this.tags::addAll);
             this.readAdditionalSaveData(p_408698_);
             if (this.repositionEntityAfterLoad()) {
                this.reapplyPosition();

@@ -6,12 +6,12 @@ import com.mojang.realmsclient.util.JsonUtils;
 import java.time.Instant;
 import java.util.UUID;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public record PendingInvite(String invitationId, String realmName, String realmOwnerName, UUID realmOwnerUuid, Instant date) {
    private static final Logger LOGGER = LogUtils.getLogger();
 

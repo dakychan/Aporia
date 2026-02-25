@@ -15,11 +15,11 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 
-@OnlyIn(Dist.CLIENT)
+
 public class AtlasGlyphProvider {
    static final GlyphInfo GLYPH_INFO = GlyphInfo.simple(8.0F);
    final TextureAtlas atlas;
@@ -71,7 +71,7 @@ public class AtlasGlyphProvider {
       );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Instance(
       GlyphRenderTypes renderTypes,
       GpuTextureView textureView,

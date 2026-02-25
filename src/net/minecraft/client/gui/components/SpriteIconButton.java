@@ -5,11 +5,11 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class SpriteIconButton extends Button {
    protected final WidgetSprites sprite;
    protected final int spriteWidth;
@@ -52,7 +52,7 @@ public abstract class SpriteIconButton extends Button {
       return new SpriteIconButton.Builder(p_299964_, p_301369_, p_298501_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder {
       private final Component message;
       private final Button.OnPress onPress;
@@ -121,7 +121,7 @@ public abstract class SpriteIconButton extends Button {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class CenteredIcon extends SpriteIconButton {
       protected CenteredIcon(
          int p_300200_,
@@ -146,7 +146,7 @@ public abstract class SpriteIconButton extends Button {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class TextAndIcon extends SpriteIconButton {
       protected TextAndIcon(
          int p_299028_,

@@ -15,11 +15,11 @@ import net.minecraft.client.renderer.PlayerSkinRenderCache;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.chat.Style;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 
-@OnlyIn(Dist.CLIENT)
+
 public class PlayerGlyphProvider {
    static final GlyphInfo GLYPH_INFO = GlyphInfo.simple(8.0F);
    final PlayerSkinRenderCache playerSkinRenderCache;
@@ -57,7 +57,7 @@ public class PlayerGlyphProvider {
       return (GlyphSource)this.wrapperCache.getUnchecked(p_428681_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Instance(Supplier<PlayerSkinRenderCache.RenderInfo> skin, boolean hat, float x, float y, int color, int shadowColor, float shadowOffset, Style style)
       implements PlainTextRenderable {
       @Override

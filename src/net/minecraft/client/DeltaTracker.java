@@ -1,10 +1,10 @@
 package net.minecraft.client;
 
 import it.unimi.dsi.fastutil.floats.FloatUnaryOperator;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public interface DeltaTracker {
    DeltaTracker ZERO = new DeltaTracker.DefaultValue(0.0F);
    DeltaTracker ONE = new DeltaTracker.DefaultValue(1.0F);
@@ -15,7 +15,7 @@ public interface DeltaTracker {
 
    float getRealtimeDeltaTicks();
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class DefaultValue implements DeltaTracker {
       private final float value;
 
@@ -39,7 +39,7 @@ public interface DeltaTracker {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Timer implements DeltaTracker {
       private float deltaTicks;
       private float deltaTickResidual;

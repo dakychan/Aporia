@@ -2,10 +2,10 @@ package net.minecraft.client.gui.screens.advancements;
 
 import net.minecraft.advancements.AdvancementType;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public enum AdvancementWidgetType {
    OBTAINED(
       Identifier.withDefaultNamespace("advancements/box_obtained"),

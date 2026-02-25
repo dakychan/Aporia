@@ -13,10 +13,10 @@ import net.minecraft.client.renderer.block.model.BlockStateModel;
 import net.minecraft.client.renderer.block.model.VariantMutator;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class MultiVariantGenerator implements BlockModelDefinitionGenerator {
    private final Block block;
    private final List<MultiVariantGenerator.Entry> entries;
@@ -77,7 +77,7 @@ public class MultiVariantGenerator implements BlockModelDefinitionGenerator {
       return new MultiVariantGenerator(p_396861_, List.of(new MultiVariantGenerator.Entry(PropertyValueList.EMPTY, p_392410_)), Set.of());
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Empty {
       private final Block block;
 
@@ -96,7 +96,7 @@ public class MultiVariantGenerator implements BlockModelDefinitionGenerator {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Entry(PropertyValueList properties, MultiVariant variant) {
       public Stream<MultiVariantGenerator.Entry> apply(PropertyDispatch<VariantMutator> p_392121_) {
          return p_392121_.getEntries().entrySet().stream().map(p_393452_ -> {

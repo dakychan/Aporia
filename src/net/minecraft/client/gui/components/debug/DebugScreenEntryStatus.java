@@ -1,10 +1,10 @@
 package net.minecraft.client.gui.components.debug;
 
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public enum DebugScreenEntryStatus implements StringRepresentable {
    ALWAYS_ON("alwaysOn"),
    IN_OVERLAY("inOverlay"),

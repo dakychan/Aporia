@@ -8,12 +8,12 @@ import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.function.BooleanSupplier;
 import java.util.zip.GZIPOutputStream;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsUploadWorldPacker {
    private static final long SIZE_LIMIT = 5368709120L;
    private static final String WORLD_FOLDER_NAME = "world";

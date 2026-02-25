@@ -8,11 +8,11 @@ import java.util.UUID;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class Report {
    protected final UUID reportId;
    protected final Instant createdAt;
@@ -35,7 +35,7 @@ public abstract class Report {
 
    public abstract Screen createScreen(Screen var1, ReportingContext var2);
 
-   @OnlyIn(Dist.CLIENT)
+   
    public abstract static class Builder<R extends Report> {
       protected final R report;
       protected final AbuseReportLimits limits;
@@ -86,7 +86,7 @@ public abstract class Report {
       public abstract Either<Report.Result, Report.CannotBuildReason> build(ReportingContext var1);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record CannotBuildReason(Component message) {
       public static final Report.CannotBuildReason NO_REASON = new Report.CannotBuildReason(Component.translatable("gui.abuseReport.send.no_reason"));
       public static final Report.CannotBuildReason NO_REPORTED_MESSAGES = new Report.CannotBuildReason(
@@ -105,7 +105,7 @@ public abstract class Report {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Result(UUID id, net.minecraft.client.multiplayer.chat.report.ReportType reportType, AbuseReport report) {
    }
 }

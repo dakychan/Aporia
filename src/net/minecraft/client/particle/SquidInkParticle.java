@@ -5,10 +5,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SquidInkParticle extends SimpleAnimatedParticle {
    SquidInkParticle(
       ClientLevel p_172325_,
@@ -49,7 +49,7 @@ public class SquidInkParticle extends SimpleAnimatedParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class GlowInkProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprites;
 
@@ -74,7 +74,7 @@ public class SquidInkParticle extends SimpleAnimatedParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprites;
 

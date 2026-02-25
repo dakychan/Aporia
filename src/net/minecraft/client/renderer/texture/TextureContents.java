@@ -8,11 +8,11 @@ import net.minecraft.client.resources.metadata.texture.TextureMetadataSection;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record TextureContents(NativeImage image, @Nullable TextureMetadataSection metadata) implements Closeable {
    public static TextureContents load(ResourceManager p_377087_, Identifier p_455898_) throws IOException {
       Resource resource = p_377087_.getResourceOrThrow(p_455898_);

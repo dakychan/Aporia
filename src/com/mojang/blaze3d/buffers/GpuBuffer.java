@@ -6,10 +6,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.nio.ByteBuffer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 @DontObfuscate
 public abstract class GpuBuffer implements AutoCloseable {
    public static final int USAGE_MAP_READ = 1;
@@ -58,7 +58,7 @@ public abstract class GpuBuffer implements AutoCloseable {
       return new GpuBufferSlice(this, 0L, this.size);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    @DontObfuscate
    public interface MappedView extends AutoCloseable {
       ByteBuffer data();
@@ -69,7 +69,7 @@ public abstract class GpuBuffer implements AutoCloseable {
 
    @Retention(RetentionPolicy.CLASS)
    @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD, ElementType.TYPE_USE})
-   @OnlyIn(Dist.CLIENT)
+   
    public @interface Usage {
    }
 }

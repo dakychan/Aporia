@@ -8,10 +8,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public record ShaderDefines(Map<String, String> values, Set<String> flags) {
    public static final ShaderDefines EMPTY = new ShaderDefines(Map.of(), Set.of());
    public static final Codec<ShaderDefines> CODEC = RecordCodecBuilder.create(
@@ -64,7 +64,7 @@ public record ShaderDefines(Map<String, String> values, Set<String> flags) {
       return this.values.isEmpty() && this.flags.isEmpty();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder {
       private final com.google.common.collect.ImmutableMap.Builder<String, String> values = ImmutableMap.builder();
       private final com.google.common.collect.ImmutableSet.Builder<String> flags = ImmutableSet.builder();

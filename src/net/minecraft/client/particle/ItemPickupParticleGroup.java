@@ -12,10 +12,10 @@ import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.state.ParticleGroupRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ItemPickupParticleGroup extends ParticleGroup<ItemPickupParticle> {
    public ItemPickupParticleGroup(ParticleEngine p_426758_) {
       super(p_426758_);
@@ -28,7 +28,7 @@ public class ItemPickupParticleGroup extends ParticleGroup<ItemPickupParticle> {
       );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record ParticleInstance(EntityRenderState itemRenderState, double xOffset, double yOffset, double zOffset) {
       public static ItemPickupParticleGroup.ParticleInstance fromParticle(ItemPickupParticle p_428662_, Camera p_423054_, float p_430102_) {
          float f = (p_428662_.life + p_430102_) / 3.0F;
@@ -44,7 +44,7 @@ public class ItemPickupParticleGroup extends ParticleGroup<ItemPickupParticle> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record State(List<ItemPickupParticleGroup.ParticleInstance> instances) implements ParticleGroupRenderState {
       @Override
       public void submit(SubmitNodeCollector p_427784_, CameraRenderState p_431324_) {

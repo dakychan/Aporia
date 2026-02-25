@@ -14,11 +14,11 @@ import net.minecraft.client.resources.model.Material;
 import net.minecraft.client.resources.model.MaterialSet;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ChestSpecialRenderer implements NoDataSpecialModelRenderer {
    public static final Identifier GIFT_CHEST_TEXTURE = Identifier.withDefaultNamespace("christmas");
    public static final Identifier NORMAL_CHEST_TEXTURE = Identifier.withDefaultNamespace("normal");
@@ -65,7 +65,7 @@ public class ChestSpecialRenderer implements NoDataSpecialModelRenderer {
       this.model.root().getExtentsForGui(posestack, p_459464_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked(Identifier texture, float openness) implements SpecialModelRenderer.Unbaked {
       public static final MapCodec<ChestSpecialRenderer.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
          p_448367_ -> p_448367_.group(

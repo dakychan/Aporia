@@ -5,11 +5,11 @@ import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.server.dialog.ActionButton;
 import net.minecraft.server.dialog.SimpleDialog;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class SimpleDialogScreen<T extends SimpleDialog> extends DialogScreen<T> {
    public SimpleDialogScreen(@Nullable Screen p_408002_, T p_407544_, DialogConnectionAccess p_408945_) {
       super(p_408002_, p_407544_, p_408945_);

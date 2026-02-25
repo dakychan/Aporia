@@ -23,11 +23,11 @@ import java.util.stream.Stream;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class PostChain implements AutoCloseable {
    public static final Identifier MAIN_TARGET_ID = Identifier.withDefaultNamespace("main");
    private final List<PostPass> passes;
@@ -171,7 +171,7 @@ public class PostChain implements AutoCloseable {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface TargetBundle {
       static PostChain.TargetBundle of(final Identifier p_457214_, final ResourceHandle<RenderTarget> p_367685_) {
          return new PostChain.TargetBundle() {

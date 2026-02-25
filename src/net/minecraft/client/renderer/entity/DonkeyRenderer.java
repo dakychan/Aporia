@@ -9,10 +9,10 @@ import net.minecraft.client.renderer.entity.state.DonkeyRenderState;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.animal.equine.AbstractChestedHorse;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class DonkeyRenderer<T extends AbstractChestedHorse> extends AbstractHorseRenderer<T, DonkeyRenderState, DonkeyModel> {
    private final Identifier texture;
 
@@ -44,7 +44,7 @@ public class DonkeyRenderer<T extends AbstractChestedHorse> extends AbstractHors
       p_451699_.hasChest = p_453396_.hasChest();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Type {
       DONKEY(
          Identifier.withDefaultNamespace("textures/entity/horse/donkey.png"),

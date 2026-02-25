@@ -29,10 +29,10 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.SpecialDates;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ItemModelUtils {
    public static ItemModel.Unbaked plainModel(Identifier p_456497_) {
       return new BlockModelWrapper.Unbaked(p_456497_, List.of());

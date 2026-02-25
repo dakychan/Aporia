@@ -11,11 +11,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Quaternionf;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class SingleQuadParticle extends Particle {
    protected float quadSize;
    protected float rCol = 1.0F;
@@ -165,7 +165,7 @@ public abstract class SingleQuadParticle extends Particle {
          + this.age;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface FacingCameraMode {
       SingleQuadParticle.FacingCameraMode LOOKAT_XYZ = (p_312026_, p_311956_, p_310043_) -> p_312026_.set(p_311956_.rotation());
       SingleQuadParticle.FacingCameraMode LOOKAT_Y = (p_310770_, p_309904_, p_311153_) -> p_310770_.set(
@@ -175,7 +175,7 @@ public abstract class SingleQuadParticle extends Particle {
       void setRotation(Quaternionf var1, Camera var2, float var3);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Layer(boolean translucent, Identifier textureAtlasLocation, RenderPipeline pipeline) {
       public static final SingleQuadParticle.Layer TERRAIN = new SingleQuadParticle.Layer(
          true, TextureAtlas.LOCATION_BLOCKS, RenderPipelines.TRANSLUCENT_PARTICLE

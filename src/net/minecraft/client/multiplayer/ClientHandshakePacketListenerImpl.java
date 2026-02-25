@@ -48,12 +48,12 @@ import net.minecraft.server.ServerLinks;
 import net.minecraft.util.Crypt;
 import net.minecraft.util.Util;
 import net.minecraft.world.flag.FeatureFlags;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ClientHandshakePacketListenerImpl implements ClientLoginPacketListener {
    private static final Logger LOGGER = LogUtils.getLogger();
    private final Minecraft minecraft;
@@ -251,7 +251,7 @@ public class ClientHandshakePacketListenerImpl implements ClientLoginPacketListe
       p_311844_.setDetail("Is Local", () -> String.valueOf(this.connection.isMemoryConnection()));
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static enum State {
       CONNECTING(Component.translatable("connect.connecting"), Set.of()),
       AUTHORIZING(Component.translatable("connect.authorizing"), Set.of(CONNECTING)),

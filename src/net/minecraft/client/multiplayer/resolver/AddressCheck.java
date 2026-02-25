@@ -6,10 +6,10 @@ import com.mojang.blocklist.BlockListSupplier;
 import java.util.Objects;
 import java.util.ServiceLoader;
 import java.util.function.Predicate;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public interface AddressCheck {
    boolean isAllowed(ResolvedServerAddress var1);
 

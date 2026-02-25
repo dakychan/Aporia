@@ -5,10 +5,10 @@ import net.minecraft.gizmos.Gizmos;
 import net.minecraft.util.debug.DebugSubscriptions;
 import net.minecraft.util.debug.DebugValueAccess;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class RedstoneWireOrientationsRenderer implements DebugRenderer.SimpleDebugRenderer {
    @Override
    public void emitGizmos(double p_456959_, double p_455590_, double p_453399_, DebugValueAccess p_455798_, Frustum p_458798_, float p_453987_) {

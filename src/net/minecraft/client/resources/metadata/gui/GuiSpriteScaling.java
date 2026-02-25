@@ -8,17 +8,17 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.OptionalInt;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public interface GuiSpriteScaling {
    Codec<GuiSpriteScaling> CODEC = GuiSpriteScaling.Type.CODEC.dispatch(GuiSpriteScaling::type, GuiSpriteScaling.Type::codec);
    GuiSpriteScaling DEFAULT = new GuiSpriteScaling.Stretch();
 
    GuiSpriteScaling.Type type();
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record NineSlice(int width, int height, GuiSpriteScaling.NineSlice.Border border, boolean stretchInner) implements GuiSpriteScaling {
       public static final MapCodec<GuiSpriteScaling.NineSlice> CODEC = RecordCodecBuilder.mapCodec(
             p_358030_ -> p_358030_.group(
@@ -61,7 +61,7 @@ public interface GuiSpriteScaling {
          return GuiSpriteScaling.Type.NINE_SLICE;
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       public record Border(int left, int top, int right, int bottom) {
          private static final Codec<GuiSpriteScaling.NineSlice.Border> VALUE_CODEC = ExtraCodecs.POSITIVE_INT
             .flatComapMap(p_299885_ -> new GuiSpriteScaling.NineSlice.Border(p_299885_, p_299885_, p_299885_, p_299885_), p_299528_ -> {
@@ -86,7 +86,7 @@ public interface GuiSpriteScaling {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Stretch() implements GuiSpriteScaling {
       public static final MapCodec<GuiSpriteScaling.Stretch> CODEC = MapCodec.unit(GuiSpriteScaling.Stretch::new);
 
@@ -96,7 +96,7 @@ public interface GuiSpriteScaling {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Tile(int width, int height) implements GuiSpriteScaling {
       public static final MapCodec<GuiSpriteScaling.Tile> CODEC = RecordCodecBuilder.mapCodec(
          p_297832_ -> p_297832_.group(
@@ -112,7 +112,7 @@ public interface GuiSpriteScaling {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Type implements StringRepresentable {
       STRETCH("stretch", GuiSpriteScaling.Stretch.CODEC),
       TILE("tile", GuiSpriteScaling.Tile.CODEC),

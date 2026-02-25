@@ -9,12 +9,12 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DynamicUniformStorage<T extends DynamicUniformStorage.DynamicUniform> implements AutoCloseable {
    private static final Logger LOGGER = LogUtils.getLogger();
    private final List<MappableRingBuffer> oldBuffers = new ArrayList<>();
@@ -150,7 +150,7 @@ public class DynamicUniformStorage<T extends DynamicUniformStorage.DynamicUnifor
       this.ringBuffer.close();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface DynamicUniform {
       void write(ByteBuffer var1);
    }

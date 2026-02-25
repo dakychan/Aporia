@@ -1,10 +1,10 @@
 package com.mojang.realmsclient.client.worldupload;
 
 import com.mojang.realmsclient.client.UploadStatus;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public interface RealmsWorldUploadStatusTracker {
    UploadStatus getUploadStatus();
 

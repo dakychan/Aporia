@@ -10,10 +10,10 @@ import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class LivingEntityEmissiveLayer<S extends LivingEntityRenderState, M extends EntityModel<S>> extends RenderLayer<S, M> {
    private final Function<S, Identifier> textureProvider;
    private final LivingEntityEmissiveLayer.AlphaFunction<S> alphaFunction;
@@ -60,7 +60,7 @@ public class LivingEntityEmissiveLayer<S extends LivingEntityRenderState, M exte
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface AlphaFunction<S extends LivingEntityRenderState> {
       float apply(S var1, float var2);
    }

@@ -5,11 +5,11 @@ import com.google.gson.FieldAttributes;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GuardedSerializer {
    ExclusionStrategy strategy = new ExclusionStrategy() {
       public boolean shouldSkipClass(Class<?> p_410689_) {

@@ -19,11 +19,11 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsPreferredRegionSelectionScreen extends Screen {
    private static final Component REGION_SELECTION_LABEL = Component.translatable("mco.configure.world.region_preference.title");
    private static final int SPACING = 8;
@@ -90,7 +90,7 @@ public class RealmsPreferredRegionSelectionScreen extends Screen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class RegionSelectionList extends ObjectSelectionList<RealmsPreferredRegionSelectionScreen.RegionSelectionList.Entry> {
       RegionSelectionList() {
          super(
@@ -118,7 +118,7 @@ public class RealmsPreferredRegionSelectionScreen extends Screen {
          RealmsPreferredRegionSelectionScreen.this.updateButtonValidity();
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       class Entry extends net.minecraft.client.gui.components.ObjectSelectionList.Entry<RealmsPreferredRegionSelectionScreen.RegionSelectionList.Entry> {
          final RealmsSettingsTab.RegionSelection regionSelection;
          private final Component name;

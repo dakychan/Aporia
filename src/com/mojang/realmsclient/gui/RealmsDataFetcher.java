@@ -13,10 +13,10 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class RealmsDataFetcher {
    public final DataFetcher dataFetcher = new DataFetcher(Util.ioPool(), TimeUnit.MILLISECONDS, Util.timeSource);
    private final List<DataFetcher.Task<?>> tasks;
@@ -58,7 +58,7 @@ public class RealmsDataFetcher {
       return this.tasks;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record ServerListData(List<RealmsServer> serverList, List<RealmsServer> availableSnapshotServers) {
    }
 }

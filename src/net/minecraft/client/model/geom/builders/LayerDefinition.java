@@ -1,10 +1,10 @@
 package net.minecraft.client.model.geom.builders;
 
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class LayerDefinition {
    private final MeshDefinition mesh;
    private final MaterialDefinition material;

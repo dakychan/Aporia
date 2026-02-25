@@ -4,11 +4,11 @@ import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.model.object.banner.BannerFlagModel;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record GuiBannerResultRenderState(
    BannerFlagModel flag,
    DyeColor baseColor,

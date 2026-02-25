@@ -63,12 +63,12 @@ import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.LevelSummary;
 import net.minecraft.world.level.validation.ContentValidationException;
 import net.minecraft.world.level.validation.ForbiddenSymlinkInfo;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class WorldSelectionList extends ObjectSelectionList<WorldSelectionList.Entry> {
    public static final DateTimeFormatter DATE_FORMAT = Util.localizedDateFormatter(FormatStyle.SHORT);
    static final Identifier ERROR_HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("world_list/error_highlighted");
@@ -281,7 +281,7 @@ public class WorldSelectionList extends ObjectSelectionList<WorldSelectionList.E
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder {
       private final Minecraft minecraft;
       private final Screen screen;
@@ -340,7 +340,7 @@ public class WorldSelectionList extends ObjectSelectionList<WorldSelectionList.E
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public abstract static class Entry extends ObjectSelectionList.Entry<WorldSelectionList.Entry> implements AutoCloseable {
       @Override
       public void close() {
@@ -351,13 +351,13 @@ public class WorldSelectionList extends ObjectSelectionList<WorldSelectionList.E
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum EntryType {
       SINGLEPLAYER,
       UPLOAD_WORLD;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class LoadingHeader extends WorldSelectionList.Entry {
       private static final Component LOADING_LABEL = Component.translatable("selectWorld.loading_list");
       private final Minecraft minecraft;
@@ -383,7 +383,7 @@ public class WorldSelectionList extends ObjectSelectionList<WorldSelectionList.E
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static final class NoWorldsEntry extends WorldSelectionList.Entry {
       private final StringWidget stringWidget;
 
@@ -404,7 +404,7 @@ public class WorldSelectionList extends ObjectSelectionList<WorldSelectionList.E
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public final class WorldListEntry extends WorldSelectionList.Entry implements SelectableEntry {
       private static final int ICON_SIZE = 32;
       private final WorldSelectionList list;

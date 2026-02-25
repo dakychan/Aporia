@@ -16,12 +16,12 @@ import net.minecraft.client.telemetry.WorldSessionTelemetryManager;
 import net.minecraft.network.protocol.game.ClientboundUpdateAdvancementsPacket;
 import net.minecraft.network.protocol.game.ServerboundSeenAdvancementsPacket;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ClientAdvancements {
    private static final Logger LOGGER = LogUtils.getLogger();
    private final Minecraft minecraft;
@@ -108,7 +108,7 @@ public class ClientAdvancements {
       return advancementnode != null ? advancementnode.holder() : null;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Listener extends AdvancementTree.Listener {
       void onUpdateAdvancementProgress(AdvancementNode var1, AdvancementProgress var2);
 

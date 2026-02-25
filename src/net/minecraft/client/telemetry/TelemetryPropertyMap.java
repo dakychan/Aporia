@@ -10,11 +10,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TelemetryPropertyMap {
    final Map<TelemetryProperty<?>, Object> entries;
 
@@ -84,7 +84,7 @@ public class TelemetryPropertyMap {
       return this.entries.keySet();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder {
       private final Map<TelemetryProperty<?>, Object> entries = new Reference2ObjectOpenHashMap();
 

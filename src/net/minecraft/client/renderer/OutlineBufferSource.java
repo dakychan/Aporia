@@ -4,10 +4,10 @@ import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.Optional;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class OutlineBufferSource implements MultiBufferSource {
    private final MultiBufferSource.BufferSource outlineBufferSource = MultiBufferSource.immediate(new ByteBufferBuilder(1536));
    private int outlineColor = -1;
@@ -36,7 +36,7 @@ public class OutlineBufferSource implements MultiBufferSource {
       this.outlineBufferSource.endBatch();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record EntityOutlineGenerator(VertexConsumer delegate, int color) implements VertexConsumer {
       public VertexConsumer addVertex(float p_342958_, float p_343747_, float p_344781_) {
          this.delegate.addVertex(p_342958_, p_343747_, p_344781_).setColor(this.color);

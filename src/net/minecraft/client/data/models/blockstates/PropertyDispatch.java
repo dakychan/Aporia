@@ -12,10 +12,10 @@ import java.util.stream.Stream;
 import net.minecraft.client.data.models.MultiVariant;
 import net.minecraft.client.renderer.block.model.VariantMutator;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public abstract class PropertyDispatch<V> {
    private final Map<PropertyValueList, V> values = new HashMap<>();
 
@@ -103,7 +103,7 @@ public abstract class PropertyDispatch<V> {
       return new PropertyDispatch.C5<>(p_392424_, p_393722_, p_394175_, p_395776_, p_393427_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class C1<V, T1 extends Comparable<T1>> extends PropertyDispatch<V> {
       private final Property<T1> property1;
 
@@ -128,7 +128,7 @@ public abstract class PropertyDispatch<V> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class C2<V, T1 extends Comparable<T1>, T2 extends Comparable<T2>> extends PropertyDispatch<V> {
       private final Property<T1> property1;
       private final Property<T2> property2;
@@ -161,7 +161,7 @@ public abstract class PropertyDispatch<V> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class C3<V, T1 extends Comparable<T1>, T2 extends Comparable<T2>, T3 extends Comparable<T3>> extends PropertyDispatch<V> {
       private final Property<T1> property1;
       private final Property<T2> property2;
@@ -202,7 +202,7 @@ public abstract class PropertyDispatch<V> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class C4<V, T1 extends Comparable<T1>, T2 extends Comparable<T2>, T3 extends Comparable<T3>, T4 extends Comparable<T4>>
       extends PropertyDispatch<V> {
       private final Property<T1> property1;
@@ -254,7 +254,7 @@ public abstract class PropertyDispatch<V> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class C5<V, T1 extends Comparable<T1>, T2 extends Comparable<T2>, T3 extends Comparable<T3>, T4 extends Comparable<T4>, T5 extends Comparable<T5>>
       extends PropertyDispatch<V> {
       private final Property<T1> property1;

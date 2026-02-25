@@ -3,10 +3,10 @@ package net.minecraft.client.renderer.state;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.renderer.WeatherEffectRenderer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class WeatherRenderState {
    public final List<WeatherEffectRenderer.ColumnInstance> rainColumns = new ArrayList<>();
    public final List<WeatherEffectRenderer.ColumnInstance> snowColumns = new ArrayList<>();

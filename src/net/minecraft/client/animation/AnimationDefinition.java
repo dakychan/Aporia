@@ -5,16 +5,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public record AnimationDefinition(float lengthInSeconds, boolean looping, Map<String, List<AnimationChannel>> boneAnimations) {
    public KeyframeAnimation bake(ModelPart p_409469_) {
       return KeyframeAnimation.bake(p_409469_, this);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder {
       private final float length;
       private final Map<String, List<AnimationChannel>> animationByBone = Maps.newHashMap();

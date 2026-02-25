@@ -17,11 +17,11 @@ import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.repository.PackCompatibility;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TransferableSelectionList extends ObjectSelectionList<TransferableSelectionList.Entry> {
    static final Identifier SELECT_HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("transferable_list/select_highlighted");
    static final Identifier SELECT_SPRITE = Identifier.withDefaultNamespace("transferable_list/select");
@@ -75,7 +75,7 @@ public class TransferableSelectionList extends ObjectSelectionList<TransferableS
       this.refreshScrollAmount();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public abstract class Entry extends ObjectSelectionList.Entry<TransferableSelectionList.Entry> {
       @Override
       public int getWidth() {
@@ -85,7 +85,7 @@ public class TransferableSelectionList extends ObjectSelectionList<TransferableS
       public abstract String getPackId();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class HeaderEntry extends TransferableSelectionList.Entry {
       private final Font font;
       private final Component text;
@@ -111,7 +111,7 @@ public class TransferableSelectionList extends ObjectSelectionList<TransferableS
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class PackEntry extends TransferableSelectionList.Entry implements SelectableEntry {
       private static final int MAX_DESCRIPTION_WIDTH_PIXELS = 157;
       public static final int ICON_SIZE = 32;

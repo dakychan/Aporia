@@ -18,8 +18,8 @@ import net.minecraft.ReportedException;
 import net.minecraft.client.main.SilentInitException;
 import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.resources.IoSupplier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.Callbacks;
@@ -33,7 +33,7 @@ import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public final class Window implements AutoCloseable {
    private static final Logger LOGGER = LogUtils.getLogger();
    public static final int BASE_WIDTH = 320;
@@ -542,7 +542,7 @@ public final class Window implements AutoCloseable {
       return Math.max(2.5F, this.getWidth() / 1920.0F * 2.5F);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class WindowInitFailed extends SilentInitException {
       WindowInitFailed(String p_85455_) {
          super(p_85455_);

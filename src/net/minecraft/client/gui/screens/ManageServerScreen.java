@@ -9,10 +9,10 @@ import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ManageServerScreen extends Screen {
    private static final Component NAME_LABEL = Component.translatable("manageServer.enterName");
    private static final Component IP_LABEL = Component.translatable("manageServer.enterIp");

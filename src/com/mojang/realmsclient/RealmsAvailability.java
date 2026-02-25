@@ -13,12 +13,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsAvailability {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static @Nullable CompletableFuture<RealmsAvailability.Result> future;
@@ -66,7 +66,7 @@ public class RealmsAvailability {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Result(RealmsAvailability.Type type, @Nullable RealmsServiceException exception) {
       public Result(RealmsAvailability.Type p_298726_) {
          this(p_298726_, null);
@@ -89,7 +89,7 @@ public class RealmsAvailability {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Type {
       SUCCESS,
       INCOMPATIBLE_CLIENT,

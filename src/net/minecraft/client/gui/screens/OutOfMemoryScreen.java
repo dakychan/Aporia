@@ -6,10 +6,10 @@ import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class OutOfMemoryScreen extends Screen {
    private static final Component TITLE = Component.translatable("outOfMemory.title");
    private static final Component MESSAGE = Component.translatable("outOfMemory.message");

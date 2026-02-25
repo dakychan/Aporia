@@ -10,8 +10,8 @@ import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.Version;
 import org.lwjgl.glfw.GLFW;
@@ -23,7 +23,7 @@ import org.slf4j.Logger;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
 
-@OnlyIn(Dist.CLIENT)
+
 @DontObfuscate
 public class GLX {
    private static final Logger LOGGER = LogUtils.getLogger();

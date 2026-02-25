@@ -3,10 +3,10 @@ package net.minecraft.client.resources.language;
 import java.util.IllegalFormatException;
 import java.util.Locale;
 import net.minecraft.locale.Language;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class I18n {
    private static volatile Language language = Language.getInstance();
 

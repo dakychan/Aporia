@@ -26,11 +26,11 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TabNavigationBar extends AbstractContainerEventHandler implements Renderable, NarratableEntry {
    private static final int NO_TAB = -1;
    private static final int MAX_WIDTH = 400;
@@ -247,7 +247,7 @@ public class TabNavigationBar extends AbstractContainerEventHandler implements R
       return i != -1 ? (TabButton)this.tabButtons.get(i) : null;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder {
       private final int width;
       private final TabManager tabManager;

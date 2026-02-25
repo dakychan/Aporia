@@ -5,10 +5,10 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeStorage;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class TextFeatureRenderer {
    public void render(SubmitNodeCollection p_424576_, MultiBufferSource.BufferSource p_429835_) {
       Font font = Minecraft.getInstance().font;

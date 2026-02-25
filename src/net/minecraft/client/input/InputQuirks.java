@@ -1,10 +1,10 @@
 package net.minecraft.client.input;
 
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class InputQuirks {
    private static final boolean ON_OSX = Util.getPlatform() == Util.OS.OSX;
    public static final boolean REPLACE_CTRL_KEY_WITH_CMD_KEY = ON_OSX;

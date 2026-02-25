@@ -7,11 +7,11 @@ import java.util.List;
 import java.util.Locale;
 import net.minecraft.util.Util;
 import net.minecraft.util.Util.OS;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GraphicsWorkarounds {
    private static final List<String> INTEL_GEN11_CORE = List.of(
       "i3-1000g1",

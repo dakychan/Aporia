@@ -4,10 +4,10 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class CampfireSmokeParticle extends SingleQuadParticle {
    CampfireSmokeParticle(
       ClientLevel p_105856_,
@@ -58,7 +58,7 @@ public class CampfireSmokeParticle extends SingleQuadParticle {
       return SingleQuadParticle.Layer.TRANSLUCENT;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class CosyProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprites;
 
@@ -85,7 +85,7 @@ public class CampfireSmokeParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class SignalProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprites;
 

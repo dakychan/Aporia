@@ -14,11 +14,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
 import net.minecraft.SharedConstants;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GlRenderPass implements RenderPass {
    protected static final int MAX_VERTEX_BUFFERS = 1;
    public static final boolean VALIDATION = SharedConstants.IS_RUNNING_IN_IDE;
@@ -194,7 +194,7 @@ public class GlRenderPass implements RenderPass {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    protected record TextureViewAndSampler(GlTextureView view, GlSampler sampler) {
    }
 }

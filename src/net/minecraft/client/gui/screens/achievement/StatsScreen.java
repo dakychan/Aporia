@@ -47,11 +47,11 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class StatsScreen extends Screen {
    private static final Component TITLE = Component.translatable("gui.stats");
    static final Identifier SLOT_SPRITE = Identifier.withDefaultNamespace("container/slot");
@@ -179,7 +179,7 @@ public class StatsScreen extends Screen {
       return "stat." + p_96947_.getValue().toString().replace(':', '.');
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class GeneralStatisticsList extends ObjectSelectionList<StatsScreen.GeneralStatisticsList.Entry> {
       public GeneralStatisticsList(final Minecraft p_96995_) {
          super(p_96995_, StatsScreen.this.width, StatsScreen.this.layout.getContentHeight(), 33, 14);
@@ -206,7 +206,7 @@ public class StatsScreen extends Screen {
       protected void renderListSeparators(GuiGraphics p_427813_) {
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       class Entry extends ObjectSelectionList.Entry<StatsScreen.GeneralStatisticsList.Entry> {
          private final Stat<Identifier> stat;
          private final Component statDisplay;
@@ -239,7 +239,7 @@ public class StatsScreen extends Screen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class ItemStatisticsList extends ContainerObjectSelectionList<StatsScreen.ItemStatisticsList.Entry> {
       private static final int SLOT_BG_SIZE = 18;
       private static final int SLOT_STAT_HEIGHT = 22;
@@ -363,11 +363,11 @@ public class StatsScreen extends Screen {
       protected void renderListSeparators(GuiGraphics p_428163_) {
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       abstract static class Entry extends ContainerObjectSelectionList.Entry<StatsScreen.ItemStatisticsList.Entry> {
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       class HeaderEntry extends StatsScreen.ItemStatisticsList.Entry {
          private static final Identifier BLOCK_MINED_SPRITE = Identifier.withDefaultNamespace("statistics/block_mined");
          private static final Identifier ITEM_BROKEN_SPRITE = Identifier.withDefaultNamespace("statistics/item_broken");
@@ -424,7 +424,7 @@ public class StatsScreen extends Screen {
             return this.children;
          }
 
-         @OnlyIn(Dist.CLIENT)
+         
          class StatSortButton extends ImageButton {
             private final Identifier sprite;
 
@@ -449,7 +449,7 @@ public class StatsScreen extends Screen {
          }
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       class ItemRow extends StatsScreen.ItemStatisticsList.Entry {
          private final Item item;
          private final StatsScreen.ItemStatisticsList.ItemRow.ItemRowWidget itemRowWidget;
@@ -509,7 +509,7 @@ public class StatsScreen extends Screen {
             return List.of(this.itemRowWidget);
          }
 
-         @OnlyIn(Dist.CLIENT)
+         
          class ItemRowWidget extends ItemDisplayWidget {
             ItemRowWidget(final ItemStack p_430329_) {
                super(ItemStatisticsList.this.minecraft, 1, 1, 18, 18, p_430329_.getHoverName(), p_430329_, false, true);
@@ -528,7 +528,7 @@ public class StatsScreen extends Screen {
          }
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       class ItemRowComparator implements Comparator<StatsScreen.ItemStatisticsList.ItemRow> {
          public int compare(StatsScreen.ItemStatisticsList.ItemRow p_169524_, StatsScreen.ItemStatisticsList.ItemRow p_169525_) {
             Item item = p_169524_.getItem();
@@ -555,7 +555,7 @@ public class StatsScreen extends Screen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class MobsStatisticsList extends ObjectSelectionList<StatsScreen.MobsStatisticsList.MobRow> {
       public MobsStatisticsList(final Minecraft p_97100_) {
          super(p_97100_, StatsScreen.this.width, StatsScreen.this.layout.getContentHeight(), 33, 36);
@@ -581,7 +581,7 @@ public class StatsScreen extends Screen {
       protected void renderListSeparators(GuiGraphics p_427958_) {
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       class MobRow extends ObjectSelectionList.Entry<StatsScreen.MobsStatisticsList.MobRow> {
          private final Component mobName;
          private final Component kills;
@@ -628,7 +628,7 @@ public class StatsScreen extends Screen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class StatisticsTab extends GridLayoutTab {
       protected final AbstractSelectionList<?> list;
 

@@ -8,10 +8,10 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Unit;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public abstract class Model<S> {
    protected final ModelPart root;
    protected final Function<Identifier, RenderType> renderType;
@@ -53,7 +53,7 @@ public abstract class Model<S> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Simple extends Model<Unit> {
       public Simple(ModelPart p_368796_, Function<Identifier, RenderType> p_362226_) {
          super(p_368796_, p_362226_);

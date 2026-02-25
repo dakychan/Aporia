@@ -49,13 +49,13 @@ import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.resources.IoSupplier;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.validation.ForbiddenSymlinkInfo;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class PackSelectionScreen extends Screen {
    static final Logger LOGGER = LogUtils.getLogger();
    private static final Component AVAILABLE_TITLE = Component.translatable("pack.available.title");
@@ -336,7 +336,7 @@ public class PackSelectionScreen extends Screen {
       return this.packIcons.computeIfAbsent(p_99990_.getId(), p_448066_ -> this.loadPackIcon(this.minecraft.getTextureManager(), p_99990_));
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Watcher implements AutoCloseable {
       private final WatchService watcher;
       private final Path packPath;

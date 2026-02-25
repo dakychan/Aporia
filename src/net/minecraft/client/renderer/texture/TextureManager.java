@@ -19,11 +19,11 @@ import java.util.concurrent.Executor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TextureManager implements PreparableReloadListener, AutoCloseable {
    private static final Logger LOGGER = LogUtils.getLogger();
    public static final Identifier INTENTIONAL_MISSING_TEXTURE = Identifier.withDefaultNamespace("");
@@ -181,7 +181,7 @@ public class TextureManager implements PreparableReloadListener, AutoCloseable {
       }, p_376135_));
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record PendingReload(ReloadableTexture texture, CompletableFuture<TextureContents> newContents) {
    }
 }

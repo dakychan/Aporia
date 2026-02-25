@@ -6,10 +6,10 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class LockIconButton extends Button {
    private boolean locked;
 
@@ -49,7 +49,7 @@ public class LockIconButton extends Button {
       p_282701_.blitSprite(RenderPipelines.GUI_TEXTURED, lockiconbutton$icon.sprite, this.getX(), this.getY(), this.width, this.height);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static enum Icon {
       LOCKED(Identifier.withDefaultNamespace("widget/locked_button")),
       LOCKED_HOVER(Identifier.withDefaultNamespace("widget/locked_button_highlighted")),

@@ -18,11 +18,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class CycleButton<T> extends AbstractButton implements ResettableOptionWidget {
    public static final BooleanSupplier DEFAULT_ALT_LIST_SELECTOR = () -> Minecraft.getInstance().hasAltDown();
    private static final List<Boolean> BOOLEAN_OPTIONS = ImmutableList.of(Boolean.TRUE, Boolean.FALSE);
@@ -196,7 +196,7 @@ public class CycleButton<T> extends AbstractButton implements ResettableOptionWi
          .withValues(BOOLEAN_OPTIONS);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder<T> {
       private final Supplier<T> defaultValueSupplier;
       private final Function<T, Component> valueStringifier;
@@ -298,7 +298,7 @@ public class CycleButton<T> extends AbstractButton implements ResettableOptionWi
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum DisplayState {
       NAME_AND_VALUE,
       VALUE,
@@ -306,18 +306,18 @@ public class CycleButton<T> extends AbstractButton implements ResettableOptionWi
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface OnValueChange<T> {
       void onValueChange(CycleButton<T> var1, T var2);
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface SpriteSupplier<T> {
       @Nullable Identifier apply(CycleButton<T> var1, T var2);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface ValueListSupplier<T> {
       List<T> getSelectedList();
 

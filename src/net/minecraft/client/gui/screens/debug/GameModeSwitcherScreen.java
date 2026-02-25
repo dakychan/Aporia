@@ -21,10 +21,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class GameModeSwitcherScreen extends Screen {
    static final Identifier SLOT_SPRITE = Identifier.withDefaultNamespace("gamemode_switcher/slot");
    static final Identifier SELECTION_SPRITE = Identifier.withDefaultNamespace("gamemode_switcher/selection");
@@ -159,7 +159,7 @@ public class GameModeSwitcherScreen extends Screen {
       return false;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static enum GameModeIcon {
       CREATIVE(Component.translatable("gameMode.creative"), GameType.CREATIVE, new ItemStack(Blocks.GRASS_BLOCK)),
       SURVIVAL(Component.translatable("gameMode.survival"), GameType.SURVIVAL, new ItemStack(Items.IRON_SWORD)),
@@ -202,7 +202,7 @@ public class GameModeSwitcherScreen extends Screen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class GameModeSlot extends AbstractWidget {
       final GameModeSwitcherScreen.GameModeIcon icon;
       private boolean isSelected;

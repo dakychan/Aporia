@@ -1,10 +1,10 @@
 package net.minecraft.client.server;
 
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class LanServer {
    private final String motd;
    private final String address;

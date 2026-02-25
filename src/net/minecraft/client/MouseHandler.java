@@ -23,14 +23,14 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.SmoothDouble;
 import net.minecraft.util.Util;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector2i;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFWDropCallback;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class MouseHandler {
    private static final Logger LOGGER = LogUtils.getLogger();
    public static final long DOUBLE_CLICK_THRESHOLD_MS = 250L;
@@ -450,7 +450,7 @@ public class MouseHandler {
       p_398226_.drawString(p_398229_, s, (int)d0, (int)d1, -1);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record LastClick(long time, Screen screen) {
    }
 }

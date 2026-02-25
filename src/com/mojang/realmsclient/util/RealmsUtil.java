@@ -16,12 +16,12 @@ import net.minecraft.client.renderer.PlayerSkinRenderCache.RenderInfo;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
 import net.minecraft.world.item.component.ResolvableProfile;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsUtil {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final Component RIGHT_NOW = Component.translatable("mco.util.time.now");
@@ -92,7 +92,7 @@ public class RealmsUtil {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface RealmsIoConsumer extends RealmsUtil.RealmsIoFunction<Void> {
       void accept(RealmsClient var1) throws RealmsServiceException;
 
@@ -103,7 +103,7 @@ public class RealmsUtil {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface RealmsIoFunction<T> {
       T apply(RealmsClient var1) throws RealmsServiceException;
    }

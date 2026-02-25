@@ -2,10 +2,10 @@ package net.minecraft.client.renderer.state;
 
 import net.minecraft.world.level.MoonPhase;
 import net.minecraft.world.level.dimension.DimensionType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SkyRenderState {
    public DimensionType.Skybox skybox = DimensionType.Skybox.NONE;
    public boolean shouldRenderDarkDisc;

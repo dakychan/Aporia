@@ -1,9 +1,9 @@
 package com.mojang.blaze3d.vertex;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class DefaultVertexFormat {
    public static final VertexFormat EMPTY = VertexFormat.builder().build();
    public static final VertexFormat BLOCK = VertexFormat.builder()

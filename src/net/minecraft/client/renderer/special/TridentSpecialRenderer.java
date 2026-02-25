@@ -7,11 +7,11 @@ import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.object.projectile.TridentModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TridentSpecialRenderer implements NoDataSpecialModelRenderer {
    private final TridentModel model;
 
@@ -38,7 +38,7 @@ public class TridentSpecialRenderer implements NoDataSpecialModelRenderer {
       this.model.root().getExtentsForGui(posestack, p_454785_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked() implements SpecialModelRenderer.Unbaked {
       public static final MapCodec<TridentSpecialRenderer.Unbaked> MAP_CODEC = MapCodec.unit(new TridentSpecialRenderer.Unbaked());
 

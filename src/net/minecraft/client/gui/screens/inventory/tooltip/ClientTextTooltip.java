@@ -3,10 +3,10 @@ package net.minecraft.client.gui.screens.inventory.tooltip;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ClientTextTooltip implements ClientTooltipComponent {
    private final FormattedCharSequence text;
 

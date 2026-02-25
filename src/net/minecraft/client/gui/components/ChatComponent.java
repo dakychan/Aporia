@@ -30,17 +30,17 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.player.ChatVisiblity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix3x2f;
 import org.joml.Vector2f;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
-import ru.ui.notify.Notify.Manager;
-import ru.ui.notify.Notify.Messages;
-import ru.ui.notify.Notify.NotificationType;
+import cc.apr.ui.notify.Notify.Manager;
+import cc.apr.ui.notify.Notify.Messages;
+import cc.apr.ui.notify.Notify.NotificationType;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ChatComponent {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final int MAX_CHAT_HISTORY = 100;
@@ -481,7 +481,7 @@ public class ChatComponent {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    interface AlphaCalculator {
       ChatComponent.AlphaCalculator FULLY_VISIBLE = p_460520_ -> 1.0F;
 
@@ -500,7 +500,7 @@ public class ChatComponent {
       float calculate(GuiMessage.Line var1);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface ChatGraphicsAccess {
       void updatePose(Consumer<Matrix3x2f> var1);
 
@@ -513,7 +513,7 @@ public class ChatComponent {
       void handleTagIcon(int var1, int var2, boolean var3, GuiMessageTag var4, GuiMessageTag.Icon var5);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum ChatMethod {
       MESSAGE("") {
          @Override
@@ -541,7 +541,7 @@ public class ChatComponent {
       public abstract boolean isDraftRestorable(ChatComponent.Draft var1);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class ClickableTextOnlyGraphicsAccess implements ChatComponent.ChatGraphicsAccess {
       private final ActiveTextCollector output;
 
@@ -576,15 +576,15 @@ public class ChatComponent {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record DelayedMessageDeletion(MessageSignature signature, int deletableAfter) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Draft(String text, ChatComponent.ChatMethod chatMethod) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class DrawingBackgroundGraphicsAccess implements ChatComponent.ChatGraphicsAccess {
       private final GuiGraphics graphics;
       private final ActiveTextCollector textRenderer;
@@ -624,7 +624,7 @@ public class ChatComponent {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class DrawingFocusedGraphicsAccess implements ChatComponent.ChatGraphicsAccess, Consumer<Style> {
       private final GuiGraphics graphics;
       private final Font font;
@@ -713,12 +713,12 @@ public class ChatComponent {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    interface LineConsumer {
       void accept(GuiMessage.Line var1, int var2, float var3);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class State {
       final List<GuiMessage> messages;
       final List<String> history;

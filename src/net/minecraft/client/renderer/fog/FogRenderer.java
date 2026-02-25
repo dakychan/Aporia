@@ -29,12 +29,12 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.material.FogType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector4f;
 import org.lwjgl.system.MemoryStack;
 
-@OnlyIn(Dist.CLIENT)
+
 public class FogRenderer implements AutoCloseable {
    public static final int FOG_UBO_SIZE = new Std140SizeCalculator().putVec4().putFloat().putFloat().putFloat().putFloat().putFloat().putFloat().get();
    private static final List<FogEnvironment> FOG_ENVIRONMENTS = Lists.newArrayList(
@@ -255,7 +255,7 @@ public class FogRenderer implements AutoCloseable {
          .putFloat(p_406808_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum FogMode {
       NONE,
       WORLD;

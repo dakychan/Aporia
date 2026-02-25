@@ -10,11 +10,11 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import java.util.Collection;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 @DontObfuscate
 public interface RenderPass extends AutoCloseable {
    void pushDebugGroup(Supplier<String> var1);
@@ -48,7 +48,7 @@ public interface RenderPass extends AutoCloseable {
    @Override
    void close();
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Draw<T>(
       int slot,
       GpuBuffer vertexBuffer,
@@ -63,7 +63,7 @@ public interface RenderPass extends AutoCloseable {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface UniformUploader {
       void upload(String var1, GpuBufferSlice var2);
    }

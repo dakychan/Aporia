@@ -85,13 +85,13 @@ import net.minecraft.util.CommonLinks;
 import net.minecraft.util.Util;
 import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.level.GameType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsMainScreen extends RealmsScreen {
    static final Identifier INFO_SPRITE = Identifier.withDefaultNamespace("icon/info");
    static final Identifier NEW_REALM_SPRITE = Identifier.withDefaultNamespace("icon/new_realm");
@@ -695,7 +695,7 @@ public class RealmsMainScreen extends RealmsScreen {
       p_298843_.pose().popMatrix();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class AvailableSnapshotEntry extends RealmsMainScreen.Entry {
       private static final Component START_SNAPSHOT_REALM = Component.translatable("mco.snapshot.start");
       private static final int TEXT_PADDING = 5;
@@ -773,7 +773,7 @@ public class RealmsMainScreen extends RealmsScreen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class CrossButton extends ImageButton {
       private static final WidgetSprites SPRITES = new WidgetSprites(
          Identifier.withDefaultNamespace("widget/cross_button"), Identifier.withDefaultNamespace("widget/cross_button_highlighted")
@@ -785,7 +785,7 @@ public class RealmsMainScreen extends RealmsScreen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    abstract class Entry extends net.minecraft.client.gui.components.ObjectSelectionList.Entry<RealmsMainScreen.Entry> {
       protected static final int STATUS_LIGHT_WIDTH = 10;
       private static final int STATUS_LIGHT_HEIGHT = 28;
@@ -934,14 +934,14 @@ public class RealmsMainScreen extends RealmsScreen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static enum LayoutState {
       LOADING,
       NO_REALMS,
       LIST;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class NotificationButton extends CenteredIcon {
       private static final Identifier[] NOTIFICATION_ICONS = new Identifier[]{
          Identifier.withDefaultNamespace("notification/1"),
@@ -982,7 +982,7 @@ public class RealmsMainScreen extends RealmsScreen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class NotificationMessageEntry extends RealmsMainScreen.Entry {
       private static final int SIDE_MARGINS = 40;
       public static final int PADDING = 7;
@@ -1080,7 +1080,7 @@ public class RealmsMainScreen extends RealmsScreen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class ParentEntry extends RealmsMainScreen.Entry {
       private final RealmsServer server;
       private final WidgetTooltipHolder tooltip = new WidgetTooltipHolder();
@@ -1114,7 +1114,7 @@ public class RealmsMainScreen extends RealmsScreen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class RealmSelectionList extends ObjectSelectionList<RealmsMainScreen.Entry> {
       public RealmSelectionList() {
          super(Minecraft.getInstance(), RealmsMainScreen.this.width, RealmsMainScreen.this.height, 0, 36);
@@ -1183,12 +1183,12 @@ public class RealmsMainScreen extends RealmsScreen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    interface RealmsCall<T> {
       T request(RealmsClient var1) throws RealmsServiceException;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class ServerEntry extends RealmsMainScreen.Entry {
       private static final Component ONLINE_PLAYERS_TOOLTIP_HEADER = Component.translatable("mco.onlinePlayers");
       private static final int PLAYERS_ONLINE_SPRITE_SIZE = 9;

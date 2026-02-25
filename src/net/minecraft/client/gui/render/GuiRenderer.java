@@ -64,8 +64,8 @@ import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.joml.Matrix3x2fc;
 import org.joml.Matrix4f;
@@ -75,7 +75,7 @@ import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GuiRenderer implements AutoCloseable {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final float MAX_GUI_Z = 10000.0F;
@@ -742,7 +742,7 @@ public class GuiRenderer implements AutoCloseable {
       this.oversizedItemRenderers.values().forEach(PictureInPictureRenderer::close);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static final class AtlasPosition {
       final int x;
       final int y;
@@ -759,7 +759,7 @@ public class GuiRenderer implements AutoCloseable {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Draw(
       GpuBuffer vertexBuffer,
       int baseVertex,
@@ -771,7 +771,7 @@ public class GuiRenderer implements AutoCloseable {
    ) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record MeshToDraw(MeshData mesh, RenderPipeline pipeline, TextureSetup textureSetup, @Nullable ScreenRectangle scissorArea) implements AutoCloseable {
       @Override
       public void close() {

@@ -113,18 +113,16 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
 import org.joml.Matrix4fc;
 import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.opengl.GL30;
-import ru.Aporia;
-import ru.debug.FramebufferDebug;
+import cc.apr.Aporia;
 
-@OnlyIn(Dist.CLIENT)
 public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseable {
    private static final Identifier TRANSPARENCY_POST_CHAIN_ID = Identifier.withDefaultNamespace("transparency");
    private static final Identifier ENTITY_OUTLINE_POST_CHAIN_ID = Identifier.withDefaultNamespace("entity_outline");
@@ -745,7 +743,6 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
                RenderTarget mainTarget = (RenderTarget)mainHandle.get();
                RenderTarget worldTarget = this.worldOnlyTarget;
                if (mainTarget != null && worldTarget != null) {
-                  FramebufferDebug.saveRenderTarget(mainTarget, "01_mainTarget_before_blit");
                   int mainWidth = mainTarget.width;
                   int mainHeight = mainTarget.height;
                   int worldWidth = worldTarget.width;
@@ -767,7 +764,6 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
                         .getFbo(((GlDevice)RenderSystem.getDevice()).directStateAccess(), worldTarget.useDepth ? worldTarget.getDepthTexture() : null)
                   );
                   GL30.glBlitFramebuffer(0, 0, mainWidth, mainHeight, 0, 0, mainWidth, mainHeight, 16384, 9728);
-                  FramebufferDebug.saveRenderTarget(worldTarget, "02_worldTarget_after_blit");
                   Aporia.captureWorldOnlyTarget(worldTarget);
                }
             }
@@ -1616,7 +1612,7 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface BrightnessGetter {
       LevelRenderer.BrightnessGetter DEFAULT = (p_398214_, p_398219_) -> {
          int i = p_398214_.getBrightness(LightLayer.SKY, p_398219_);
@@ -1627,7 +1623,7 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
       int packedBrightness(BlockAndTintGetter var1, BlockPos var2);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record FinalizedGizmos(DrawableGizmoPrimitives standardPrimitives, DrawableGizmoPrimitives alwaysOnTopPrimitives) {
    }
 }

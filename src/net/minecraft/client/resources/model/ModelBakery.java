@@ -31,12 +31,12 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.thread.ParallelMapTransform;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ModelBakery {
    public static final Material FIRE_0 = Sheets.BLOCKS_MAPPER.defaultNamespaceApply("fire_0");
    public static final Material FIRE_1 = Sheets.BLOCKS_MAPPER.defaultNamespaceApply("fire_1");
@@ -134,7 +134,7 @@ public class ModelBakery {
       );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record BakingResult(
       ModelBakery.MissingModels missingModels,
       Map<BlockState, BlockStateModel> blockStateModels,
@@ -143,7 +143,7 @@ public class ModelBakery {
    ) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record MissingModels(BlockModelPart blockPart, BlockStateModel block, ItemModel item) {
       public static ModelBakery.MissingModels bake(ResolvedModel p_395506_, final SpriteGetter p_393671_, final ModelBaker.PartCache p_456418_) {
          ModelBaker modelbaker = new ModelBaker() {
@@ -185,7 +185,7 @@ public class ModelBakery {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class ModelBakerImpl implements ModelBaker {
       private final SpriteGetter sprites;
       private final ModelBaker.PartCache parts;
@@ -231,7 +231,7 @@ public class ModelBakery {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class PartCacheImpl implements ModelBaker.PartCache {
       private final Interner<Vector3fc> vectors = Interners.newStrongInterner();
 

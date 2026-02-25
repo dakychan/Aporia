@@ -7,10 +7,10 @@ import net.minecraft.client.gui.TextAlignment;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.SingleKeyCache;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class MultiLineTextWidget extends AbstractStringWidget {
    private OptionalInt maxWidth = OptionalInt.empty();
    private OptionalInt maxRows = OptionalInt.empty();
@@ -82,7 +82,7 @@ public class MultiLineTextWidget extends AbstractStringWidget {
       return new MultiLineTextWidget.CacheKey(this.getMessage(), this.maxWidth.orElse(Integer.MAX_VALUE), this.maxRows);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record CacheKey(Component message, int maxWidth, OptionalInt maxRows) {
    }
 }

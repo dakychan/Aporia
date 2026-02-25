@@ -14,10 +14,10 @@ import java.util.Map.Entry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public record EquipmentClientInfo(Map<EquipmentClientInfo.LayerType, List<EquipmentClientInfo.Layer>> layers) {
    private static final Codec<List<EquipmentClientInfo.Layer>> LAYER_LIST_CODEC = ExtraCodecs.nonEmptyList(EquipmentClientInfo.Layer.CODEC.listOf());
    public static final Codec<EquipmentClientInfo> CODEC = RecordCodecBuilder.create(
@@ -37,7 +37,7 @@ public record EquipmentClientInfo(Map<EquipmentClientInfo.LayerType, List<Equipm
       return this.layers.getOrDefault(p_377530_, List.of());
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Builder {
       private final Map<EquipmentClientInfo.LayerType, List<EquipmentClientInfo.Layer>> layersByType = new EnumMap<>(EquipmentClientInfo.LayerType.class);
 
@@ -73,7 +73,7 @@ public record EquipmentClientInfo(Map<EquipmentClientInfo.LayerType, List<Equipm
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Dyeable(Optional<Integer> colorWhenUndyed) {
       public static final Codec<EquipmentClientInfo.Dyeable> CODEC = RecordCodecBuilder.create(
          p_377022_ -> p_377022_.group(ExtraCodecs.RGB_COLOR_CODEC.optionalFieldOf("color_when_undyed").forGetter(EquipmentClientInfo.Dyeable::colorWhenUndyed))
@@ -81,7 +81,7 @@ public record EquipmentClientInfo(Map<EquipmentClientInfo.LayerType, List<Equipm
       );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Layer(Identifier textureId, Optional<EquipmentClientInfo.Dyeable> dyeable, boolean usePlayerTexture) {
       public static final Codec<EquipmentClientInfo.Layer> CODEC = RecordCodecBuilder.create(
          p_448442_ -> p_448442_.group(
@@ -111,7 +111,7 @@ public record EquipmentClientInfo(Map<EquipmentClientInfo.LayerType, List<Equipm
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum LayerType implements StringRepresentable {
       HUMANOID("humanoid"),
       HUMANOID_LEGGINGS("humanoid_leggings"),

@@ -1,9 +1,9 @@
 package com.mojang.blaze3d.platform.cursor;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class CursorTypes {
    public static final CursorType ARROW = CursorType.createStandardCursor(221185, "arrow", CursorType.DEFAULT);
    public static final CursorType IBEAM = CursorType.createStandardCursor(221186, "ibeam", CursorType.DEFAULT);

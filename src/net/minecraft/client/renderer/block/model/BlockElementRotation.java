@@ -2,15 +2,15 @@ package net.minecraft.client.renderer.block.model;
 
 import com.mojang.math.MatrixUtil;
 import net.minecraft.core.Direction;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Math;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public record BlockElementRotation(Vector3fc origin, BlockElementRotation.RotationValue value, boolean rescale, Matrix4fc transform) {
    public BlockElementRotation(Vector3fc p_453182_, BlockElementRotation.RotationValue p_452495_, boolean p_254029_) {
       this(p_453182_, p_452495_, p_254029_, computeTransform(p_452495_, p_254029_));
@@ -44,7 +44,7 @@ public record BlockElementRotation(Vector3fc origin, BlockElementRotation.Rotati
       return 1.0F / f3;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record EulerXYZRotation(float x, float y, float z) implements BlockElementRotation.RotationValue {
       @Override
       public Matrix4f transformation() {
@@ -55,12 +55,12 @@ public record BlockElementRotation(Vector3fc origin, BlockElementRotation.Rotati
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface RotationValue {
       Matrix4f transformation();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record SingleAxisRotation(Direction.Axis axis, float angle) implements BlockElementRotation.RotationValue {
       @Override
       public Matrix4f transformation() {

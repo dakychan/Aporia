@@ -7,10 +7,10 @@ import net.minecraft.client.renderer.texture.atlas.SpriteSource;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public record DirectoryLister(String sourcePath, String idPrefix) implements SpriteSource {
    public static final MapCodec<DirectoryLister> MAP_CODEC = RecordCodecBuilder.mapCodec(
       p_262096_ -> p_262096_.group(

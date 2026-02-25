@@ -10,11 +10,11 @@ import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.util.debug.DebugValueAccess;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.mutable.MutableInt;
 
-@OnlyIn(Dist.CLIENT)
+
 public class OctreeDebugRenderer implements DebugRenderer.SimpleDebugRenderer {
    private final Minecraft minecraft;
 

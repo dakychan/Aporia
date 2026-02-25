@@ -4,15 +4,15 @@ import com.mojang.logging.LogUtils;
 import java.util.Set;
 import java.util.function.Supplier;
 import net.minecraft.util.StringUtil;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.lwjgl.opengl.EXTDebugLabel;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GLCapabilities;
 import org.lwjgl.opengl.KHRDebug;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class GlDebugLabel {
    private static final Logger LOGGER = LogUtils.getLogger();
 
@@ -59,7 +59,7 @@ public abstract class GlDebugLabel {
       return false;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Core extends GlDebugLabel {
       private final int maxLabelLength = GL11.glGetInteger(33512);
 
@@ -107,11 +107,11 @@ public abstract class GlDebugLabel {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Empty extends GlDebugLabel {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Ext extends GlDebugLabel {
       @Override
       public void applyLabel(GlBuffer p_391884_) {

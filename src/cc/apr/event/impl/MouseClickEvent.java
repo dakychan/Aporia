@@ -1,0 +1,15 @@
+package cc.apr.event.impl;
+
+import cc.apr.event.api.Event;
+
+public class MouseClickEvent extends Event {
+   public final double x;
+   public final double y;
+   public final int button;
+
+   public MouseClickEvent(double x, double y, int button) {
+      this.x = x;
+      this.y = y;
+      this.button = button;
+   }
+}

@@ -6,10 +6,10 @@ import net.minecraft.client.renderer.state.QuadParticleRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class FlyTowardsPositionParticle extends SingleQuadParticle {
    private final double xStart;
    private final double yStart;
@@ -123,7 +123,7 @@ public class FlyTowardsPositionParticle extends SingleQuadParticle {
       super.extract(p_431207_, p_427296_, p_428014_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class EnchantProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -146,7 +146,7 @@ public class FlyTowardsPositionParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class NautilusProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -169,7 +169,7 @@ public class FlyTowardsPositionParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class VaultConnectionProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 

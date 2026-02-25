@@ -35,11 +35,11 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DebugOptionsScreen extends Screen {
    private static final Component TITLE = Component.translatable("debug.options.title");
    private static final Component SUBTITLE = Component.translatable("debug.options.warning").withColor(-2142128);
@@ -122,12 +122,12 @@ public class DebugOptionsScreen extends Screen {
       return this.optionList;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public abstract static class AbstractOptionEntry extends ContainerObjectSelectionList.Entry<DebugOptionsScreen.AbstractOptionEntry> {
       public abstract void refreshEntry();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class CategoryEntry extends DebugOptionsScreen.AbstractOptionEntry {
       final Component category;
 
@@ -167,7 +167,7 @@ public class DebugOptionsScreen extends Screen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class OptionEntry extends DebugOptionsScreen.AbstractOptionEntry {
       private static final int BUTTON_WIDTH = 60;
       private final Identifier location;
@@ -272,7 +272,7 @@ public class DebugOptionsScreen extends Screen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class OptionList extends ContainerObjectSelectionList<DebugOptionsScreen.AbstractOptionEntry> {
       private static final Comparator<Map.Entry<Identifier, DebugScreenEntry>> COMPARATOR = (p_448041_, p_448042_) -> {
          int i = FloatComparators.NATURAL_COMPARATOR.compare(p_448041_.getValue().category().sortKey(), p_448042_.getValue().category().sortKey());

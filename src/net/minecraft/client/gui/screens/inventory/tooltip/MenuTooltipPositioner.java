@@ -2,12 +2,12 @@ package net.minecraft.client.gui.screens.inventory.tooltip;
 
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector2i;
 import org.joml.Vector2ic;
 
-@OnlyIn(Dist.CLIENT)
+
 public class MenuTooltipPositioner implements ClientTooltipPositioner {
    private static final int MARGIN = 5;
    private static final int MOUSE_OFFSET_X = 12;

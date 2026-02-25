@@ -67,12 +67,12 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.ServerLinks;
 import net.minecraft.server.dialog.Dialog;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class ClientCommonPacketListenerImpl implements ClientCommonPacketListener {
    private static final Component GENERIC_DISCONNECT_MESSAGE = Component.translatable("disconnect.lost");
    private static final Logger LOGGER = LogUtils.getLogger();
@@ -399,7 +399,7 @@ public abstract class ClientCommonPacketListenerImpl implements ClientCommonPack
          );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    protected abstract class CommonDialogAccess implements DialogConnectionAccess {
       @Override
       public void disconnect(Component p_426149_) {
@@ -423,11 +423,11 @@ public abstract class ClientCommonPacketListenerImpl implements ClientCommonPack
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record DeferredPacket(Packet<? extends ServerboundPacketListener> packet, BooleanSupplier sendCondition, long expirationTime) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class PackConfirmScreen extends ConfirmScreen {
       private final List<ClientCommonPacketListenerImpl.PackConfirmScreen.PendingRequest> requests;
       private final @Nullable Screen parentScreen;
@@ -495,7 +495,7 @@ public abstract class ClientCommonPacketListenerImpl implements ClientCommonPack
          return ClientCommonPacketListenerImpl.this.new PackConfirmScreen(p_312486_, this.parentScreen, list, p_312985_, p_309496_);
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       record PendingRequest(UUID id, URL url, String hash) {
       }
    }

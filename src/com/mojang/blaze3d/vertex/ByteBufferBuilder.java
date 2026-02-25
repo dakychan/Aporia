@@ -5,14 +5,14 @@ import com.mojang.jtracy.TracyClient;
 import com.mojang.logging.LogUtils;
 import java.nio.ByteBuffer;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.system.MemoryUtil.MemoryAllocator;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ByteBufferBuilder implements AutoCloseable {
    private static final MemoryPool MEMORY_POOL = TracyClient.createMemoryPool("ByteBufferBuilder");
    private static final Logger LOGGER = LogUtils.getLogger();
@@ -146,7 +146,7 @@ public class ByteBufferBuilder implements AutoCloseable {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class Result implements AutoCloseable {
       private final long offset;
       private final int capacity;

@@ -6,10 +6,10 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public record ModelRenderProperties(boolean usesBlockLight, TextureAtlasSprite particleIcon, ItemTransforms transforms) {
    public static ModelRenderProperties fromResolvedModel(ModelBaker p_391505_, ResolvedModel p_393493_, TextureSlots p_396428_) {
       TextureAtlasSprite textureatlassprite = p_393493_.resolveParticleSprite(p_396428_, p_391505_);

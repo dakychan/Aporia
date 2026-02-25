@@ -13,12 +13,12 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.level.block.SkullBlock;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class PlayerHeadSpecialRenderer implements SpecialModelRenderer<PlayerSkinRenderCache.RenderInfo> {
    private final PlayerSkinRenderCache playerSkinRenderCache;
    private final SkullModelBase modelBase;
@@ -55,7 +55,7 @@ public class PlayerHeadSpecialRenderer implements SpecialModelRenderer<PlayerSki
       return resolvableprofile == null ? null : this.playerSkinRenderCache.getOrDefault(resolvableprofile);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked() implements SpecialModelRenderer.Unbaked {
       public static final MapCodec<PlayerHeadSpecialRenderer.Unbaked> MAP_CODEC = MapCodec.unit(PlayerHeadSpecialRenderer.Unbaked::new);
 

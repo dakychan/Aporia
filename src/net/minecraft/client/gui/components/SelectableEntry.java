@@ -1,9 +1,9 @@
 package net.minecraft.client.gui.components;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public interface SelectableEntry {
    default boolean mouseOverIcon(int p_451881_, int p_459041_, int p_458504_) {
       return p_451881_ >= 0 && p_451881_ < p_458504_ && p_459041_ >= 0 && p_459041_ < p_458504_;

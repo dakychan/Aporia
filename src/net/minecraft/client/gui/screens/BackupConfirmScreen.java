@@ -9,10 +9,10 @@ import net.minecraft.client.gui.components.MultiLineLabel;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class BackupConfirmScreen extends Screen {
    private static final Component SKIP_AND_JOIN = Component.translatable("selectWorld.backupJoinSkipButton");
    public static final Component BACKUP_AND_JOIN = Component.translatable("selectWorld.backupJoinConfirmButton");
@@ -90,7 +90,7 @@ public class BackupConfirmScreen extends Screen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Listener {
       void proceed(boolean var1, boolean var2);
    }

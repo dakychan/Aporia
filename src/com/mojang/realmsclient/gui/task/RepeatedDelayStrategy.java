@@ -1,11 +1,11 @@
 package com.mojang.realmsclient.gui.task;
 
 import com.mojang.logging.LogUtils;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface RepeatedDelayStrategy {
    RepeatedDelayStrategy CONSTANT = new RepeatedDelayStrategy() {
       @Override

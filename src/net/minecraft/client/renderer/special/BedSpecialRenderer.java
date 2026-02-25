@@ -11,11 +11,11 @@ import net.minecraft.client.resources.model.Material;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public class BedSpecialRenderer implements NoDataSpecialModelRenderer {
    private final BedRenderer bedRenderer;
    private final Material material;
@@ -37,7 +37,7 @@ public class BedSpecialRenderer implements NoDataSpecialModelRenderer {
       this.bedRenderer.getExtents(p_454410_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked(Identifier texture) implements SpecialModelRenderer.Unbaked {
       public static final MapCodec<BedSpecialRenderer.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
          p_448366_ -> p_448366_.group(Identifier.CODEC.fieldOf("texture").forGetter(BedSpecialRenderer.Unbaked::texture))

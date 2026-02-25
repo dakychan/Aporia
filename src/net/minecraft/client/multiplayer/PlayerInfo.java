@@ -10,11 +10,11 @@ import net.minecraft.world.entity.player.PlayerSkin;
 import net.minecraft.world.entity.player.ProfilePublicKey;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.scores.PlayerTeam;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class PlayerInfo {
    private final GameProfile profile;
    private @Nullable Supplier<PlayerSkin> skinLookup;

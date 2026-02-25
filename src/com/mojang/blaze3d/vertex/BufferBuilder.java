@@ -4,12 +4,12 @@ import java.nio.ByteOrder;
 import java.util.stream.Collectors;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
 
-@OnlyIn(Dist.CLIENT)
+
 public class BufferBuilder implements VertexConsumer {
    private static final int MAX_VERTEX_COUNT = 16777215;
    private static final long NOT_BUILDING = -1L;

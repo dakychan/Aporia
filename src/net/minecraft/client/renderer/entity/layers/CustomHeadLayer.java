@@ -17,10 +17,10 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.Util;
 import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.level.block.SkullBlock;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class CustomHeadLayer<S extends LivingEntityRenderState, M extends EntityModel<S> & HeadedModel> extends RenderLayer<S, M> {
    private static final float ITEM_SCALE = 0.625F;
    private static final float SKULL_SCALE = 1.1875F;
@@ -82,7 +82,7 @@ public class CustomHeadLayer<S extends LivingEntityRenderState, M extends Entity
       p_174484_.scale(0.625F, -0.625F, -0.625F);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Transforms(float yOffset, float skullYOffset, float horizontalScale) {
       public static final CustomHeadLayer.Transforms DEFAULT = new CustomHeadLayer.Transforms(0.0F, 0.0F, 1.0F);
    }

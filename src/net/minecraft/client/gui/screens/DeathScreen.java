@@ -16,11 +16,11 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DeathScreen extends Screen {
    private static final int TITLE_SCALE = 2;
    private static final Identifier DRAFT_REPORT_SPRITE = Identifier.withDefaultNamespace("icon/draft_report");
@@ -174,7 +174,7 @@ public class DeathScreen extends Screen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class TitleConfirmScreen extends ConfirmScreen {
       public TitleConfirmScreen(BooleanConsumer p_273707_, Component p_273255_, Component p_273747_, Component p_273434_, Component p_273416_) {
          super(p_273707_, p_273255_, p_273747_, p_273434_, p_273416_);

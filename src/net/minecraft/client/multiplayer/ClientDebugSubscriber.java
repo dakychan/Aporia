@@ -19,11 +19,11 @@ import net.minecraft.util.debugchart.RemoteDebugSampleType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ClientDebugSubscriber {
    private final ClientPacketListener connection;
    private final DebugScreenOverlay debugScreenOverlay;
@@ -229,7 +229,7 @@ public class ClientDebugSubscriber {
       return p_424690_ -> p_424690_.chunkValues;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class ValueMap<K, V> {
       private final Map<K, ClientDebugSubscriber.ValueWrapper<V>> values = new HashMap<>();
 
@@ -265,12 +265,12 @@ public class ClientDebugSubscriber {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    interface ValueMapType<K, V> {
       ClientDebugSubscriber.ValueMap<K, V> get(ClientDebugSubscriber.ValueMaps<V> var1);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class ValueMaps<V> {
       final ClientDebugSubscriber.ValueMap<ChunkPos, V> chunkValues = new ClientDebugSubscriber.ValueMap<>();
       final ClientDebugSubscriber.ValueMap<BlockPos, V> blockValues = new ClientDebugSubscriber.ValueMap<>();
@@ -291,7 +291,7 @@ public class ClientDebugSubscriber {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record ValueWrapper<T>(T value, long expiresAfterTime) {
       private static final long NO_EXPIRY = -1L;
 

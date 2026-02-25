@@ -32,11 +32,11 @@ import net.minecraft.world.scores.ReadOnlyScoreInfo;
 import net.minecraft.world.scores.ScoreHolder;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class PlayerTabOverlay {
    private static final Identifier PING_UNKNOWN_SPRITE = Identifier.withDefaultNamespace("icon/ping_unknown");
    private static final Identifier PING_1_SPRITE = Identifier.withDefaultNamespace("icon/ping_1");
@@ -332,7 +332,7 @@ public class PlayerTabOverlay {
       this.footer = null;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class HealthState {
       private static final long DISPLAY_UPDATE_DELAY = 20L;
       private static final long DECREASE_BLINK_DURATION = 20L;
@@ -369,7 +369,7 @@ public class PlayerTabOverlay {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record ScoreDisplayEntry(Component name, int score, @Nullable Component formattedScore, int scoreWidth) {
    }
 }

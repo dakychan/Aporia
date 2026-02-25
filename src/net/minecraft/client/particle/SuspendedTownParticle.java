@@ -4,10 +4,10 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SuspendedTownParticle extends SingleQuadParticle {
    SuspendedTownParticle(
       ClientLevel p_108104_,
@@ -58,7 +58,7 @@ public class SuspendedTownParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class ComposterFillProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -86,7 +86,7 @@ public class SuspendedTownParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class DolphinSpeedProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -115,7 +115,7 @@ public class SuspendedTownParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class EggCrackProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -142,7 +142,7 @@ public class SuspendedTownParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class HappyVillagerProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -169,7 +169,7 @@ public class SuspendedTownParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 

@@ -8,10 +8,10 @@ import net.minecraft.util.debug.DebugStructureInfo;
 import net.minecraft.util.debug.DebugSubscriptions;
 import net.minecraft.util.debug.DebugValueAccess;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class StructureRenderer implements DebugRenderer.SimpleDebugRenderer {
    @Override
    public void emitGizmos(double p_455468_, double p_459439_, double p_452616_, DebugValueAccess p_453459_, Frustum p_450911_, float p_459559_) {

@@ -7,10 +7,10 @@ import java.util.stream.Collectors;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.DyeColor;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ColorLerper {
    public static final DyeColor[] MUSIC_NOTE_COLORS = new DyeColor[]{
       DyeColor.WHITE,
@@ -48,7 +48,7 @@ public class ColorLerper {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Type {
       SHEEP(25, DyeColor.values(), 0.75F),
       MUSIC_NOTE(30, ColorLerper.MUSIC_NOTE_COLORS, 1.25F);

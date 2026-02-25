@@ -21,11 +21,11 @@ import net.minecraft.util.Util;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ModelBlockRenderer {
    private static final Direction[] DIRECTIONS = Direction.values();
    private final BlockColors blockColors;
@@ -358,7 +358,7 @@ public class ModelBlockRenderer {
       CACHE.get().disable();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    protected static enum AdjacencyInfo {
       DOWN(
          new Direction[]{Direction.WEST, Direction.EAST, Direction.NORTH, Direction.SOUTH},
@@ -668,7 +668,7 @@ public class ModelBlockRenderer {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class AmbientOcclusionRenderStorage extends ModelBlockRenderer.CommonRenderStorage {
       final float[] faceShape = new float[ModelBlockRenderer.SizeInfo.COUNT];
 
@@ -871,7 +871,7 @@ public class ModelBlockRenderer {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static enum AmbientVertexRemap {
       DOWN(0, 1, 2, 3),
       UP(2, 3, 0, 1),
@@ -905,7 +905,7 @@ public class ModelBlockRenderer {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Cache {
       private boolean enabled;
       private final Long2IntLinkedOpenHashMap colorCache = Util.make(() -> {
@@ -981,7 +981,7 @@ public class ModelBlockRenderer {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class CommonRenderStorage {
       public final BlockPos.MutableBlockPos scratchPos = new BlockPos.MutableBlockPos();
       public boolean faceCubic;
@@ -993,7 +993,7 @@ public class ModelBlockRenderer {
       public final ModelBlockRenderer.Cache cache = ModelBlockRenderer.CACHE.get();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    protected static enum SizeInfo {
       DOWN(0),
       UP(1),

@@ -10,11 +10,11 @@ import com.mojang.math.Quadrant;
 import java.lang.reflect.Type;
 import net.minecraft.core.Direction;
 import net.minecraft.util.GsonHelper;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record BlockElementFace(@Nullable Direction cullForDirection, int tintIndex, String texture, BlockElementFace.@Nullable UVs uvs, Quadrant rotation) {
    public static final int NO_TINT = -1;
 
@@ -26,7 +26,7 @@ public record BlockElementFace(@Nullable Direction cullForDirection, int tintInd
       return p_397165_.getVertexV(p_391897_.rotateVertexIndex(p_393770_)) / 16.0F;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    protected static class Deserializer implements JsonDeserializer<BlockElementFace> {
       private static final int DEFAULT_TINT_INDEX = -1;
       private static final int DEFAULT_ROTATION = 0;
@@ -77,7 +77,7 @@ public record BlockElementFace(@Nullable Direction cullForDirection, int tintInd
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record UVs(float minU, float minV, float maxU, float maxV) {
       public float getVertexU(int p_393086_) {
          return p_393086_ != 0 && p_393086_ != 1 ? this.maxU : this.minU;

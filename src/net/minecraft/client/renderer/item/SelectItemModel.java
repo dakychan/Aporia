@@ -17,11 +17,11 @@ import net.minecraft.util.RegistryContextSwapper;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class SelectItemModel<T> implements ItemModel {
    private final SelectItemModelProperty<T> property;
    private final SelectItemModel.ModelSelector<T> models;
@@ -50,12 +50,12 @@ public class SelectItemModel<T> implements ItemModel {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface ModelSelector<T> {
       @Nullable ItemModel get(@Nullable T var1, @Nullable ClientLevel var2);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record SwitchCase<T>(List<T> values, ItemModel.Unbaked model) {
       public static <T> Codec<SelectItemModel.SwitchCase<T>> codec(Codec<T> p_378608_) {
          return RecordCodecBuilder.create(
@@ -68,7 +68,7 @@ public class SelectItemModel<T> implements ItemModel {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked(SelectItemModel.UnbakedSwitch<?, ?> unbakedSwitch, Optional<ItemModel.Unbaked> fallback) implements ItemModel.Unbaked {
       public static final MapCodec<SelectItemModel.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
          p_375671_ -> p_375671_.group(
@@ -96,7 +96,7 @@ public class SelectItemModel<T> implements ItemModel {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record UnbakedSwitch<P extends SelectItemModelProperty<T>, T>(P property, List<SelectItemModel.SwitchCase<T>> cases) {
       public static final MapCodec<SelectItemModel.UnbakedSwitch<?, ?>> MAP_CODEC = SelectItemModelProperties.CODEC
          .dispatchMap("property", p_377103_ -> p_377103_.property().type(), SelectItemModelProperty.Type::switchCodec);

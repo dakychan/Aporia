@@ -11,11 +11,11 @@ import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.NaturalSpawner;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DebugEntrySpawnCounts implements DebugScreenEntry {
    @Override
    public void display(DebugScreenDisplayer p_424068_, @Nullable Level p_425991_, @Nullable LevelChunk p_429361_, @Nullable LevelChunk p_427551_) {

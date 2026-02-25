@@ -8,11 +8,11 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Quaternionf;
 
-@OnlyIn(Dist.CLIENT)
+
 public class PlayerCapeModel extends PlayerModel {
    private static final String CAPE = "cape";
    private final ModelPart cape = this.body.getChild("cape");

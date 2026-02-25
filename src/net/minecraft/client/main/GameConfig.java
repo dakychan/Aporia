@@ -7,11 +7,11 @@ import java.nio.file.Path;
 import net.minecraft.client.User;
 import net.minecraft.client.resources.IndexedAssetSource;
 import net.minecraft.util.StringUtil;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GameConfig {
    public final GameConfig.UserData user;
    public final DisplayData display;
@@ -29,7 +29,7 @@ public class GameConfig {
       this.quickPlay = p_279425_;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class FolderData {
       public final File gameDirectory;
       public final File resourcePackDirectory;
@@ -48,7 +48,7 @@ public class GameConfig {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class GameData {
       public final boolean demo;
       public final String launchVersion;
@@ -73,14 +73,14 @@ public class GameConfig {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record QuickPlayData(@Nullable String logPath, GameConfig.QuickPlayVariant variant) {
       public boolean isEnabled() {
          return this.variant.isEnabled();
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record QuickPlayDisabled() implements GameConfig.QuickPlayVariant {
       @Override
       public boolean isEnabled() {
@@ -88,7 +88,7 @@ public class GameConfig {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record QuickPlayMultiplayerData(String serverAddress) implements GameConfig.QuickPlayVariant {
       @Override
       public boolean isEnabled() {
@@ -96,7 +96,7 @@ public class GameConfig {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record QuickPlayRealmsData(String realmId) implements GameConfig.QuickPlayVariant {
       @Override
       public boolean isEnabled() {
@@ -104,7 +104,7 @@ public class GameConfig {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record QuickPlaySinglePlayerData(@Nullable String worldId) implements GameConfig.QuickPlayVariant {
       @Override
       public boolean isEnabled() {
@@ -112,7 +112,7 @@ public class GameConfig {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public sealed interface QuickPlayVariant
       permits GameConfig.QuickPlaySinglePlayerData,
       GameConfig.QuickPlayMultiplayerData,
@@ -123,7 +123,7 @@ public class GameConfig {
       boolean isEnabled();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class UserData {
       public final User user;
       public final Proxy proxy;

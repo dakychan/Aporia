@@ -3,11 +3,11 @@ package net.minecraft.client.resources.model;
 import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.block.model.TextureSlots;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface UnbakedModel {
    String PARTICLE_TEXTURE_REFERENCE = "particle";
 
@@ -35,7 +35,7 @@ public interface UnbakedModel {
       return null;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum GuiLight {
       FRONT("front"),
       SIDE("side");

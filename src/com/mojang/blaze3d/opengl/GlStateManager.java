@@ -8,8 +8,8 @@ import com.mojang.jtracy.TracyClient;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.IntStream;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.opengl.GL11;
@@ -23,7 +23,7 @@ import org.lwjgl.opengl.GL32;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
-@OnlyIn(Dist.CLIENT)
+
 @DontObfuscate
 public class GlStateManager {
    private static final Plot PLOT_TEXTURES = TracyClient.createPlot("GPU Textures");
@@ -543,7 +543,7 @@ public class GlStateManager {
       GL32.glDeleteSync(p_393074_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class BlendState {
       public final GlStateManager.BooleanState mode = new GlStateManager.BooleanState(3042);
       public int srcRgb = 1;
@@ -552,7 +552,7 @@ public class GlStateManager {
       public int dstAlpha = 0;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class BooleanState {
       private final int state;
       private boolean enabled;
@@ -582,13 +582,13 @@ public class GlStateManager {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class ColorLogicState {
       public final GlStateManager.BooleanState enable = new GlStateManager.BooleanState(3058);
       public int op = 5379;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class ColorMask {
       public boolean red = true;
       public boolean green = true;
@@ -596,31 +596,31 @@ public class GlStateManager {
       public boolean alpha = true;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class CullState {
       public final GlStateManager.BooleanState enable = new GlStateManager.BooleanState(2884);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class DepthState {
       public final GlStateManager.BooleanState mode = new GlStateManager.BooleanState(2929);
       public boolean mask = true;
       public int func = 513;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class PolygonOffsetState {
       public final GlStateManager.BooleanState fill = new GlStateManager.BooleanState(32823);
       public float factor;
       public float units;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class ScissorState {
       public final GlStateManager.BooleanState mode = new GlStateManager.BooleanState(3089);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class TextureState {
       public int binding;
    }

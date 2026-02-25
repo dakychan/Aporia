@@ -13,15 +13,15 @@ import net.minecraft.util.ARGB;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix3x2f;
 import org.joml.Matrix3x2fc;
 import org.joml.Vector2f;
 import org.joml.Vector2fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface ActiveTextCollector {
    double PERIOD_PER_SCROLLED_PIXEL = 0.5;
    double MIN_SCROLL_PERIOD = 3.0;
@@ -124,7 +124,7 @@ public interface ActiveTextCollector {
       return p_458941_ >= p_456813_ && p_458941_ < p_453879_ && p_453323_ >= p_456753_ && p_453323_ < p_459652_;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class ClickableStyleFinder implements ActiveTextCollector {
       private static final ActiveTextCollector.Parameters INITIAL = new ActiveTextCollector.Parameters(new Matrix3x2f());
       private final Font font;
@@ -183,7 +183,7 @@ public interface ActiveTextCollector {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Parameters(Matrix3x2fc pose, float opacity, @Nullable ScreenRectangle scissor) {
       public Parameters(Matrix3x2fc p_452094_) {
          this(p_452094_, 1.0F, null);

@@ -9,10 +9,10 @@ import com.mojang.blaze3d.textures.TextureFormat;
 import java.io.IOException;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public abstract class ReloadableTexture extends AbstractTexture {
    private final Identifier resourceId;
 

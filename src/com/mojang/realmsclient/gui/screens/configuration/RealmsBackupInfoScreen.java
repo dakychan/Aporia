@@ -14,10 +14,10 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.realms.RealmsScreen;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class RealmsBackupInfoScreen extends RealmsScreen {
    private static final Component TITLE = Component.translatable("mco.backup.info.title");
    private static final Component UNKNOWN = Component.translatable("mco.backup.unknown");
@@ -86,7 +86,7 @@ public class RealmsBackupInfoScreen extends RealmsScreen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class BackupInfoList extends ObjectSelectionList<RealmsBackupInfoScreen.BackupInfoListEntry> {
       public BackupInfoList(final Minecraft p_407391_) {
          super(
@@ -104,7 +104,7 @@ public class RealmsBackupInfoScreen extends RealmsScreen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class BackupInfoListEntry extends Entry<RealmsBackupInfoScreen.BackupInfoListEntry> {
       private static final Component TEMPLATE_NAME = Component.translatable("mco.backup.entry.templateName");
       private static final Component GAME_DIFFICULTY = Component.translatable("mco.backup.entry.gameDifficulty");

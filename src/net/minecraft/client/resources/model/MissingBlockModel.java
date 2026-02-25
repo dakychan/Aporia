@@ -14,11 +14,11 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3f;
 
-@OnlyIn(Dist.CLIENT)
+
 public class MissingBlockModel {
    private static final String TEXTURE_SLOT = "missingno";
    public static final Identifier LOCATION = Identifier.withDefaultNamespace("builtin/missing");

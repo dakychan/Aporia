@@ -10,10 +10,10 @@ import net.minecraft.util.debug.DebugValueAccess;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ChunkBorderRenderer implements DebugRenderer.SimpleDebugRenderer {
    private static final float THICK_WIDTH = 4.0F;
    private static final float THIN_WIDTH = 1.0F;

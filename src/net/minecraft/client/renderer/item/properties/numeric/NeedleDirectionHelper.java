@@ -4,11 +4,11 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class NeedleDirectionHelper {
    private final boolean wobble;
 
@@ -90,7 +90,7 @@ public abstract class NeedleDirectionHelper {
       };
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Wobbler {
       float rotation();
 

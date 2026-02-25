@@ -8,10 +8,10 @@ import com.google.gson.stream.JsonWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public final class RealmsSlot implements ReflectionBasedSerialization {
    @SerializedName("slotId")
    public int slotId;
@@ -39,7 +39,7 @@ public final class RealmsSlot implements ReflectionBasedSerialization {
       return RealmsSetting.isHardcore(this.settings);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class RealmsWorldOptionsJsonAdapter extends TypeAdapter<RealmsWorldOptions> {
       private RealmsWorldOptionsJsonAdapter() {
       }

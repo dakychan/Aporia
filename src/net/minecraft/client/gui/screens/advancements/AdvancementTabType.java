@@ -4,10 +4,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 enum AdvancementTabType {
    ABOVE(
       new AdvancementTabType.Sprites(
@@ -172,7 +172,7 @@ enum AdvancementTabType {
       return p_97217_ > i && p_97217_ < i + this.width && p_97218_ > j && p_97218_ < j + this.height;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Sprites(Identifier first, Identifier middle, Identifier last) {
    }
 }

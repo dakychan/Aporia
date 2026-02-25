@@ -47,11 +47,11 @@ import net.minecraft.util.profiling.Zone;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ModelManager implements PreparableReloadListener {
    public static final Identifier BLOCK_OR_ITEM = Identifier.withDefaultNamespace("block_or_item");
    private static final Logger LOGGER = LogUtils.getLogger();
@@ -340,7 +340,7 @@ public class ModelManager implements PreparableReloadListener {
       return () -> this.entityModelSet;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record ReloadState(
       ModelBakery.BakingResult bakedModels,
       Object2IntMap<BlockState> modelGroups,
@@ -350,7 +350,7 @@ public class ModelManager implements PreparableReloadListener {
    ) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record ResolvedModels(ResolvedModel missing, Map<Identifier, ResolvedModel> models) {
    }
 }

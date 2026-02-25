@@ -12,10 +12,10 @@ import net.minecraft.util.debug.DebugSubscriptions;
 import net.minecraft.util.debug.DebugValueAccess;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class NeighborsUpdateRenderer implements DebugRenderer.SimpleDebugRenderer {
    @Override
    public void emitGizmos(double p_457497_, double p_452871_, double p_454779_, DebugValueAccess p_453375_, Frustum p_456175_, float p_458659_) {
@@ -42,7 +42,7 @@ public class NeighborsUpdateRenderer implements DebugRenderer.SimpleDebugRendere
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record LastUpdate(int count, int age) {
       static final NeighborsUpdateRenderer.LastUpdate NONE = new NeighborsUpdateRenderer.LastUpdate(0, Integer.MAX_VALUE);
 

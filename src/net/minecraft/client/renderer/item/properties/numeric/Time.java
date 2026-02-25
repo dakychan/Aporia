@@ -10,10 +10,10 @@ import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.MoonPhase;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class Time extends NeedleDirectionHelper implements RangeSelectItemModelProperty {
    public static final MapCodec<Time> MAP_CODEC = RecordCodecBuilder.mapCodec(
       p_378406_ -> p_378406_.group(
@@ -48,7 +48,7 @@ public class Time extends NeedleDirectionHelper implements RangeSelectItemModelP
       return MAP_CODEC;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum TimeSource implements StringRepresentable {
       RANDOM("random") {
          @Override

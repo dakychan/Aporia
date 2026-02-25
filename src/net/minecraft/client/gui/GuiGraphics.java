@@ -73,8 +73,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
 import net.minecraft.world.level.block.state.properties.WoodType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix3x2f;
 import org.joml.Matrix3x2fStack;
 import org.joml.Quaternionf;
@@ -82,7 +82,7 @@ import org.joml.Vector2ic;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GuiGraphics {
    private static final int EXTRA_SPACE_AFTER_FIRST_TOOLTIP_LINE = 2;
    final Minecraft minecraft;
@@ -1313,7 +1313,7 @@ public class GuiGraphics {
       return new ActiveTextCollector.Parameters(new Matrix3x2f(this.pose), p_456552_, this.scissorStack.peek());
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum HoveredTextEffects {
       NONE(false, false),
       TOOLTIP_ONLY(true, false),
@@ -1332,7 +1332,7 @@ public class GuiGraphics {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class RenderingTextCollector implements ActiveTextCollector, Consumer<Style> {
       private ActiveTextCollector.Parameters defaultParameters;
       private final GuiGraphics.HoveredTextEffects hoveredTextEffects;
@@ -1396,7 +1396,7 @@ public class GuiGraphics {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class ScissorStack {
       private final Deque<ScreenRectangle> stack = new ArrayDeque<>();
 

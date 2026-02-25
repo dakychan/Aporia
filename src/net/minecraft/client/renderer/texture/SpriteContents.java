@@ -31,12 +31,12 @@ import net.minecraft.client.resources.metadata.texture.TextureMetadataSection;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.metadata.MetadataSectionType;
 import net.minecraft.util.ARGB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class SpriteContents implements Stitcher.Entry, AutoCloseable {
    private static final Logger LOGGER = LogUtils.getLogger();
    public static final int UBO_SIZE = new Std140SizeCalculator().putMat4f().putMat4f().putFloat().putFloat().putInt().get();
@@ -214,7 +214,7 @@ public class SpriteContents implements Stitcher.Entry, AutoCloseable {
          .writeToTexture(p_394515_, this.byMipLevel[p_252315_], p_252315_, 0, 0, 0, this.width >> p_252315_, this.height >> p_252315_, 0, 0);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class AnimatedTexture {
       final List<SpriteContents.FrameInfo> frames;
       private final int frameRowSize;
@@ -275,7 +275,7 @@ public class SpriteContents implements Stitcher.Entry, AutoCloseable {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class AnimationState implements AutoCloseable {
       private int frame;
       private int subFrame;
@@ -345,7 +345,7 @@ public class SpriteContents implements Stitcher.Entry, AutoCloseable {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record FrameInfo(int index, int time) {
    }
 }

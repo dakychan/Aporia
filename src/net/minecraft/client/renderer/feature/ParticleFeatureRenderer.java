@@ -20,11 +20,11 @@ import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.state.QuadParticleRenderState;
 import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ParticleFeatureRenderer implements AutoCloseable {
    private final Queue<ParticleFeatureRenderer.ParticleBufferCache> availableBuffers = new ArrayDeque<>();
    private final List<ParticleFeatureRenderer.ParticleBufferCache> usedBuffers = new ArrayList<>();
@@ -141,7 +141,7 @@ public class ParticleFeatureRenderer implements AutoCloseable {
       this.availableBuffers.forEach(ParticleFeatureRenderer.ParticleBufferCache::close);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class ParticleBufferCache implements AutoCloseable {
       private @Nullable MappableRingBuffer ringBuffer;
 

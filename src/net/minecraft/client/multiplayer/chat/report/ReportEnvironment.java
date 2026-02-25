@@ -6,11 +6,11 @@ import com.mojang.authlib.yggdrasil.request.AbuseReportRequest.ThirdPartyServerI
 import com.mojang.realmsclient.dto.RealmsServer;
 import java.util.Locale;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record ReportEnvironment(String clientVersion, ReportEnvironment.@Nullable Server server) {
    public static ReportEnvironment local() {
       return create(null);
@@ -54,16 +54,16 @@ public record ReportEnvironment(String clientVersion, ReportEnvironment.@Nullabl
       return stringbuilder.toString();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Server {
-      @OnlyIn(Dist.CLIENT)
+      
       public record Realm(long realmId, int slotId) implements ReportEnvironment.Server {
          public Realm(RealmsServer p_239068_) {
             this(p_239068_.id, p_239068_.activeSlot);
          }
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       public record ThirdParty(String ip) implements ReportEnvironment.Server {
       }
    }

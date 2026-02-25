@@ -16,11 +16,11 @@ import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.BitSetDiscreteVoxelShape;
 import net.minecraft.world.phys.shapes.DiscreteVoxelShape;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class LightSectionDebugRenderer implements DebugRenderer.SimpleDebugRenderer {
    private static final Duration REFRESH_INTERVAL = Duration.ofMillis(500L);
    private static final int RADIUS = 10;
@@ -90,7 +90,7 @@ public class LightSectionDebugRenderer implements DebugRenderer.SimpleDebugRende
       Gizmos.line(new Vec3(d0, d1, d2), new Vec3(d3, d4, d5), i);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static final class SectionData {
       final DiscreteVoxelShape lightAndBlocksShape;
       final DiscreteVoxelShape lightShape;

@@ -18,11 +18,11 @@ import net.minecraft.client.telemetry.TelemetryEventType;
 import net.minecraft.client.telemetry.TelemetryProperty;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TelemetryEventWidget extends AbstractTextAreaWidget {
    private static final int HEADER_HORIZONTAL_PADDING = 32;
    private static final String TELEMETRY_REQUIRED_TRANSLATION_KEY = "telemetry.event.required";
@@ -126,11 +126,11 @@ public class TelemetryEventWidget extends AbstractTextAreaWidget {
       return this.width - this.totalInnerPadding();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Content(Layout container, Component narration) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class ContentBuilder {
       private final int width;
       private final LinearLayout layout;

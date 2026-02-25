@@ -30,15 +30,15 @@ import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class CloudRenderer extends SimplePreparableReloadListener<Optional<CloudRenderer.TextureData>> implements AutoCloseable {
    private static final int FLAG_INSIDE_FACE = 16;
    private static final int FLAG_USE_TOP_COLOR = 32;
@@ -397,14 +397,14 @@ public class CloudRenderer extends SimplePreparableReloadListener<Optional<Cloud
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static enum RelativeCameraPos {
       ABOVE_CLOUDS,
       INSIDE_CLOUDS,
       BELOW_CLOUDS;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record TextureData(long[] cells, int width, int height) {
    }
 }

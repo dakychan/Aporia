@@ -13,10 +13,10 @@ import com.mojang.blaze3d.textures.TextureFormat;
 import com.mojang.jtracy.TracyClient;
 import java.util.OptionalInt;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class TracyFrameCapture implements AutoCloseable {
    private static final int MAX_WIDTH = 320;
    private static final int MAX_HEIGHT = 180;
@@ -116,7 +116,7 @@ public class TracyFrameCapture implements AutoCloseable {
       this.pixelbuffer.close();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static enum Status {
       WAITING_FOR_CAPTURE,
       WAITING_FOR_COPY,

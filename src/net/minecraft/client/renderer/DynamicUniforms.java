@@ -4,8 +4,8 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import java.nio.ByteBuffer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
@@ -13,7 +13,7 @@ import org.joml.Vector3fc;
 import org.joml.Vector4f;
 import org.joml.Vector4fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DynamicUniforms implements AutoCloseable {
    public static final int TRANSFORM_UBO_SIZE = new Std140SizeCalculator().putMat4f().putVec4().putVec3().putMat4f().get();
    public static final int CHUNK_SECTION_UBO_SIZE = new Std140SizeCalculator().putMat4f().putFloat().putIVec2().putIVec3().get();
@@ -47,7 +47,7 @@ public class DynamicUniforms implements AutoCloseable {
       return this.chunkSections.writeUniforms(p_450990_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record ChunkSectionInfo(Matrix4fc modelView, int x, int y, int z, float visibility, int textureAtlasWidth, int textureAtlasHeight)
       implements DynamicUniformStorage.DynamicUniform {
       @Override
@@ -60,7 +60,7 @@ public class DynamicUniforms implements AutoCloseable {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Transform(Matrix4fc modelView, Vector4fc colorModulator, Vector3fc modelOffset, Matrix4fc textureMatrix)
       implements DynamicUniformStorage.DynamicUniform {
       @Override

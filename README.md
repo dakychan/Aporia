@@ -11,7 +11,7 @@ Aporia.clear/
 │   ├── assets/         # Ассеты Minecraft + Aporia
 │   ├── net/minecraft/  # Декомпилированный Minecraft (Java)
 │   ├── com/mojang/     # Декомпилированный Mojang (Java)
-│   ├── ru/             # Твой чит (Java + Kotlin)
+│   ├── main.kotlin.ru/             # Твой чит (Java + Kotlin)
 │   └── run/            # Рабочая папка
 ├── libs/               # Библиотеки (144 JAR)
 ├── vineflower-1.11.2.jar  # Декомпилятор
@@ -27,7 +27,7 @@ run_mcp.bat
 
 ## Редактирование кода
 
-**Классы уже декомпилированы** в `src/net/minecraft/`, `src/com/mojang/`, `src/ru/`
+**Классы уже декомпилированы** в `src/net/minecraft/`, `src/com/mojang/`, `src/main.kotlin.ru/`
 
 1. Редактируй `.java` файлы в `src/`
 2. Компилируй обратно в `src/classes/`

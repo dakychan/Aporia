@@ -15,12 +15,12 @@ import net.minecraft.gizmos.TextGizmo;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DrawableGizmoPrimitives implements GizmoPrimitives {
    private final DrawableGizmoPrimitives.Group opaque = new DrawableGizmoPrimitives.Group(true);
    private final DrawableGizmoPrimitives.Group translucent = new DrawableGizmoPrimitives.Group(false);
@@ -69,7 +69,7 @@ public class DrawableGizmoPrimitives implements GizmoPrimitives {
       return this.isEmpty;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Group(
       boolean opaque,
       List<DrawableGizmoPrimitives.Line> lines,
@@ -261,23 +261,23 @@ public class DrawableGizmoPrimitives implements GizmoPrimitives {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Line(Vec3 start, Vec3 end, int color, float width) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Point(Vec3 pos, int color, float size) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Quad(Vec3 a, Vec3 b, Vec3 c, Vec3 d, int color) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Text(Vec3 pos, String text, TextGizmo.Style style) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record TriangleFan(Vec3[] points, int color) {
    }
 }

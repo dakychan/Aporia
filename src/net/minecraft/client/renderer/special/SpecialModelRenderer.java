@@ -9,12 +9,12 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.resources.model.MaterialSet;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface SpecialModelRenderer<T> {
    void submit(@Nullable T var1, ItemDisplayContext var2, PoseStack var3, SubmitNodeCollector var4, int var5, int var6, boolean var7, int var8);
 
@@ -22,7 +22,7 @@ public interface SpecialModelRenderer<T> {
 
    @Nullable T extractArgument(ItemStack var1);
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface BakingContext {
       EntityModelSet entityModelSet();
 
@@ -30,13 +30,13 @@ public interface SpecialModelRenderer<T> {
 
       PlayerSkinRenderCache playerSkinRenderCache();
 
-      @OnlyIn(Dist.CLIENT)
+      
       public record Simple(EntityModelSet entityModelSet, MaterialSet materials, PlayerSkinRenderCache playerSkinRenderCache)
          implements SpecialModelRenderer.BakingContext {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Unbaked {
       @Nullable SpecialModelRenderer<?> bake(SpecialModelRenderer.BakingContext var1);
 

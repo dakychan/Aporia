@@ -13,10 +13,10 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ExtraCodecs;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public record PostChainConfig(Map<Identifier, PostChainConfig.InternalTarget> internalTargets, List<PostChainConfig.Pass> passes) {
    public static final Codec<PostChainConfig> CODEC = RecordCodecBuilder.create(
       p_448178_ -> p_448178_.group(
@@ -28,7 +28,7 @@ public record PostChainConfig(Map<Identifier, PostChainConfig.InternalTarget> in
          .apply(p_448178_, PostChainConfig::new)
    );
 
-   @OnlyIn(Dist.CLIENT)
+   
    public sealed interface Input permits PostChainConfig.TextureInput, PostChainConfig.TargetInput {
       Codec<PostChainConfig.Input> CODEC = Codec.xor(PostChainConfig.TextureInput.CODEC, PostChainConfig.TargetInput.CODEC)
          .xmap(p_368743_ -> (PostChainConfig.Input)p_368743_.map(Function.identity(), Function.identity()), p_368212_ -> {
@@ -44,7 +44,7 @@ public record PostChainConfig(Map<Identifier, PostChainConfig.InternalTarget> in
       Set<Identifier> referencedTargets();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record InternalTarget(Optional<Integer> width, Optional<Integer> height, boolean persistent, int clearColor) {
       public static final Codec<PostChainConfig.InternalTarget> CODEC = RecordCodecBuilder.create(
          p_404935_ -> p_404935_.group(
@@ -57,7 +57,7 @@ public record PostChainConfig(Map<Identifier, PostChainConfig.InternalTarget> in
       );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Pass(
       Identifier vertexShaderId,
       Identifier fragmentShaderId,
@@ -94,7 +94,7 @@ public record PostChainConfig(Map<Identifier, PostChainConfig.InternalTarget> in
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record TargetInput(String samplerName, Identifier targetId, boolean useDepthBuffer, boolean bilinear) implements PostChainConfig.Input {
       public static final Codec<PostChainConfig.TargetInput> CODEC = RecordCodecBuilder.create(
          p_448180_ -> p_448180_.group(
@@ -112,7 +112,7 @@ public record PostChainConfig(Map<Identifier, PostChainConfig.InternalTarget> in
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record TextureInput(String samplerName, Identifier location, int width, int height, boolean bilinear) implements PostChainConfig.Input {
       public static final Codec<PostChainConfig.TextureInput> CODEC = RecordCodecBuilder.create(
          p_448181_ -> p_448181_.group(

@@ -11,11 +11,11 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.Mth;
 import net.minecraft.util.StringUtil;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class MultilineTextField {
    private static final Logger LOGGER = LogUtils.getLogger();
    public static final int NO_LIMIT = Integer.MAX_VALUE;
@@ -409,7 +409,7 @@ public class MultilineTextField {
          && this.font.getSplitter().splitLines(p_407017_, this.width, Style.EMPTY).size() + (StringUtil.endsWithNewLine(p_407017_) ? 1 : 0) > this.lineLimit;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    protected record StringView(int beginIndex, int endIndex) {
       static final MultilineTextField.StringView EMPTY = new MultilineTextField.StringView(0, 0);
    }

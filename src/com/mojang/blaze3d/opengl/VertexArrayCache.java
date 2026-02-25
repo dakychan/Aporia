@@ -6,13 +6,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.opengl.ARBVertexAttribBinding;
 import org.lwjgl.opengl.GLCapabilities;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class VertexArrayCache {
    public static VertexArrayCache create(GLCapabilities p_396371_, GlDebugLabel p_392063_, Set<String> p_395833_) {
       if (p_396371_.GL_ARB_vertex_attrib_binding && GlDevice.USE_GL_ARB_vertex_attrib_binding) {
@@ -25,7 +25,7 @@ public abstract class VertexArrayCache {
 
    public abstract void bindVertexArray(VertexFormat var1, @Nullable GlBuffer var2);
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Emulated extends VertexArrayCache {
       private final Map<VertexFormat, VertexArrayCache.VertexArray> cache = new HashMap<>();
       private final GlDebugLabel debugLabels;
@@ -92,7 +92,7 @@ public abstract class VertexArrayCache {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Separate extends VertexArrayCache {
       private final Map<VertexFormat, VertexArrayCache.VertexArray> cache = new HashMap<>();
       private final GlDebugLabel debugLabels;
@@ -168,7 +168,7 @@ public abstract class VertexArrayCache {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class VertexArray {
       final int id;
       final VertexFormat format;

@@ -3,11 +3,11 @@ package net.minecraft.client.telemetry.events;
 import java.time.Duration;
 import java.time.Instant;
 import net.minecraft.client.telemetry.TelemetryEventSender;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class AggregatedTelemetryEvent {
    private static final int SAMPLE_INTERVAL_MS = 60000;
    private static final int SAMPLES_PER_EVENT = 10;

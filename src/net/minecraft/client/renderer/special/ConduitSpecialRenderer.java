@@ -10,11 +10,11 @@ import net.minecraft.client.renderer.blockentity.ConduitRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.resources.model.MaterialSet;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ConduitSpecialRenderer implements NoDataSpecialModelRenderer {
    private final MaterialSet materials;
    private final ModelPart model;
@@ -53,7 +53,7 @@ public class ConduitSpecialRenderer implements NoDataSpecialModelRenderer {
       this.model.getExtentsForGui(posestack, p_460569_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked() implements SpecialModelRenderer.Unbaked {
       public static final MapCodec<ConduitSpecialRenderer.Unbaked> MAP_CODEC = MapCodec.unit(new ConduitSpecialRenderer.Unbaked());
 

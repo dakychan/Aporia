@@ -4,13 +4,13 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import java.nio.ByteBuffer;
 import java.util.Set;
 import java.util.function.Supplier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.opengl.GLCapabilities;
 import org.lwjgl.system.MemoryUtil;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class BufferStorage {
    public static BufferStorage create(GLCapabilities p_408913_, Set<String> p_406550_) {
       if (p_408913_.GL_ARB_buffer_storage && GlDevice.USE_GL_ARB_buffer_storage) {
@@ -27,7 +27,7 @@ public abstract class BufferStorage {
 
    public abstract GlBuffer.GlMappedView mapBuffer(DirectStateAccess var1, GlBuffer var2, long var3, long var5, int var7);
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Immutable extends BufferStorage {
       @Override
       public GlBuffer createBuffer(DirectStateAccess p_407964_, @Nullable Supplier<String> p_407920_, @GpuBuffer.Usage int p_408114_, long p_450165_) {
@@ -88,7 +88,7 @@ public abstract class BufferStorage {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class Mutable extends BufferStorage {
       @Override
       public GlBuffer createBuffer(DirectStateAccess p_408573_, @Nullable Supplier<String> p_408145_, @GpuBuffer.Usage int p_406482_, long p_455461_) {

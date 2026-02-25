@@ -7,11 +7,11 @@ import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface SpriteSource {
    FileToIdConverter TEXTURE_ID_CONVERTER = new FileToIdConverter("textures", ".png");
 
@@ -19,19 +19,19 @@ public interface SpriteSource {
 
    MapCodec<? extends SpriteSource> codec();
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface DiscardableLoader extends SpriteSource.Loader {
       default void discard() {
       }
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Loader {
       @Nullable SpriteContents get(SpriteResourceLoader var1);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Output {
       default void add(Identifier p_457649_, Resource p_261651_) {
          this.add(p_457649_, p_448408_ -> p_448408_.loadSprite(p_457649_, p_261651_));

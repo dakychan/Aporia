@@ -21,12 +21,12 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.PlaceholderLookupProvider;
 import net.minecraft.util.StrictJsonParser;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ClientItemInfoLoader {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final FileToIdConverter LISTER = FileToIdConverter.json("items");
@@ -91,11 +91,11 @@ public class ClientItemInfoLoader {
          );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record LoadedClientInfos(Map<Identifier, ClientItem> contents) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record PendingLoad(Identifier id, @Nullable ClientItem clientItemInfo) {
    }
 }

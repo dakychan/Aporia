@@ -8,11 +8,11 @@ import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.scores.Team;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record TeamColor(int defaultColor) implements ItemTintSource {
    public static final MapCodec<TeamColor> MAP_CODEC = RecordCodecBuilder.mapCodec(
       p_377470_ -> p_377470_.group(ExtraCodecs.RGB_COLOR_CODEC.fieldOf("default").forGetter(TeamColor::defaultColor)).apply(p_377470_, TeamColor::new)

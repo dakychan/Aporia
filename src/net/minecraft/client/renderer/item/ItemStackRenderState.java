@@ -16,14 +16,14 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ItemStackRenderState {
    ItemDisplayContext displayContext = ItemDisplayContext.NONE;
    private int activeLayerCount;
@@ -133,14 +133,14 @@ public class ItemStackRenderState {
       return this.oversizedInGui;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum FoilType {
       NONE,
       STANDARD,
       SPECIAL;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class LayerRenderState {
       private static final Vector3fc[] NO_EXTENTS = new Vector3fc[0];
       public static final Supplier<Vector3fc[]> NO_EXTENTS_SUPPLIER = () -> NO_EXTENTS;

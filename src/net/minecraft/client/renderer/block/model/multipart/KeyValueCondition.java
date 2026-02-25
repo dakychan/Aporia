@@ -17,11 +17,11 @@ import net.minecraft.util.Util;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.StateHolder;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public record KeyValueCondition(Map<String, KeyValueCondition.Terms> tests) implements Condition {
    static final Logger LOGGER = LogUtils.getLogger();
    public static final Codec<KeyValueCondition> CODEC = ExtraCodecs.nonEmptyMap(Codec.unboundedMap(Codec.STRING, KeyValueCondition.Terms.CODEC))
@@ -45,7 +45,7 @@ public record KeyValueCondition(Map<String, KeyValueCondition.Terms> tests) impl
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Term(String value, boolean negated) {
       private static final String NEGATE = "!";
 
@@ -68,7 +68,7 @@ public record KeyValueCondition(Map<String, KeyValueCondition.Terms> tests) impl
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Terms(List<KeyValueCondition.Term> entries) {
       private static final char SEPARATOR = '|';
       private static final Joiner JOINER = Joiner.on('|');

@@ -2,11 +2,11 @@ package com.mojang.blaze3d.font;
 
 import it.unimi.dsi.fastutil.ints.IntSet;
 import net.minecraft.client.gui.font.FontOption.Filter;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface GlyphProvider extends AutoCloseable {
    float BASELINE = 7.0F;
 
@@ -20,7 +20,7 @@ public interface GlyphProvider extends AutoCloseable {
 
    IntSet getSupportedGlyphs();
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Conditional(GlyphProvider provider, Filter filter) implements AutoCloseable {
       @Override
       public void close() {

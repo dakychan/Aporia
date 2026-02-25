@@ -105,11 +105,11 @@ import net.minecraft.world.level.block.state.properties.StairsShape;
 import net.minecraft.world.level.block.state.properties.TestBlockMode;
 import net.minecraft.world.level.block.state.properties.Tilt;
 import net.minecraft.world.level.block.state.properties.WallSide;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class BlockModelGenerators {
    final Consumer<BlockModelDefinitionGenerator> blockStateOutput;
    final ItemModelOutput itemModelOutput;
@@ -4193,7 +4193,7 @@ public class BlockModelGenerators {
          .accept(MultiVariantGenerator.dispatch(p_378320_).with(createBooleanModelDispatch(BlockStateProperties.LIT, multivariant9, multivariant8)));
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class BlockFamilyProvider {
       private final TextureMapping mapping;
       private final Map<ModelTemplate, Identifier> models = new HashMap<>();
@@ -4424,16 +4424,16 @@ public class BlockModelGenerators {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    interface BlockStateGeneratorSupplier {
       BlockModelDefinitionGenerator create(Block var1, Variant var2, TextureMapping var3, BiConsumer<Identifier, ModelInstance> var4);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record BookSlotModelCacheKey(ModelTemplate template, String modelSuffix) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static enum PlantType {
       TINTED(ModelTemplates.TINTED_CROSS, ModelTemplates.TINTED_FLOWER_POT_CROSS, false),
       NOT_TINTED(ModelTemplates.CROSS, ModelTemplates.FLOWER_POT_CROSS, false),
@@ -4473,7 +4473,7 @@ public class BlockModelGenerators {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class WoodProvider {
       private final TextureMapping logMapping;
 

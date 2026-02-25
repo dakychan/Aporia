@@ -5,10 +5,10 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class FlameParticle extends RisingParticle {
    FlameParticle(
       ClientLevel p_106800_,
@@ -55,7 +55,7 @@ public class FlameParticle extends RisingParticle {
       return j | k << 16;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 
@@ -78,7 +78,7 @@ public class FlameParticle extends RisingParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class SmallFlameProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprite;
 

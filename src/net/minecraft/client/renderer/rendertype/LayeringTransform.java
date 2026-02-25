@@ -2,12 +2,12 @@ package net.minecraft.client.renderer.rendertype;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.function.Consumer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4fStack;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class LayeringTransform {
    private final String name;
    private final @Nullable Consumer<Matrix4fStack> modifier;

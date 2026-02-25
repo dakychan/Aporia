@@ -15,11 +15,11 @@ import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DebugRenderer {
    private final List<DebugRenderer.SimpleDebugRenderer> renderers = new ArrayList<>();
    private long lastDebugEntriesVersion;
@@ -194,7 +194,7 @@ public class DebugRenderer {
       return new Vec3(vec33.x / d0, vec33.y / d0, vec33.z / d0);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface SimpleDebugRenderer {
       void emitGizmos(double var1, double var3, double var5, DebugValueAccess var7, Frustum var8, float var9);
    }

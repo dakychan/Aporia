@@ -3,10 +3,10 @@ package net.minecraft.client.renderer.chunk;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import java.util.Locale;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public enum ChunkSectionLayer {
    SOLID(RenderPipelines.SOLID_TERRAIN, 4194304, false),
    CUTOUT(RenderPipelines.CUTOUT_TERRAIN, 4194304, false),

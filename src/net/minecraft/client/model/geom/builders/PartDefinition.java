@@ -10,10 +10,10 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class PartDefinition {
    private final List<CubeDefinition> cubes;
    private final PartPose partPose;

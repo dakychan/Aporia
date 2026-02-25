@@ -34,11 +34,11 @@ import net.minecraft.world.level.gamerules.GameRule;
 import net.minecraft.world.level.gamerules.GameRuleCategory;
 import net.minecraft.world.level.gamerules.GameRuleTypeVisitor;
 import net.minecraft.world.level.gamerules.GameRules;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class EditGameRulesScreen extends Screen {
    private static final Component TITLE = Component.translatable("editGamerule.title");
    private static final int SPACING = 8;
@@ -99,7 +99,7 @@ public class EditGameRulesScreen extends Screen {
       this.updateDoneButton();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class BooleanRuleEntry extends EditGameRulesScreen.GameRuleEntry {
       private final CycleButton<Boolean> checkbox;
 
@@ -121,7 +121,7 @@ public class EditGameRulesScreen extends Screen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class CategoryRuleEntry extends EditGameRulesScreen.RuleEntry {
       final Component label;
 
@@ -157,12 +157,12 @@ public class EditGameRulesScreen extends Screen {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    interface EntryFactory<T> {
       EditGameRulesScreen.RuleEntry create(Component var1, List<FormattedCharSequence> var2, String var3, GameRule<T> var4);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public abstract class GameRuleEntry extends EditGameRulesScreen.RuleEntry {
       private final List<FormattedCharSequence> label;
       protected final List<AbstractWidget> children = Lists.newArrayList();
@@ -192,7 +192,7 @@ public class EditGameRulesScreen extends Screen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class IntegerRuleEntry extends EditGameRulesScreen.GameRuleEntry {
       private final EditBox input;
 
@@ -223,7 +223,7 @@ public class EditGameRulesScreen extends Screen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public abstract static class RuleEntry extends ContainerObjectSelectionList.Entry<EditGameRulesScreen.RuleEntry> {
       final @Nullable List<FormattedCharSequence> tooltip;
 
@@ -232,7 +232,7 @@ public class EditGameRulesScreen extends Screen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class RuleList extends ContainerObjectSelectionList<EditGameRulesScreen.RuleEntry> {
       private static final int ITEM_HEIGHT = 24;
 

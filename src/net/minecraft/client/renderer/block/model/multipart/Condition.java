@@ -10,11 +10,11 @@ import java.util.function.Predicate;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.StateHolder;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 
 @FunctionalInterface
-@OnlyIn(Dist.CLIENT)
+
 public interface Condition {
    Codec<Condition> CODEC = Codec.recursive(
       "condition",

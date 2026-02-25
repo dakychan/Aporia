@@ -34,12 +34,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.realms.RealmsScreen;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.CommonLinks;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsSelectWorldTemplateScreen extends RealmsScreen {
    static final Logger LOGGER = LogUtils.getLogger();
    static final Identifier SLOT_FRAME_SPRITE = Identifier.withDefaultNamespace("widget/slot_frame");
@@ -238,7 +238,7 @@ public class RealmsSelectWorldTemplateScreen extends RealmsScreen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class Entry extends net.minecraft.client.gui.components.ObjectSelectionList.Entry<RealmsSelectWorldTemplateScreen.Entry> {
       private static final WidgetSprites WEBSITE_LINK_SPRITES = new WidgetSprites(
          Identifier.withDefaultNamespace("icon/link"), Identifier.withDefaultNamespace("icon/link_highlighted")
@@ -338,7 +338,7 @@ public class RealmsSelectWorldTemplateScreen extends RealmsScreen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class WorldTemplateList extends ObjectSelectionList<RealmsSelectWorldTemplateScreen.Entry> {
       public WorldTemplateList() {
          this(Collections.emptyList());

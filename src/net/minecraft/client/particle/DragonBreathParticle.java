@@ -4,10 +4,10 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.PowerParticleOption;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class DragonBreathParticle extends SingleQuadParticle {
    private static final int COLOR_MIN = 11993298;
    private static final int COLOR_MAX = 14614777;
@@ -81,7 +81,7 @@ public class DragonBreathParticle extends SingleQuadParticle {
       return this.quadSize * Mth.clamp((this.age + p_106026_) / this.lifetime * 32.0F, 0.0F, 1.0F);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Provider implements ParticleProvider<PowerParticleOption> {
       private final SpriteSet sprites;
 

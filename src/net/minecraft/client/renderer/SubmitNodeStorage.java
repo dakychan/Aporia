@@ -21,14 +21,14 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class SubmitNodeStorage implements SubmitNodeCollector {
    private final Int2ObjectAVLTreeMap<SubmitNodeCollection> submitsPerOrder = new Int2ObjectAVLTreeMap();
 
@@ -177,25 +177,25 @@ public class SubmitNodeStorage implements SubmitNodeCollector {
       return this.submitsPerOrder;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record BlockModelSubmit(
       Pose pose, RenderType renderType, BlockStateModel model, float r, float g, float b, int lightCoords, int overlayCoords, int outlineColor
    ) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record BlockSubmit(Pose pose, BlockState state, int lightCoords, int overlayCoords, int outlineColor) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record CustomGeometrySubmit(Pose pose, SubmitNodeCollector.CustomGeometryRenderer customGeometryRenderer) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record FlameSubmit(Pose pose, EntityRenderState entityRenderState, Quaternionf rotation) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record ItemSubmit(
       Pose pose,
       ItemDisplayContext displayContext,
@@ -209,11 +209,11 @@ public class SubmitNodeStorage implements SubmitNodeCollector {
    ) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record LeashSubmit(Matrix4f pose, EntityRenderState.LeashState leashState) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record ModelPartSubmit(
       Pose pose,
       ModelPart modelPart,
@@ -228,7 +228,7 @@ public class SubmitNodeStorage implements SubmitNodeCollector {
    ) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record ModelSubmit<S>(
       Pose pose,
       Model<? super S> model,
@@ -242,19 +242,19 @@ public class SubmitNodeStorage implements SubmitNodeCollector {
    ) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record MovingBlockSubmit(Matrix4f pose, MovingBlockRenderState movingBlockRenderState) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record NameTagSubmit(Matrix4f pose, float x, float y, Component text, int lightCoords, int color, int backgroundColor, double distanceToCameraSq) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record ShadowSubmit(Matrix4f pose, float radius, List<EntityRenderState.ShadowPiece> pieces) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record TextSubmit(
       Matrix4f pose,
       float x,
@@ -269,7 +269,7 @@ public class SubmitNodeStorage implements SubmitNodeCollector {
    ) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record TranslucentModelSubmit<S>(SubmitNodeStorage.ModelSubmit<S> modelSubmit, RenderType renderType, Vector3f position) {
    }
 }

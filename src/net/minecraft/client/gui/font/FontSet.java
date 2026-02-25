@@ -26,11 +26,11 @@ import net.minecraft.client.gui.font.glyphs.SpecialGlyphs;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class FontSet implements AutoCloseable {
    private static final float LARGE_FORWARD_ADVANCE = 32.0F;
    private static final BakedGlyph INVISIBLE_MISSING_GLYPH = new BakedGlyph() {
@@ -176,7 +176,7 @@ public class FontSet implements AutoCloseable {
       return p_430275_ ? this.nonFishyGlyphs : this.anyGlyphs;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class DelayedBake implements Supplier<BakedGlyph> {
       final UnbakedGlyph unbaked;
       private @Nullable BakedGlyph baked;
@@ -194,14 +194,14 @@ public class FontSet implements AutoCloseable {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record SelectedGlyphs(Supplier<BakedGlyph> any, Supplier<BakedGlyph> nonFishy) {
       Supplier<BakedGlyph> select(boolean p_429186_) {
          return p_429186_ ? this.nonFishy : this.any;
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public class Source implements GlyphSource {
       private final boolean filterFishyGlyphs;
 

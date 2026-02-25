@@ -7,11 +7,11 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class Octree {
    private final Octree.Branch root;
    final BlockPos cameraSectionCenter;
@@ -51,7 +51,7 @@ public class Octree {
          && k < p_363335_ + p_370074_;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static enum AxisSorting {
       XYZ(4, 2, 1),
       XZY(4, 1, 2),
@@ -81,7 +81,7 @@ public class Octree {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class Branch implements Octree.Node {
       private final Octree.@Nullable Node[] nodes = new Octree.Node[8];
       private final BoundingBox boundingBox;
@@ -234,7 +234,7 @@ public class Octree {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    final class Leaf implements Octree.Node {
       private final SectionRenderDispatcher.RenderSection section;
 
@@ -262,7 +262,7 @@ public class Octree {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Node {
       void visitNodes(Octree.OctreeVisitor var1, boolean var2, Frustum var3, int var4, int var5, boolean var6);
 
@@ -272,7 +272,7 @@ public class Octree {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface OctreeVisitor {
       void visit(Octree.Node var1, boolean var2, int var3, boolean var4);
    }

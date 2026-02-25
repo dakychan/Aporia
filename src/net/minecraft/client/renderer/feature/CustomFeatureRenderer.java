@@ -14,10 +14,10 @@ import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class CustomFeatureRenderer {
    public void render(SubmitNodeCollection p_425143_, MultiBufferSource.BufferSource p_423778_) {
       CustomFeatureRenderer.Storage customfeaturerenderer$storage = p_425143_.getCustomGeometrySubmits();
@@ -31,7 +31,7 @@ public class CustomFeatureRenderer {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Storage {
       final Map<RenderType, List<SubmitNodeStorage.CustomGeometrySubmit>> customGeometrySubmits = new HashMap<>();
       private final Set<RenderType> customGeometrySubmitsUsage = new ObjectOpenHashSet();

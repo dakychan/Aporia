@@ -19,11 +19,11 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.TestInstanceBlockEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TestInstanceBlockEditScreen extends Screen {
    private static final Component ID_LABEL = Component.translatable("test_instance_block.test_id");
    private static final Component SIZE_LABEL = Component.translatable("test_instance_block.size");

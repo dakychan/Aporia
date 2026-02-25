@@ -10,11 +10,11 @@ import net.minecraft.server.dialog.DialogListDialog;
 import net.minecraft.server.dialog.MultiActionDialog;
 import net.minecraft.server.dialog.NoticeDialog;
 import net.minecraft.server.dialog.ServerLinksDialog;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DialogScreens {
    private static final Map<MapCodec<? extends Dialog>, DialogScreens.Factory<?>> FACTORIES = new HashMap<>();
 
@@ -36,7 +36,7 @@ public class DialogScreens {
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface Factory<T extends Dialog> {
       DialogScreen<T> create(@Nullable Screen var1, T var2, DialogConnectionAccess var3);
    }

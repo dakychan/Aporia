@@ -5,8 +5,9 @@ import net.minecraft.client.GuiMessage
 import net.minecraft.network.chat.Component
 import net.minecraft.util.FormattedCharSink
 import org.lwjgl.glfw.GLFW
-import ru.command.Command
-import ru.command.CommandRegistry
+import cc.apr.command.Command
+import cc.apr.command.CommandRegistry
+import cc.apr.command.commands.*
 
 /**
  * Unified chat and command management system for Aporia.cc.
@@ -30,10 +31,10 @@ object ChatUtils {
     private val registry: CommandRegistry = CommandRegistry()
     
     /** Command prefix */
-    private var prefix: String = "^"
+    private var _prefix: String = "^"
     
     /** Command aliases */
-    private val aliases: MutableMap<String, String> = mutableMapOf()
+    private val _aliases: MutableMap<String, String> = mutableMapOf()
     
     /** Show notification when copying chat */
     @JvmField
@@ -89,14 +90,14 @@ object ChatUtils {
      * Initialize ChatUtils and register all commands.
      */
     fun initialize() {
-        registerCommand(ru.command.commands.ConfigCommand())
-        registerCommand(ru.command.commands.AliasCommand())
-        registerCommand(ru.command.commands.FriendCommand())
-        registerCommand(ru.command.commands.InfoCommand())
-        registerCommand(ru.command.commands.PrefixCommand())
-        registerCommand(ru.command.commands.HelpCommand(registry))
+        registerCommand(ConfigCommand())
+        registerCommand(AliasCommand())
+        registerCommand(FriendCommand())
+        registerCommand(InfoCommand())
+        registerCommand(PrefixCommand())
+        registerCommand(HelpCommand(registry))
     }
-    
+
     /**
      * Handle incoming chat message.
      * 
@@ -104,11 +105,11 @@ object ChatUtils {
      * @return true if message was a command, false otherwise
      */
     fun handleChatMessage(message: String): Boolean {
-        if (!message.startsWith(prefix)) {
+        if (!message.startsWith(_prefix)) {
             return false
         }
         
-        var commandText = message.substring(prefix.length).trim()
+        var commandText = message.substring(_prefix.length).trim()
         
         if (commandText.isEmpty()) {
             return true
@@ -349,8 +350,8 @@ object ChatUtils {
         val parts = input.split("\\s+".toRegex(), limit = 2)
         val firstWord = parts[0].lowercase()
         
-        if (aliases.containsKey(firstWord)) {
-            val expansion = aliases[firstWord]!!
+        if (_aliases.containsKey(firstWord)) {
+            val expansion = _aliases[firstWord]!!
             return if (parts.size > 1) {
                 "$expansion ${parts[1]}"
             } else {
@@ -367,7 +368,7 @@ object ChatUtils {
      * @param newPrefix The new prefix
      */
     fun setPrefix(newPrefix: String) {
-        prefix = newPrefix
+        _prefix = newPrefix
     }
     
     /**
@@ -376,7 +377,7 @@ object ChatUtils {
      * @return The current prefix
      */
     fun getPrefix(): String {
-        return prefix
+        return _prefix
     }
     
     /**
@@ -386,7 +387,7 @@ object ChatUtils {
      * @return Formatted command string with current prefix
      */
     fun formatCommand(command: String): String {
-        return "$prefix$command"
+        return "$_prefix$command"
     }
     
     /**
@@ -396,7 +397,7 @@ object ChatUtils {
      * @param command The command to alias
      */
     fun addAlias(alias: String, command: String) {
-        aliases[alias.lowercase()] = command
+        _aliases[alias.lowercase()] = command
     }
     
     /**
@@ -405,7 +406,7 @@ object ChatUtils {
      * @param alias The alias to remove
      */
     fun removeAlias(alias: String) {
-        aliases.remove(alias.lowercase())
+        _aliases.remove(alias.lowercase())
     }
     
     /**
@@ -414,7 +415,7 @@ object ChatUtils {
      * @return Map of aliases
      */
     fun getAliases(): Map<String, String> {
-        return aliases.toMap()
+        return _aliases.toMap()
     }
     
     /**

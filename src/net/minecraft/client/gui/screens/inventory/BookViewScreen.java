@@ -26,11 +26,11 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.WritableBookContent;
 import net.minecraft.world.item.component.WrittenBookContent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class BookViewScreen extends Screen {
    public static final int PAGE_INDICATOR_TEXT_Y_OFFSET = 16;
    public static final int PAGE_TEXT_X_OFFSET = 36;
@@ -259,7 +259,7 @@ public class BookViewScreen extends Screen {
       return true;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record BookAccess(List<Component> pages) {
       public int getPageCount() {
          return this.pages.size();

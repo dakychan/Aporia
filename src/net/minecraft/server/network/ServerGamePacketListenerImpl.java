@@ -956,8 +956,10 @@ public class ServerGamePacketListenerImpl
       if (itemstack.has(DataComponents.WRITABLE_BOOK_CONTENT)) {
          ItemStack itemstack1 = itemstack.transmuteCopy(Items.WRITTEN_BOOK);
          itemstack1.remove(DataComponents.WRITABLE_BOOK_CONTENT);
-         List<Filterable<Component>> list = p_215210_.stream().map(p_326455_ -> this.filterableFromOutgoing(p_326455_).map(Component::literal)).toList();
-         itemstack1.set(
+         List<Filterable<Component>> list = p_215210_.stream()
+                 .map(p_326455_ -> this.filterableFromOutgoing(p_326455_)
+                         .map(s -> (Component)Component.literal(s)))  // явное приведение
+                 .toList();         itemstack1.set(
             DataComponents.WRITTEN_BOOK_CONTENT, new WrittenBookContent(this.filterableFromOutgoing(p_215209_), this.player.getPlainTextName(), 0, list, true)
          );
          this.player.getInventory().setItem(p_215211_, itemstack1);

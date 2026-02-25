@@ -18,10 +18,10 @@ import net.minecraft.util.context.ContextMap;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.display.RecipeDisplayEntry;
 import net.minecraft.world.item.crafting.display.RecipeDisplayId;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class RecipeButton extends AbstractWidget {
    private static final Identifier SLOT_MANY_CRAFTABLE_SPRITE = Identifier.withDefaultNamespace("recipe_book/slot_many_craftable");
    private static final Identifier SLOT_CRAFTABLE_SPRITE = Identifier.withDefaultNamespace("recipe_book/slot_craftable");
@@ -168,7 +168,7 @@ public class RecipeButton extends AbstractWidget {
       return p_430610_.button() == 0 || p_430610_.button() == 1;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record ResolvedEntry(RecipeDisplayId id, List<ItemStack> displayItems) {
       public ItemStack selectItem(int p_361103_) {
          if (this.displayItems.isEmpty()) {

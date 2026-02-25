@@ -23,10 +23,10 @@ import net.minecraft.world.level.block.StandingSignBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.WoodType;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SignRenderer extends AbstractSignRenderer {
    public static final float RENDER_SCALE = 0.6666667F;
    private static final Vec3 TEXT_OFFSET = new Vec3(0.0, 0.33333334F, 0.046666667F);
@@ -116,7 +116,7 @@ public class SignRenderer extends AbstractSignRenderer {
       return LayerDefinition.create(meshdefinition, 64, 32);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Models(Model.Simple standing, Model.Simple wall) {
    }
 }

@@ -5,11 +5,11 @@ import com.google.common.collect.Lists;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TextRenderingUtils {
    private TextRenderingUtils() {
    }
@@ -74,7 +74,7 @@ public class TextRenderingUtils {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Line {
       public final List<TextRenderingUtils.LineSegment> segments;
 
@@ -109,7 +109,7 @@ public class TextRenderingUtils {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class LineSegment {
       private final String fullText;
       private final @Nullable String linkTitle;

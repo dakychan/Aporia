@@ -6,20 +6,20 @@ import com.mojang.blaze3d.vertex.PoseStack.Pose;
 import net.minecraft.client.renderer.feature.ParticleFeatureRenderer;
 import net.minecraft.client.renderer.state.QuadParticleRenderState;
 import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public interface SubmitNodeCollector extends OrderedSubmitNodeCollector {
    OrderedSubmitNodeCollector order(int var1);
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface CustomGeometryRenderer {
       void render(Pose var1, VertexConsumer var2);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface ParticleGroupRenderer {
       QuadParticleRenderState.@Nullable PreparedBuffers prepare(ParticleFeatureRenderer.ParticleBufferCache var1);
 

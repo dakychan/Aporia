@@ -6,11 +6,11 @@ import net.minecraft.util.StringUtil;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelSettings;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsWorldOptions extends ValueObject implements ReflectionBasedSerialization {
    @SerializedName("spawnProtection")
    public int spawnProtection = 0;

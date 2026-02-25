@@ -5,11 +5,11 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record GuiMessageTag(int indicatorColor, GuiMessageTag.@Nullable Icon icon, @Nullable Component text, @Nullable String logTag) {
    private static final Component SYSTEM_TEXT = Component.translatable("chat.tag.system");
    private static final Component SYSTEM_TEXT_SINGLE_PLAYER = Component.translatable("chat.tag.system_single_player");
@@ -45,7 +45,7 @@ public record GuiMessageTag(int indicatorColor, GuiMessageTag.@Nullable Icon ico
       return CHAT_ERROR;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Icon {
       CHAT_MODIFIED(Identifier.withDefaultNamespace("icon/chat_modified"), 9, 9);
 

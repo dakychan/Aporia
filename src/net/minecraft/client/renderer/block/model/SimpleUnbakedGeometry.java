@@ -9,11 +9,11 @@ import net.minecraft.client.resources.model.ModelState;
 import net.minecraft.client.resources.model.QuadCollection;
 import net.minecraft.client.resources.model.UnbakedGeometry;
 import net.minecraft.core.Direction;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
+
 public record SimpleUnbakedGeometry(List<BlockElement> elements) implements UnbakedGeometry {
    @Override
    public QuadCollection bake(TextureSlots p_397805_, ModelBaker p_395314_, ModelState p_394240_, ModelDebugName p_392934_) {

@@ -13,10 +13,10 @@ import java.util.stream.Stream;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ModelTemplate {
    private final Optional<Identifier> model;
    private final Set<TextureSlot> requiredSlots;

@@ -10,8 +10,8 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.opengl.ARBDebugOutput;
 import org.lwjgl.opengl.GL;
@@ -22,7 +22,7 @@ import org.lwjgl.opengl.GLDebugMessageCallback;
 import org.lwjgl.opengl.KHRDebug;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class GlDebug {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final int CIRCULAR_LOG_SIZE = 10;
@@ -159,7 +159,7 @@ public class GlDebug {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class LogEntry {
       private final int id;
       private final int source;

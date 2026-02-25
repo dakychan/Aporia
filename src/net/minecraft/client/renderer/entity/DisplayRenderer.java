@@ -24,12 +24,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class DisplayRenderer<T extends Display, S, ST extends DisplayEntityRenderState> extends EntityRenderer<T, ST> {
    private final EntityRenderDispatcher entityRenderDispatcher;
 
@@ -129,7 +129,7 @@ public abstract class DisplayRenderer<T extends Display, S, ST extends DisplayEn
       p_362498_.cameraYRot = camera.yRot();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class BlockDisplayRenderer extends DisplayRenderer<Display.BlockDisplay, Display.BlockDisplay.BlockRenderState, BlockDisplayEntityRenderState> {
       protected BlockDisplayRenderer(EntityRendererProvider.Context p_270283_) {
          super(p_270283_);
@@ -149,7 +149,7 @@ public abstract class DisplayRenderer<T extends Display, S, ST extends DisplayEn
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class ItemDisplayRenderer extends DisplayRenderer<Display.ItemDisplay, Display.ItemDisplay.ItemRenderState, ItemDisplayEntityRenderState> {
       private final ItemModelResolver itemModelResolver;
 
@@ -183,7 +183,7 @@ public abstract class DisplayRenderer<T extends Display, S, ST extends DisplayEn
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class TextDisplayRenderer extends DisplayRenderer<Display.TextDisplay, Display.TextDisplay.TextRenderState, TextDisplayEntityRenderState> {
       private final Font font;
 

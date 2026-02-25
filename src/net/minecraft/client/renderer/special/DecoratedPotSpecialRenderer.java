@@ -10,12 +10,12 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.PotDecorations;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DecoratedPotSpecialRenderer implements SpecialModelRenderer<PotDecorations> {
    private final DecoratedPotRenderer decoratedPotRenderer;
 
@@ -45,7 +45,7 @@ public class DecoratedPotSpecialRenderer implements SpecialModelRenderer<PotDeco
       this.decoratedPotRenderer.getExtents(p_455215_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked() implements SpecialModelRenderer.Unbaked {
       public static final MapCodec<DecoratedPotSpecialRenderer.Unbaked> MAP_CODEC = MapCodec.unit(new DecoratedPotSpecialRenderer.Unbaked());
 

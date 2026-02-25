@@ -2,10 +2,10 @@ package net.minecraft.client.renderer.texture;
 
 import java.util.Collection;
 import java.util.Locale;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class StitcherException extends RuntimeException {
    private final Collection<Stitcher.Entry> allSprites;
 

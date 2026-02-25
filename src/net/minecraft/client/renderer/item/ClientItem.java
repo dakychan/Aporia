@@ -4,11 +4,11 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.RegistryContextSwapper;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public record ClientItem(ItemModel.Unbaked model, ClientItem.Properties properties, @Nullable RegistryContextSwapper registrySwapper) {
    public static final Codec<ClientItem> CODEC = RecordCodecBuilder.create(
       p_377165_ -> p_377165_.group(
@@ -25,7 +25,7 @@ public record ClientItem(ItemModel.Unbaked model, ClientItem.Properties properti
       return new ClientItem(this.model, this.properties, p_392250_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Properties(boolean handAnimationOnSwap, boolean oversizedInGui, float swapAnimationScale) {
       public static final ClientItem.Properties DEFAULT = new ClientItem.Properties(true, false, 1.0F);
       public static final MapCodec<ClientItem.Properties> MAP_CODEC = RecordCodecBuilder.mapCodec(

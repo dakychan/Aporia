@@ -4,11 +4,11 @@ import java.util.Locale;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DebugEntrySoundMood implements DebugScreenEntry {
    @Override
    public void display(DebugScreenDisplayer p_426392_, @Nullable Level p_425339_, @Nullable LevelChunk p_425787_, @Nullable LevelChunk p_422662_) {

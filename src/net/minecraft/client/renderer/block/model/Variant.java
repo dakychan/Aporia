@@ -9,10 +9,10 @@ import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ModelState;
 import net.minecraft.client.resources.model.ResolvableModel;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public record Variant(Identifier modelLocation, Variant.SimpleModelState modelState) implements BlockModelPart.Unbaked {
    public static final MapCodec<Variant> MAP_CODEC = RecordCodecBuilder.mapCodec(
       p_448207_ -> p_448207_.group(
@@ -64,7 +64,7 @@ public record Variant(Identifier modelLocation, Variant.SimpleModelState modelSt
       p_391294_.markDependency(this.modelLocation);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record SimpleModelState(Quadrant x, Quadrant y, Quadrant z, boolean uvLock) {
       public static final MapCodec<Variant.SimpleModelState> MAP_CODEC = RecordCodecBuilder.mapCodec(
          p_448208_ -> p_448208_.group(

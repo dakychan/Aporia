@@ -13,10 +13,10 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.KineticWeapon;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class SpearAnimations {
    static float progress(float p_458081_, float p_458435_, float p_459481_) {
       return Mth.clamp(Mth.inverseLerp(p_458081_, p_458435_, p_459481_), 0.0F, 1.0F);
@@ -173,7 +173,7 @@ public class SpearAnimations {
       p_457121_.translate(0.0, 0.0, -0.25 * (f2 - f1));
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record UseParams(
       float raiseProgress,
       float raiseProgressStart,

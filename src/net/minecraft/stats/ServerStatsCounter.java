@@ -51,15 +51,20 @@ public class ServerStatsCounter extends StatsCounter {
    private final Path file;
    private final Set<Stat<?>> dirty = Sets.newHashSet();
 
-   private static <T> Codec<Map<Stat<?>, Integer>> createTypedStatsCodec(StatType<T> p_395191_) {
-      Codec<T> codec = p_395191_.getRegistry().byNameCodec();
-      Codec<Stat<?>> codec1 = codec.flatComapMap(
-         p_395191_::get,
-         p_390205_ -> p_390205_.getType() == p_395191_
-            ? DataResult.success(p_390205_.getValue())
-            : DataResult.error(() -> "Expected type " + p_395191_ + ", but got " + p_390205_.getType())
+   private static <T> Codec<Map<Stat<?>, Integer>> createTypedStatsCodec(StatType<T> statType) {
+      Codec<T> codec = statType.getRegistry().byNameCodec();
+      Codec<Stat<?>> statCodec = codec.flatComapMap(
+              (T value) -> (Stat<?>) statType.get(value),
+              (Stat<?> stat) -> {
+                 if (stat.getType() == statType) {
+                    @SuppressWarnings("unchecked")
+                    T typedValue = (T) stat.getValue();
+                    return DataResult.success(typedValue);
+                 }
+                 return DataResult.error(() -> "Expected type " + statType + ", but got " + stat.getType());
+              }
       );
-      return Codec.unboundedMap(codec1, Codec.INT);
+      return Codec.unboundedMap(statCodec, Codec.INT);
    }
 
    public ServerStatsCounter(MinecraftServer p_12816_, Path p_451842_) {

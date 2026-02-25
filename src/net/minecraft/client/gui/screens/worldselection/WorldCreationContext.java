@@ -14,10 +14,10 @@ import net.minecraft.world.level.gamerules.GameRuleMap;
 import net.minecraft.world.level.levelgen.WorldDimensions;
 import net.minecraft.world.level.levelgen.WorldGenSettings;
 import net.minecraft.world.level.levelgen.WorldOptions;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public record WorldCreationContext(
    WorldOptions options,
    Registry<LevelStem> datapackDimensions,
@@ -106,11 +106,11 @@ public record WorldCreationContext(
    }
 
    @FunctionalInterface
-   @OnlyIn(Dist.CLIENT)
+   
    public interface DimensionsUpdater extends BiFunction<RegistryAccess.Frozen, WorldDimensions, WorldDimensions> {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public interface OptionsModifier extends UnaryOperator<WorldOptions> {
    }
 }

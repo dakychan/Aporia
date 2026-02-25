@@ -15,11 +15,11 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class ContainerObjectSelectionList<E extends ContainerObjectSelectionList.Entry<E>> extends AbstractSelectionList<E> {
    public ContainerObjectSelectionList(Minecraft p_94010_, int p_94011_, int p_94012_, int p_94013_, int p_94014_) {
       super(p_94010_, p_94011_, p_94012_, p_94013_, p_94014_);
@@ -105,7 +105,7 @@ public abstract class ContainerObjectSelectionList<E extends ContainerObjectSele
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public abstract static class Entry<E extends ContainerObjectSelectionList.Entry<E>> extends AbstractSelectionList.Entry<E> implements ContainerEventHandler {
       private @Nullable GuiEventListener focused;
       private @Nullable NarratableEntry lastNarratable;

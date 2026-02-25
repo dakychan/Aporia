@@ -1,10 +1,10 @@
 package com.mojang.blaze3d.opengl;
 
 import com.mojang.blaze3d.buffers.GpuFence;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class GlFence implements GpuFence {
    private long handle = GlStateManager._glFenceSync(37143, 0);
 

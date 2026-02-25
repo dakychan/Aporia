@@ -6,11 +6,11 @@ import net.minecraft.client.resources.model.ResolvableModel;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class EmptyModel implements ItemModel {
    public static final ItemModel INSTANCE = new EmptyModel();
 
@@ -27,7 +27,7 @@ public class EmptyModel implements ItemModel {
       p_376944_.appendModelIdentityElement(this);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked() implements ItemModel.Unbaked {
       public static final MapCodec<EmptyModel.Unbaked> MAP_CODEC = MapCodec.unit(EmptyModel.Unbaked::new);
 

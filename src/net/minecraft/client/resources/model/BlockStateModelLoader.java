@@ -24,11 +24,11 @@ import net.minecraft.util.Util;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class BlockStateModelLoader {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final FileToIdConverter BLOCKSTATE_LISTER = FileToIdConverter.json("blockstates");
@@ -110,11 +110,11 @@ public class BlockStateModelLoader {
       return new BlockStateModelLoader.LoadedModels(map);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record LoadedBlockModelDefinition(String source, BlockModelDefinition contents) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record LoadedModels(Map<BlockState, BlockStateModel.UnbakedRoot> models) {
    }
 }

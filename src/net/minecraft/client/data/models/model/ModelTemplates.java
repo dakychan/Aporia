@@ -3,10 +3,10 @@ package net.minecraft.client.data.models.model;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ModelTemplates {
    public static final ModelTemplate CUBE = create(
       "cube", TextureSlot.PARTICLE, TextureSlot.NORTH, TextureSlot.SOUTH, TextureSlot.EAST, TextureSlot.WEST, TextureSlot.UP, TextureSlot.DOWN

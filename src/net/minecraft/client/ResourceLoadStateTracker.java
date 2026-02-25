@@ -6,12 +6,12 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
 import net.minecraft.server.packs.PackResources;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ResourceLoadStateTracker {
    private static final Logger LOGGER = LogUtils.getLogger();
    private ResourceLoadStateTracker.@Nullable ReloadState reloadState;
@@ -53,7 +53,7 @@ public class ResourceLoadStateTracker {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class RecoveryInfo {
       private final Throwable error;
 
@@ -71,7 +71,7 @@ public class ResourceLoadStateTracker {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum ReloadReason {
       INITIAL("initial"),
       MANUAL("manual"),
@@ -84,7 +84,7 @@ public class ResourceLoadStateTracker {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class ReloadState {
       private final ResourceLoadStateTracker.ReloadReason reloadReason;
       private final List<String> packs;

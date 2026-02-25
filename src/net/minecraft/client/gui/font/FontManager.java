@@ -49,12 +49,12 @@ import net.minecraft.util.DependencySorter;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class FontManager implements PreparableReloadListener, AutoCloseable {
    static final Logger LOGGER = LogUtils.getLogger();
    private static final String FONTS_PATH = "fonts.json";
@@ -279,7 +279,7 @@ public class FontManager implements PreparableReloadListener, AutoCloseable {
       this.missingFontSet.close();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record BuilderId(Identifier fontId, String pack, int index) {
       @Override
       public String toString() {
@@ -287,7 +287,7 @@ public class FontManager implements PreparableReloadListener, AutoCloseable {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record BuilderResult(FontManager.BuilderId id, FontOption.Filter filter, Either<CompletableFuture<Optional<GlyphProvider>>, Identifier> result) {
       public Optional<List<Conditional>> resolve(Function<Identifier, @Nullable List<Conditional>> p_284942_) {
          return (Optional<List<Conditional>>)this.result
@@ -315,7 +315,7 @@ public class FontManager implements PreparableReloadListener, AutoCloseable {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class CachedFontProvider implements Font.Provider, AutoCloseable {
       private final boolean nonFishyOnly;
       private volatile FontManager.CachedFontProvider.@Nullable CachedEntry lastEntry;
@@ -367,12 +367,12 @@ public class FontManager implements PreparableReloadListener, AutoCloseable {
          return effectglyph;
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       record CachedEntry(FontDescription description, GlyphSource source) {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record FontDefinitionFile(List<GlyphProviderDefinition.Conditional> providers) {
       public static final Codec<FontManager.FontDefinitionFile> CODEC = RecordCodecBuilder.create(
          p_325360_ -> p_325360_.group(
@@ -382,11 +382,11 @@ public class FontManager implements PreparableReloadListener, AutoCloseable {
       );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Preparation(Map<Identifier, List<Conditional>> fontSets, List<GlyphProvider> allProviders) {
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record UnresolvedBuilderBundle(Identifier fontId, List<FontManager.BuilderResult> builders, Set<Identifier> dependencies)
       implements DependencySorter.Entry<Identifier> {
       public UnresolvedBuilderBundle(Identifier p_452474_) {

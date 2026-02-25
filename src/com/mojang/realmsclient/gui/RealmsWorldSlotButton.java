@@ -16,11 +16,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsWorldSlotButton extends Button {
    private static final Identifier SLOT_FRAME_SPRITE = Identifier.withDefaultNamespace("widget/slot_frame");
    public static final Identifier EMPTY_SLOT_LOCATION = Identifier.withDefaultNamespace("textures/gui/realms/empty_frame.png");
@@ -133,13 +133,13 @@ public class RealmsWorldSlotButton extends Button {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Action {
       NOTHING,
       SWITCH_SLOT;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class State {
       final String slotName;
       final String slotVersion;

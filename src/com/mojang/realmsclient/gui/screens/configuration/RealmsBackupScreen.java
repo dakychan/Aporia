@@ -31,12 +31,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.realms.RealmsScreen;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsBackupScreen extends RealmsScreen {
    static final Logger LOGGER = LogUtils.getLogger();
    private static final Component TITLE = Component.translatable("mco.configure.world.backup");
@@ -159,7 +159,7 @@ public class RealmsBackupScreen extends RealmsScreen {
          );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class BackupObjectSelectionList extends ContainerObjectSelectionList<RealmsBackupScreen.Entry> {
       private static final int ITEM_HEIGHT = 36;
 
@@ -178,7 +178,7 @@ public class RealmsBackupScreen extends RealmsScreen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class Entry extends net.minecraft.client.gui.components.ContainerObjectSelectionList.Entry<RealmsBackupScreen.Entry> {
       private static final int Y_PADDING = 2;
       private final Backup backup;

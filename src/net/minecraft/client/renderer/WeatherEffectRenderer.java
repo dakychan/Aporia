@@ -30,10 +30,10 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class WeatherEffectRenderer {
    private static final float RAIN_PARTICLES_PER_BLOCK = 0.225F;
    private static final int RAIN_RADIUS = 10;
@@ -220,7 +220,7 @@ public class WeatherEffectRenderer {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record ColumnInstance(int x, int z, int bottomY, int topY, float uOffset, float vOffset, int lightCoords) {
    }
 }

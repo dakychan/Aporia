@@ -1,17 +1,17 @@
 package net.minecraft.client.renderer.blockentity.state;
 
 import net.minecraft.world.level.block.state.properties.ChestType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ChestRenderState extends BlockEntityRenderState {
    public ChestType type = ChestType.SINGLE;
    public float open;
    public float angle;
    public ChestRenderState.ChestMaterialType material = ChestRenderState.ChestMaterialType.REGULAR;
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum ChestMaterialType {
       ENDER_CHEST,
       CHRISTMAS,

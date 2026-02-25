@@ -4,10 +4,10 @@ import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.annotations.SerializedName;
 import com.mojang.util.UUIDTypeAdapter;
 import java.util.UUID;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class PlayerInfo extends ValueObject implements ReflectionBasedSerialization {
    @SerializedName("name")
    public final String name;

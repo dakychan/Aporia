@@ -5,10 +5,10 @@ import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.state.GoatRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.animal.goat.Goat;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class GoatRenderer extends AgeableMobRenderer<Goat, GoatRenderState, GoatModel> {
    private static final Identifier GOAT_LOCATION = Identifier.withDefaultNamespace("textures/entity/goat/goat.png");
 

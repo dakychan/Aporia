@@ -26,8 +26,8 @@ import net.minecraft.util.ArrayListDeque;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.minecraft.util.TimeSource.NanoTimeSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
 import org.jspecify.annotations.Nullable;
@@ -35,9 +35,9 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallbackI;
 import org.lwjgl.system.MemoryUtil;
 import org.slf4j.Logger;
-import ru.Aporia;
+import cc.apr.Aporia;
 
-@OnlyIn(Dist.CLIENT)
+
 @DontObfuscate
 public class RenderSystem {
    static final Logger LOGGER = LogUtils.getLogger();
@@ -319,7 +319,7 @@ public class RenderSystem {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static final class AutoStorageIndexBuffer {
       private final int vertexStride;
       private final int indexStride;
@@ -389,13 +389,13 @@ public class RenderSystem {
          return this.type;
       }
 
-      @OnlyIn(Dist.CLIENT)
+      
       interface IndexGenerator {
          void accept(it.unimi.dsi.fastutil.ints.IntConsumer var1, int var2);
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record GpuAsyncTask(Runnable callback, GpuFence fence) {
    }
 }

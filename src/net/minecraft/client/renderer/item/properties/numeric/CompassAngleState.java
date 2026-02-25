@@ -15,11 +15,11 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.LodestoneTracker;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class CompassAngleState extends NeedleDirectionHelper {
    public static final MapCodec<CompassAngleState> MAP_CODEC = RecordCodecBuilder.mapCodec(
       p_377373_ -> p_377373_.group(
@@ -97,7 +97,7 @@ public class CompassAngleState extends NeedleDirectionHelper {
       return this.compassTarget;
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum CompassTarget implements StringRepresentable {
       NONE("none") {
          @Override

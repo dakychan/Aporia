@@ -8,11 +8,11 @@ import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.server.dialog.ActionButton;
 import net.minecraft.server.dialog.ButtonListDialog;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public abstract class ButtonListDialogScreen<T extends ButtonListDialog> extends DialogScreen<T> {
    public static final int FOOTER_MARGIN = 5;
 

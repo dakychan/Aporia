@@ -4,10 +4,10 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.server.packs.metadata.MetadataSectionType;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public record VillagerMetadataSection(VillagerMetadataSection.Hat hat) {
    public static final Codec<VillagerMetadataSection> CODEC = RecordCodecBuilder.create(
       p_377007_ -> p_377007_.group(
@@ -17,7 +17,7 @@ public record VillagerMetadataSection(VillagerMetadataSection.Hat hat) {
    );
    public static final MetadataSectionType<VillagerMetadataSection> TYPE = new MetadataSectionType<>("villager", CODEC);
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static enum Hat implements StringRepresentable {
       NONE("none"),
       PARTIAL("partial"),

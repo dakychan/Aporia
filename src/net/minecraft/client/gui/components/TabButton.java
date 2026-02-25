@@ -13,10 +13,10 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class TabButton extends AbstractWidget.WithInactiveMessage {
    private static final WidgetSprites SPRITES = new WidgetSprites(
       Identifier.withDefaultNamespace("widget/tab_selected"),

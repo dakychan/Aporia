@@ -12,8 +12,8 @@ import net.minecraft.client.gui.font.CodepointMap;
 import net.minecraft.client.gui.font.glyphs.BakedGlyph;
 import net.minecraft.client.gui.font.glyphs.EmptyGlyph;
 import net.minecraft.client.gui.font.providers.FreeTypeUtil;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
@@ -23,7 +23,7 @@ import org.lwjgl.util.freetype.FT_GlyphSlot;
 import org.lwjgl.util.freetype.FT_Vector;
 import org.lwjgl.util.freetype.FreeType;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TrueTypeGlyphProvider implements GlyphProvider {
    private @Nullable ByteBuffer fontMemory;
    private @Nullable FT_Face face;
@@ -148,7 +148,7 @@ public class TrueTypeGlyphProvider implements GlyphProvider {
       return this.glyphs.keySet();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class Glyph implements UnbakedGlyph {
       final int width;
       final int height;
@@ -223,7 +223,7 @@ public class TrueTypeGlyphProvider implements GlyphProvider {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class GlyphEntry {
       final int index;
       volatile @Nullable UnbakedGlyph glyph;

@@ -3,11 +3,11 @@ package com.mojang.realmsclient.dto;
 import com.google.gson.annotations.SerializedName;
 import com.mojang.logging.LogUtils;
 import java.util.List;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public record RealmsServerList(@SerializedName("servers") List<RealmsServer> servers) implements ReflectionBasedSerialization {
    private static final Logger LOGGER = LogUtils.getLogger();
 

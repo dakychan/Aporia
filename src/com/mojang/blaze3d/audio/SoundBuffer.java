@@ -3,12 +3,12 @@ package com.mojang.blaze3d.audio;
 import java.nio.ByteBuffer;
 import java.util.OptionalInt;
 import javax.sound.sampled.AudioFormat;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.openal.AL10;
 
-@OnlyIn(Dist.CLIENT)
+
 public class SoundBuffer {
    private @Nullable ByteBuffer data;
    private final AudioFormat format;

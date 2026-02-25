@@ -31,12 +31,12 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.realms.RealmsScreen;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsPendingInvitesScreen extends RealmsScreen {
    static final Logger LOGGER = LogUtils.getLogger();
    private static final Component NO_PENDING_INVITES_TEXT = Component.translatable("mco.invites.nopending");
@@ -94,7 +94,7 @@ public class RealmsPendingInvitesScreen extends RealmsScreen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class Entry extends net.minecraft.client.gui.components.ContainerObjectSelectionList.Entry<RealmsPendingInvitesScreen.Entry> {
       private static final Component ACCEPT_INVITE = Component.translatable("mco.invites.button.accept");
       private static final Component REJECT_INVITE = Component.translatable("mco.invites.button.reject");
@@ -212,7 +212,7 @@ public class RealmsPendingInvitesScreen extends RealmsScreen {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class PendingInvitationSelectionList extends ContainerObjectSelectionList<RealmsPendingInvitesScreen.Entry> {
       public static final int ITEM_HEIGHT = 36;
 

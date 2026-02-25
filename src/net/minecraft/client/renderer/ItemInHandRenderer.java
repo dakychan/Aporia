@@ -34,10 +34,10 @@ import net.minecraft.world.item.MapItem;
 import net.minecraft.world.item.ShieldItem;
 import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class ItemInHandRenderer {
    private static final RenderType MAP_BACKGROUND = RenderTypes.text(Identifier.withDefaultNamespace("textures/map/map_background.png"));
    private static final RenderType MAP_BACKGROUND_CHECKERBOARD = RenderTypes.text(
@@ -616,7 +616,7 @@ public class ItemInHandRenderer {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    @VisibleForTesting
    static enum HandRenderSelection {
       RENDER_BOTH_HANDS(true, true),

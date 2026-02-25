@@ -16,11 +16,11 @@ import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ResolvableModel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class MultiPartModel implements BlockStateModel {
    private final MultiPartModel.SharedBakedState shared;
    private final BlockState blockState;
@@ -50,14 +50,14 @@ public class MultiPartModel implements BlockStateModel {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Selector<T>(Predicate<BlockState> condition, T model) {
       public <S> MultiPartModel.Selector<S> with(S p_393772_) {
          return new MultiPartModel.Selector<>(this.condition, p_393772_);
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static final class SharedBakedState {
       private final List<MultiPartModel.Selector<BlockStateModel>> selectors;
       final TextureAtlasSprite particleIcon;
@@ -100,7 +100,7 @@ public class MultiPartModel implements BlockStateModel {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class Unbaked implements BlockStateModel.UnbakedRoot {
       final List<MultiPartModel.Selector<BlockStateModel.Unbaked>> selectors;
       private final ModelBaker.SharedOperationKey<MultiPartModel.SharedBakedState> sharedStateKey = new ModelBaker.SharedOperationKey<MultiPartModel.SharedBakedState>(
@@ -131,7 +131,7 @@ public class MultiPartModel implements BlockStateModel {
             }
          }
 
-         @OnlyIn(Dist.CLIENT)
+         
          record Key(MultiPartModel.Unbaked model, IntList selectors) {
          }
 

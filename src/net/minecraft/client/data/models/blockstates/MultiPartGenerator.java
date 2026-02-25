@@ -8,10 +8,10 @@ import net.minecraft.client.renderer.block.model.BlockModelDefinition;
 import net.minecraft.client.renderer.block.model.multipart.Condition;
 import net.minecraft.client.renderer.block.model.multipart.Selector;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class MultiPartGenerator implements BlockModelDefinitionGenerator {
    private final Block block;
    private final List<MultiPartGenerator.Entry> parts = new ArrayList<>();
@@ -55,7 +55,7 @@ public class MultiPartGenerator implements BlockModelDefinitionGenerator {
       );
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    record Entry(Optional<Condition> condition, MultiVariant variants) {
       public Selector toUnbaked() {
          return new Selector(this.condition, this.variants.toUnbaked());

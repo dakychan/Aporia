@@ -25,11 +25,11 @@ import net.minecraft.world.inventory.ContainerListener;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BeaconBlockEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class BeaconScreen extends AbstractContainerScreen<BeaconMenu> {
    private static final Identifier BEACON_LOCATION = Identifier.withDefaultNamespace("textures/gui/container/beacon.png");
    static final Identifier BUTTON_DISABLED_SPRITE = Identifier.withDefaultNamespace("container/beacon/button_disabled");
@@ -143,12 +143,12 @@ public class BeaconScreen extends AbstractContainerScreen<BeaconMenu> {
       this.renderTooltip(p_283062_, p_282876_, p_282015_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    interface BeaconButton {
       void updateStatus(int var1);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class BeaconCancelButton extends BeaconScreen.BeaconSpriteScreenButton {
       public BeaconCancelButton(final int p_97982_, final int p_97983_) {
          super(p_97982_, p_97983_, BeaconScreen.CANCEL_SPRITE, CommonComponents.GUI_CANCEL);
@@ -164,7 +164,7 @@ public class BeaconScreen extends AbstractContainerScreen<BeaconMenu> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class BeaconConfirmButton extends BeaconScreen.BeaconSpriteScreenButton {
       public BeaconConfirmButton(final int p_97992_, final int p_97993_) {
          super(p_97992_, p_97993_, BeaconScreen.CONFIRM_SPRITE, CommonComponents.GUI_DONE);
@@ -184,7 +184,7 @@ public class BeaconScreen extends AbstractContainerScreen<BeaconMenu> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class BeaconPowerButton extends BeaconScreen.BeaconScreenButton {
       private final boolean isPrimary;
       protected final int tier;
@@ -238,7 +238,7 @@ public class BeaconScreen extends AbstractContainerScreen<BeaconMenu> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    abstract static class BeaconScreenButton extends AbstractButton implements BeaconScreen.BeaconButton {
       private boolean selected;
 
@@ -283,7 +283,7 @@ public class BeaconScreen extends AbstractContainerScreen<BeaconMenu> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    abstract static class BeaconSpriteScreenButton extends BeaconScreen.BeaconScreenButton {
       private final Identifier sprite;
 
@@ -299,7 +299,7 @@ public class BeaconScreen extends AbstractContainerScreen<BeaconMenu> {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class BeaconUpgradePowerButton extends BeaconScreen.BeaconPowerButton {
       public BeaconUpgradePowerButton(final int p_169675_, final int p_169676_, final Holder<MobEffect> p_330320_) {
          super(p_169675_, p_169676_, p_330320_, false, 3);

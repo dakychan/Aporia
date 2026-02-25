@@ -13,11 +13,11 @@ import net.minecraft.network.protocol.game.ServerboundSetTestBlockPacket;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.TestBlockEntity;
 import net.minecraft.world.level.block.state.properties.TestBlockMode;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class TestBlockEditScreen extends Screen {
    private static final List<TestBlockMode> MODES = List.of(TestBlockMode.values());
    private static final Component TITLE = Component.translatable(Blocks.TEST_BLOCK.getDescriptionId());

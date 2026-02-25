@@ -5,10 +5,10 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
+
+
 public class FallingLeavesParticle extends SingleQuadParticle {
    private static final float ACCELERATION_SCALE = 0.0025F;
    private static final int INITIAL_LIFETIME = 300;
@@ -100,7 +100,7 @@ public class FallingLeavesParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class CherryProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprites;
 
@@ -123,7 +123,7 @@ public class FallingLeavesParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class PaleOakProvider implements ParticleProvider<SimpleParticleType> {
       private final SpriteSet sprites;
 
@@ -146,7 +146,7 @@ public class FallingLeavesParticle extends SingleQuadParticle {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public static class TintedLeavesProvider implements ParticleProvider<ColorParticleOption> {
       private final SpriteSet sprites;
 

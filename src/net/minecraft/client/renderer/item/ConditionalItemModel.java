@@ -12,11 +12,11 @@ import net.minecraft.util.RegistryContextSwapper;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ConditionalItemModel implements ItemModel {
    private final ItemModelPropertyTest property;
    private final ItemModel onTrue;
@@ -43,7 +43,7 @@ public class ConditionalItemModel implements ItemModel {
          .update(p_376429_, p_375999_, p_375782_, p_376170_, p_378740_, p_424211_, p_376970_);
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    public record Unbaked(ConditionalItemModelProperty property, ItemModel.Unbaked onTrue, ItemModel.Unbaked onFalse) implements ItemModel.Unbaked {
       public static final MapCodec<ConditionalItemModel.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
          p_375749_ -> p_375749_.group(

@@ -10,11 +10,11 @@ import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.AtlasManager;
 import net.minecraft.client.resources.model.ModelBakery;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.joml.Quaternionf;
 
-@OnlyIn(Dist.CLIENT)
+
 public class FlameFeatureRenderer {
    public void render(SubmitNodeCollection p_426889_, MultiBufferSource.BufferSource p_430500_, AtlasManager p_422974_) {
       for (SubmitNodeStorage.FlameSubmit submitnodestorage$flamesubmit : p_426889_.getFlameSubmits()) {

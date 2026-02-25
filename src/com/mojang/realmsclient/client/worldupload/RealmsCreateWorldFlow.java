@@ -26,12 +26,12 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.RegistryLayer;
 import net.minecraft.world.level.storage.PrimaryLevelData;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class RealmsCreateWorldFlow {
    private static final Logger LOGGER = LogUtils.getLogger();
 

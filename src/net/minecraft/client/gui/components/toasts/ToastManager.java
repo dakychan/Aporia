@@ -17,12 +17,12 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ToastManager {
    private static final int SLOT_COUNT = 5;
    private static final int ALL_SLOTS_OCCUPIED = -1;
@@ -190,7 +190,7 @@ public class ToastManager {
       }
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    class ToastInstance<T extends Toast> {
       private static final long SLIDE_ANIMATION_DURATION_MS = 600L;
       private final T toast;

@@ -8,11 +8,11 @@ import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DebugEntryLocalDifficulty implements DebugScreenEntry {
    @Override
    public void display(DebugScreenDisplayer p_422323_, @Nullable Level p_426366_, @Nullable LevelChunk p_423491_, @Nullable LevelChunk p_431288_) {

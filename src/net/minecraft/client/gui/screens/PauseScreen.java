@@ -32,11 +32,11 @@ import net.minecraft.server.dialog.Dialogs;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DialogTags;
 import net.minecraft.util.CommonLinks;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+
+
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
+
 public class PauseScreen extends Screen {
    private static final Identifier DRAFT_REPORT_SPRITE = Identifier.withDefaultNamespace("icon/draft_report");
    private static final int COLUMNS = 2;
@@ -206,7 +206,7 @@ public class PauseScreen extends Screen {
       return Button.builder(p_262593_, ConfirmLinkScreen.confirmLink(p_343161_, p_343969_)).width(98).build();
    }
 
-   @OnlyIn(Dist.CLIENT)
+   
    static class FeedbackSubScreen extends Screen {
       private static final Component TITLE = Component.translatable("menu.feedback.title");
       public final Screen parent;
