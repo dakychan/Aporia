@@ -1,5 +1,6 @@
 package ru.utils.command.commands;
 
+import aporia.cc.Logger;
 import aporia.cc.chat.ChatUtils;
 import aporia.cc.user.UserData;
 import ru.Aporia;
@@ -63,7 +64,7 @@ public class InfoCommand implements Command {
             
         } catch (Exception e) {
             ChatUtils.INSTANCE.sendMessage("Не удалось загрузить данные пользователя: " + e.getMessage(), ChatUtils.MessageType.ERROR);
-            aporia.cc.Logger.INSTANCE.error("Failed to load user data", e);
+            Logger.INSTANCE.error("Failed to load user data", e);
         }
     }
 }

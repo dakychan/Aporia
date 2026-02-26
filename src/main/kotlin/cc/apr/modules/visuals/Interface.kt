@@ -1,7 +1,7 @@
 package cc.apr.modules.visuals
 
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin
-import cc.apr.module.Module
+import cc.apr.module.api.Module
 import ru.utils.render.IconFont
 import ru.utils.render.MsdfFont
 import ru.utils.render.MsdfTextRenderer

@@ -1,7 +1,7 @@
 package cc.apr.modules.misc
 
 import aporia.cc.chat.ChatUtils
-import cc.apr.module.Module
+import cc.apr.module.api.Module
 
 /**
  * BetterChat module - улучшенная система чата.

@@ -81,8 +81,7 @@ public class NotifyRenderer {
             int centeredX = (fbWidth - dynamicWidth) / 2;
        
             RectRenderer.drawRoundedRect(centeredX, y, dynamicWidth, NOTIFICATION_HEIGHT, BORDER_RADIUS, BG_COLOR);
-        
-            // Icon space (left side)
+
             int iconX = centeredX + ICON_PADDING;
             int iconY = y + (NOTIFICATION_HEIGHT - ICON_SIZE) / 2;
             // TODO: Render icon here when available at (iconX, iconY) with size ICON_SIZE

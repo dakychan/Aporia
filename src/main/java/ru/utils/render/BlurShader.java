@@ -12,12 +12,12 @@ import org.joml.Vector2f;
 public class BlurShader {
     private static GlProgram blurHorizontalProgram;
     private static GlProgram blurVerticalProgram;
-    private static GlProgram blurCombinedProgram; // NEW: Single-pass 2D blur
-    private static GlProgram blurDisplayProgram; // NEW: For final rendering with matrices
-    private static GlProgram simpleDisplayProgram; // Simple texture display without blur
+    private static GlProgram blurCombinedProgram;
+    private static GlProgram blurDisplayProgram;
+    private static GlProgram simpleDisplayProgram;
     private static boolean initialized = false;
 
-    private float blurRadius = 15.0f; // Увеличен с 4.0 до 15.0 для видимого blur эффекта
+    private float blurRadius = 15.0f;
     private int passes = 2;
     private TextureTarget blurFramebuffer;
 
@@ -29,7 +29,6 @@ public class BlurShader {
         if (initialized) return;
 
         try {
-            // Create combined 2D blur program (single pass)
             blurCombinedProgram = CometLoaders.IN_JAR.createProgramBuilder()
                     .name("blur_combined")
                     .shader(CometLoaders.IN_JAR.createGlslFileEntry("blur_ndc", "assets/aporia/shaders/blur_ndc.vert"), ShaderType.Vertex)
@@ -38,8 +37,6 @@ public class BlurShader {
                     .uniform("uTexelSize", UniformType.VEC2)
                     .uniform("uRadius", UniformType.FLOAT)
                     .build();
-
-            // Create horizontal blur program with NDC vertex shader
             blurHorizontalProgram = CometLoaders.IN_JAR.createProgramBuilder()
                     .name("blur_horizontal")
                     .shader(CometLoaders.IN_JAR.createGlslFileEntry("blur_ndc", "assets/aporia/shaders/blur_ndc.vert"), ShaderType.Vertex)
@@ -48,8 +45,6 @@ public class BlurShader {
                     .uniform("uTexelSize", UniformType.VEC2)
                     .uniform("uRadius", UniformType.FLOAT)
                     .build();
-
-            // Create vertical blur program with NDC vertex shader
             blurVerticalProgram = CometLoaders.IN_JAR.createProgramBuilder()
                     .name("blur_vertical")
                     .shader(CometLoaders.IN_JAR.createGlslFileEntry("blur_ndc", "assets/aporia/shaders/blur_ndc.vert"), ShaderType.Vertex)
@@ -58,8 +53,6 @@ public class BlurShader {
                     .uniform("uTexelSize", UniformType.VEC2)
                     .uniform("uRadius", UniformType.FLOAT)
                     .build();
-
-            // Создаем display программу с blur для финального рендера
             blurDisplayProgram = CometLoaders.IN_JAR.createProgramBuilder()
                     .name("blur_display")
                     .shader(CometLoaders.IN_JAR.createGlslFileEntry("blur_vert", "assets/aporia/shaders/blur.vert"), ShaderType.Vertex)
@@ -68,19 +61,14 @@ public class BlurShader {
                     .uniform("direction", com.ferra13671.cometrenderer.glsl.uniform.UniformType.VEC2)
                     .uniform("radius", com.ferra13671.cometrenderer.glsl.uniform.UniformType.FLOAT)
                     .build();
-
-            // Создаем простую display программу БЕЗ blur для отображения уже размытой текстуры
             simpleDisplayProgram = CometLoaders.IN_JAR.createProgramBuilder()
                     .name("simple_display")
                     .shader(CometLoaders.IN_JAR.createGlslFileEntry("display_vert", "assets/aporia/shaders/display.vert"), ShaderType.Vertex)
                     .shader(CometLoaders.IN_JAR.createGlslFileEntry("display_frag", "assets/aporia/shaders/display.frag"), ShaderType.Fragment)
                     .sampler("Sampler0")
                     .build();
-
             initialized = true;
-            System.out.println("[BLUR] All programs initialized successfully");
         } catch (Exception e) {
-            System.err.println("[BLUR] Failed to initialize programs:");
             e.printStackTrace();
         }
     }
@@ -113,12 +101,10 @@ public class BlurShader {
         return blurVerticalProgram;
     }
 
-    // NEW: Getter for display program
     public GlProgram getDisplayProgram() {
         return blurDisplayProgram;
     }
 
-    // NEW: Getter for simple display program (no blur)
     public GlProgram getSimpleDisplayProgram() {
         return simpleDisplayProgram;
     }

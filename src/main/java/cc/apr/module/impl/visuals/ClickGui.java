@@ -1,7 +1,7 @@
 package cc.apr.module.impl.visuals;
 
 import net.minecraft.client.Minecraft;
-import cc.apr.module.Module;
+import cc.apr.module.api.Module;
 import ru.utils.ui.clickgui.ClickGuiScreen;
 
 public class ClickGui extends Module {

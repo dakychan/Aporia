@@ -1,6 +1,6 @@
 package ru.utils.render;
 
-import cc.apr.module.Module;
+import cc.apr.module.api.Module;
 
 import java.util.HashMap;
 import java.util.Map;

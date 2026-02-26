@@ -1,12 +1,15 @@
-package cc.apr.module;
+package cc.apr.module.api;
 
+import aporia.cc.Logger;
 import aporia.cc.files.FilesManager;
+import aporia.cc.files.ModuleConfig;
 import cc.apr.modules.misc.BetterChat;
 import cc.apr.modules.misc.DiscordRPC;
 import cc.apr.modules.visuals.BlurTest;
 import cc.apr.modules.visuals.Interface;
 import cc.apr.module.impl.misc.AutoFlyMe;
 import cc.apr.module.impl.movement.AutoSprint;
+import ru.Aporia;
 import ru.utils.input.api.bind.Keybind;
 import ru.utils.input.impl.bind.KeybindManager;
 import cc.apr.module.impl.visuals.ClickGui;
@@ -37,9 +40,9 @@ public class ModuleManager {
     
     private void loadConfig() {
         try {
-            FilesManager filesManager = ru.Aporia.getFilesManager();
+            FilesManager filesManager = Aporia.getFilesManager();
             if (filesManager != null) {
-                Map<String, aporia.cc.files.ModuleConfig> configs = filesManager.loadConfig();
+                Map<String, ModuleConfig> configs = filesManager.loadConfig();
                 if (configs != null) {
                     applyConfig(configs);
                 }
@@ -49,9 +52,9 @@ public class ModuleManager {
         }
     }
     
-    private void applyConfig(Map<String, aporia.cc.files.ModuleConfig> configs) {
+    private void applyConfig(Map<String, ModuleConfig> configs) {
         for (Module module : modules) {
-            aporia.cc.files.ModuleConfig config = configs.get(module.getName());
+            ModuleConfig config = configs.get(module.getName());
             if (config != null) {
                 if (config.getEnabled() != module.isEnabled()) {
                     module.setEnabled(config.getEnabled());
@@ -89,7 +92,7 @@ public class ModuleManager {
                 ((Interface.MultiSetting) setting).getValue().addAll(list);
             }
         } catch (Exception e) {
-            aporia.cc.Logger.INSTANCE.error("Failed to apply setting " + setting.getName() + ": " + e.getMessage(), e);
+            Logger.INSTANCE.error("Failed to apply setting " + setting.getName() + ": " + e.getMessage(), e);
         }
     }
     
@@ -149,9 +152,9 @@ public class ModuleManager {
         try {
             FilesManager filesManager = ru.Aporia.getFilesManager();
             if (filesManager != null) {
-                Map<String, aporia.cc.files.ModuleConfig> configs = new HashMap<>();
+                Map<String, ModuleConfig> configs = new HashMap<>();
                 
-                Map<String, aporia.cc.files.ModuleConfig> existingConfigs = filesManager.loadConfig();
+                Map<String, ModuleConfig> existingConfigs = filesManager.loadConfig();
                 if (existingConfigs != null && existingConfigs.containsKey("ClickGui")) {
                     configs.put("ClickGui", existingConfigs.get("ClickGui"));
                 }
@@ -170,13 +173,13 @@ public class ModuleManager {
                         }
                     }
                     
-                    configs.put(module.getName(), new aporia.cc.files.ModuleConfig(module.isEnabled(), settings));
+                    configs.put(module.getName(), new ModuleConfig(module.isEnabled(), settings));
                 }
                 
                 filesManager.saveConfig(configs);
             }
         } catch (Exception e) {
-            aporia.cc.Logger.INSTANCE.error("Failed to save config: " + e.getMessage(), e);
+            Logger.INSTANCE.error("Failed to save config: " + e.getMessage(), e);
         }
     }
     
@@ -195,7 +198,7 @@ public class ModuleManager {
                 return String.join(",", values);
             }
         } catch (Exception e) {
-            aporia.cc.Logger.INSTANCE.error("Failed to get setting value for " + setting.getName() + ": " + e.getMessage(), e);
+            Logger.INSTANCE.error("Failed to get setting value for " + setting.getName() + ": " + e.getMessage(), e);
         }
         return null;
     }

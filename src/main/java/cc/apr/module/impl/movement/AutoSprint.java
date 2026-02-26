@@ -2,7 +2,7 @@ package cc.apr.module.impl.movement;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import cc.apr.module.Module;
+import cc.apr.module.api.Module;
 
 public class AutoSprint extends Module {
     

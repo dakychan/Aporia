@@ -1,7 +1,7 @@
 package net.minecraft.client.gui.screens;
 
-import cc.apr.module.Module;
-import cc.apr.module.ModuleManager;
+import cc.apr.module.api.Module;
+import cc.apr.module.api.ModuleManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.ActiveTextCollector;
 import net.minecraft.client.gui.GuiGraphics;

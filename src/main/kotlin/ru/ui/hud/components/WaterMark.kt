@@ -1,6 +1,6 @@
 package ru.ui.hud.components
 
-import cc.apr.module.Module
+import cc.apr.module.api.Module
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin
 import com.ferra13671.cometrenderer.plugins.minecraft.RectColors
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor

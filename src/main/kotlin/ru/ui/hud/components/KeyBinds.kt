@@ -5,7 +5,7 @@ import com.ferra13671.cometrenderer.plugins.minecraft.RectColors
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor
 import org.lwjgl.glfw.GLFW
 import ru.utils.input.impl.bind.KeybindManager
-import cc.apr.module.ModuleManager
+import cc.apr.module.api.ModuleManager
 import ru.utils.render.MsdfTextRenderer
 import ru.ui.hud.HudManager.HudComponent
 import ru.utils.render.RectRenderer

@@ -1,7 +1,7 @@
 package cc.apr.modules.misc
 
 import aporia.cc.Logger
-import cc.apr.module.Module
+import cc.apr.module.api.Module
 import ru.Aporia
 
 /**

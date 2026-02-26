@@ -1,6 +1,6 @@
 package net.minecraft.client.gui;
 
-import cc.apr.module.ModuleManager;
+import cc.apr.module.api.ModuleManager;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.mojang.blaze3d.platform.Window;

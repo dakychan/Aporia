@@ -6,6 +6,8 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
 import com.mojang.blaze3d.framegraph.FramePass;
+import com.mojang.blaze3d.opengl.GlDevice;
+import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.Lighting;
@@ -117,6 +119,9 @@ import org.joml.Matrix4fStack;
 import org.joml.Matrix4fc;
 import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
+
+import static com.mojang.blaze3d.opengl.GlConst.GL_DRAW_FRAMEBUFFER;
+import static org.lwjgl.opengl.GL30.*;
 
 @OnlyIn(Dist.CLIENT)
 public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseable {
@@ -719,7 +724,6 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
         );
     }
 
-    // Aporia: Capture world-only rendering to separate target for blur effect
     private void addWorldOnlyCapturePass(FrameGraphBuilder p_framegraphbuilder_) {
         if (this.worldOnlyTarget == null) {
             initWorldOnlyTarget();
@@ -731,61 +735,44 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
 
         FramePass framepass = p_framegraphbuilder_.addPass("world_only_capture");
         ResourceHandle<RenderTarget> worldOnlyHandle = p_framegraphbuilder_.importExternal("world_only", this.worldOnlyTarget);
-        
-        // Read from main target (which has world rendered) and write to worldOnlyTarget
+
         framepass.reads(this.targets.main);
         worldOnlyHandle = framepass.readsAndWrites(worldOnlyHandle);
         
         ResourceHandle<RenderTarget> mainHandle = this.targets.main;
         
         framepass.executes(() -> {
-            // Copy main target to worldOnlyTarget
             RenderTarget mainTarget = mainHandle.get();
             RenderTarget worldTarget = this.worldOnlyTarget;
             
             if (mainTarget != null && worldTarget != null) {
-                // DEBUG: Сохраняем main target ДО копирования
-                ru.debug.FramebufferDebug.saveRenderTarget(mainTarget, "01_mainTarget_before_blit");
-                
-                // Получаем РЕАЛЬНЫЕ размеры
+
                 int mainWidth = mainTarget.width;
                 int mainHeight = mainTarget.height;
                 int worldWidth = worldTarget.width;
                 int worldHeight = worldTarget.height;
-                
-                System.out.println("[DEBUG] Main size: " + mainWidth + "x" + mainHeight + 
-                                 ", World size: " + worldWidth + "x" + worldHeight);
-                
-                // Если размеры не совпадают - resize worldTarget
+
                 if (mainWidth != worldWidth || mainHeight != worldHeight) {
-                    System.out.println("[DEBUG] Resizing worldTarget to match main");
                     worldTarget.resize(mainWidth, mainHeight);
                 }
-                
-                // Bind main as read, worldOnly as draw
-                org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, 
+
+                glBindFramebuffer(GL_READ_FRAMEBUFFER,
                     ((com.mojang.blaze3d.opengl.GlTexture)mainTarget.getColorTexture()).getFbo(
                         ((com.mojang.blaze3d.opengl.GlDevice)RenderSystem.getDevice()).directStateAccess(),
                         mainTarget.useDepth ? mainTarget.getDepthTexture() : null
                     ));
-                org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, 
-                    ((com.mojang.blaze3d.opengl.GlTexture)worldTarget.getColorTexture()).getFbo(
-                        ((com.mojang.blaze3d.opengl.GlDevice)RenderSystem.getDevice()).directStateAccess(),
+                glBindFramebuffer(GL_DRAW_FRAMEBUFFER,
+                    ((GlTexture)worldTarget.getColorTexture()).getFbo(
+                        ((GlDevice)RenderSystem.getDevice()).directStateAccess(),
                         worldTarget.useDepth ? worldTarget.getDepthTexture() : null
                     ));
-                
-                // Используем РЕАЛЬНЫЕ размеры main target
-                org.lwjgl.opengl.GL30.glBlitFramebuffer(
+
+                glBlitFramebuffer(
                     0, 0, mainWidth, mainHeight,
                     0, 0, mainWidth, mainHeight,
                     org.lwjgl.opengl.GL30.GL_COLOR_BUFFER_BIT,
                     org.lwjgl.opengl.GL11.GL_NEAREST
                 );
-                
-                // DEBUG: Сохраняем worldOnly target ПОСЛЕ копирования
-                ru.debug.FramebufferDebug.saveRenderTarget(worldTarget, "02_worldTarget_after_blit");
-                
-                // Notify Aporia that world-only capture is ready
                 ru.Aporia.captureWorldOnlyTarget(worldTarget);
             }
         });

@@ -4,7 +4,7 @@ import com.ferra13671.cometrenderer.CometRenderer
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor
 import net.minecraft.client.Minecraft
-import cc.apr.module.Module
+import cc.apr.module.api.Module
 import ru.utils.render.RectRenderer
 
 class BlurTest : Module("BlurTest", "Тест блюра", C.VISUALS) {
@@ -28,7 +28,6 @@ class BlurTest : Module("BlurTest", "Тест блюра", C.VISUALS) {
         val plugin = MinecraftPlugin.getInstance()
         plugin.bindMainFramebuffer(true)
 
-        // Enable blending
         CometRenderer.applyDefaultBlend()
 
         val x = 100f
@@ -38,11 +37,9 @@ class BlurTest : Module("BlurTest", "Тест блюра", C.VISUALS) {
         val radius = 10f
         val blur = blurAmount.value.toFloat()
 
-        // Рисуем прямоугольники С BLUR
         RectRenderer.drawRectangleWithBlur(x, y, width, height, RenderColor.of(0, 0, 0, 200), radius, blur)
         RectRenderer.drawRectangleWithBlur(x + 400f, y, width, height, RenderColor.of(255, 0, 0, 200), radius, blur)
 
-        // Disable blending
         CometRenderer.disableBlend()
     }
 }

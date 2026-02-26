@@ -1,4 +1,4 @@
-package cc.apr.module;
+package cc.apr.module.api;
 
 import cc.apr.event.impl.EventSystemImpl;
 import cc.apr.event.impl.ModuleToggleEvent;

@@ -2,7 +2,7 @@ package cc.apr.module.impl.misc;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import cc.apr.module.Module;
+import cc.apr.module.api.Module;
 
 public class AutoFlyMe extends Module {
     private long lastSpacePress = 0;

@@ -14,6 +14,7 @@ import lombok.Generated;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.resources.Identifier;
+import ru.Aporia;
 
 public class DiscordManager {
    private final DiscordManager.DiscordDaemonThread discordDaemonThread = new DiscordManager.DiscordDaemonThread();
@@ -30,7 +31,7 @@ public class DiscordManager {
          this.discordRpc = new DiscordRpc();
          DiscordEventHandler handler = new DiscordEventHandler() {
             public void ready(User user) {
-               ru.Aporia.getDiscordManager()
+               Aporia.getDiscordManager()
                   .setInfo(
                      new DiscordManager.DiscordInfo(
                         user.getUsername(), "https://cdn.discordapp.com/avatars/" + user.getUserId() + "/" + user.getAvatar() + ".png", user.getUserId()

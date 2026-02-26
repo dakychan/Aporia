@@ -16,7 +16,7 @@ public class MultiSetting {
     private List<String> options;
     private List<String> selectedOptions;
     private int x, y, width, height;
-    private MsdfTextRenderer textRenderer; // Store for width calculations
+    private MsdfTextRenderer textRenderer;
     
     private static final int HEADER_HEIGHT = 20;
     private static final int BUTTON_HEIGHT = 18;
@@ -37,13 +37,12 @@ public class MultiSetting {
      * @return Component height in pixels
      */
     public int getHeight() {
-        // Calculate number of rows needed
         int totalRows = 1;
         int currentRowWidth = 0;
-        int maxWidth = width > 0 ? width : 150; // Use stored width or default
+        int maxWidth = width > 0 ? width : 150;
         
         for (String option : options) {
-            float textWidth = 40; // Default
+            float textWidth = 40;
             if (textRenderer != null) {
                 try {
                     textWidth = textRenderer.measureWidth(option, 9);
@@ -81,41 +80,34 @@ public class MultiSetting {
         this.x = x;
         this.y = y;
         this.width = width;
-        this.textRenderer = textRenderer; // Store for later use
-        
-        // Force full alpha for visibility
+        this.textRenderer = textRenderer;
+
         alpha = 1.0f;
-        
-        // Render header with setting name
+
         if (textRenderer != null) {
             textRenderer.drawText(x, y + 6, 10, name, RenderColor.of(220, 220, 230, 255));
         }
-        
-        // Render option buttons inline with wrapping
+
         int buttonX = x;
         int buttonY = y + HEADER_HEIGHT;
-        int maxWidth = width; // Maximum width before wrapping
+        int maxWidth = width;
         int currentRowWidth = 0;
         
         for (String option : options) {
             boolean isSelected = selectedOptions.contains(option);
-            
-            // Calculate button width based on text
+
             float textWidth = textRenderer != null ? textRenderer.measureWidth(option, 9) : 40;
             int buttonWidth = (int) (textWidth + 12);
-            
-            // Check if button needs to wrap to next line
+
             if (currentRowWidth + buttonWidth > maxWidth && currentRowWidth > 0) {
                 buttonX = x;
                 buttonY += BUTTON_HEIGHT + BUTTON_SPACING;
                 currentRowWidth = 0;
             }
-            
-            // Check if button is hovered
+
             boolean hovered = mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
                             mouseY >= buttonY && mouseY <= buttonY + BUTTON_HEIGHT;
-            
-            // Button background color
+
             RenderColor bgColor;
             if (isSelected) {
                 bgColor = hovered 
@@ -128,8 +120,7 @@ public class MultiSetting {
             }
             
             RectRenderer.drawRoundedRect(buttonX, buttonY, buttonWidth, BUTTON_HEIGHT, 3, bgColor);
-            
-            // Button text - опущен еще ниже
+
             if (textRenderer != null) {
                 RenderColor textColor = isSelected 
                     ? RenderColor.WHITE
@@ -159,19 +150,15 @@ public class MultiSetting {
         int currentRowWidth = 0;
         
         for (String option : options) {
-            // Calculate button width based on text - need textRenderer for accurate width
-            float textWidth = 40; // Default fallback
+            float textWidth = 40;
             if (textRenderer != null) {
-                // Create a temporary renderer instance to measure text
                 try {
                     textWidth = textRenderer.measureWidth(option, 9);
                 } catch (Exception e) {
-                    textWidth = option.length() * 6; // Fallback calculation
+                    textWidth = option.length() * 6;
                 }
             }
             int buttonWidth = (int) (textWidth + 12);
-            
-            // Check if button needs to wrap to next line
             if (currentRowWidth + buttonWidth > maxWidth && currentRowWidth > 0) {
                 buttonX = x;
                 buttonY += BUTTON_HEIGHT + BUTTON_SPACING;
@@ -216,8 +203,7 @@ public class MultiSetting {
         this.y = y;
         this.width = width;
     }
-    
-    // Deprecated methods for compatibility
+
     public boolean isExpanded() { return false; }
     public void setExpanded(boolean expanded) { }
     public boolean isClickOutside(int mouseX, int mouseY) { return false; }

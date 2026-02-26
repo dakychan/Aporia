@@ -1,13 +1,18 @@
 package ru;
 
+import aporia.cc.Logger;
+import aporia.cc.chat.ChatUtils;
 import aporia.cc.user.UserData;
 import cc.apr.modules.visuals.BlurTest;
 import cc.apr.modules.visuals.Interface;
-import cc.apr.module.Module;
-import cc.apr.module.ModuleManager;
+import cc.apr.module.api.Module;
+import cc.apr.module.api.ModuleManager;
 import com.ferra13671.cometrenderer.CometRenderer;
 import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import aporia.cc.files.FilesManager;
+import com.mojang.blaze3d.opengl.GlBuffer;
+import com.mojang.blaze3d.opengl.GlTexture;
+import com.mojang.blaze3d.textures.GpuTexture;
 import ru.utils.ui.gui.GuiManager;
 import ru.utils.discord.DiscordManager;
 import ru.utils.input.api.KeyBindings;
@@ -32,7 +37,7 @@ public class Aporia {
 
     public static void initRender() {
         CometRenderer.init();
-        MinecraftPlugin.init(glGpuBuffer -> ((com.mojang.blaze3d.opengl.GlBuffer) glGpuBuffer).getHandle(), () -> 1);
+        MinecraftPlugin.init(glGpuBuffer -> ((GlBuffer) glGpuBuffer).getHandle(), () -> 1);
     }
 
     public static void onInit() {
@@ -66,7 +71,7 @@ public class Aporia {
     }
 
     private static void initCommandSystem() {
-        aporia.cc.chat.ChatUtils.INSTANCE.initialize();
+        ChatUtils.INSTANCE.initialize();
     }
     
     private static void initDiscordManager() {
@@ -91,7 +96,7 @@ public class Aporia {
                     blurShader.cleanup();
                 }
             } catch (Exception e) {
-                aporia.cc.Logger.INSTANCE.error("Failed to save stats on shutdown: " + e.getMessage(), e);
+                Logger.INSTANCE.error("Failed to save stats on shutdown: " + e.getMessage(), e);
             }
         }));
     }
@@ -123,12 +128,6 @@ public class Aporia {
         } else if (interfaceEnabled && interfaceModule instanceof Interface) {
             ((Interface) interfaceModule).render();
         }
-
-        // BlurTest вызывается в renderBlur() после рендера мира
-        // ru.module.Module blurTestModule = ru.module.ModuleManager.getInstance().getModuleByName("BlurTest");
-        // if (blurTestModule != null && blurTestModule.isEnabled() && blurTestModule instanceof ru.module.impl.visuals.BlurTest) {
-        //     ((ru.module.impl.visuals.BlurTest) blurTestModule).onRender2D();
-        // }
     }
 
     /**
@@ -159,7 +158,6 @@ public class Aporia {
 
         Module blurTestModule = ModuleManager.getInstance().getModuleByName("BlurTest");
         if (blurTestModule != null && blurTestModule.isEnabled()) {
-            // Захватываем и размываем экран ОДИН РАЗ
             RectRenderer.beginBlurBatch(width, height);
         }
     }
@@ -177,7 +175,6 @@ public class Aporia {
 
         Module blurTestModule = ModuleManager.getInstance().getModuleByName("BlurTest");
         if (blurTestModule != null && blurTestModule.isEnabled()) {
-            // Захватываем экран для использования в следующем кадре
             RectRenderer.captureForNextFrame(width, height);
         }
     }
@@ -189,7 +186,6 @@ public class Aporia {
     public static void captureScreenInFramePass(int width, int height) {
         Module blurTestModule = ModuleManager.getInstance().getModuleByName("BlurTest");
         if (blurTestModule != null && blurTestModule.isEnabled()) {
-            System.out.println("[APORIA] Capturing screen in FramePass - width=" + width + ", height=" + height);
             RectRenderer.captureForNextFrame(width, height);
         }
     }
@@ -199,17 +195,14 @@ public class Aporia {
      * Вызывается из LevelRenderer.addWorldOnlyCapturePass() когда мир отрендерен БЕЗ UI.
      */
     public static void captureWorldOnlyTarget(com.mojang.blaze3d.pipeline.RenderTarget worldTarget) {
-        // Всегда захватываем texture, независимо от модулей (может использоваться в ClickGui, Interface и т.д.)
         int width = worldTarget.width;
         int height = worldTarget.height;
+
+        GpuTexture gpuTexture = worldTarget.getColorTexture();
         
-        // Получаем texture ID из worldTarget
-        com.mojang.blaze3d.textures.GpuTexture gpuTexture = worldTarget.getColorTexture();
-        
-        if (gpuTexture instanceof com.mojang.blaze3d.opengl.GlTexture) {
-            int textureId = ((com.mojang.blaze3d.opengl.GlTexture)gpuTexture).glId();
-            
-            // Передаем texture ID в RectRenderer для использования в blur
+        if (gpuTexture instanceof GlTexture) {
+            int textureId = ((GlTexture)gpuTexture).glId();
+
             RectRenderer.setWorldOnlyTexture(textureId, width, height);
         }
     }

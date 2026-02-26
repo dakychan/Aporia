@@ -1,7 +1,8 @@
 package ru.utils.command.commands;
 
+import aporia.cc.Logger;
 import aporia.cc.chat.ChatUtils;
-import cc.apr.module.ModuleManager;
+import cc.apr.module.api.ModuleManager;
 import ru.utils.command.Command;
 
 /**
@@ -58,7 +59,7 @@ public class ConfigCommand implements Command {
                 ChatUtils.INSTANCE.sendMessage("Конфигурация успешно сохранена", ChatUtils.MessageType.SUCCESS);
             } catch (Exception e) {
                 ChatUtils.INSTANCE.sendMessage("Ошибка при сохранении конфигурации: " + e.getMessage(), ChatUtils.MessageType.ERROR);
-                aporia.cc.Logger.INSTANCE.error("Failed to save configuration", e);
+                Logger.INSTANCE.error("Failed to save configuration", e);
             }
         } else {
             ChatUtils.INSTANCE.sendMessage("Неизвестная подкоманда: " + args[0], ChatUtils.MessageType.ERROR);
