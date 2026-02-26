@@ -117,7 +117,9 @@ public final class EnvironmentAttributeMap {
                p_456378_ -> (EnvironmentAttributeMap.Entry)p_456378_.map(
                   p_460354_ -> new EnvironmentAttributeMap.Entry<>(p_460354_, AttributeModifier.override()), p_460971_ -> p_460971_
                ),
-               p_456225_ -> p_456225_.modifier == AttributeModifier.override() ? Either.left(p_456225_.argument()) : Either.right(p_456225_)
+                    p_456225_ -> p_456225_.modifier == AttributeModifier.override()
+                            ? Either.<Value, EnvironmentAttributeMap.Entry<Value, ?>>left((Value)p_456225_.argument())
+                            : Either.<Value, EnvironmentAttributeMap.Entry<Value, ?>>right(p_456225_)
             );
       }
 

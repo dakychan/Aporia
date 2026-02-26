@@ -568,7 +568,7 @@ public class Block extends BlockBehaviour implements ItemLike {
          .collect(ImmutableMap.toImmutableMap(Function.identity(), p_152459_));
       return p_390898_ -> {
          for (Entry<? extends Property<?>, Object> entry : map.entrySet()) {
-            p_390898_ = setValueHelper(p_390898_, (Property<?>)entry.getKey(), entry.getValue());
+             p_390898_ = p_390898_.setValue((Property)entry.getKey(), (Comparable)entry.getValue());
          }
 
          return (VoxelShape)immutablemap.get(p_390898_);

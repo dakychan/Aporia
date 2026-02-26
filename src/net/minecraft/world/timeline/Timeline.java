@@ -27,13 +27,14 @@ public class Timeline {
       EnvironmentAttributes.CODEC, Util.memoize(AttributeTrack::createCodec)
    );
    public static final Codec<Timeline> DIRECT_CODEC = RecordCodecBuilder.create(
-         p_451719_ -> p_451719_.group(
-               ExtraCodecs.POSITIVE_INT.optionalFieldOf("period_ticks").forGetter(p_453317_ -> p_453317_.periodTicks),
-               TRACKS_CODEC.optionalFieldOf("tracks", Map.of()).forGetter(p_458374_ -> p_458374_.tracks)
-            )
-            .apply(p_451719_, Timeline::new)
-      )
-      .validate(Timeline::validateInternal);
+           (RecordCodecBuilder.Instance<Timeline> p_451719_) -> p_451719_.group(
+                           ExtraCodecs.POSITIVE_INT.optionalFieldOf("period_ticks")
+                                   .forGetter((Timeline timeline) -> timeline.periodTicks),
+                           TRACKS_CODEC.optionalFieldOf("tracks", Map.of())
+                                   .forGetter((Timeline timeline) -> timeline.tracks)
+                   )
+                   .apply(p_451719_, Timeline::new)
+   ).validate(Timeline::validateInternal);
    public static final Codec<Timeline> NETWORK_CODEC = DIRECT_CODEC.xmap(Timeline::filterSyncableTracks, Timeline::filterSyncableTracks);
    private final Optional<Integer> periodTicks;
    private final Map<EnvironmentAttribute<?>, AttributeTrack<?, ?>> tracks;

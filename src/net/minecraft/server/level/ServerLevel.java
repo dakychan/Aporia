@@ -1699,8 +1699,7 @@ public class ServerLevel extends Level implements ServerEntityGetter, WorldGenLe
 
          return object2intopenhashmap.object2IntEntrySet()
             .stream()
-            .sorted(Comparator.<Entry<String>>comparing(Entry::getIntValue).reversed())
-            .limit(5L)
+            .sorted(Comparator.<Entry<String>>comparingInt(Entry::getIntValue).reversed()).limit(5L)
             .map(p_207570_ -> (String)p_207570_.getKey() + ":" + p_207570_.getIntValue())
             .collect(Collectors.joining(","));
       } catch (Exception var6) {

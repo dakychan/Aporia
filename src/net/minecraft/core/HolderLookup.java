@@ -40,8 +40,8 @@ public interface HolderLookup<T> extends HolderGetter<T> {
          return this.lookup(p_255957_).orElseThrow(() -> new IllegalStateException("Registry " + p_255957_.identifier() + " not found"));
       }
 
-      default <V> RegistryOps<V> createSerializationContext(DynamicOps<V> p_330698_) {
-         return RegistryOps.create((DynamicOps<T>)p_330698_, this);
+      default <V> RegistryOps<V> createSerializationContext(DynamicOps<V> ops) {
+         return RegistryOps.create(ops, this);
       }
 
       static HolderLookup.Provider create(Stream<HolderLookup.RegistryLookup<?>> p_256054_) {

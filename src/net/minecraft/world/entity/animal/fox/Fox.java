@@ -126,7 +126,7 @@ public class Fox extends Animal {
    private static final Predicate<Entity> AVOID_PLAYERS = p_459144_ -> !p_459144_.isDiscrete() && EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(p_459144_);
    private static final int MIN_TICKS_BEFORE_EAT = 600;
    private static final EntityDimensions BABY_DIMENSIONS = EntityType.FOX.getDimensions().scale(0.5F).withEyeHeight(0.2975F);
-   private static final Codec<List<EntityReference<LivingEntity>>> TRUSTED_LIST_CODEC = EntityReference.codec().listOf();
+   private static final Codec<List<EntityReference<LivingEntity>>> TRUSTED_LIST_CODEC = EntityReference.<LivingEntity>codec().listOf();
    private static final boolean DEFAULT_SLEEPING = false;
    private static final boolean DEFAULT_SITTING = false;
    private static final boolean DEFAULT_CROUCHING = false;
@@ -437,7 +437,9 @@ public class Fox extends Animal {
    protected void readAdditionalSaveData(ValueInput p_453408_) {
       super.readAdditionalSaveData(p_453408_);
       this.clearTrusted();
-      p_453408_.<List>read("Trusted", TRUSTED_LIST_CODEC).orElse(List.of()).forEach(this::addTrustedEntity);
+      p_453408_.<List<EntityReference<LivingEntity>>>read("Trusted", TRUSTED_LIST_CODEC)
+              .orElse(List.of())
+              .forEach(this::addTrustedEntity);
       this.setSleeping(p_453408_.getBooleanOr("Sleeping", false));
       this.setVariant(p_453408_.<Fox.Variant>read("Type", Fox.Variant.CODEC).orElse(Fox.Variant.DEFAULT));
       this.setSitting(p_453408_.getBooleanOr("Sitting", false));

@@ -65,7 +65,7 @@ public class StateDefinition<O, S extends StateHolder<O, S>> {
             reference2objectarraymap.put((Property)pair.getFirst(), (Comparable)pair.getSecond());
          }
 
-         S s1 = p_61054_.create(p_61053_, reference2objectarraymap, mapcodec1);
+         S s1 = p_61054_.create(p_61053_, reference2objectarraymap, p_61055_);
          map.put(reference2objectarraymap, s1);
          list.add(s1);
       });

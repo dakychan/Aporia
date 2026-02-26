@@ -76,18 +76,23 @@ public class RegistryOps<T> extends DelegatingOps<T> {
          .forGetter(p_255526_ -> null);
    }
 
-   public static <E, O> RecordCodecBuilder<O, Holder.Reference<E>> retrieveElement(ResourceKey<E> p_256347_) {
-      ResourceKey<? extends Registry<E>> resourcekey = ResourceKey.createRegistryKey(p_256347_.registry());
-      return ExtraCodecs.retrieveContext(
-            p_274808_ -> p_274808_ instanceof RegistryOps<?> registryops
-               ? registryops.lookupProvider
-                  .lookup(resourcekey)
-                  .flatMap(p_255518_ -> p_255518_.getter().get(p_256347_))
-                  .<DataResult<E>>map(DataResult::success)
-                  .orElseGet(() -> DataResult.error(() -> "Can't find value: " + p_256347_))
-               : DataResult.error(() -> "Not a registry ops")
-         )
-         .forGetter(p_255524_ -> null);
+   public static <E, O> RecordCodecBuilder<O, Holder.Reference<E>> retrieveElement(ResourceKey<E> key) {
+      ResourceKey<? extends Registry<E>> registryKey = ResourceKey.createRegistryKey(key.registry());
+
+      return ExtraCodecs.<Holder.Reference<E>>retrieveContext(
+              context -> {
+                 if (context instanceof RegistryOps<?> registryOps) {
+                    Optional<Holder.Reference<E>> holder = registryOps.lookupProvider
+                            .lookup(registryKey)
+                            .flatMap(lookup -> lookup.getter().get(key));
+
+                    return holder
+                            .<DataResult<Holder.Reference<E>>>map(DataResult::success)
+                            .orElseGet(() -> DataResult.error(() -> "Can't find value: " + key));
+                 }
+                 return DataResult.error(() -> "Not a registry ops");
+              }
+      ).forGetter(holder -> null);
    }
 
    static final class HolderLookupAdapter implements RegistryOps.RegistryInfoLookup {

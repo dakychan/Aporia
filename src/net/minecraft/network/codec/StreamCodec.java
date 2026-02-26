@@ -619,8 +619,9 @@ public interface StreamCodec<B, V> extends StreamDecoder<B, V>, StreamEncoder<B,
       };
    }
 
+   @SuppressWarnings("unchecked")
    default <S extends B> StreamCodec<S, V> cast() {
-      return this;
+      return (StreamCodec<S, V>) this;
    }
 
    @FunctionalInterface
