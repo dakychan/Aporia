@@ -1,8 +1,6 @@
 plugins {
-    id 'fabric-loom' version '1.15-SNAPSHOT'
+    id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
     id 'maven-publish'
-    id "com.github.johnrengelman.shadow" version "8.1.1"
-    id 'org.jetbrains.kotlin.jvm' version '2.3.10'
 }
 
 version = project.mod_version
@@ -12,98 +10,49 @@ base {
     archivesName = project.archives_base_name
 }
 
-
 repositories {
-    maven {
-        name = "ferra13671-maven"
-        url = "https://ferra13671.github.io/maven/"
-    }
-    mavenCentral()
+    maven { url 'https://jitpack.io' }
+    maven { url = 'https://maven.maxhenkel.de/repository/public' }
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/accesswidener")
 }
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-
-    mappings loom.officialMojangMappings()
-
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-
+    include(modImplementation('io.netty:netty-handler-proxy:4.1.82.Final'))
+    include(modImplementation('io.netty:netty-codec-socks:4.1.82.Final'))
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+    modCompileOnly "de.maxhenkel.voicechat:voicechat-api:2.6.0"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-
-    implementation "com.ferra13671:comet-renderer:2.5-HOTFIX-1"
-    implementation "com.ferra13671:gl-texture-utils:1.7.4-HOTFIX-1"
-    implementation "com.ferra13671:comet-renderer-minecraft:26.1-snapshot-1-fabric-2.5-HOTFIX-1"
-    implementation "com.ferra13671:comet-renderer-better-compiler:2.5-HOTFIX-1"
-    implementation "com.ferra13671:comet-renderer-better-exceptions:2.5-HOTFIX-1"
-    implementation "com.ferra13671:comet-renderer-post-effects:2.5-HOTFIX-1"
-    implementation 'ai.catboost:catboost-prediction:1.2.8'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.1.10"
-
-    include "com.ferra13671:comet-renderer:2.5-HOTFIX-1"
-    include "com.ferra13671:gl-texture-utils:1.7.4-HOTFIX-1"
-    include "com.ferra13671:comet-renderer-minecraft:26.1-snapshot-1-fabric-2.5-HOTFIX-1"
-    include "com.ferra13671:comet-renderer-better-compiler:2.5-HOTFIX-1"
-    include "com.ferra13671:comet-renderer-better-exceptions:2.5-HOTFIX-1"
-    include "com.ferra13671:comet-renderer-post-effects:2.5-HOTFIX-1"
-    include 'ai.catboost:catboost-prediction:1.2.8'
-    include "org.jetbrains.kotlin:kotlin-stdlib:2.1.10"
-
-    compileOnly("org.projectlombok:lombok:1.18.42")
-    annotationProcessor("org.projectlombok:lombok:1.18.42")
-
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
-    testImplementation("net.jqwik:jqwik:1.8.2")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.1")
-}
-
-test {
-    useJUnitPlatform {
-        includeEngines "jqwik", "junit-jupiter"
-    }
+    implementation("ai.catboost:catboost-common:1.2.10")
 }
 
 processResources {
     inputs.property "version", project.version
-    inputs.property "minecraft_version", project.minecraft_version
-    inputs.property "loader_version", project.loader_version
-    filteringCharset "UTF-8"
     filesMatching("fabric.mod.json") {
-        expand "version": project.version,
-                "minecraft_version": project.minecraft_version,
-                "loader_version": project.loader_version
+        expand "version": inputs.properties.version
     }
 }
 
-def targetJavaVersion = 25
 tasks.withType(JavaCompile).configureEach {
-    it.options.encoding = "UTF-8"
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        it.options.release.set(targetJavaVersion)
-    }
+    it.options.release = 21
 }
 
 java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
-    }
     withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 jar {
+    inputs.property "archivesName", project.base.archivesName
     from("LICENSE") {
-        rename { "${it}_${project.archives_base_name}" }
-    }
-}
-
-task buildMod {
-    dependsOn build
-    group = 'build'
-    description = 'Builds the final mod jar'
-    
-    doLast {
-        println "Mod built successfully!"
-        println "Output: build/libs/${project.archives_base_name}-${project.version}.jar"
+        rename { "${it}_${inputs.properties.archivesName}"}
     }
 }
 
