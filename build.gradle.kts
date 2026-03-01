@@ -2,10 +2,10 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "2.3.10"
-    id("fabric-loom") version "1.16.0-alpha.10"
+    kotlin("jvm") version "2.2.20"
+    id("fabric-loom") version "1.15-SNAPSHOT"
     id("maven-publish")
-    id("org.jetbrains.kotlin.plugin.lombok") version "2.3.20-RC"
+    id("org.jetbrains.kotlin.plugin.lombok") version "2.2.20"
 }
 
 version = project.property("mod_version").toString()
@@ -15,7 +15,7 @@ base {
     archivesName.set(project.property("archives_base_name").toString())
 }
 
-val targetJavaVersion = 25
+val targetJavaVersion = 21
 
 repositories {
     maven("https://jitpack.io")
