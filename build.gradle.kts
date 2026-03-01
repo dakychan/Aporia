@@ -2,10 +2,10 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "2.2.20"
-    id("fabric-loom") version "1.15-SNAPSHOT"
+    kotlin("jvm") version "2.3.20-RC"
+    id("fabric-loom") version "1.16.0-alpha.10"
     id("maven-publish")
-    id("org.jetbrains.kotlin.plugin.lombok") version "2.2.20"
+    id("org.jetbrains.kotlin.plugin.lombok") version "2.3.20-RC"
 }
 
 version = project.property("mod_version").toString()
@@ -15,7 +15,11 @@ base {
     archivesName.set(project.property("archives_base_name").toString())
 }
 
-val targetJavaVersion = 21
+java {
+    withSourcesJar()
+}
+
+val targetJavaVersion = 26
 
 repositories {
     maven("https://jitpack.io")
@@ -34,8 +38,8 @@ dependencies {
     modImplementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_version")}")
     include(modImplementation("io.netty:netty-handler-proxy:4.1.82.Final")!!)
     include(modImplementation("io.netty:netty-codec-socks:4.1.82.Final")!!)
-    compileOnly("org.projectlombok:lombok:1.18.30")
-    annotationProcessor("org.projectlombok:lombok:1.18.30")
+    compileOnly("org.projectlombok:lombok:1.18.42")
+    annotationProcessor("org.projectlombok:lombok:1.18.42")
     modCompileOnly("de.maxhenkel.voicechat:voicechat-api:2.6.0")
     implementation("ai.catboost:catboost-common:1.2.10")
 }
@@ -59,11 +63,14 @@ tasks.processResources {
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
-    options.release.set(targetJavaVersion)
+    options.forkOptions.javaHome = file("C:/Program Files/Java/jdk-26")
 }
 
 tasks.withType<KotlinCompile>().configureEach {
-    compilerOptions.jvmTarget.set(JvmTarget.fromTarget(targetJavaVersion.toString()))
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_25)
+        freeCompilerArgs.add("-Xjdk-release=26")
+    }
 }
 
 tasks.jar {
