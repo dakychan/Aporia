@@ -1,21 +1,60 @@
 {
   "required": true,
-  "minVersion": "0.8",
-  "package": "ru.mixin",
+  "package": "aporia.su.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": [
-  ],
   "client": [
-    "render.GameRendererMixin",
-    "render.IGlBuffer",
-    "render.RenderSystemMixin",
-    "gui.ScreenKeyPressMixin",
-    "chat.ChatMessageMixin"
+    "AccessibilityOnboardingScreenMixin",
+    "BlockOutlineMixin",
+    "CameraMixin",
+    "ChatInputSuggestorMixin",
+    "ChatScreenMixin",
+    "ChunkOcclusionDataBuilderMixin",
+    "ClientPlayerEntityMixin",
+    "ClientPlayerInteractionManagerMixin",
+    "ClientPlayNetworkHandlerMixin",
+    "ClientWorldAccessor",
+    "ClientWorldMixin",
+    "CustomCapeMixin",
+    "EntityRendererMixin",
+    "GameRendererMixin",
+    "GenericContainerScreenMixin",
+    "HandledScreenMixin",
+    "HeldItemRendererMixin",
+    "IClientWorld",
+    "InGameHudMixin",
+    "InGameOverlayRendererMixin",
+    "InventoryScreenMixin",
+    "IScreen",
+    "KeyboardInputMixin",
+    "KeyboardMixin",
+    "LightmapTextureManagerMixin",
+    "LivingEntityRendererMixin",
+    "MinecraftClientMixin",
+    "MixinBuiltChunk",
+    "MixinClientPlayerInteractionManager",
+    "MixinItemEntityRenderer",
+    "MixinPlayerEntityRenderer",
+    "MouseMixin",
+    "MultiplayerScreenOpenMixin",
+    "MultiplayerServerListWidgetMixin",
+    "PlayerListHudMixin",
+    "ScreenMixin",
+    "SplashOverlayMixin",
+    "StatusEffectFogModifierMixin",
+    "TitleScreenMixin",
+    "WindowMixin",
+    "WorldRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1
   },
-  "overwrites": {
-    "requireAnnotations": true
-  }
+  "mixins": [
+    "ClientConnectionAccessor",
+    "ClientConnectionMixin",
+    "EntityMixin",
+    "FireworkRocketEntityMixin",
+    "LivingEntityMixin",
+    "PlayerEntityMixin",
+    "TextVisitFactoryMixin"
+  ]
 }

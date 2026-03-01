@@ -1,25 +1,29 @@
 {
   "schemaVersion": 1,
-  "id": "sorray",
+  "id": "copyright",
   "version": "${version}",
-  "name": "Sorray",
-  "description": "IDK",
-  "authors": [],
+  "name": "copyright client",
+  "description": "Custom Minecraft client with shader-based rendering",
+  "authors": ["You"],
   "contact": {},
-  "license": "All-Rights-Reserved",
-  "icon": "assets/sorray/icon.png",
+  "license": "MIT",
+  "icon": "assets/aporia/textures/capes/cape.png",
   "environment": "client",
   "entrypoints": {
+    "preLaunch": [
+      "aporia.su.util.mods.config.wave.WaveCapesConfigOverride"
+    ],
     "client": [
-      "ru.Aporia"
+      "aporia.su.Initialization"
     ]
   },
   "mixins": [
     "mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=${loader_version}",
+    "fabricloader": ">=0.18.4",
     "fabric-api": "*",
-    "minecraft": "${minecraft_version}"
+    "minecraft": "~1.21.11",
+    "java": ">=21"
   }
 }

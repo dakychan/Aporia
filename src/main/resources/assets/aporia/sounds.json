@@ -1,0 +1,62 @@
+{
+  "kolokolnia_kill": {
+    "sounds": [
+      "aporia:kolokolnia_kill"
+    ]
+  },
+  "moan1": {
+    "sounds": [
+      "aporia:moan1"
+    ]
+  },
+  "moan2": {
+    "sounds": [
+      "aporia:moan2"
+    ]
+  },
+  "moan3": {
+    "sounds": [
+      "aporia:moan3"
+    ]
+  },
+  "moan4": {
+    "sounds": [
+      "aporia:moan4"
+    ]
+  },
+  "module_disable": {
+    "sounds": [
+      "aporia:module_disable"
+    ]
+  },
+  "module_enable": {
+    "sounds": [
+      "aporia:module_enable"
+    ]
+  },
+  "off": {
+    "sounds": [
+      "aporia:off"
+    ]
+  },
+  "on": {
+    "sounds": [
+      "aporia:on"
+    ]
+  },
+  "crime": {
+    "sounds": [
+      "aporia:crime"
+    ]
+  },
+  "metallic": {
+    "sounds": [
+      "aporia:metallic"
+    ]
+  },
+  "welcome": {
+  "sounds": [
+    "aporia:welcome"
+  ]
+}
+}
