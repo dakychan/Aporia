@@ -1,112 +1,169 @@
 package ru.utils.render;
 
+import com.ferra13671.cometrenderer.plugins.minecraft.drawer.impl.BasicTextureDrawer;
+import com.ferra13671.cometrenderer.plugins.minecraft.drawer.impl.RoundedRectDrawer;
 import com.ferra13671.cometrenderer.plugins.minecraft.RectColors;
 import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor;
-import com.ferra13671.cometrenderer.plugins.minecraft.drawer.impl.RoundedRectDrawer;
+import com.ferra13671.gltextureutils.atlas.TextureBorder;
+import net.minecraft.client.Minecraft;
 
 public class RectRenderer {
-    private static RectangularShader rectangularShader;
-    private static BlurShader sharedBlurShader;
-
+    
     public static void init() {
-        if (rectangularShader == null) {
-            rectangularShader = new RectangularShader();
+        // BlurManager is singleton, no need to init here
+    }
+    
+    /**
+     * Рисует прямоугольник с blur эффектом используя BlurManager.
+     */
+    public static void drawRectWithBlur(float x, float y, float width, float height, int color, float cornerRadius) {
+        BlurManager blurManager = BlurManager.getInstance();
+        
+        if (!blurManager.isBlurAvailable()) {
+            drawRect(x, y, width, height, color, cornerRadius);
+            return;
+        }
+        
+        int blurTexId = blurManager.getBlurredTextureId();
+        
+        Minecraft mc = Minecraft.getInstance();
+        int screenWidth = mc.getWindow().getWidth();
+        int screenHeight = mc.getWindow().getHeight();
+        
+        float u0 = x / screenWidth;
+        float v0 = 1.0f - (y / screenHeight);
+        float u1 = (x + width) / screenWidth;
+        float v1 = 1.0f - ((y + height) / screenHeight);
+        
+        TextureBorder border = new TextureBorder(u0, v0, u1, v1);
+        
+        try (var drawer = new BasicTextureDrawer()
+            .setTexture(blurTexId)
+            .rectSized(x, y, width, height, border)
+            .build()) {
+            drawer.tryDraw();
+        }
+        
+        int a = (color >> 24) & 0xFF;
+        int r = (color >> 16) & 0xFF;
+        int g = (color >> 8) & 0xFF;
+        int b = color & 0xFF;
+        
+        float tintAlpha = Math.max(0.02f, a / 2550.0f);
+        RenderColor tint = RenderColor.of(r, g, b, tintAlpha);
+        
+        try (var drawer = new RoundedRectDrawer()
+            .rectSized(x, y, width, height, cornerRadius, RectColors.oneColor(tint))
+            .build()) {
+            drawer.tryDraw();
         }
     }
-
-    public static void setSharedBlurShader(BlurShader blurShader) {
-        sharedBlurShader = blurShader;
-        if (rectangularShader != null) {
-            rectangularShader.setBlurShader(blurShader);
-        }
-    }
-
-    private static void ensureInitialized() {
-        if (rectangularShader == null) {
-            rectangularShader = new RectangularShader();
-            if (sharedBlurShader != null) {
-                rectangularShader.setBlurShader(sharedBlurShader);
-            }
-        }
-    }
-
-    public static void drawRoundedRect(float x, float y, float width, float height, float radius, RenderColor color) {
+    
+    /**
+     * Рисует обычный прямоугольник.
+     */
+    public static void drawRect(float x, float y, float width, float height, int color, float cornerRadius) {
+        int a = (color >> 24) & 0xFF;
+        int r = (color >> 16) & 0xFF;
+        int g = (color >> 8) & 0xFF;
+        int b = color & 0xFF;
+        
+        RenderColor renderColor = RenderColor.of(r, g, b, a);
+        
         new RoundedRectDrawer()
-                .rectSized(x, y, width, height, radius, RectColors.oneColor(color))
-                .build()
-                .tryDraw()
-                .close();
+            .rectSized(x, y, width, height, cornerRadius, RectColors.oneColor(renderColor))
+            .build()
+            .tryDraw()
+            .close();
     }
-
-    public static void drawRoundedRect(float x, float y, float width, float height, float radius, RectColors colors) {
+    
+    /**
+     * Alias для совместимости.
+     */
+    public static void drawRoundedRect(float x, float y, float width, float height, float cornerRadius, int color) {
+        drawRect(x, y, width, height, color, cornerRadius);
+    }
+    
+    /**
+     * Alias для совместимости с RectColors.
+     */
+    public static void drawRoundedRect(float x, float y, float width, float height, float cornerRadius, RectColors colors) {
         new RoundedRectDrawer()
-                .rectSized(x, y, width, height, radius, colors)
-                .build()
-                .tryDraw()
-                .close();
+            .rectSized(x, y, width, height, cornerRadius, colors)
+            .build()
+            .tryDraw()
+            .close();
     }
-
-    public static void drawRectangle(float x, float y, float width, float height, int color, float cornerRadius) {
-        ensureInitialized();
-        rectangularShader.drawRectangle(x, y, width, height, color, cornerRadius);
-    }
-
-    public static void drawRectangle(float x, float y, float width, float height, RenderColor color, float cornerRadius) {
-        ensureInitialized();
-        rectangularShader.drawRectangle(x, y, width, height, color, cornerRadius);
-    }
-
-    public static void drawRectangleWithBlur(float x, float y, float width, float height, int color, float cornerRadius, float blurAmount) {
-        ensureInitialized();
-        rectangularShader.drawRectangleWithBlur(x, y, width, height, color, cornerRadius, blurAmount);
-    }
-
+    
+    /**
+     * Alias для совместимости с ClickGuiScreen.
+     */
     public static void drawRectangleWithBlur(float x, float y, float width, float height, RenderColor color, float cornerRadius, float blurAmount) {
-        ensureInitialized();
-        rectangularShader.drawRectangleWithBlur(x, y, width, height, color, cornerRadius, blurAmount);
-    }
-
-    /**
-     * Начинает batch рендеринг blur прямоугольников.
-     * Захватывает экран ОДИН РАЗ для всех последующих drawRectangleWithBlur вызовов.
-     * ВАЖНО: Вызывать ПОСЛЕ рендера мира, но ДО первого drawRectangleWithBlur!
-     */
-    public static void beginBlurBatch(int screenWidth, int screenHeight) {
-        ensureInitialized();
-        rectangularShader.beginBlurBatch(screenWidth, screenHeight);
-    }
-
-    /**
-     * Заканчивает batch рендеринг blur прямоугольников.
-     * Сбрасывает флаг захвата экрана.
-     */
-    public static void endBlurBatch() {
-        ensureInitialized();
-        rectangularShader.endBlurBatch();
+        float[] rgba = color.getColor();
+        int colorInt = ((int)(rgba[3] * 255) << 24) | ((int)(rgba[0] * 255) << 16) | ((int)(rgba[1] * 255) << 8) | (int)(rgba[2] * 255);
+        drawRectWithBlur(x, y, width, height, colorInt, cornerRadius);
     }
     
     /**
-     * Захватывает экран в конце кадра для использования в следующем кадре.
-     * Вызывается ПОСЛЕ guiRenderer.render() когда мир уже отрендерен.
+     * Overload для float,float,float,float,float,RenderColor.
      */
-    public static void captureForNextFrame(int screenWidth, int screenHeight) {
-        ensureInitialized();
-        rectangularShader.captureForNextFrame(screenWidth, screenHeight);
+    public static void drawRoundedRect(float x, float y, float width, float height, float cornerRadius, RenderColor color) {
+        drawRect(x, y, width, height, colorToInt(color), cornerRadius);
     }
     
     /**
-     * НОВЫЙ ПОДХОД: Устанавливает world-only texture для использования в blur эффекте.
-     * Вызывается из Aporia.captureWorldOnlyTarget() когда LevelRenderer захватил мир БЕЗ UI.
+     * Overload для int параметров.
      */
-    public static void setWorldOnlyTexture(int textureId, int width, int height) {
-        ensureInitialized();
-        rectangularShader.setWorldOnlyTexture(textureId, width, height);
+    public static void drawRoundedRect(int x, int y, int width, int height, float cornerRadius, RenderColor color) {
+        drawRect((float)x, (float)y, (float)width, (float)height, colorToInt(color), cornerRadius);
     }
-
+    
+    /**
+     * Overload для int параметров.
+     */
+    public static void drawRoundedRect(int x, int y, int width, int height, int cornerRadius, RenderColor color) {
+        drawRect((float)x, (float)y, (float)width, (float)height, colorToInt(color), (float)cornerRadius);
+    }
+    
+    /**
+     * Overload для mixed параметров.
+     */
+    public static void drawRoundedRect(float x, float y, int width, int height, float cornerRadius, RenderColor color) {
+        drawRect(x, y, (float)width, (float)height, colorToInt(color), cornerRadius);
+    }
+    
+    /**
+     * Overload для mixed параметров.
+     */
+    public static void drawRoundedRect(int x, int y, float width, int height, float cornerRadius, RenderColor color) {
+        drawRect((float)x, y, width, (float)height, colorToInt(color), cornerRadius);
+    }
+    
+    /**
+     * Overload для mixed параметров.
+     */
+    public static void drawRoundedRect(float x, int y, int width, int height, float cornerRadius, RenderColor color) {
+        drawRect(x, (float)y, (float)width, (float)height, colorToInt(color), cornerRadius);
+    }
+    
+    private static int colorToInt(RenderColor color) {
+        float[] rgba = color.getColor();
+        return ((int)(rgba[3] * 255) << 24) | ((int)(rgba[0] * 255) << 16) | ((int)(rgba[1] * 255) << 8) | (int)(rgba[2] * 255);
+    }
+    
+    public static void setBlurRadius(float radius) {
+        BlurManager.getInstance().setBlurRadius(radius);
+    }
+    
+    public static void setBlurIterations(int iterations) {
+        BlurManager.getInstance().setBlurIterations(iterations);
+    }
+    
+    public static void setBlurOffset(float offset) {
+        BlurManager.getInstance().setBlurOffset(offset);
+    }
+    
     public static void cleanup() {
-        if (rectangularShader != null) {
-            rectangularShader.cleanup();
-            rectangularShader = null;
-        }
+        BlurManager.getInstance().cleanup();
     }
 }

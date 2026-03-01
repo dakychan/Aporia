@@ -7,13 +7,7 @@ import net.minecraft.util.FormattedCharSink
 import org.lwjgl.glfw.GLFW
 import ru.utils.command.Command
 import ru.utils.command.CommandRegistry
-import ru.utils.command.commands.AliasCommand
-import ru.utils.command.commands.ConfigCommand
-import ru.utils.command.commands.FriendCommand
-import ru.utils.command.commands.HelpCommand
-import ru.utils.command.commands.InfoCommand
-import ru.utils.command.commands.PrefixCommand
-
+import ru.utils.command.commands.*
 /**
  * Unified chat and command management system for Aporia.cc.
  * Handles command execution, message formatting, and chat copy functionality.

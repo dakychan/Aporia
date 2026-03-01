@@ -1,17 +1,11 @@
 #version 330 core
 
-in vec4 pos;
-in vec2 UV;
-in vec4 color;
+layout(location = 0) in vec3 Position;
+layout(location = 1) in vec2 Texture;
 
-layout(std140) uniform Projection {
-    mat4 projMat;
-};
-uniform mat4 modelViewMat;
-
-out vec2 texCoord;
+out vec2 vTexCoord;
 
 void main() {
-    gl_Position = projMat * modelViewMat * pos;
-    texCoord = UV;
+    gl_Position = vec4(Position, 1.0);
+    vTexCoord = Texture;
 }

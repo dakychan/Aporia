@@ -19,6 +19,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.AddressMode;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuSampler;
+import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.SheetedDecalTextureGenerator;
@@ -560,9 +561,6 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
 
         this.addMainPass(framegraphbuilder, frustum, p_254120_, p_407881_, p_109603_, this.levelRenderState, p_342180_, profilerfiller);
         
-        // Aporia: Add world-only capture pass for blur effect
-        this.addWorldOnlyCapturePass(framegraphbuilder);
-        
         PostChain postchain1 = this.minecraft.getShaderManager().getPostChain(ENTITY_OUTLINE_POST_CHAIN_ID, LevelTargetBundle.OUTLINE_TARGETS);
         if (this.levelRenderState.haveGlowingEntities && postchain1 != null) {
             postchain1.addToFrame(framegraphbuilder, i, j, this.targets);
@@ -570,6 +568,11 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
 
         this.minecraft.particleEngine.extract(this.particlesRenderState, new Frustum(frustum).offset(-3.0F), p_109604_, f);
         this.addParticlesPass(framegraphbuilder, p_407881_);
+        
+        // Aporia: Захватываем mainTarget ЗДЕСЬ, внутри FrameGraph, ПОСЛЕ particles!
+        // Это гарантирует что mainTarget содержит полностью отрендеренный мир
+        this.addBlurCapturePass(framegraphbuilder);
+        
         CloudStatus cloudstatus = this.minecraft.options.getCloudsType();
         if (cloudstatus != CloudStatus.OFF) {
             int k = p_109604_.attributeProbe().getValue(EnvironmentAttributes.CLOUD_COLOR, f);
@@ -723,58 +726,65 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
             }
         );
     }
-
-    private void addWorldOnlyCapturePass(FrameGraphBuilder p_framegraphbuilder_) {
-        if (this.worldOnlyTarget == null) {
-            initWorldOnlyTarget();
+    
+    /**
+     * Проверяет нужно ли обрабатывать blur эффект.
+     * ОПТИМИЗАЦИЯ: Не обрабатываем blur если нет активных GUI.
+     */
+    private boolean shouldProcessBlur() {
+        // Проверяем есть ли открытый GUI
+        if (this.minecraft.screen != null) {
+            return true; // GUI открыт - нужен blur
         }
         
-        if (this.worldOnlyTarget == null) {
-            return;
+        // Проверяем активные модули с blur
+        try {
+            cc.apr.module.api.ModuleManager moduleManager = cc.apr.module.api.ModuleManager.getInstance();
+            if (moduleManager != null) {
+                // Проверяем BlurTest модуль
+                cc.apr.module.api.Module blurTest = moduleManager.getModuleByName("BlurTest");
+                if (blurTest != null && blurTest.isEnabled()) {
+                    return true;
+                }
+                
+                // Проверяем ClickGui
+                cc.apr.module.api.Module clickGui = moduleManager.getModuleByName("ClickGui");
+                if (clickGui != null && clickGui.isEnabled()) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            // Игнорируем ошибки - лучше обработать blur чем крашнуть
         }
+        
+        return false; // Нет активных GUI - не нужен blur
+    }
 
-        FramePass framepass = p_framegraphbuilder_.addPass("world_only_capture");
-        ResourceHandle<RenderTarget> worldOnlyHandle = p_framegraphbuilder_.importExternal("world_only", this.worldOnlyTarget);
-
-        framepass.reads(this.targets.main);
-        worldOnlyHandle = framepass.readsAndWrites(worldOnlyHandle);
+    /**
+     * Aporia: Захватывает mainTarget для blur эффекта.
+     * Копирует текстуру mainTarget напрямую в blur систему.
+     * ВАЖНО: Вызывается ПОСЛЕ частиц чтобы они были видны в blur!
+     * КРИТИЧНО: Использует reads() вместо readsAndWrites() чтобы гарантировать что mainTarget готов!
+     */
+    private void addBlurCapturePass(FrameGraphBuilder p_framegraphbuilder_) {
+        FramePass framepass = p_framegraphbuilder_.addPass("blur_capture");
+        // Используем readsAndWrites чтобы FrameGraph не пропустил этот pass
+        this.targets.main = framepass.readsAndWrites(this.targets.main);
         
         ResourceHandle<RenderTarget> mainHandle = this.targets.main;
         
         framepass.executes(() -> {
             RenderTarget mainTarget = mainHandle.get();
-            RenderTarget worldTarget = this.worldOnlyTarget;
             
-            if (mainTarget != null && worldTarget != null) {
-
-                int mainWidth = mainTarget.width;
-                int mainHeight = mainTarget.height;
-                int worldWidth = worldTarget.width;
-                int worldHeight = worldTarget.height;
-
-                if (mainWidth != worldWidth || mainHeight != worldHeight) {
-                    worldTarget.resize(mainWidth, mainHeight);
-                }
-
-                glBindFramebuffer(GL_READ_FRAMEBUFFER,
-                    ((com.mojang.blaze3d.opengl.GlTexture)mainTarget.getColorTexture()).getFbo(
-                        ((com.mojang.blaze3d.opengl.GlDevice)RenderSystem.getDevice()).directStateAccess(),
-                        mainTarget.useDepth ? mainTarget.getDepthTexture() : null
-                    ));
-                glBindFramebuffer(GL_DRAW_FRAMEBUFFER,
-                    ((GlTexture)worldTarget.getColorTexture()).getFbo(
-                        ((GlDevice)RenderSystem.getDevice()).directStateAccess(),
-                        worldTarget.useDepth ? worldTarget.getDepthTexture() : null
-                    ));
-
-                glBlitFramebuffer(
-                    0, 0, mainWidth, mainHeight,
-                    0, 0, mainWidth, mainHeight,
-                    org.lwjgl.opengl.GL30.GL_COLOR_BUFFER_BIT,
-                    org.lwjgl.opengl.GL11.GL_NEAREST
-                );
-                ru.Aporia.captureWorldOnlyTarget(worldTarget);
+            if (mainTarget == null) {
+                System.err.println("[BLUR DEBUG] mainTarget is null!");
+                return;
             }
+
+            System.out.println("[BLUR DEBUG] Capturing mainTarget inside FrameGraph: size=" + mainTarget.width + "x" + mainTarget.height);
+            
+            // Передаем RenderTarget напрямую в blur систему
+            ru.Aporia.captureMainTargetForBlur(mainTarget);
         });
     }
 
@@ -1612,20 +1622,5 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
 
     @OnlyIn(Dist.CLIENT)
     record FinalizedGizmos(DrawableGizmoPrimitives standardPrimitives, DrawableGizmoPrimitives alwaysOnTopPrimitives) {
-    }
-    
-    /**
-     * CUSTOM: Добавляет pass для захвата экрана для blur эффекта.
-     * Выполняется ПОСЛЕ рендера мира, но ДО UI.
-     */
-    private void addBlurCapturePass(FrameGraphBuilder p_framegraph_, int width, int height) {
-        FramePass framepass = p_framegraph_.addPass("blur_capture");
-        this.targets.main = framepass.readsAndWrites(this.targets.main);
-        
-        framepass.executes(() -> {
-            // Здесь framebuffer УЖЕ заполнен миром!
-            System.out.println("[BLUR_CAPTURE] Executing blur capture pass - framebuffer should be filled!");
-            ru.Aporia.captureScreenInFramePass(width, height);
-        });
     }
 }

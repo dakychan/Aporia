@@ -18,7 +18,6 @@ import ru.utils.input.api.bind.Keybind;
 import ru.utils.input.impl.bind.KeybindManager;
 import cc.apr.module.api.Module;
 import cc.apr.module.api.ModuleManager;
-import ru.utils.render.BlurShader;
 import ru.utils.render.IconFont;
 import ru.utils.render.MsdfFont;
 import ru.utils.render.MsdfTextRenderer;
@@ -93,8 +92,6 @@ public class ClickGuiScreen extends Screen {
     private static final float ANIMATION_SPEED = 0.15f;
     private static final float DESCRIPTION_Y_OFFSET = 20f;
     private static final float DESCRIPTION_DASH_SPACING = 8f;
-    
-    private BlurShader blurShader;
 
     public ClickGuiScreen(int width, int height) {
         super(Component.literal("Click GUI"));
@@ -104,7 +101,6 @@ public class ClickGuiScreen extends Screen {
         initializeCategoryPanels();
         loadPanelPositions();
         loadModuleKeybinds();
-        blurShader = new BlurShader();
     }
 
     private static void initFont() {
@@ -520,7 +516,9 @@ public class ClickGuiScreen extends Screen {
     }
     
     private void renderRectWithBlur(float x, float y, float w, float h, float radius, RenderColor color, float blurAmount) {
-        RectRenderer.drawRectangleWithBlur(x, y, w, h, color, radius, blurAmount);
+        // Временно отключаем blur в GUI из-за конфликта с KawaseBlurPipeline
+        // TODO: Реализовать правильную интеграцию blur для GUI
+        RectRenderer.drawRoundedRect(x, y, w, h, radius, color);
     }
     
     private boolean handleSettingClick(Module module, int mouseX, int mouseY) {

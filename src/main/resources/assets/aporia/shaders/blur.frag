@@ -1,25 +1,24 @@
 #version 330 core
 
-precision lowp float;
+in vec2 vTexCoord;
+out vec4 FragColor;
 
-in vec2 texCoord;
-out vec4 fragColor;
-
-uniform sampler2D Sampler0;
-uniform vec2 direction;
-uniform float radius;
+uniform sampler2D uTexture;
+uniform vec2 uTexelSize;
+uniform float uRadius;
 
 void main() {
-    vec2 texelSize = 1.0 / vec2(textureSize(Sampler0, 0));
-    vec4 result = vec4(0.0);
-    float totalWeight = 0.0;
+    vec4 sum = vec4(0.0);
+    float total = 0.0;
     
-    for (float i = -radius; i <= radius; i += 1.0) {
-        float weight = exp(-(i * i) / (2.0 * radius * radius));
-        vec2 offset = direction * texelSize * i;
-        result += texture(Sampler0, texCoord + offset) * weight;
-        totalWeight += weight;
+    for (float x = -uRadius; x <= uRadius; x++) {
+        for (float y = -uRadius; y <= uRadius; y++) {
+            vec2 offset = vec2(x, y) * uTexelSize;
+            float weight = 1.0 / (1.0 + length(vec2(x, y)));
+            sum += texture(uTexture, vTexCoord + offset) * weight;
+            total += weight;
+        }
     }
     
-    fragColor = result / totalWeight;
+    FragColor = sum / total;
 }

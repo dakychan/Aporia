@@ -1,45 +1,39 @@
 package cc.apr.modules.visuals
 
-import com.ferra13671.cometrenderer.CometRenderer
-import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin
-import com.ferra13671.cometrenderer.plugins.minecraft.RenderColor
-import net.minecraft.client.Minecraft
 import cc.apr.module.api.Module
 import ru.utils.render.RectRenderer
 
-class BlurTest : Module("BlurTest", "Тест блюра", C.VISUALS) {
-
+class BlurTest : Module("BlurTest", "Тест blur эффекта", C.VISUALS) {
+    
     private val blurAmount: NumberSetting
-
+    
     init {
-        blurAmount = NumberSetting("Blur Amount", 15.0, 0.0, 30.0, 1.0)
+        blurAmount = NumberSetting("Blur Amount", 8.0, 2.0, 30.0, 1.0)
         addSetting(blurAmount)
     }
-
-    override fun onEnable() {}
-    override fun onDisable() {}
-    override fun onTick() {}
-
+    
+    override fun onEnable() {
+        RectRenderer.setBlurRadius(blurAmount.value.toFloat())
+    }
+    
+    override fun onDisable() {
+        // Nothing
+    }
+    
+    override fun onTick() {
+        // Nothing
+    }
+    
     fun onRender2D() {
-        if (!isEnabled) return
-
-        val minecraft = Minecraft.getInstance()
-        val window = minecraft.window
-        val plugin = MinecraftPlugin.getInstance()
-        plugin.bindMainFramebuffer(true)
-
-        CometRenderer.applyDefaultBlend()
-
+        RectRenderer.setBlurRadius(blurAmount.value.toFloat())
+        
         val x = 100f
         val y = 100f
         val width = 300f
         val height = 200f
-        val radius = 10f
-        val blur = blurAmount.value.toFloat()
-
-        RectRenderer.drawRectangleWithBlur(x, y, width, height, RenderColor.of(0, 0, 0, 200), radius, blur)
-        RectRenderer.drawRectangleWithBlur(x + 400f, y, width, height, RenderColor.of(255, 0, 0, 200), radius, blur)
-
-        CometRenderer.disableBlend()
+        val color = 0x80FF0000.toInt()
+        val cornerRadius = 10f
+        
+        RectRenderer.drawRectWithBlur(x, y, width, height, color, cornerRadius)
     }
 }

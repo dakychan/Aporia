@@ -12,7 +12,9 @@ import com.ferra13671.cometrenderer.plugins.minecraft.MinecraftPlugin;
 import aporia.cc.files.FilesManager;
 import com.mojang.blaze3d.opengl.GlBuffer;
 import com.mojang.blaze3d.opengl.GlTexture;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.textures.GpuTexture;
+import net.minecraft.client.Minecraft;
 import ru.utils.ui.gui.GuiManager;
 import ru.utils.discord.DiscordManager;
 import ru.utils.input.api.KeyBindings;
@@ -20,7 +22,6 @@ import ru.utils.input.impl.UnifiedInputHandler;
 import ru.utils.input.impl.bind.KeybindListener;
 import ru.utils.input.impl.bind.KeybindManager;
 import aporia.cc.manager.OsManager;
-import ru.utils.render.BlurShader;
 import ru.utils.render.RectRenderer;
 import ru.ui.hud.HudManager;
 import ru.utils.ui.notify.Notify;
@@ -28,7 +29,6 @@ import ru.utils.ui.notify.Notify;
 public class Aporia {
 
     private static FilesManager filesManager;
-    private static BlurShader blurShader;
     private static DiscordManager discordManager;
     
     public static DiscordManager getDiscordManager() {
@@ -64,9 +64,7 @@ public class Aporia {
     }
 
     private static void initRenderingSystems() {
-        blurShader = new BlurShader();
         RectRenderer.init();
-        RectRenderer.setSharedBlurShader(blurShader); // Используем один BlurShader
         HudManager.INSTANCE.initialize();
     }
 
@@ -91,10 +89,6 @@ public class Aporia {
             try {
                 UserData.UserDataClass userData = UserData.INSTANCE.getUserData();
                 filesManager.saveStats(userData);
-                
-                if (blurShader != null) {
-                    blurShader.cleanup();
-                }
             } catch (Exception e) {
                 Logger.INSTANCE.error("Failed to save stats on shutdown: " + e.getMessage(), e);
             }
@@ -119,13 +113,7 @@ public class Aporia {
         Module interfaceModule = ModuleManager.getInstance().getModuleByName("Interface");
         boolean interfaceEnabled = interfaceModule != null && interfaceModule.isEnabled();
 
-        if (interfaceEnabled && blurShader != null) {
-            blurShader.renderToFramebuffer(width, height, () -> {
-                if (interfaceModule instanceof Interface) {
-                    ((Interface) interfaceModule).render();
-                }
-            });
-        } else if (interfaceEnabled && interfaceModule instanceof Interface) {
+        if (interfaceEnabled && interfaceModule instanceof Interface) {
             ((Interface) interfaceModule).render();
         }
     }
@@ -145,66 +133,22 @@ public class Aporia {
             ((BlurTest) blurTestModule).onRender2D();
         }
     }
-
     /**
-     * Захватывает экран СРАЗУ после рендера мира для blur эффекта
+     * Захватывает mainTarget для blur.
+     * Вызывается из LevelRenderer.addBlurCapturePass() внутри FrameGraph.
      */
-    public static void captureScreenForBlur() {
-        MinecraftPlugin plugin = MinecraftPlugin.getInstance();
-        if (plugin == null) return;
-
-        int width = plugin.getMainFramebufferWidth();
-        int height = plugin.getMainFramebufferHeight();
-
-        Module blurTestModule = ModuleManager.getInstance().getModuleByName("BlurTest");
-        if (blurTestModule != null && blurTestModule.isEnabled()) {
-            RectRenderer.beginBlurBatch(width, height);
-        }
-    }
-    
-    /**
-     * Захватывает экран в КОНЦЕ кадра для использования в СЛЕДУЮЩЕМ кадре.
-     * Вызывается ПОСЛЕ guiRenderer.render() когда мир уже отрендерен.
-     */
-    public static void captureScreenForNextFrame() {
-        MinecraftPlugin plugin = MinecraftPlugin.getInstance();
-        if (plugin == null) return;
-
-        int width = plugin.getMainFramebufferWidth();
-        int height = plugin.getMainFramebufferHeight();
-
-        Module blurTestModule = ModuleManager.getInstance().getModuleByName("BlurTest");
-        if (blurTestModule != null && blurTestModule.isEnabled()) {
-            RectRenderer.captureForNextFrame(width, height);
-        }
-    }
-    
-    /**
-     * НОВЫЙ МЕТОД: Захватывает экран ВНУТРИ FramePass когда framebuffer гарантированно заполнен.
-     * Вызывается из LevelRenderer.addBlurCapturePass() во время выполнения FrameGraph.
-     */
-    public static void captureScreenInFramePass(int width, int height) {
-        Module blurTestModule = ModuleManager.getInstance().getModuleByName("BlurTest");
-        if (blurTestModule != null && blurTestModule.isEnabled()) {
-            RectRenderer.captureForNextFrame(width, height);
-        }
-    }
-    
-    /**
-     * НОВЫЙ ПОДХОД: Захватывает world-only RenderTarget для blur эффекта.
-     * Вызывается из LevelRenderer.addWorldOnlyCapturePass() когда мир отрендерен БЕЗ UI.
-     */
-    public static void captureWorldOnlyTarget(com.mojang.blaze3d.pipeline.RenderTarget worldTarget) {
-        int width = worldTarget.width;
-        int height = worldTarget.height;
-
-        GpuTexture gpuTexture = worldTarget.getColorTexture();
+    public static void captureMainTargetForBlur(com.mojang.blaze3d.pipeline.RenderTarget mainTarget) {
+        if (mainTarget == null) return;
         
-        if (gpuTexture instanceof GlTexture) {
-            int textureId = ((GlTexture)gpuTexture).glId();
-
-            RectRenderer.setWorldOnlyTexture(textureId, width, height);
+        // Проверяем нужен ли blur
+        Module blurTestModule = ModuleManager.getInstance().getModuleByName("BlurTest");
+        if (blurTestModule == null || !blurTestModule.isEnabled()) {
+            return;
         }
+        
+        // Применяем blur через BlurManager
+        System.out.println("[APORIA] Applying blur in FrameGraph pass");
+        ru.utils.render.BlurManager.getInstance().applyBlur(mainTarget);
     }
     
     public static boolean handleInterfaceClick(int mouseX, int mouseY, int button) {
