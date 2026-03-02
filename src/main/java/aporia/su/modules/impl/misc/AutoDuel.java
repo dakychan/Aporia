@@ -1,6 +1,6 @@
 package aporia.su.modules.impl.misc;
 
-import antidaunleak.api.annotation.Native;
+import anidumpproject.api.annotation.Native;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.client.network.PlayerListEntry;

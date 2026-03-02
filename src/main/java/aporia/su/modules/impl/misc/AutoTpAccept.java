@@ -1,6 +1,6 @@
 package aporia.su.modules.impl.misc;
 
-import antidaunleak.api.annotation.Native;
+import anidumpproject.api.annotation.Native;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;

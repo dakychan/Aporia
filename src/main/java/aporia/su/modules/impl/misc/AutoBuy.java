@@ -1,6 +1,6 @@
 package aporia.su.modules.impl.misc;
 
-import antidaunleak.api.annotation.Native;
+import anidumpproject.api.annotation.Native;
 import lombok.Getter;
 import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
 import net.minecraft.component.DataComponentTypes;

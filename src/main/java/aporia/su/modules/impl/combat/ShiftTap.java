@@ -1,6 +1,6 @@
 package aporia.su.modules.impl.combat;
 
-import antidaunleak.api.annotation.Native;
+import anidumpproject.api.annotation.Native;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;

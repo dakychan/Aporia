@@ -1,6 +1,6 @@
 package aporia.su.modules.impl.movement;
 
-import antidaunleak.api.annotation.Native;
+import anidumpproject.api.annotation.Native;
 import lombok.Getter;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import aporia.su.events.api.EventHandler;

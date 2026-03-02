@@ -16,10 +16,13 @@ base {
 }
 
 java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    }
     withSourcesJar()
 }
 
-val targetJavaVersion = 26
+val targetJavaVersion = 25
 
 repositories {
     maven("https://jitpack.io")
@@ -63,19 +66,63 @@ tasks.processResources {
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
-    options.forkOptions.javaHome = file("C:/Program Files/Java/jdk-26")
 }
 
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_25)
-        freeCompilerArgs.add("-Xjdk-release=26")
     }
 }
 
 tasks.jar {
     from("LICENSE") {
         rename { "${it}_${project.base.archivesName.get()}" }
+    }
+}
+
+tasks.register<ChaosObfuscator>("chaosObfuscate") {
+    group = "build"
+    description = "Chaos obfuscation with daily rotating mappings"
+    dependsOn("classes")
+}
+
+tasks.register<Jar>("obfuscatedJar") {
+    group = "build"
+    description = "Create obfuscated JAR before remapping"
+    dependsOn("chaosObfuscate")
+    archiveClassifier.set("obfuscated-dev")
+    from(File(project.buildDir, "chaos-obfuscated"))
+    from(zipTree(tasks.jar.get().archiveFile)) {
+        exclude("**/*.class")
+    }
+    manifest {
+        from(tasks.jar.get().manifest)
+    }
+}
+
+tasks.named("remapJar") {
+    dependsOn("obfuscatedJar")
+    doFirst {
+        val obfJar = tasks.named<Jar>("obfuscatedJar").get()
+        val normalJar = tasks.jar.get().archiveFile.get().asFile
+        val obfuscatedJar = obfJar.archiveFile.get().asFile
+        if (obfuscatedJar.exists()) {
+            normalJar.delete()
+            obfuscatedJar.copyTo(normalJar, overwrite = true)
+        }
+    }
+}
+
+tasks.register<Jar>("chaosJar") {
+    group = "build"
+    description = "Create standalone chaos obfuscated JAR"
+    dependsOn("chaosObfuscate")
+    archiveClassifier.set("chaos")
+    from(File(project.buildDir, "chaos-obfuscated"))
+    manifest {
+        attributes(
+            "Main-Class" to "aporia.su.Initialization"
+        )
     }
 }
 

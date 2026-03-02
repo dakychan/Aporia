@@ -1,6 +1,6 @@
 package aporia.su.modules.impl.movement;
 
-import antidaunleak.api.annotation.Native;
+import anidumpproject.api.annotation.Native;
 import aporia.su.events.api.EventHandler;
 import aporia.su.events.impl.KeyEvent;
 import aporia.su.modules.module.ModuleStructure;

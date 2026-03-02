@@ -1,6 +1,6 @@
 package aporia.su.modules.impl.player;
 
-import antidaunleak.api.annotation.Native;
+import anidumpproject.api.annotation.Native;
 import aporia.su.events.api.EventHandler;
 import aporia.su.events.impl.TickEvent;
 import aporia.su.modules.module.ModuleStructure;

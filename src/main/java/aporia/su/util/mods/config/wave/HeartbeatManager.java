@@ -1,6 +1,6 @@
 package aporia.su.util.mods.config.wave;
 
-import antidaunleak.api.annotation.Native;
+import anidumpproject.api.annotation.Native;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;

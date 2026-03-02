@@ -32,7 +32,7 @@ import aporia.su.util.config.ConfigSystem;
 import aporia.su.util.render.font.FontRenderer;
 import aporia.su.util.session.SessionChanger;
 import aporia.su.util.window.WindowStyle;
-import antidaunleak.api.UserProfile;
+import anidumpproject.api.UserProfile;
 
 import static aporia.su.IMinecraft.mc;
 

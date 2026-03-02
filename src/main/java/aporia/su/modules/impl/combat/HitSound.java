@@ -1,6 +1,6 @@
 package aporia.su.modules.impl.combat;
 
-import antidaunleak.api.annotation.Native;
+import anidumpproject.api.annotation.Native;
 import net.minecraft.entity.LivingEntity;
 import aporia.su.events.api.EventHandler;
 import aporia.su.events.impl.AttackEvent;

@@ -6,7 +6,7 @@ import aporia.su.util.render.Render2D;
 import aporia.su.util.render.shader.Scissor;
 import aporia.su.util.render.font.Fonts;
 import aporia.su.util.render.gif.GifRender;
-import antidaunleak.api.UserProfile;
+import anidumpproject.api.UserProfile;
 
 import java.awt.*;
 

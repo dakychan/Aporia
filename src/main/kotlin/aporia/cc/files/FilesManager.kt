@@ -28,11 +28,8 @@ import java.time.format.DateTimeFormatter
  * - Logs - логи приложения
  */
 class FilesManager {
-
     private val fileLoader = FileLoader()
     private val gson: Gson = Gson()
-
-    // Основные пути через OsManager
     private val configPath: Path = OsManager.getFile(DirectoryType.CONFIG, "Config.apr")
     private val friendsPath: Path = OsManager.getFile(DirectoryType.CONFIG, "Friends.apr")
     private val statsPath: Path = OsManager.getFile(DirectoryType.CACHE, "Stats.json")
@@ -47,21 +44,14 @@ class FilesManager {
     fun initialize() {
         Logger.info("Initializing file system with OsManager...")
         Logger.info("Platform: ${OsManager.getPlatformName()} ${OsManager.osVersion}")
-
         createAllDirectories()
         createAllFiles()
         setHiddenAttributeForCacheFiles()
-
         Logger.info("✓ File system initialized successfully")
         Logger.info("  Main directory: ${OsManager.mainDirectory}")
         Logger.info("  Cache directory: ${OsManager.cacheDirectory}")
         Logger.info("  Data directory: ${OsManager.dataDirectory}")
         Logger.info("  Logs directory: ${OsManager.logsDirectory}")
-
-        // Добавить shutdown hook для очистки temp
-        Runtime.getRuntime().addShutdownHook(Thread {
-            cleanup()
-        })
     }
 
     /**
@@ -79,7 +69,6 @@ class FilesManager {
             OsManager.themesDirectory,
             OsManager.scriptsDirectory
         )
-
         directories.forEach { path ->
             createDirectoryWithFallback(path)
         }
@@ -97,7 +86,6 @@ class FilesManager {
             hudConfigPath to "[]",
             modulesConfigPath to "# Modules Configuration\n\n"
         )
-
         files.forEach { (path, content) ->
             ensureFileExists(path, content)
         }
@@ -112,12 +100,10 @@ class FilesManager {
             Logger.debug("✓ Created directory: $path")
         } catch (e: Exception) {
             Logger.warn("Failed to create directory, trying fallback...")
-
             val success = when (OsManager.platform) {
                 OsManager.Platform.WINDOWS -> createDirectoryWindows(path)
                 OsManager.Platform.LINUX, OsManager.Platform.MAC, OsManager.Platform.UNKNOWN -> createDirectoryUnix(path)
             }
-
             if (success) {
                 Logger.debug("✓ Created directory via fallback: $path")
             } else {
@@ -182,11 +168,7 @@ class FilesManager {
             }
         }
     }
-
-    // ========================================================================
-    // Конфигурация модулей
-    // ========================================================================
-
+    /*
     /**
      * Сохранить конфигурацию модулей.
      */
@@ -241,11 +223,6 @@ class FilesManager {
             ModuleConfig(enabled, moduleSettings)
         }
     }
-
-    // ========================================================================
-    // Статистика пользователя
-    // ========================================================================
-
     /**
      * Сохранить статистику пользователя.
      */
@@ -284,11 +261,6 @@ class FilesManager {
             null
         }
     }
-
-    // ========================================================================
-    // Друзья
-    // ========================================================================
-
     /**
      * Сохранить список друзей.
      */
@@ -516,7 +488,7 @@ class FilesManager {
         clearTemp()
         Logger.info("✓ File system cleanup complete")
     }
-
+*/
     /**
      * Получить информацию о файловой системе.
      */

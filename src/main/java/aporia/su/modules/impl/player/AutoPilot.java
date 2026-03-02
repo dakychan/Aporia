@@ -1,6 +1,6 @@
 package aporia.su.modules.impl.player;
 
-import antidaunleak.api.annotation.Native;
+import anidumpproject.api.annotation.Native;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.item.Items;

@@ -71,7 +71,29 @@ git clone https://github.com/dakychan/aporia/aporia.git
 ./gradlew build
 
 ./gradlew runClient
+
+# Обфускация для релиза
+./gradlew chaosObfuscate
+./gradlew chaosJar
 ```
+
+### 🌍 Unicode Chaos Obfuscation
+
+Aporia использует продвинутую систему обфускации с поддержкой Unicode символов из 30+ языков!
+
+**Уровни защиты:**
+- 🟢 **LIGHT** - ASCII only (базовая защита)
+- 🟡 **MEDIUM** - Greek + Cyrillic (средняя защита)
+- 🟠 **HEAVY** - Asian languages (высокая защита)
+- 🔴 **EXTREME** - Full Unicode chaos (максимальная защита)
+
+**Что включено:**
+- Китайский, Японский, Корейский, Тайский, Арабский
+- Руны, Египетские иероглифы, Клинопись
+- Математические символы, Эмодзи, Брейль
+- Ежедневная ротация маппингов (00:00 UTC)
+
+Подробнее: [UNICODE_CHAOS_GUIDE.md](UNICODE_CHAOS_GUIDE.md)
 
 ---
 

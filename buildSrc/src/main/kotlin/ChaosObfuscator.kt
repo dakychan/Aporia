@@ -1,0 +1,778 @@
+import org.gradle.api.DefaultTask
+import org.gradle.api.tasks.TaskAction
+import org.objectweb.asm.*
+import org.objectweb.asm.tree.*
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.security.MessageDigest
+import java.time.LocalDate
+import java.time.ZoneId
+import kotlin.random.Random
+
+/**
+ * CHAOS OBFUSCATOR - Полная каша с ежедневной ротацией
+ * 
+ * Что делает:
+ * 1. Обфусцирует package, import, class, методы, поля
+ * 2. Маппинги меняются каждый день в 00:00 UTC
+ * 3. В runtime только каша - дамп бесполезен
+ * 4. Миксины не трогает
+ * 5. Генерирует RuntimeMapper с алгоритмом восстановления
+ * 6. UNICODE CHAOS - арабский, китайский, японский, руны, иероглифы
+ */
+open class ChaosObfuscator : DefaultTask() {
+    
+    // UNICODE CHAOS - пиздец глазам
+    private val unicodeChaos = listOf(
+        // АРАБСКИЙ (справа налево, пиздец)
+        "ابتثجحخدذرزسشصضطظعغفقكلمنهوي",
+        "ءآأؤإئابةتثجحخدذرزسشصضطظعغ",
+        "ـفقكلمنهوىيًٌٍَُِّْٕٖٜٓٔٗ٘ٙٚٛٝٞ",
+        
+        // КИТАЙСКИЙ (иероглифы, пизда глазам)
+        "的一是不了人我在有他这为之大来以个中上们到说时",
+        "要就出会可也你得对生能下面孩子对工动力已经面",
+        "愛你我他她它我們你們他們今天明天昨天現在過去未來",
+        "甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥",
+        
+        // ЯПОНСКИЙ (хирагана + катакана + кандзи)
+        "あいうえおかきくけこさしすせそたちつてとなにぬねの",
+        "はひふへほまみむめもやゆよらりるれろわをんぁぃぅぇぉ",
+        "アイウエオカキクケコサシスセソタチツテトナニヌネノ",
+        "ハヒフヘホマミムメモヤユヨラリルレロワヲンァィゥェォ",
+        "犬猫鳥魚山川水火木金土日月年春夏秋冬東西南北",
+        
+        // КОРЕЙСКИЙ (хангыль - квадратные кракозябры)
+        "가나다라마바사아자차카타파하",
+        "거너더러머버서어저처커터퍼허",
+        "고노도로모보소오조초코토포호",
+        "구누두루무부수우주추쿠투푸후",
+        "그느드르므브스으즈츠크트프흐",
+        "기니디리미비시이지치키티피히",
+        
+        // ТАЙСКИЙ (петли и крючки)
+        "กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ",
+        "ะาำิีืึุูเแโใไๅๆ็่้๊๋์",
+        
+        // ДЕВАНАГАРИ (хинди, санскрит)
+        "अआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसह",
+        "ािीुूृॄेैोौ्ँंः",
+        
+        // ТИБЕТСКИЙ (вообще пиздец)
+        "ཀཁགངཅཆཇཉཏཐདནཔཕབམཙཚཛཝཞཟའཡརལཤཥསཧཨ",
+        
+        // ГРУЗИНСКИЙ (мхедрули)
+        "აბგდევზთიკლმნოპჟრსტუფქღყშჩცძწჭხჯჰ",
+        
+        // АРМЯНСКИЙ
+        "աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆ",
+        
+        // МОНГОЛЬСКИЙ (старомонгольское письмо - вертикально!)
+        "ᠠᠡᠢᠣᠤᠥᠦᠧᠨᠩᠪᠫᠬᠭᠮᠯᠰᠱᠲᠳᠴᠵᠶᠷᠸᠹᠺᠻᠼᠽᠾᠿ",
+        
+        // РУНЫ (древнегерманские)
+        "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ",
+        
+        // ЕГИПЕТСКИЕ ИЕРОГЛИФЫ
+        "𓀀𓀁𓀂𓀃𓀄𓀅𓀆𓀇𓀈𓀉𓀊𓀋𓀌𓀍𓀎𓀏",
+        
+        // КЛИНОПИСЬ (Шумер, Вавилон)
+        "𒀀𒀁𒀂𒀃𒀄𒀅𒀆𒀇𒀈𒀉𒀊𒀋𒀌𒀍𒀎𒀏",
+        
+        // МАТЕМАТИЧЕСКИЕ СИМВОЛЫ (жирные, рукописные, готические)
+        "𝐀𝐁𝐂𝐃𝐄𝐅𝐆𝐇𝐈𝐉𝐊𝐋𝐌𝐍𝐎𝐏𝐐𝐑𝐒𝐓𝐔𝐕𝐖𝐗𝐘𝐙",
+        "𝑎𝑏𝑐𝑑𝑒𝑓𝑔ℎ𝑖𝑗𝑘𝑙𝑚𝑛𝑜𝑝𝑞𝑟𝑠𝑡𝑢𝑣𝑤𝑥𝑦𝑧",
+        "𝒜ℬ𝒞𝒟ℰℱ𝒢ℋℐ𝒥𝒦ℒℳ𝒩𝒪𝒫𝒬ℛ𝒮𝒯𝒰𝒱𝒲𝒳𝒴𝒵",
+        "𝔄𝔅ℭ𝔇𝔈𝔉𝔊ℌℑ𝔍𝔎𝔏𝔐𝔑𝔒𝔓𝔔ℜ𝔖𝔗𝔘𝔙𝔚𝔛𝔜ℨ",
+        
+        // ЗЕРКАЛЬНЫЕ БУКВЫ (перевернутые)
+        "ɐqɔpǝɟɓɥıɾʞlɯuodbɹsʇnʌʍxʎz",
+        "∀𐐒ƆᗡƎℲ⅁HIſ⅂WNOԀΌᴚS⊥∩ɅMX⅄Z",
+        
+        // ШРИФТ БРЕЙЛЯ (для слепых реверсеров)
+        "⠁⠃⠉⠙⠑⠋⠛⠓⠊⠚⠅⠇⠍⠝⠕⠏⠟⠗⠎⠞⠥⠧⠺⠭⠽⠵",
+        
+        // ДИАКРИТИКА ВСЮДУ (буквы с точками сверху/снизу/сбоку)
+        "ạḅḍẹḥịḷṃṇọṛṣṭụṿẏỵ",
+        "áǎàâāåãäąæćĉčçċďđéěèêēėę",
+        "íǐìîīïĩıĵĺľļłńňņñóǒòôōőõøœ",
+        "úǔùûūůűũųẃẁŵýỳŷÿźžż",
+        
+        // ГРЕЧЕСКИЙ (альфа, бета, гамма...)
+        "αβγδεζηθικλμνξοπρστυφχψω",
+        "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ",
+        
+        // КИРИЛЛИЦА (русский, украинский, болгарский)
+        "абвгдежзийклмнопрстуфхцчшщъыьэюя",
+        "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ",
+        "ѐёђѓєѕіїјљњћќѝўџ",
+        
+        // ЭМОДЗИ (да, они тоже валидные идентификаторы в Java!)
+        "😀😁😂🤣😃😄😅😆😉😊😋😎😍😘🥰😗😙😚",
+        "🔥💀👻👽🤖💩🎃🎄🎁🎈🎉🎊🎋🎍🎎🎏",
+        
+        // СПЕЦИАЛЬНЫЕ СИМВОЛЫ
+        "ªºµ¹²³¼½¾ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞß",
+        "ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģ",
+        
+        // СТРЕЛКИ И СИМВОЛЫ
+        "←↑→↓↔↕↖↗↘↙↚↛↜↝↞↟↠↡↢↣↤↥↦↧↨",
+        "⇐⇑⇒⇓⇔⇕⇖⇗⇘⇙⇚⇛⇜⇝⇞⇟⇠⇡⇢⇣⇤⇥⇦⇧⇨⇩⇪",
+        
+        // ГЕОМЕТРИЧЕСКИЕ ФИГУРЫ
+        "■□▢▣▤▥▦▧▨▩▪▫▬▭▮▯▰▱▲△▴▵▶▷▸▹►▻▼▽▾▿◀◁◂◃◄◅",
+        "●○◎◉◊○◌◍◎●◐◑◒◓◔◕◖◗◘◙◚◛◜◝◞◟◠◡◢◣◤◥",
+        
+        // МУЗЫКАЛЬНЫЕ СИМВОЛЫ
+        "♩♪♫♬♭♮♯𝄞𝄢𝄫𝄪𝄬",
+        
+        // ШАХМАТНЫЕ ФИГУРЫ
+        "♔♕♖♗♘♙♚♛♜♝♞♟",
+        
+        // КАРТОЧНЫЕ МАСТИ
+        "♠♡♢♣♤♥♦♧",
+        
+        // ЗОДИАК
+        "♈♉♊♋♌♍♎♏♐♑♒♓",
+        
+        // ПЛАНЕТЫ
+        "☉☿♀♁♂♃♄♅♆♇",
+        
+        // АЛХИМИЧЕСКИЕ СИМВОЛЫ
+        "🜁🜂🜃🜄🜅🜆🜇🜈🜉🜊🜋🜌🜍🜎🜏🜐🜑🜒🜓",
+        
+        // I CHING (Книга Перемен)
+        "☰☱☲☳☴☵☶☷",
+        
+        // ТАЙСКИЕ ЦИФРЫ
+        "๐๑๒๓๔๕๖๗๘๙",
+        
+        // АРАБСКИЕ ЦИФРЫ (восточные)
+        "٠١٢٣٤٥٦٧٨٩",
+        
+        // БЕНГАЛЬСКИЕ ЦИФРЫ
+        "০১২৩৪৫৬৭৮৯",
+        
+        // ДЕВАНАГАРИ ЦИФРЫ
+        "०१२३४५६७८९"
+    )
+    
+    private val classMappings = mutableMapOf<String, String>()
+    private val methodMappings = mutableMapOf<String, MutableMap<String, String>>()
+    private val fieldMappings = mutableMapOf<String, MutableMap<String, String>>()
+    private var dailySeed: Long = 0
+    
+    @TaskAction
+    fun obfuscate() {
+        val javaClassesDir = File(project.buildDir, "classes/java/main")
+        val kotlinClassesDir = File(project.buildDir, "classes/kotlin/main")
+        val outputDir = File(project.buildDir, "chaos-obfuscated")
+        
+        if (!javaClassesDir.exists() && !kotlinClassesDir.exists()) {
+            println("Classes directory not found. Run 'build' first.")
+            return
+        }
+        
+        println("=== CHAOS OBFUSCATOR ===")
+        dailySeed = getDailySeed()
+        println("Daily seed: $dailySeed")
+        println("Date: ${LocalDate.now(ZoneId.of("UTC"))}")
+        
+        // Сканируем Java классы
+        if (javaClassesDir.exists()) {
+            println("Scanning Java classes...")
+            scanClasses(javaClassesDir)
+        }
+        
+        // Сканируем Kotlin классы
+        if (kotlinClassesDir.exists()) {
+            println("Scanning Kotlin classes...")
+            scanClasses(kotlinClassesDir)
+        }
+        
+        if (classMappings.isEmpty()) {
+            println("No classes to obfuscate.")
+            return
+        }
+        
+        println("\nFound ${classMappings.size} classes to obfuscate")
+        println("Generating chaos mappings...")
+        
+        // Обфусцируем
+        outputDir.deleteRecursively()
+        outputDir.mkdirs()
+        
+        // Обфусцируем Java классы
+        if (javaClassesDir.exists()) {
+            obfuscateClasses(javaClassesDir, outputDir)
+        }
+        
+        // Обфусцируем Kotlin классы
+        if (kotlinClassesDir.exists()) {
+            obfuscateClasses(kotlinClassesDir, outputDir)
+        }
+        
+        // Сохраняем маппинги
+        val date = LocalDate.now(ZoneId.of("UTC"))
+        saveMappings(File(project.buildDir, "chaos-mappings-$date.txt"))
+        
+        // Генерируем RuntimeMapper
+        generateRuntimeMapper(outputDir)
+        
+        println("\n✅ Chaos obfuscation complete!")
+        println("📁 Output: ${outputDir.absolutePath}")
+        println("🗺️  Mappings: chaos-mappings-$date.txt")
+        println("⚠️  Mappings expire tomorrow at 00:00 UTC!")
+    }
+    
+    /**
+     * Генерирует seed на основе даты UTC
+     */
+    private fun getDailySeed(): Long {
+        val date = LocalDate.now(ZoneId.of("UTC"))
+        val dateStr = "${date.year}${date.monthValue}${date.dayOfMonth}"
+        val md = MessageDigest.getInstance("SHA-256")
+        val hash = md.digest(dateStr.toByteArray())
+        return hash.fold(0L) { acc, byte -> (acc shl 8) or (byte.toLong() and 0xFF) }
+    }
+    
+    /**
+     * Сканирует классы
+     */
+    private fun scanClasses(dir: File) {
+        dir.walkTopDown().forEach { file ->
+            if (file.extension == "class") {
+                val classNode = readClass(file)
+                
+                // Пропускаем миксины
+                if (isMixin(classNode)) {
+                    return@forEach
+                }
+                
+                // Проверяем аннотации
+                val level = getObfuscationLevel(classNode)
+                if (level != ObfuscationLevel.NONE) {
+                    val oldName = classNode.name
+                    val newName = generateChaosClassName(oldName, level)
+                    classMappings[oldName] = newName
+                    
+                    // Генерируем маппинги для методов и полей
+                    methodMappings[oldName] = mutableMapOf()
+                    fieldMappings[oldName] = mutableMapOf()
+                    
+                    // LIGHT и MEDIUM - только классы
+                    // HEAVY и EXTREME - классы + методы + поля
+                    if (level == ObfuscationLevel.HEAVY || level == ObfuscationLevel.EXTREME) {
+                        classNode.methods?.forEach { method ->
+                            if (!method.name.startsWith("<")) { // Не трогаем <init> и <clinit>
+                                val newMethodName = generateChaosName(method.name, 2, level = level)
+                                methodMappings[oldName]!![method.name + method.desc] = newMethodName
+                            }
+                        }
+                        
+                        classNode.fields?.forEach { field ->
+                            val newFieldName = generateChaosName(field.name, 2, level = level)
+                            fieldMappings[oldName]!![field.name] = newFieldName
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Проверяет миксин
+     */
+    private fun isMixin(classNode: ClassNode): Boolean {
+        return classNode.visibleAnnotations?.any { 
+            it.desc.contains("Mixin") || it.desc.contains("mixin")
+        } ?: false
+    }
+    
+    /**
+     * Определяет уровень обфускации
+     */
+    private fun getObfuscationLevel(classNode: ClassNode): ObfuscationLevel {
+        // Объединяем visible и invisible аннотации
+        val allAnnotations = (classNode.visibleAnnotations ?: emptyList()) + 
+                            (classNode.invisibleAnnotations ?: emptyList())
+        
+        // @MainClass - не обфусцируем
+        allAnnotations.forEach { ann ->
+            if (ann.desc.contains("MainClass")) {
+                return ObfuscationLevel.NONE
+            }
+        }
+        
+        // @Obfuscate
+        allAnnotations.forEach { ann ->
+            if (ann.desc.contains("Obfuscate")) {
+                // Читаем level
+                if (ann.values != null) {
+                    for (i in 0 until ann.values.size step 2) {
+                        if (ann.values[i] == "level") {
+                            val levelValue = ann.values[i + 1]
+                            if (levelValue is Array<*> && levelValue.size >= 2) {
+                                val level = levelValue[1] as? String ?: "NONE"
+                                return when (level) {
+                                    "LIGHT" -> ObfuscationLevel.LIGHT
+                                    "MEDIUM" -> ObfuscationLevel.MEDIUM
+                                    "HEAVY" -> ObfuscationLevel.HEAVY
+                                    "EXTREME" -> ObfuscationLevel.EXTREME
+                                    else -> ObfuscationLevel.NONE
+                                }
+                            }
+                        }
+                    }
+                }
+                return ObfuscationLevel.MEDIUM // По умолчанию
+            }
+        }
+        
+        // @Native
+        allAnnotations.forEach { ann ->
+            if (ann.desc.contains("Native")) {
+                return ObfuscationLevel.HEAVY
+            }
+        }
+        
+        return ObfuscationLevel.NONE
+    }
+    
+    /**
+     * Генерирует хаотичное имя класса
+     */
+    private fun generateChaosClassName(oldName: String, level: ObfuscationLevel): String {
+        val random = Random(oldName.hashCode().toLong() + dailySeed)
+        
+        // Генерируем хаотичный пакет
+        val packageParts = oldName.split("/").dropLast(1)
+        val className = oldName.split("/").last()
+        
+        val obfuscatedPackage = packageParts.joinToString("/") { 
+            generateChaosName("pkg", 1, random, level)
+        }
+        
+        val obfuscatedClass = when (level) {
+            ObfuscationLevel.LIGHT -> generateChaosName(className, 2, random, level)
+            ObfuscationLevel.MEDIUM -> generateChaosName(className, 3, random, level)
+            ObfuscationLevel.HEAVY -> generateChaosName(className, 4, random, level)
+            ObfuscationLevel.EXTREME -> generateChaosName(className, 5, random, level)
+            ObfuscationLevel.NONE -> className
+        }
+        
+        return if (obfuscatedPackage.isNotEmpty()) {
+            "$obfuscatedPackage/$obfuscatedClass"
+        } else {
+            "aporia/su/$obfuscatedClass"
+        }
+    }
+    
+    /**
+     * Генерирует хаотичное имя
+     * 
+     * Формат:
+     * - package: рандом буква (a, b, c)
+     * - import: буква + символ (a$, b_, c0)
+     * - class: символ + буква (1a, $b, _c)
+     * - method: буква буква (aa, ab, ac)
+     * - field: символ символ ($$, $_, $0)
+     */
+    private fun generateChaosName(base: String, length: Int, random: Random = Random(base.hashCode().toLong() + dailySeed), level: ObfuscationLevel = ObfuscationLevel.MEDIUM): String {
+        // ASCII база (всегда доступна)
+        val asciiLetters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        val asciiSymbols = "_$"
+        
+        // Собираем пул символов в зависимости от уровня
+        val charPool = buildString {
+            append(asciiLetters)
+            append(asciiSymbols)
+            
+            when (level) {
+                ObfuscationLevel.LIGHT -> {
+                }
+                ObfuscationLevel.MEDIUM -> {
+                    // + Греческий + Кириллица
+                    append("αβγδεζηθικλμνξοπρστυφχψω")
+                    append("ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ")
+                    append("абвгдежзийклмнопрстуфхцчшщъыьэюя")
+                    append("АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ")
+                }
+                ObfuscationLevel.HEAVY -> {
+                    // + Азиатские языки
+                    append("αβγδεζηθικλμνξοπρστυφχψω")
+                    append("абвгдежзийклмнопрстуфхцчшщъыьэюя")
+                    // Китайский
+                    append("的一是不了人我在有他这为之大来以个中上们到说时")
+                    append("要就出会可也你得对生能下面孩子对工动力已经面")
+                    // Японский
+                    append("あいうえおかきくけこさしすせそたちつてとなにぬねの")
+                    append("アイウエオカキクケコサシスセソタチツテトナニヌネノ")
+                    // Корейский
+                    append("가나다라마바사아자차카타파하")
+                    append("거너더러머버서어저처커터퍼허")
+                    // Тайский
+                    append("กขคงจฉชซญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ")
+                    // Деванагари
+                    append("अआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसह")
+                }
+                ObfuscationLevel.EXTREME -> {
+                    // ВСЁ! Полный пиздец!
+                    // Базовые unicode
+                    append("αβγδεζηθικλμνξοπρστυφχψω")
+                    append("абвгдежзийклмнопрстуфхцчшщъыьэюя")
+                    
+                    // Азиатские
+                    unicodeChaos.forEach { charset ->
+                        append(charset)
+                    }
+                    
+                    // Арабский (RTL - пиздец)
+                    append("ابتثجحخدذرزسشصضطظعغفقكلمنهوي")
+                    
+                    // Руны
+                    append("ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ")
+                    
+                    // Грузинский
+                    append("აბგდევზთიკლმნოპჟრსტუფქღყშჩცძწჭხჯჰ")
+                    
+                    // Армянский
+                    append("աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆ")
+                    
+                    // Тибетский
+                    append("ཀཁགངཅཆཇཉཏཐདནཔཕབམཙཚཛཝཞཟའཡརལཤཥསཧཨ")
+                    
+                    // Монгольский
+                    append("ᠠᠡᠢᠣᠤᠥᠦᠧᠨᠩᠪᠫᠬᠭᠮᠯᠰᠱᠲᠳᠴᠵᠶᠷᠸᠹᠺᠻᠼᠽᠾᠿ")
+                    
+                    // Математические символы
+                    append("𝐀𝐁𝐂𝐃𝐄𝐅𝐆𝐇𝐈𝐉𝐊𝐋𝐌𝐍𝐎𝐏𝐐𝐑𝐒𝐓𝐔𝐕𝐖𝐗𝐘𝐙")
+                    append("𝑎𝑏𝑐𝑑𝑒𝑓𝑔ℎ𝑖𝑗𝑘𝑙𝑚𝑛𝑜𝑝𝑞𝑟𝑠𝑡𝑢𝑣𝑤𝑥𝑦𝑧")
+                    
+                    // Зеркальные
+                    append("ɐqɔpǝɟɓɥıɾʞlɯuodbɹsʇnʌʍxʎz")
+                    
+                    // Диакритика
+                    append("áǎàâāåãäąæćĉčçċďđéěèêēėę")
+                    append("íǐìîīïĩıĵĺľļłńňņñóǒòôōőõøœ")
+                    
+                    // Брейль
+                    append("⠁⠃⠉⠙⠑⠋⠛⠓⠊⠚⠅⠇⠍⠝⠕⠏⠟⠗⠎⠞⠥⠧⠺⠭⠽⠵")
+                    
+                    // Геометрия
+                    append("■□▢▣▤▥▦▧▨▩▪▫▬▭▮▯▰▱▲△▴▵▶▷▸▹►▻▼▽▾▿◀◁◂◃◄◅")
+                    
+                    // Стрелки
+                    append("←↑→↓↔↕↖↗↘↙↚↛↜↝↞↟↠↡↢↣↤↥↦↧↨")
+                    
+                    // Эмодзи (да, они валидные идентификаторы!)
+                    append("😀😁😂🤣😃😄😅😆😉😊😋😎😍😘🥰😗😙😚")
+                    append("🔥💀👻👽🤖💩🎃🎄🎁🎈🎉🎊🎋🎍🎎🎏")
+                }
+                ObfuscationLevel.NONE -> {
+                    // Не должно вызываться
+                }
+            }
+        }
+        
+        // Генерируем имя
+        return buildString {
+            // Первый символ - всегда валидный Java идентификатор
+            val firstChar = charPool.filter { Character.isJavaIdentifierStart(it) }
+            if (firstChar.isNotEmpty()) {
+                append(firstChar.random(random))
+            } else {
+                append('_') // Fallback
+            }
+            
+            // Остальные символы - любые валидные
+            repeat(length - 1) {
+                val validChars = charPool.filter { Character.isJavaIdentifierPart(it) }
+                if (validChars.isNotEmpty()) {
+                    append(validChars.random(random))
+                } else {
+                    append(asciiLetters.random(random))
+                }
+            }
+        }
+    }
+    
+    /**
+     * Обфусцирует классы
+     */
+    private fun obfuscateClasses(inputDir: File, outputDir: File) {
+        inputDir.walkTopDown().forEach { file ->
+            if (file.extension == "class") {
+                val classNode = readClass(file)
+                val oldName = classNode.name
+                
+                // Обновляем ссылки
+                remapReferences(classNode)
+                
+                // Переименовываем класс
+                if (classMappings.containsKey(oldName)) {
+                    classNode.name = classMappings[oldName]!!
+                    
+                    // Переименовываем методы
+                    classNode.methods?.forEach { method ->
+                        val key = method.name + method.desc
+                        if (methodMappings[oldName]?.containsKey(key) == true) {
+                            method.name = methodMappings[oldName]!![key]!!
+                        }
+                    }
+                    
+                    // Переименовываем поля
+                    classNode.fields?.forEach { field ->
+                        if (fieldMappings[oldName]?.containsKey(field.name) == true) {
+                            field.name = fieldMappings[oldName]!![field.name]!!
+                        }
+                    }
+                }
+                
+                // Определяем выходной файл
+                val outputFile = if (classMappings.containsKey(oldName)) {
+                    File(outputDir, "${classNode.name}.class")
+                } else {
+                    val relativePath = file.relativeTo(inputDir)
+                    File(outputDir, relativePath.path)
+                }
+                
+                outputFile.parentFile.mkdirs()
+                writeClass(classNode, outputFile)
+            }
+        }
+    }
+    
+    /**
+     * Обновляет ссылки
+     */
+    private fun remapReferences(classNode: ClassNode) {
+        classNode.superName = remap(classNode.superName)
+        classNode.interfaces = classNode.interfaces?.map { remap(it) }
+        
+        classNode.fields?.forEach { field ->
+            field.desc = remapDescriptor(field.desc)
+            field.signature = remapSignature(field.signature)
+        }
+        
+        classNode.methods?.forEach { method ->
+            method.desc = remapDescriptor(method.desc)
+            method.signature = remapSignature(method.signature)
+            
+            method.instructions?.forEach { insn ->
+                when (insn) {
+                    is TypeInsnNode -> insn.desc = remap(insn.desc)
+                    is FieldInsnNode -> {
+                        val oldOwner = insn.owner
+                        insn.owner = remap(insn.owner)
+                        insn.desc = remapDescriptor(insn.desc)
+                        // Переименовываем поле
+                        if (fieldMappings[oldOwner]?.containsKey(insn.name) == true) {
+                            insn.name = fieldMappings[oldOwner]!![insn.name]!!
+                        }
+                    }
+                    is MethodInsnNode -> {
+                        val oldOwner = insn.owner
+                        insn.owner = remap(insn.owner)
+                        val oldKey = insn.name + insn.desc
+                        insn.desc = remapDescriptor(insn.desc)
+                        // Переименовываем метод
+                        if (methodMappings[oldOwner]?.containsKey(oldKey) == true) {
+                            insn.name = methodMappings[oldOwner]!![oldKey]!!
+                        }
+                    }
+                    is InvokeDynamicInsnNode -> {
+                        insn.desc = remapDescriptor(insn.desc)
+                    }
+                    is LdcInsnNode -> {
+                        if (insn.cst is Type) {
+                            insn.cst = Type.getType(remapDescriptor((insn.cst as Type).descriptor))
+                        }
+                    }
+                }
+            }
+            
+            method.tryCatchBlocks?.forEach { tcb ->
+                tcb.type = remap(tcb.type)
+            }
+            
+            method.localVariables?.forEach { lv ->
+                lv.desc = remapDescriptor(lv.desc)
+                lv.signature = remapSignature(lv.signature)
+            }
+        }
+    }
+    
+    private fun remap(className: String?): String? {
+        if (className == null) return null
+        return classMappings[className] ?: className
+    }
+    
+    private fun remapDescriptor(desc: String?): String? {
+        if (desc == null) return null
+        var result = desc
+        classMappings.forEach { (old, new) ->
+            result = result?.replace("L$old;", "L$new;")
+        }
+        return result
+    }
+    
+    private fun remapSignature(signature: String?): String? {
+        if (signature == null) return null
+        var result = signature
+        classMappings.forEach { (old, new) ->
+            result = result?.replace("L$old;", "L$new;")
+        }
+        return result
+    }
+    
+    /**
+     * Генерирует RuntimeMapper с алгоритмом восстановления
+     */
+    private fun generateRuntimeMapper(outputDir: File) {
+        val mapperFile = File(outputDir, "anidumpproject/api/RuntimeMapper.class")
+        mapperFile.parentFile.mkdirs()
+        
+        val cw = ClassWriter(0) // БЕЗ COMPUTE_MAXS!
+        cw.visit(
+            Opcodes.V17,
+            Opcodes.ACC_PUBLIC,
+            "anidumpproject/api/RuntimeMapper",
+            null,
+            "java/lang/Object",
+            null
+        )
+        
+        // Статическое поле с seed
+        cw.visitField(
+            Opcodes.ACC_PRIVATE or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL,
+            "SEED",
+            "J",
+            null,
+            dailySeed
+        ).visitEnd()
+        
+        // Статическая Map с маппингами
+        cw.visitField(
+            Opcodes.ACC_PRIVATE or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL,
+            "MAPPINGS",
+            "Ljava/util/Map;",
+            "Ljava/util/Map<Ljava/lang/String;Ljava/lang/String;>;",
+            null
+        ).visitEnd()
+        
+        // Статический блок инициализации
+        val clinit = cw.visitMethod(
+            Opcodes.ACC_STATIC,
+            "<clinit>",
+            "()V",
+            null,
+            null
+        )
+        clinit.visitCode()
+        
+        // new HashMap()
+        clinit.visitTypeInsn(Opcodes.NEW, "java/util/HashMap")
+        clinit.visitInsn(Opcodes.DUP)
+        clinit.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/util/HashMap", "<init>", "()V", false)
+        clinit.visitFieldInsn(Opcodes.PUTSTATIC, "anidumpproject/api/RuntimeMapper", "MAPPINGS", "Ljava/util/Map;")
+        
+        // Добавляем маппинги
+        classMappings.forEach { (old, new) ->
+            clinit.visitFieldInsn(Opcodes.GETSTATIC, "anidumpproject/api/RuntimeMapper", "MAPPINGS", "Ljava/util/Map;")
+            clinit.visitLdcInsn(new)
+            clinit.visitLdcInsn(old)
+            clinit.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true)
+            clinit.visitInsn(Opcodes.POP)
+        }
+        
+        clinit.visitInsn(Opcodes.RETURN)
+        clinit.visitMaxs(0, 0) // ASM сам посчитает
+        clinit.visitEnd()
+        
+        // Метод deobfuscate
+        val mv = cw.visitMethod(
+            Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC,
+            "deobfuscate",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            null,
+            null
+        )
+        mv.visitCode()
+        
+        // return MAPPINGS.getOrDefault(obfuscated, obfuscated);
+        mv.visitFieldInsn(Opcodes.GETSTATIC, "anidumpproject/api/RuntimeMapper", "MAPPINGS", "Ljava/util/Map;")
+        mv.visitVarInsn(Opcodes.ALOAD, 0)
+        mv.visitVarInsn(Opcodes.ALOAD, 0)
+        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/Map", "getOrDefault", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true)
+        mv.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/String")
+        mv.visitInsn(Opcodes.ARETURN)
+        mv.visitMaxs(0, 0) // ASM сам посчитает
+        mv.visitEnd()
+        
+        cw.visitEnd()
+        
+        FileOutputStream(mapperFile).use { fos ->
+            fos.write(cw.toByteArray())
+        }
+    }
+    
+    /**
+     * Сохраняет маппинги
+     */
+    private fun saveMappings(file: File) {
+        file.writeText(buildString {
+            appendLine("# CHAOS OBFUSCATION MAPPINGS")
+            appendLine("# Date: ${LocalDate.now(ZoneId.of("UTC"))}")
+            appendLine("# Seed: $dailySeed")
+            appendLine("# ⚠️  EXPIRES TOMORROW AT 00:00 UTC!")
+            appendLine()
+            appendLine("# Classes:")
+            classMappings.forEach { (old, new) ->
+                appendLine("$old -> $new")
+            }
+            appendLine()
+            appendLine("# Methods:")
+            methodMappings.forEach { (className, methods) ->
+                appendLine("# Class: $className")
+                methods.forEach { (old, new) ->
+                    appendLine("  $old -> $new")
+                }
+            }
+            appendLine()
+            appendLine("# Fields:")
+            fieldMappings.forEach { (className, fields) ->
+                appendLine("# Class: $className")
+                fields.forEach { (old, new) ->
+                    appendLine("  $old -> $new")
+                }
+            }
+        })
+    }
+    
+    private fun readClass(file: File): ClassNode {
+        val classNode = ClassNode()
+        FileInputStream(file).use { fis ->
+            val classReader = ClassReader(fis)
+            classReader.accept(classNode, 0)
+        }
+        return classNode
+    }
+    
+    private fun writeClass(classNode: ClassNode, file: File) {
+        val classWriter = ClassWriter(0) // БЕЗ COMPUTE_MAXS!
+        classNode.accept(classWriter)
+        FileOutputStream(file).use { fos ->
+            fos.write(classWriter.toByteArray())
+        }
+    }
+    
+    enum class ObfuscationLevel {
+        NONE,
+        LIGHT,
+        MEDIUM,
+        HEAVY,
+        EXTREME
+    }
+}

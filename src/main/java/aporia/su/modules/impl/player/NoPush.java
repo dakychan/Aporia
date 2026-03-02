@@ -1,6 +1,6 @@
 package aporia.su.modules.impl.player;
 
-import antidaunleak.api.annotation.Native;
+import anidumpproject.api.annotation.Native;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import aporia.su.events.api.EventHandler;

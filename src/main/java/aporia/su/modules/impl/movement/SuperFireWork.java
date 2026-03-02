@@ -1,6 +1,6 @@
 package aporia.su.modules.impl.movement;
 
-import antidaunleak.api.annotation.Native;
+import anidumpproject.api.annotation.Native;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import net.minecraft.entity.player.PlayerEntity;
