@@ -18,7 +18,7 @@ import aporia.su.events.impl.InputEvent;
 import aporia.su.events.impl.KeyEvent;
 import aporia.su.events.impl.RotationUpdateEvent;
 import aporia.su.events.impl.TickEvent;
-import aporia.su.mixin.ClientWorldAccessor;
+import aporia.su.mixin.client.ClientWorldAccessor;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.AngleConfig;
 import aporia.su.modules.impl.combat.aura.AngleConnection;

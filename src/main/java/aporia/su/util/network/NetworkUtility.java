@@ -11,8 +11,8 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.PlayerInput;
 import net.minecraft.util.hit.BlockHitResult;
 import aporia.su.IMinecraft;
-import aporia.su.mixin.ClientConnectionAccessor;
-import aporia.su.mixin.IClientWorld;
+import aporia.su.mixin.client.ClientConnectionAccessor;
+import aporia.su.mixin.client.IClientWorld;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.util.timer.TimerUtil;
 

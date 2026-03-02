@@ -1,19 +1,11 @@
 package aporia.cc.chat
 
-import net.minecraft.client.Minecraft
-import net.minecraft.client.GuiMessage
-import net.minecraft.network.chat.Component
-import net.minecraft.util.FormattedCharSink
-import org.lwjgl.glfw.GLFW
-import ru.utils.command.Command
-import ru.utils.command.CommandRegistry
-import ru.utils.command.commands.*
 /**
  * Unified chat and command management system for Aporia.cc.
  * Handles command execution, message formatting, and chat copy functionality.
  */
 object ChatUtils {
-    
+    /*
     /**
      * Message type enum for colored output.
      */
@@ -486,4 +478,6 @@ object ChatUtils {
     fun getAntiSpamEnabled(): Boolean {
         return antiSpamEnabled
     }
+
+     */
 }

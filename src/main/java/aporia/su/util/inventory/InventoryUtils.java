@@ -15,7 +15,7 @@ import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.Hand;
 import net.minecraft.client.network.PendingUpdateManager;
-import aporia.su.mixin.ClientWorldAccessor;
+import aporia.su.mixin.client.ClientWorldAccessor;
 
 import java.util.Arrays;
 import java.util.Comparator;

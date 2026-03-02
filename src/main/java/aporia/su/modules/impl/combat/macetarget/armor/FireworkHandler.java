@@ -10,7 +10,7 @@ import net.minecraft.network.packet.c2s.play.PlayerInteractItemC2SPacket;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.Hand;
-import aporia.su.mixin.ClientWorldAccessor;
+import aporia.su.mixin.client.ClientWorldAccessor;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 import aporia.su.modules.impl.combat.aura.MathAngle;

@@ -16,7 +16,7 @@ import aporia.su.events.impl.HotBarScrollEvent;
 import aporia.su.events.impl.InputEvent;
 import aporia.su.events.impl.KeyEvent;
 import aporia.su.events.impl.TickEvent;
-import aporia.su.mixin.ClientWorldAccessor;
+import aporia.su.mixin.client.ClientWorldAccessor;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BindSetting;
