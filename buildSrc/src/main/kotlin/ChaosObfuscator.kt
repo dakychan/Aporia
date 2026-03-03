@@ -163,6 +163,15 @@ open class ChaosObfuscator : DefaultTask() {
     private val fieldMappings = mutableMapOf<String, MutableMap<String, String>>()
     private var dailySeed: Long = 0
     
+    /**
+     * Расширенные обфускаторы (Catlean-style)
+     */
+    private lateinit var stringEncryptor: StringEncryptor
+    private lateinit var methodHandleGenerator: MethodHandleGenerator
+    private lateinit var threadLocalCache: ThreadLocalCacheGenerator
+    private lateinit var longObfuscator: LongObfuscator
+    private lateinit var garbageGenerator: GarbageGenerator
+    
     @TaskAction
     fun obfuscate() {
         val javaClassesDir = File(project.buildDir, "classes/java/main")
@@ -178,6 +187,15 @@ open class ChaosObfuscator : DefaultTask() {
         dailySeed = getDailySeed()
         println("Daily seed: $dailySeed")
         println("Date: ${LocalDate.now(ZoneId.of("UTC"))}")
+        
+        /**
+         * Инициализация расширенных обфускаторов
+         */
+        stringEncryptor = StringEncryptor(dailySeed)
+        methodHandleGenerator = MethodHandleGenerator(dailySeed)
+        threadLocalCache = ThreadLocalCacheGenerator(dailySeed)
+        longObfuscator = LongObfuscator(dailySeed)
+        garbageGenerator = GarbageGenerator(dailySeed)
         
         // Сканируем Java классы
         if (javaClassesDir.exists()) {
@@ -510,11 +528,15 @@ open class ChaosObfuscator : DefaultTask() {
                 // Обновляем ссылки
                 remapReferences(classNode)
                 
-                // Переименовываем класс
+                /**
+                 * Переименовываем класс
+                 */
                 if (classMappings.containsKey(oldName)) {
                     classNode.name = classMappings[oldName]!!
                     
-                    // Переименовываем методы
+                    /**
+                     * Переименовываем методы
+                     */
                     classNode.methods?.forEach { method ->
                         val key = method.name + method.desc
                         if (methodMappings[oldName]?.containsKey(key) == true) {
@@ -522,11 +544,21 @@ open class ChaosObfuscator : DefaultTask() {
                         }
                     }
                     
-                    // Переименовываем поля
+                    /**
+                     * Переименовываем поля
+                     */
                     classNode.fields?.forEach { field ->
                         if (fieldMappings[oldName]?.containsKey(field.name) == true) {
                             field.name = fieldMappings[oldName]!![field.name]!!
                         }
+                    }
+                    
+                    /**
+                     * РАСШИРЕННАЯ ОБФУСКАЦИЯ (Catlean-style)
+                     */
+                    val level = getObfuscationLevelForProcessing(classNode, oldName)
+                    if (level != ObfuscationLevel.NONE && level != ObfuscationLevel.LIGHT) {
+                        applyAdvancedObfuscation(classNode, level)
                     }
                 }
                 
@@ -765,6 +797,330 @@ open class ChaosObfuscator : DefaultTask() {
         classNode.accept(classWriter)
         FileOutputStream(file).use { fos ->
             fos.write(classWriter.toByteArray())
+        }
+    }
+    
+    /**
+     * Получение уровня обфускации для обработки
+     */
+    private fun getObfuscationLevelForProcessing(classNode: ClassNode, oldName: String): ObfuscationLevel {
+        val allAnnotations = (classNode.visibleAnnotations ?: emptyList()) + 
+                            (classNode.invisibleAnnotations ?: emptyList())
+        
+        allAnnotations.forEach { ann ->
+            if (ann.desc.contains("Obfuscate")) {
+                if (ann.values != null) {
+                    for (i in 0 until ann.values.size step 2) {
+                        if (ann.values[i] == "level") {
+                            val levelValue = ann.values[i + 1]
+                            if (levelValue is Array<*> && levelValue.size >= 2) {
+                                val level = levelValue[1] as? String ?: "NONE"
+                                return when (level) {
+                                    "LIGHT" -> ObfuscationLevel.LIGHT
+                                    "MEDIUM" -> ObfuscationLevel.MEDIUM
+                                    "HEAVY" -> ObfuscationLevel.HEAVY
+                                    "EXTREME" -> ObfuscationLevel.EXTREME
+                                    else -> ObfuscationLevel.NONE
+                                }
+                            }
+                        }
+                    }
+                }
+                return ObfuscationLevel.MEDIUM
+            }
+        }
+        
+        return ObfuscationLevel.NONE
+    }
+    
+    /**
+     * Применяет расширенную обфускацию (Catlean-style)
+     */
+    private fun applyAdvancedObfuscation(classNode: ClassNode, level: ObfuscationLevel) {
+        /**
+         * Временно отключаем расширенную обфускацию для избежания "Method too large"
+         * TODO: Оптимизировать генерацию кода
+         */
+        
+        /**
+         * 1. ThreadLocal Cache (только для HEAVY, не EXTREME)
+         */
+        if (level == ObfuscationLevel.HEAVY) {
+            threadLocalCache.generateThreadLocalCache(classNode)
+        }
+        
+        /**
+         * 2. String Encryption (ограниченное количество)
+         */
+        if (level == ObfuscationLevel.HEAVY || level == ObfuscationLevel.EXTREME) {
+            /**
+             * Шифруем только короткие строки
+             */
+            encryptShortStrings(classNode)
+        }
+    }
+    
+    /**
+     * Шифрование только коротких строк (оптимизированная версия)
+     */
+    private fun encryptShortStrings(classNode: ClassNode) {
+        val stringPairs = mutableListOf<Pair<MethodNode, LdcInsnNode>>()
+        
+        classNode.methods?.forEach { method ->
+            method.instructions?.forEach { insn ->
+                if (insn is LdcInsnNode && insn.cst is String) {
+                    val str = insn.cst as String
+                    /**
+                     * Только строки до 50 символов
+                     */
+                    if (str.length <= 50) {
+                        stringPairs.add(method to insn)
+                    }
+                }
+            }
+        }
+        
+        if (stringPairs.isEmpty()) return
+        
+        /**
+         * Максимум 20 строк
+         */
+        val stringsToEncrypt = stringPairs.take(20)
+        
+        generateDecryptMethod(classNode)
+        
+        val (key1, _) = stringEncryptor.generateKeys()
+        
+        stringsToEncrypt.forEach { (method, ldcInsn) ->
+            val originalString = ldcInsn.cst as String
+            val encrypted = stringEncryptor.encryptString(originalString, key1)
+            
+            if (encrypted.size > 50) {
+                return@forEach
+            }
+            
+            val insnList = InsnList()
+            
+            insnList.add(LdcInsnNode(encrypted.size))
+            insnList.add(IntInsnNode(Opcodes.NEWARRAY, Opcodes.T_BYTE))
+            
+            encrypted.forEachIndexed { index, byte ->
+                insnList.add(InsnNode(Opcodes.DUP))
+                insnList.add(LdcInsnNode(index))
+                insnList.add(LdcInsnNode(byte.toInt()))
+                insnList.add(InsnNode(Opcodes.BASTORE))
+            }
+            
+            insnList.add(LdcInsnNode(key1))
+            insnList.add(MethodInsnNode(
+                Opcodes.INVOKESTATIC,
+                classNode.name,
+                "decrypt\${dailySeed.toString(36)}",
+                "([BJ)Ljava/lang/String;",
+                false
+            ))
+            
+            method.instructions.insert(ldcInsn, insnList)
+            method.instructions.remove(ldcInsn)
+        }
+    }
+    
+    /**
+     * Шифрование всех строк в классе
+     */
+    private fun encryptAllStrings(classNode: ClassNode) {
+        val stringPairs = mutableListOf<Pair<MethodNode, LdcInsnNode>>()
+        
+        classNode.methods?.forEach { method ->
+            method.instructions?.forEach { insn ->
+                if (insn is LdcInsnNode && insn.cst is String) {
+                    stringPairs.add(method to insn)
+                }
+            }
+        }
+        
+        if (stringPairs.isEmpty()) return
+        
+        /**
+         * Ограничиваем количество строк для шифрования (чтобы метод не был слишком большим)
+         */
+        val stringsToEncrypt = stringPairs.take(50)
+        
+        /**
+         * Генерируем метод расшифровки
+         */
+        generateDecryptMethod(classNode)
+        
+        /**
+         * Заменяем LDC на вызовы расшифровки
+         */
+        val (key1, _) = stringEncryptor.generateKeys()
+        
+        stringsToEncrypt.forEach { (method, ldcInsn) ->
+            val originalString = ldcInsn.cst as String
+            
+            /**
+             * Пропускаем слишком длинные строки
+             */
+            if (originalString.length > 200) {
+                return@forEach
+            }
+            
+            val encrypted = stringEncryptor.encryptString(originalString, key1)
+            
+            /**
+             * Пропускаем если зашифрованный массив слишком большой
+             */
+            if (encrypted.size > 100) {
+                return@forEach
+            }
+            
+            val insnList = InsnList()
+            
+            /**
+             * Создаем байт-массив
+             */
+            insnList.add(LdcInsnNode(encrypted.size))
+            insnList.add(IntInsnNode(Opcodes.NEWARRAY, Opcodes.T_BYTE))
+            
+            encrypted.forEachIndexed { index, byte ->
+                insnList.add(InsnNode(Opcodes.DUP))
+                insnList.add(LdcInsnNode(index))
+                insnList.add(LdcInsnNode(byte.toInt()))
+                insnList.add(InsnNode(Opcodes.BASTORE))
+            }
+            
+            /**
+             * Вызываем метод расшифровки
+             */
+            insnList.add(LdcInsnNode(key1))
+            insnList.add(MethodInsnNode(
+                Opcodes.INVOKESTATIC,
+                classNode.name,
+                "decrypt\${dailySeed.toString(36)}",
+                "([BJ)Ljava/lang/String;",
+                false
+            ))
+            
+            method.instructions.insert(ldcInsn, insnList)
+            method.instructions.remove(ldcInsn)
+        }
+    }
+    
+    /**
+     * Генерация метода расшифровки строк
+     */
+    private fun generateDecryptMethod(classNode: ClassNode) {
+        val methodName = "decrypt\${dailySeed.toString(36)}"
+        
+        /**
+         * Проверяем что метод еще не создан
+         */
+        if (classNode.methods?.any { it.name == methodName } == true) {
+            return
+        }
+        
+        val method = MethodNode(
+            Opcodes.ACC_PRIVATE or Opcodes.ACC_STATIC or Opcodes.ACC_SYNTHETIC,
+            methodName,
+            "([BJ)Ljava/lang/String;",
+            null,
+            null
+        )
+        
+        method.instructions.apply {
+            /**
+             * XOR расшифровка
+             */
+            add(VarInsnNode(Opcodes.ALOAD, 0))
+            add(InsnNode(Opcodes.ARRAYLENGTH))
+            add(IntInsnNode(Opcodes.NEWARRAY, Opcodes.T_BYTE))
+            add(VarInsnNode(Opcodes.ASTORE, 3))
+            
+            add(InsnNode(Opcodes.ICONST_0))
+            add(VarInsnNode(Opcodes.ISTORE, 4))
+            
+            val loopStart = LabelNode()
+            val loopEnd = LabelNode()
+            
+            add(loopStart)
+            add(VarInsnNode(Opcodes.ILOAD, 4))
+            add(VarInsnNode(Opcodes.ALOAD, 0))
+            add(InsnNode(Opcodes.ARRAYLENGTH))
+            add(JumpInsnNode(Opcodes.IF_ICMPGE, loopEnd))
+            
+            add(VarInsnNode(Opcodes.ALOAD, 3))
+            add(VarInsnNode(Opcodes.ILOAD, 4))
+            add(VarInsnNode(Opcodes.ALOAD, 0))
+            add(VarInsnNode(Opcodes.ILOAD, 4))
+            add(InsnNode(Opcodes.BALOAD))
+            add(VarInsnNode(Opcodes.LLOAD, 1))
+            add(VarInsnNode(Opcodes.ILOAD, 4))
+            add(InsnNode(Opcodes.I2L))
+            add(InsnNode(Opcodes.LXOR))
+            add(InsnNode(Opcodes.L2I))
+            add(InsnNode(Opcodes.IXOR))
+            add(InsnNode(Opcodes.I2B))
+            add(InsnNode(Opcodes.BASTORE))
+            
+            add(InsnNode(Opcodes.IINC))
+            add(VarInsnNode(Opcodes.ISTORE, 4))
+            add(JumpInsnNode(Opcodes.GOTO, loopStart))
+            
+            add(loopEnd)
+            
+            /**
+             * new String(decrypted, UTF-8)
+             */
+            add(TypeInsnNode(Opcodes.NEW, "java/lang/String"))
+            add(InsnNode(Opcodes.DUP))
+            add(VarInsnNode(Opcodes.ALOAD, 3))
+            add(LdcInsnNode("UTF-8"))
+            add(MethodInsnNode(
+                Opcodes.INVOKESPECIAL,
+                "java/lang/String",
+                "<init>",
+                "([BLjava/lang/String;)V",
+                false
+            ))
+            add(InsnNode(Opcodes.ARETURN))
+        }
+        
+        method.maxStack = 6
+        method.maxLocals = 5
+        
+        classNode.methods.add(method)
+    }
+    
+    /**
+     * Обфускация чисел через long-арифметику
+     */
+    private fun obfuscateNumbers(classNode: ClassNode) {
+        classNode.methods?.forEach { method ->
+            if (!method.name.startsWith("<")) {
+                longObfuscator.obfuscateMethodConstants(method)
+            }
+        }
+    }
+    
+    /**
+     * Добавление мусорных данных
+     */
+    private fun addGarbageData(classNode: ClassNode) {
+        garbageGenerator.generateGarbageStaticBlock(classNode)
+        garbageGenerator.generateGarbageMethods(classNode, 5)
+        garbageGenerator.generateGarbageFields(classNode, 10)
+    }
+    
+    /**
+     * Обфускация control flow
+     */
+    private fun obfuscateControlFlow(classNode: ClassNode) {
+        classNode.methods?.forEach { method ->
+            if (!method.name.startsWith("<")) {
+                garbageGenerator.obfuscateControlFlow(method)
+                garbageGenerator.generateGarbageTryCatch(method)
+            }
         }
     }
     

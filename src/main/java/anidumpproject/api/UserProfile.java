@@ -1,9 +1,8 @@
 package anidumpproject.api;
 
 import anidumpproject.api.annotation.Native;
-import aporia.cc.user.UserData;
-import aporia.cc.user.UserRole;
-import aporia.cc.manager.OsManager;
+import aporia.cc.OsManager;
+import aporia.cc.UserData;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -48,9 +47,9 @@ import java.util.Map;
  * Класс использует Kotlin компоненты для генерации данных:
  * </p>
  * <ul>
- *   <li>{@link aporia.cc.user.UserData} - генерация пользовательских данных</li>
- *   <li>{@link aporia.cc.user.UserGenerator} - генерация UUID и HWID</li>
- *   <li>{@link aporia.cc.manager.OsManager} - информация о системе</li>
+ *   <li>{@link aporia.cc.UserData - генерация пользовательских данных</li>
+ *   <li>{@link aporia.cc.UserGenerator} - генерация UUID и HWID</li>
+ *   <li>{@link aporia.cc.OsManager} - информация о системе</li>
  * </ul>
  * 
  * @author Aporia Team
@@ -88,10 +87,10 @@ public class UserProfile {
         cache.put("hwid", userData.getHardwareId());
         cache.put("role", userData.getRole().name());
         cache.put("uid", userData.getUuid());
-        cache.put("subTime", "unlimited"); // TODO: Добавить систему подписок
-        cache.put("os", OsManager.INSTANCE.getOsName());
-        cache.put("platform", OsManager.INSTANCE.getPlatform().name());
-        cache.put("arch", OsManager.INSTANCE.getOsArch());
+        cache.put("subTime", "unlimited");
+        cache.put("os", OsManager.getOsName());
+        cache.put("platform", OsManager.getPlatform().name());
+        cache.put("arch", OsManager.getOsArch());
     }
 
     /**
@@ -141,7 +140,7 @@ public class UserProfile {
      * </p>
      * 
      * @return роль пользователя (USER, DEVELOPER, ADMIN, CONTRIBUTOR)
-     * @see UserRole
+     * @see UserData.UserRole
      */
     @Native(type = Native.Type.STANDARD)
     public String getRole() {
@@ -191,7 +190,7 @@ public class UserProfile {
      * @return true если пользователь - разработчик
      */
     public boolean isDeveloper() {
-        return userData.getRole() == UserRole.DEVELOPER;
+        return userData.getRole() == UserData.UserRole.DEVELOPER;
     }
 
     /**
@@ -205,9 +204,9 @@ public class UserProfile {
      */
     public String getSystemInfo() {
         return String.format("%s %s (%s)", 
-            OsManager.INSTANCE.getOsName(),
-            OsManager.INSTANCE.getOsVersion(),
-            OsManager.INSTANCE.getOsArch()
+            OsManager.getOsName(),
+            OsManager.getOsVersion(),
+            OsManager.getOsArch()
         );
     }
 
@@ -241,7 +240,7 @@ public class UserProfile {
      * <p>
      * Возвращает объект с полной информацией о пользователе из Kotlin UserData.
      * </p>
-     * 
+     *
      * @return объект UserDataClass с данными пользователя
      * @see UserData.UserDataClass
      */

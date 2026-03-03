@@ -1,0 +1,147 @@
+plugins {
+    id 'fabric-loom' version '1.16.0-alpha.10'
+    id 'maven-publish'
+}
+
+version = project.property('mod_version').toString()
+group = project.property('maven_group').toString()
+
+base {
+    archivesName = project.property('archives_base_name').toString()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+    withSourcesJar()
+}
+
+def targetJavaVersion = 25
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "ferra13671-maven"
+        url = "https://ferra13671.github.io/maven/"
+    }
+    maven {
+        url "https://maven.firstdark.dev/releases"
+    }
+    maven {
+        url = uri("https://jitpack.io")
+        name = "jitpack.io"
+    }
+    maven {
+        url 'https://maven.maxhenkel.de/repository/public'
+    }
+}
+
+loom {
+    accessWidenerPath = file('src/main/resources/accesswidener')
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.property('minecraft_version')}"
+    mappings "net.fabricmc:yarn:${project.property('yarn_mappings')}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.property('loader_version')}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.property('fabric_version')}"
+    include modImplementation('io.netty:netty-handler-proxy:4.1.82.Final')
+    include modImplementation('io.netty:netty-codec-socks:4.1.82.Final')
+    compileOnly 'org.projectlombok:lombok:1.18.42'
+    annotationProcessor 'org.projectlombok:lombok:1.18.42'
+    modCompileOnly 'de.maxhenkel.voicechat:voicechat-api:2.6.0'
+    implementation 'ai.catboost:catboost-common:1.2.10'
+    implementation "com.google.code.gson:gson:2.8.9"
+    implementation "dev.firstdark.discordrpc:discord-rpc:1.0.4"
+}
+
+processResources {
+    inputs.property 'version', project.version
+    inputs.property 'minecraft_version', project.property('minecraft_version')
+    inputs.property 'loader_version', project.property('loader_version')
+
+    filteringCharset = 'UTF-8'
+
+    filesMatching('fabric.mod.json') {
+        expand(
+            'version': project.version,
+        'minecraft_version': project.property('minecraft_version'),
+        'loader_version': project.property('loader_version')
+        )
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release.set(targetJavaVersion)
+}
+
+jar {
+    from('LICENSE') {
+        rename { "${it}_${base.archivesName.get()}" }
+    }
+}
+
+tasks.register('chaosObfuscate', ChaosObfuscator) {
+    group = 'build'
+    description = 'Chaos obfuscation with daily rotating mappings'
+    dependsOn 'classes'
+}
+
+tasks.register('obfuscatedJar', Jar) {
+    group = 'build'
+    description = 'Create obfuscated JAR before remapping'
+    dependsOn 'chaosObfuscate'
+    dependsOn jar // Явная зависимость от задачи jar
+    archiveClassifier = 'obfuscated-dev'
+    from file("${project.buildDir}/chaos-obfuscated")
+    from {
+        zipTree(jar.archiveFile.get().asFile)
+    } {
+        exclude '**/*.class'
+    }
+    manifest {
+        from(jar.manifest)
+    }
+}
+
+tasks.named('remapJar') {
+    dependsOn 'obfuscatedJar'
+    doFirst {
+        def obfJar = tasks.named('obfuscatedJar', Jar).get()
+        def normalJar = jar.archiveFile.get().asFile
+        def obfuscatedJarFile = obfJar.archiveFile.get().asFile
+        if (obfuscatedJarFile.exists()) {
+            normalJar.delete()
+            normalJar.withOutputStream { out ->
+                obfuscatedJarFile.withInputStream { it.transferTo(out) }
+            }
+        }
+    }
+}
+
+tasks.register('chaosJar', Jar) {
+    group = 'build'
+    description = 'Create standalone chaos obfuscated JAR'
+    dependsOn 'chaosObfuscate'
+    archiveClassifier = 'chaos'
+    from file("${project.buildDir}/chaos-obfuscated")
+    manifest {
+        attributes(
+            'Main-Class': 'aporia.su.Initialization'
+        )
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = project.property('archives_base_name').toString()
+            from components.java
+        }
+    }
+    repositories {
+        // Add your repositories here if needed
+    }
+}
