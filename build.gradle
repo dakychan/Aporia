@@ -12,12 +12,12 @@ base {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(26)
     }
     withSourcesJar()
 }
 
-def targetJavaVersion = 25
+def targetJavaVersion = 26
 
 repositories {
     mavenCentral()
@@ -60,9 +60,7 @@ processResources {
     inputs.property 'version', project.version
     inputs.property 'minecraft_version', project.property('minecraft_version')
     inputs.property 'loader_version', project.property('loader_version')
-
     filteringCharset = 'UTF-8'
-
     filesMatching('fabric.mod.json') {
         expand(
             'version': project.version,
@@ -142,6 +140,5 @@ publishing {
         }
     }
     repositories {
-        // Add your repositories here if needed
     }
 }
