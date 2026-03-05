@@ -30,7 +30,7 @@ import java.lang.annotation.Target;
  *   <li>Используется обфускатором для пропуска метода</li>
  * </ul>
  * 
- * @author Aporia Team
+ * @author protect3ed
  * @version 1.0
  * @since 1.0
  */

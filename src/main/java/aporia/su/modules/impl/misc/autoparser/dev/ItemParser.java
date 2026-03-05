@@ -15,7 +15,7 @@ import net.minecraft.text.Text;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BooleanSetting;
-import aporia.su.util.string.chat.ChatMessage;
+import aporia.su.util.user.chat.string.chat.ChatMessage;
 
 import java.io.File;
 import java.io.FileWriter;

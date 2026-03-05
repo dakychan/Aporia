@@ -1,6 +1,7 @@
 package aporia.su.modules.impl.player;
 
 import anidumpproject.api.annotation.Native;
+import aporia.su.util.events.impl.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.experimental.FieldDefaults;
@@ -10,8 +11,7 @@ import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.*;
+import aporia.su.util.events.api.EventHandler;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BooleanSetting;

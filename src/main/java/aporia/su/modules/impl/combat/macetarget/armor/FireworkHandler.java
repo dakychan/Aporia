@@ -15,9 +15,9 @@ import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 import aporia.su.modules.impl.combat.aura.MathAngle;
 import aporia.su.modules.impl.combat.macetarget.state.MaceState.FireworkPhase;
-import aporia.su.util.inventory.InventoryUtils;
-import aporia.su.util.inventory.MovementController;
-import aporia.su.util.inventory.SwapSettings;
+import aporia.su.util.user.player.inventory.InventoryUtils;
+import aporia.su.util.user.player.inventory.MovementController;
+import aporia.su.util.user.player.inventory.SwapSettings;
 
 import java.util.function.IntFunction;
 

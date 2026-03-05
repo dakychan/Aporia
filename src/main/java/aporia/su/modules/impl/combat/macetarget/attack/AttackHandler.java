@@ -7,7 +7,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.util.Hand;
-import aporia.su.util.inventory.InventoryUtils;
+import aporia.su.util.user.player.inventory.InventoryUtils;
 
 @Getter
 @Setter

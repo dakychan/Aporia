@@ -6,7 +6,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import aporia.su.screens.menu.MainMenuScreen;
+import aporia.su.util.user.render.screens.menu.MainMenuScreen;
 
 @Mixin(AccessibilityOnboardingScreen.class)
 public class AccessibilityOnboardingScreenMixin {

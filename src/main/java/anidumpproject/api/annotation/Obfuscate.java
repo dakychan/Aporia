@@ -57,7 +57,7 @@ import java.lang.annotation.Target;
  * с датой. В runtime маппингов нет - только каша в памяти.
  * </p>
  * 
- * @author Aporia Team
+ * @author protect3ed
  * @version 1.0
  * @since 2.0
  * @see Native

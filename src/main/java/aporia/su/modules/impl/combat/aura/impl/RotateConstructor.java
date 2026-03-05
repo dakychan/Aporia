@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
-import aporia.su.IMinecraft;
+import aporia.su.util.interfaces.IMinecraft;
 import aporia.su.modules.impl.combat.aura.Angle;
 
 @Getter

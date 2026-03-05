@@ -11,12 +11,12 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.Vec3d;
-import aporia.su.IMinecraft;
+import aporia.su.util.interfaces.IMinecraft;
 import aporia.su.modules.impl.combat.AntiBot;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 import aporia.su.modules.impl.combat.aura.MathAngle;
 import aporia.su.modules.impl.combat.aura.impl.LinearConstructor;
-import aporia.su.util.repository.friend.FriendUtils;
+import aporia.su.util.user.repository.friend.FriendUtils;
 
 import java.util.Comparator;
 import java.util.List;

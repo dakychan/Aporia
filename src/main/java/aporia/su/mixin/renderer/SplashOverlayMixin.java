@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import aporia.su.screens.loading.Loading;
+import aporia.su.util.user.render.screens.loading.Loading;
 
 @Mixin(SplashOverlay.class)
 public abstract class SplashOverlayMixin {
@@ -68,7 +68,12 @@ public abstract class SplashOverlayMixin {
         loadingScreen.render(width, height, 1.0f);
 
         if (loadingScreen.isReadyToClose()) {
-            this.client.setOverlay((Overlay) null);
+            /**
+             * Null-check для client
+             */
+            if (this.client != null) {
+                this.client.setOverlay((Overlay) null);
+            }
             loadingScreen.reset();
             loadingScreen = null;
             resourcesMarkedComplete = false;

@@ -4,7 +4,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import aporia.su.util.math.MathUtils;
+import aporia.su.util.user.render.math.MathUtils;
 
 import static net.minecraft.util.math.MathHelper.wrapDegrees;
 

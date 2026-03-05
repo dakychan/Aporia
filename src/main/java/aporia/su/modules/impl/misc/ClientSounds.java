@@ -1,14 +1,14 @@
 package aporia.su.modules.impl.misc;
 
 import anidumpproject.api.annotation.Native;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.ModuleToggleEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.ModuleToggleEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.SelectSetting;
 import aporia.su.modules.module.setting.implement.SliderSettings;
 import aporia.su.util.Instance;
-import aporia.su.util.sounds.SoundManager;
+import aporia.su.util.user.render.sounds.SoundManager;
 
 public class ClientSounds extends ModuleStructure {
 

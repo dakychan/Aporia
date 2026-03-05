@@ -4,14 +4,14 @@ import anidumpproject.api.annotation.Native;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.PacketEvent;
-import aporia.su.events.impl.TickEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.PacketEvent;
+import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BooleanSetting;
-import aporia.su.util.network.Network;
-import aporia.su.util.repository.friend.FriendUtils;
+import aporia.su.util.user.network.api.Network;
+import aporia.su.util.user.repository.friend.FriendUtils;
 
 import java.util.Arrays;
 

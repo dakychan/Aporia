@@ -5,7 +5,7 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScoreboardDisplaySlot;
 import net.minecraft.scoreboard.ScoreboardObjective;
-import aporia.su.util.timer.TimerUtil;
+import aporia.su.util.user.player.timer.TimerUtil;
 
 import java.util.ArrayList;
 import java.util.List;

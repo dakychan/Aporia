@@ -2,12 +2,12 @@ package aporia.su.modules.impl.render;
 
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.EntityColorEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.EntityColorEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.SliderSettings;
-import aporia.su.util.ColorUtil;
+import aporia.su.util.user.render.color.ColorUtil;
 
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class SeeInvisible extends ModuleStructure {

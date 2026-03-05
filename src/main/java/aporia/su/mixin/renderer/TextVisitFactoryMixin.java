@@ -4,8 +4,8 @@ import net.minecraft.text.TextVisitFactory;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.api.events.render.TextFactoryEvent;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.api.events.render.TextFactoryEvent;
 
 @Mixin(value = {TextVisitFactory.class})
 public class TextVisitFactoryMixin {

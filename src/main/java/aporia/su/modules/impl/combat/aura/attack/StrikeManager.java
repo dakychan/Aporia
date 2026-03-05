@@ -18,18 +18,18 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
-import aporia.su.IMinecraft;
-import aporia.su.events.api.types.EventType;
-import aporia.su.events.impl.PacketEvent;
-import aporia.su.events.impl.UsingItemEvent;
+import aporia.su.util.interfaces.IMinecraft;
+import aporia.su.util.events.api.types.EventType;
+import aporia.su.util.events.impl.PacketEvent;
+import aporia.su.util.events.impl.UsingItemEvent;
 import aporia.su.modules.impl.combat.Aura;
 import aporia.su.modules.impl.combat.TriggerBot;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 import aporia.su.modules.impl.combat.aura.target.RaycastAngle;
 import aporia.su.modules.impl.movement.ElytraTarget;
-import aporia.su.util.player.PlayerSimulation;
-import aporia.su.util.string.PlayerInteractionHelper;
-import aporia.su.util.timer.StopWatch;
+import aporia.su.util.user.player.sim.PlayerSimulation;
+import aporia.su.util.user.string.PlayerInteractionHelper;
+import aporia.su.util.user.player.timer.StopWatch;
 
 @Setter
 @Getter

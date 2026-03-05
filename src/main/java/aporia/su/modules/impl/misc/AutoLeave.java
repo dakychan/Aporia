@@ -4,15 +4,15 @@ import anidumpproject.api.annotation.Native;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import net.minecraft.text.Text;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.TickEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.MultiSelectSetting;
 import aporia.su.modules.module.setting.implement.SelectSetting;
 import aporia.su.modules.module.setting.implement.SliderSettings;
-import aporia.su.util.network.Network;
-import aporia.su.util.repository.friend.FriendUtils;
+import aporia.su.util.user.network.api.Network;
+import aporia.su.util.user.repository.friend.FriendUtils;
 
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AutoLeave extends ModuleStructure {

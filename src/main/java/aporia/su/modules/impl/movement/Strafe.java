@@ -2,8 +2,8 @@ package aporia.su.modules.impl.movement;
 
 import anidumpproject.api.annotation.Native;
 import net.minecraft.client.MinecraftClient;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.TickEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.impl.combat.Aura;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.AngleConfig;
@@ -13,8 +13,8 @@ import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.SelectSetting;
 import aporia.su.modules.module.setting.implement.SliderSettings;
 import aporia.su.util.Instance;
-import aporia.su.util.math.TaskPriority;
-import aporia.su.util.move.MoveUtil;
+import aporia.su.util.user.render.math.TaskPriority;
+import aporia.su.util.user.player.move.MoveUtil;
 
 public class Strafe extends ModuleStructure {
 

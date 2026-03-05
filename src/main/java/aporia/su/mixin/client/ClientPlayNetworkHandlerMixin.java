@@ -15,11 +15,11 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import aporia.su.IMinecraft;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.impl.ChatEvent;
-import aporia.su.events.impl.GameLeftEvent;
-import aporia.su.events.impl.WorldChangeEvent;
+import aporia.su.util.interfaces.IMinecraft;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.impl.ChatEvent;
+import aporia.su.util.events.impl.GameLeftEvent;
+import aporia.su.util.events.impl.WorldChangeEvent;
 import aporia.su.modules.impl.render.Particles;
 
 @Mixin(ClientPlayNetworkHandler.class)

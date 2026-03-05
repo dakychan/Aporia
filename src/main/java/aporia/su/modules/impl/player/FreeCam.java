@@ -1,6 +1,7 @@
 package aporia.su.modules.impl.player;
 
 import anidumpproject.api.annotation.Native;
+import aporia.su.util.events.impl.*;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import net.minecraft.client.option.Perspective;
@@ -8,17 +9,16 @@ import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.network.packet.s2c.play.GameJoinS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerRespawnS2CPacket;
 import net.minecraft.util.math.Vec3d;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.*;
+import aporia.su.util.events.api.EventHandler;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BooleanSetting;
 import aporia.su.modules.module.setting.implement.ColorSetting;
 import aporia.su.modules.module.setting.implement.SliderSettings;
-import aporia.su.util.ColorUtil;
+import aporia.su.util.user.render.color.ColorUtil;
 import aporia.su.util.Instance;
-import aporia.su.util.math.MathUtils;
-import aporia.su.util.move.MoveUtil;
+import aporia.su.util.user.render.math.MathUtils;
+import aporia.su.util.user.player.move.MoveUtil;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class FreeCam extends ModuleStructure {

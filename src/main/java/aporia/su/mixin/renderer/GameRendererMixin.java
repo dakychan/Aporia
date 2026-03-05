@@ -27,15 +27,15 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import aporia.su.Initialization;
-import aporia.su.client.draggables.Drag;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.impl.FovEvent;
-import aporia.su.events.impl.WorldRenderEvent;
+import aporia.su.util.user.render.screens.hud.api.Drag;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.impl.FovEvent;
+import aporia.su.util.events.impl.WorldRenderEvent;
 import aporia.su.modules.impl.player.NoEntityTrace;
 import aporia.su.modules.impl.render.Hud;
 import aporia.su.modules.impl.render.NoRender;
-import aporia.su.screens.clickgui.ClickGui;
-import aporia.su.util.render.Render3D;
+import aporia.su.util.user.render.screens.clickgui.ClickGui;
+import aporia.su.util.user.render.Render3D;
 
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
@@ -89,6 +89,11 @@ public abstract class GameRendererMixin {
 
     @Inject(method = "updateCrosshairTarget", at = @At("HEAD"), cancellable = true)
     private void updateCrosshairTargetHook(float tickProgress, CallbackInfo ci) {
+        /**
+         * Null-check для client перед любыми обращениями
+         */
+        if (this.client == null) return;
+        
         NoEntityTrace noEntityTrace = NoEntityTrace.getInstance();
         if (noEntityTrace != null && noEntityTrace.shouldIgnoreEntityTrace()) {
             Entity entity = this.client.getCameraEntity();

@@ -3,7 +3,7 @@ package aporia.su.modules.impl.combat.aura.attack;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import net.minecraft.item.ItemStack;
-import aporia.su.IMinecraft;
+import aporia.su.util.interfaces.IMinecraft;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Pressing implements IMinecraft {

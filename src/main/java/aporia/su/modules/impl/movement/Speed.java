@@ -8,14 +8,14 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.vehicle.BoatEntity;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.PlayerTravelEvent;
-import aporia.su.events.impl.TickEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.PlayerTravelEvent;
+import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.SelectSetting;
 import aporia.su.modules.module.setting.implement.SliderSettings;
-import aporia.su.util.move.MoveUtil;
+import aporia.su.util.user.player.move.MoveUtil;
 
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class Speed extends ModuleStructure {

@@ -11,9 +11,9 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.impl.KeyEvent;
-import aporia.su.screens.clickgui.ClickGui;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.impl.KeyEvent;
+import aporia.su.util.user.render.screens.clickgui.ClickGui;
 import aporia.su.util.config.impl.bind.BindConfig;
 
 @Mixin(Keyboard.class)

@@ -1,8 +1,8 @@
 package aporia.su.modules.module.setting;
 
 import aporia.su.modules.module.setting.implement.*;
-import aporia.su.screens.clickgui.impl.settingsrender.*;
 import aporia.su.util.interfaces.AbstractSettingComponent;
+import aporia.su.util.user.render.screens.clickgui.impl.settingsrender.*;
 
 import java.util.List;
 

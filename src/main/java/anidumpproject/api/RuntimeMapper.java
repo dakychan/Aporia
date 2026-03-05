@@ -25,7 +25,7 @@ import java.util.Map;
  * String className = RuntimeMapper.deobfuscateClass("a/b/c/D3f$");
  * }</pre>
  * 
- * @author Aporia Team
+ * @author protect3ed
  * @version 2.0
  * @since 2.0
  */

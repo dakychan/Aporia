@@ -1,8 +1,6 @@
 package aporia.su.util.interfaces;
 
 
-import aporia.su.IMinecraft;
-
 public abstract class AbstractComponent implements Component, IMinecraft, ResizableMovable {
     public float x, y, width, height;
 

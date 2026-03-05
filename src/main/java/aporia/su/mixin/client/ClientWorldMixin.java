@@ -8,12 +8,12 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import aporia.su.IMinecraft;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.impl.EntitySpawnEvent;
-import aporia.su.events.impl.WorldLoadEvent;
+import aporia.su.util.interfaces.IMinecraft;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.impl.EntitySpawnEvent;
+import aporia.su.util.events.impl.WorldLoadEvent;
 import aporia.su.modules.impl.render.Ambience;
-import aporia.su.util.string.PlayerInteractionHelper;
+import aporia.su.util.user.string.PlayerInteractionHelper;
 
 @Mixin(ClientWorld.class)
 public class ClientWorldMixin implements IMinecraft {

@@ -12,11 +12,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.api.types.EventType;
-import aporia.su.events.impl.BlockBreakingEvent;
-import aporia.su.events.impl.ClickSlotEvent;
-import aporia.su.events.impl.UsingItemEvent;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.api.types.EventType;
+import aporia.su.util.events.impl.BlockBreakingEvent;
+import aporia.su.util.events.impl.ClickSlotEvent;
+import aporia.su.util.events.impl.UsingItemEvent;
 
 @Mixin(ClientPlayerInteractionManager.class)
 public class ClientPlayerInteractionManagerMixin {

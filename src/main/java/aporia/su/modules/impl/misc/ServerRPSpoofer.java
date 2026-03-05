@@ -6,12 +6,12 @@ import lombok.experimental.FieldDefaults;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.network.packet.c2s.common.ResourcePackStatusC2SPacket;
 import net.minecraft.network.packet.s2c.common.ResourcePackSendS2CPacket;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.PacketEvent;
-import aporia.su.events.impl.TickEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.PacketEvent;
+import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
-import aporia.su.util.timer.TimerUtil;
+import aporia.su.util.user.player.timer.TimerUtil;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ServerRPSpoofer extends ModuleStructure {

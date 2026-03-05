@@ -1,7 +1,7 @@
 package aporia.su.util.modules.autobuy;
 
 import net.minecraft.client.MinecraftClient;
-import aporia.su.util.string.chat.ChatMessage;
+import aporia.su.util.user.chat.string.chat.ChatMessage;
 
 import java.io.*;
 import java.net.*;

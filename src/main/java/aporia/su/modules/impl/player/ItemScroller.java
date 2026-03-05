@@ -6,15 +6,15 @@ import lombok.experimental.FieldDefaults;
 import net.minecraft.item.Item;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.ClickSlotEvent;
-import aporia.su.events.impl.HandledScreenEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.ClickSlotEvent;
+import aporia.su.util.events.impl.HandledScreenEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.SliderSettings;
-import aporia.su.util.inventory.InventoryUtils;
-import aporia.su.util.string.PlayerInteractionHelper;
-import aporia.su.util.timer.StopWatch;
+import aporia.su.util.user.player.inventory.InventoryUtils;
+import aporia.su.util.user.string.PlayerInteractionHelper;
+import aporia.su.util.user.player.timer.StopWatch;
 
 import java.util.stream.Stream;
 

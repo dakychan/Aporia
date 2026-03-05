@@ -16,10 +16,10 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import aporia.su.IMinecraft;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.impl.BoundingBoxControlEvent;
-import aporia.su.events.impl.PlayerVelocityStrafeEvent;
+import aporia.su.util.interfaces.IMinecraft;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.impl.BoundingBoxControlEvent;
+import aporia.su.util.events.impl.PlayerVelocityStrafeEvent;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 
 @Mixin(Entity.class)

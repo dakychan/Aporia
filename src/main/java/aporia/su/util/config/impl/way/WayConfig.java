@@ -6,8 +6,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import aporia.su.util.config.impl.consolelogger.Logger;
-import aporia.su.util.repository.way.Way;
-import aporia.su.util.repository.way.WayRepository;
+import aporia.su.util.user.repository.way.Way;
+import aporia.su.util.user.repository.way.WayRepository;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

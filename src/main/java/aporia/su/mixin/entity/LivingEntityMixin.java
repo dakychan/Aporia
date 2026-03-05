@@ -19,10 +19,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.impl.JumpEvent;
-import aporia.su.events.impl.PushEvent;
-import aporia.su.events.impl.SwingDurationEvent;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.impl.JumpEvent;
+import aporia.su.util.events.impl.PushEvent;
+import aporia.su.util.events.impl.SwingDurationEvent;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 
 import java.lang.reflect.Method;
@@ -152,6 +152,13 @@ public abstract class LivingEntityMixin {
 
     @Inject(method = "calcGlidingVelocity", at = @At("HEAD"), cancellable = true)
     private void calcGlidingVelocityFull(Vec3d oldVelocity, CallbackInfoReturnable<Vec3d> cir) {
+        /**
+         * Используем getClient() для безопасного получения client
+         */
+        MinecraftClient client = getClient();
+        if (client == null || client.player == null) {
+            return;
+        }
         if ((Object) this != client.player) {
             return;
         }

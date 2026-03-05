@@ -7,13 +7,13 @@ import net.minecraft.util.math.MathHelper;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.impl.InputEvent;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.impl.InputEvent;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 import aporia.su.modules.impl.combat.aura.AngleConstructor;
 
-import static aporia.su.IMinecraft.mc;
+import static aporia.su.util.interfaces.IMinecraft.mc;
 
 @Mixin(KeyboardInput.class)
 public class KeyboardInputMixin {

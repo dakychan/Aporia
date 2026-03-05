@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import aporia.su.Initialization;
-import aporia.su.client.draggables.Drag;
+import aporia.su.util.user.render.screens.hud.api.Drag;
 
 @Mixin(ChatScreen.class)
 public abstract class ChatScreenMixin extends Screen {

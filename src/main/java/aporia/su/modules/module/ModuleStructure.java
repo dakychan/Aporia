@@ -7,17 +7,17 @@ import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
 import net.minecraft.client.MinecraftClient;
 import org.lwjgl.glfw.GLFW;
-import aporia.su.IMinecraft;
+import aporia.su.util.interfaces.IMinecraft;
 import aporia.su.Initialization;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.impl.ModuleToggleEvent;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.impl.ModuleToggleEvent;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.SettingRepository;
 import aporia.su.modules.impl.render.Hud;
-import aporia.su.screens.hud.Notifications;
-import aporia.su.util.animations.Animation;
-import aporia.su.util.animations.Decelerate;
-import aporia.su.util.animations.Direction;
+import aporia.su.util.user.render.screens.hud.impl.Notifications;
+import aporia.su.util.user.render.animations.Animation;
+import aporia.su.util.user.render.animations.Decelerate;
+import aporia.su.util.user.render.animations.Direction;
 
 @Getter
 @Setter

@@ -8,8 +8,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import aporia.su.command.CommandManager;
-import aporia.su.screens.clickgui.ClickGui;
+import aporia.su.util.user.chat.command.CommandManager;
+import aporia.su.util.user.render.screens.clickgui.ClickGui;
 
 @Mixin(Screen.class)
 public class ScreenMixin {

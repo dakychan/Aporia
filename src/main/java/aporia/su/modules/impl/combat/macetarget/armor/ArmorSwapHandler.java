@@ -4,9 +4,9 @@ import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.MinecraftClient;
 import aporia.su.modules.impl.combat.macetarget.state.MaceState.SwapPhase;
-import aporia.su.util.inventory.InventoryUtils;
-import aporia.su.util.inventory.MovementController;
-import aporia.su.util.inventory.SwapSettings;
+import aporia.su.util.user.player.inventory.InventoryUtils;
+import aporia.su.util.user.player.inventory.MovementController;
+import aporia.su.util.user.player.inventory.SwapSettings;
 
 @Getter
 public class ArmorSwapHandler {

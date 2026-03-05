@@ -1,6 +1,9 @@
 package aporia.su.modules.impl.misc;
 
 import anidumpproject.api.annotation.Native;
+import aporia.su.util.user.player.inventory.InventoryUtils;
+import aporia.su.util.user.player.inventory.MovementController;
+import aporia.su.util.user.player.inventory.SwapSettings;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.experimental.FieldDefaults;
@@ -22,9 +25,9 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.*;
 import org.lwjgl.glfw.GLFW;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.RotationUpdateEvent;
-import aporia.su.events.impl.WorldRenderEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.RotationUpdateEvent;
+import aporia.su.util.events.impl.WorldRenderEvent;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.MathAngle;
 import aporia.su.modules.module.ModuleStructure;
@@ -32,13 +35,12 @@ import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BindSetting;
 import aporia.su.modules.module.setting.implement.ColorSetting;
 import aporia.su.modules.module.setting.implement.SelectSetting;
-import aporia.su.util.ColorUtil;
-import aporia.su.util.inventory.*;
-import aporia.su.util.math.MathUtils;
-import aporia.su.util.render.Render3D;
-import aporia.su.util.repository.friend.FriendUtils;
-import aporia.su.util.string.PlayerInteractionHelper;
-import aporia.su.util.timer.StopWatch;
+import aporia.su.util.user.render.color.ColorUtil;
+import aporia.su.util.user.render.math.MathUtils;
+import aporia.su.util.user.render.Render3D;
+import aporia.su.util.user.repository.friend.FriendUtils;
+import aporia.su.util.user.string.PlayerInteractionHelper;
+import aporia.su.util.user.player.timer.StopWatch;
 
 import java.util.*;
 

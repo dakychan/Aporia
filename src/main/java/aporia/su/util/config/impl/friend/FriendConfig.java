@@ -5,7 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 import aporia.su.util.config.impl.consolelogger.Logger;
-import aporia.su.util.repository.friend.FriendUtils;
+import aporia.su.util.user.repository.friend.FriendUtils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

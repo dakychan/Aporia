@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import aporia.su.IMinecraft;
+import aporia.su.util.interfaces.IMinecraft;
 import aporia.su.modules.impl.render.ChunkAnimator;
 import aporia.su.modules.impl.render.NoRender;
 

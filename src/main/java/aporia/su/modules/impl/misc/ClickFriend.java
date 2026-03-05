@@ -5,12 +5,12 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.hit.EntityHitResult;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.KeyEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.KeyEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BindSetting;
-import aporia.su.util.repository.friend.FriendUtils;
+import aporia.su.util.user.repository.friend.FriendUtils;
 
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ClickFriend extends ModuleStructure {

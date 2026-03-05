@@ -6,15 +6,13 @@ import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.MathAngle;
 import aporia.su.modules.impl.combat.aura.attack.StrikeManager;
 import aporia.su.modules.impl.combat.aura.impl.RotateConstructor;
-import aporia.su.util.timer.StopWatch;
+import aporia.su.util.user.player.timer.StopWatch;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 
 import java.security.SecureRandom;
-
-import static aporia.su.IMinecraft.mc;
 
 public class FTAngle extends RotateConstructor {
 

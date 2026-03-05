@@ -7,7 +7,7 @@ import com.google.gson.JsonParser;
 import lombok.Getter;
 import lombok.Setter;
 import aporia.su.util.config.impl.consolelogger.Logger;
-import aporia.su.util.proxy.Proxy;
+import aporia.su.util.user.network.proxy.Proxy;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

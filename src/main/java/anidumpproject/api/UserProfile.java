@@ -52,7 +52,7 @@ import java.util.Map;
  *   <li>{@link aporia.cc.OsManager} - информация о системе</li>
  * </ul>
  * 
- * @author Aporia Team
+ * @author protect3ed
  * @version 2.0
  * @since 1.0
  * @see UserData

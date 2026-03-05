@@ -9,12 +9,12 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
-import aporia.su.IMinecraft;
-import aporia.su.util.ColorUtil;
-import aporia.su.util.animations.Animation;
-import aporia.su.util.animations.Direction;
-import aporia.su.util.animations.EaseInOutQuad;
-import aporia.su.util.render.сliemtpipeline.ClientPipelines;
+import aporia.su.util.interfaces.IMinecraft;
+import aporia.su.util.user.render.color.ColorUtil;
+import aporia.su.util.user.render.animations.Animation;
+import aporia.su.util.user.render.animations.Direction;
+import aporia.su.util.user.render.animations.EaseInOutQuad;
+import aporia.su.util.user.render.сliemtpipeline.ClientPipelines;
 
 import java.util.concurrent.ThreadLocalRandom;
 

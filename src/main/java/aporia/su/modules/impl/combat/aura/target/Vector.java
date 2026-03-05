@@ -3,13 +3,13 @@ package aporia.su.modules.impl.combat.aura.target;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import aporia.su.util.timer.StopWatch;
+import aporia.su.util.user.player.timer.StopWatch;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static aporia.su.IMinecraft.mc;
+import static aporia.su.util.interfaces.IMinecraft.mc;
 
 public class Vector {
 

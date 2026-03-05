@@ -17,10 +17,10 @@ import net.minecraft.network.packet.c2s.play.PlayerInteractItemC2SPacket;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.Hand;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.RotationUpdateEvent;
-import aporia.su.events.impl.TickEvent;
-import aporia.su.events.api.types.EventType;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.RotationUpdateEvent;
+import aporia.su.util.events.impl.TickEvent;
+import aporia.su.util.events.api.types.EventType;
 import aporia.su.mixin.client.ClientWorldAccessor;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
@@ -30,8 +30,8 @@ import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BooleanSetting;
 import aporia.su.modules.module.setting.implement.MultiSelectSetting;
-import aporia.su.util.math.TaskPriority;
-import aporia.su.util.timer.StopWatch;
+import aporia.su.util.user.render.math.TaskPriority;
+import aporia.su.util.user.player.timer.StopWatch;
 
 @SuppressWarnings("all")
 @FieldDefaults(level = AccessLevel.PRIVATE)

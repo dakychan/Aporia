@@ -5,7 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import lombok.Getter;
-import aporia.su.command.CommandManager;
+import aporia.su.util.user.chat.command.CommandManager;
 import aporia.su.util.config.impl.consolelogger.Logger;
 
 import java.io.IOException;

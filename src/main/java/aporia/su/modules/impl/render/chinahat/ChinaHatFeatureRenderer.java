@@ -13,8 +13,8 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
 import org.joml.Matrix4f;
 import aporia.su.modules.impl.render.ChinaHat;
-import aporia.su.util.ColorUtil;
-import aporia.su.util.render.сliemtpipeline.ClientPipelines;
+import aporia.su.util.user.render.color.ColorUtil;
+import aporia.su.util.user.render.сliemtpipeline.ClientPipelines;
 
 public class ChinaHatFeatureRenderer extends FeatureRenderer<PlayerEntityRenderState, PlayerEntityModel> {
 

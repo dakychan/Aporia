@@ -6,14 +6,14 @@ import lombok.Getter;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
 import net.minecraft.util.math.Vec3d;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.PacketEvent;
-import aporia.su.events.impl.TickEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.PacketEvent;
+import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.impl.combat.Aura;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.util.Instance;
-import aporia.su.util.timer.StopWatch;
+import aporia.su.util.user.player.timer.StopWatch;
 
 import java.util.Random;
 

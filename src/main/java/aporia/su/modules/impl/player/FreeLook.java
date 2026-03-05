@@ -5,17 +5,17 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import net.minecraft.client.option.Perspective;
 import net.minecraft.util.math.MathHelper;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.CameraEvent;
-import aporia.su.events.impl.FovEvent;
-import aporia.su.events.impl.KeyEvent;
-import aporia.su.events.impl.MouseRotationEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.CameraEvent;
+import aporia.su.util.events.impl.FovEvent;
+import aporia.su.util.events.impl.KeyEvent;
+import aporia.su.util.events.impl.MouseRotationEvent;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.MathAngle;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BindSetting;
-import aporia.su.util.string.PlayerInteractionHelper;
+import aporia.su.util.user.string.PlayerInteractionHelper;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class FreeLook extends ModuleStructure {

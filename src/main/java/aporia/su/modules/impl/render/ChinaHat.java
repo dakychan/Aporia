@@ -5,7 +5,7 @@ import lombok.experimental.FieldDefaults;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.ColorSetting;
-import aporia.su.util.ColorUtil;
+import aporia.su.util.user.render.color.ColorUtil;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ChinaHat extends ModuleStructure {

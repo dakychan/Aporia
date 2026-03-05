@@ -6,15 +6,15 @@ import net.minecraft.entity.ItemEntity;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.util.math.MathHelper;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.TickEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.AngleConfig;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.util.Instance;
-import aporia.su.util.math.TaskPriority;
+import aporia.su.util.user.render.math.TaskPriority;
 
 import java.util.Comparator;
 import java.util.List;

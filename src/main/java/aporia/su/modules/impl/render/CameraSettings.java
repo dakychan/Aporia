@@ -3,11 +3,11 @@ package aporia.su.modules.impl.render;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import net.minecraft.util.math.MathHelper;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.CameraEvent;
-import aporia.su.events.impl.FovEvent;
-import aporia.su.events.impl.HotBarScrollEvent;
-import aporia.su.events.impl.KeyEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.CameraEvent;
+import aporia.su.util.events.impl.FovEvent;
+import aporia.su.util.events.impl.HotBarScrollEvent;
+import aporia.su.util.events.impl.KeyEvent;
 import aporia.su.modules.impl.combat.aura.MathAngle;
 import aporia.su.modules.impl.player.FreeLook;
 import aporia.su.modules.module.ModuleStructure;
@@ -16,8 +16,8 @@ import aporia.su.modules.module.setting.implement.BindSetting;
 import aporia.su.modules.module.setting.implement.BooleanSetting;
 import aporia.su.modules.module.setting.implement.SliderSettings;
 import aporia.su.util.Instance;
-import aporia.su.util.math.MathUtils;
-import aporia.su.util.string.PlayerInteractionHelper;
+import aporia.su.util.user.render.math.MathUtils;
+import aporia.su.util.user.string.PlayerInteractionHelper;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CameraSettings extends ModuleStructure {

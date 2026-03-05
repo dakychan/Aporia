@@ -12,10 +12,10 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.impl.PacketEvent;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.impl.PacketEvent;
 import aporia.su.util.config.impl.proxy.ProxyConfig;
-import aporia.su.util.proxy.Proxy;
+import aporia.su.util.user.network.proxy.Proxy;
 
 import java.net.InetSocketAddress;
 

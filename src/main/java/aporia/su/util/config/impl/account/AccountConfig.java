@@ -6,9 +6,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.util.Identifier;
-import aporia.su.screens.account.AccountEntry;
+import aporia.su.util.user.render.screens.account.AccountEntry;
 import aporia.su.util.config.impl.consolelogger.Logger;
-import aporia.su.util.session.SessionChanger;
+import aporia.su.util.user.player.session.SessionChanger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

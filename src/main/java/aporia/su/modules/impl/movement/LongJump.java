@@ -9,12 +9,12 @@ import net.minecraft.block.ShulkerBoxBlock;
 import net.minecraft.block.SlimeBlock;
 import net.minecraft.client.gui.screen.ingame.ShulkerBoxScreen;
 import net.minecraft.util.math.BlockPos;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.TickEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.SelectSetting;
-import aporia.su.util.timer.StopWatch;
+import aporia.su.util.user.player.timer.StopWatch;
 
 @Getter
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)

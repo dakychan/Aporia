@@ -5,12 +5,12 @@ import lombok.experimental.FieldDefaults;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.WorldRenderEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.WorldRenderEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.util.Instance;
-import aporia.su.util.render.Render3D;
+import aporia.su.util.user.render.Render3D;
 
 import java.awt.*;
 

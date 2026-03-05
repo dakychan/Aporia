@@ -3,15 +3,15 @@ package aporia.su.modules.impl.render;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.experimental.FieldDefaults;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.GlassHandsRenderEvent;
-import aporia.su.events.impl.WorldChangeEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.GlassHandsRenderEvent;
+import aporia.su.util.events.impl.WorldChangeEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BooleanSetting;
 import aporia.su.modules.module.setting.implement.ColorSetting;
 import aporia.su.modules.module.setting.implement.SliderSettings;
-import aporia.su.util.render.shader.GlassHandsRenderer;
+import aporia.su.util.user.render.shader.GlassHandsRenderer;
 
 @Getter
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)

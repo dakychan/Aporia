@@ -15,9 +15,9 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.Redirect;
-import aporia.su.IMinecraft;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.impl.EntityColorEvent;
+import aporia.su.util.interfaces.IMinecraft;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.impl.EntityColorEvent;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 
 @SuppressWarnings("unchecked")

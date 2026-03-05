@@ -8,14 +8,14 @@ import lombok.experimental.NonFinal;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ItemStack;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.TickEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.SelectSetting;
 import aporia.su.modules.module.setting.implement.SliderSettings;
-import aporia.su.util.move.MoveUtil;
-import aporia.su.util.timer.StopWatch;
+import aporia.su.util.user.player.move.MoveUtil;
+import aporia.su.util.user.player.timer.StopWatch;
 
 @Getter
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)

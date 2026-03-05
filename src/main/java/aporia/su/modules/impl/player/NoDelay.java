@@ -1,8 +1,8 @@
 package aporia.su.modules.impl.player;
 
 import anidumpproject.api.annotation.Native;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.TickEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.MultiSelectSetting;

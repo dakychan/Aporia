@@ -20,21 +20,21 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import aporia.su.Initialization;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.impl.GameLeftEvent;
-import aporia.su.events.impl.HotBarUpdateEvent;
-import aporia.su.events.impl.SetScreenEvent;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.impl.GameLeftEvent;
+import aporia.su.util.events.impl.HotBarUpdateEvent;
+import aporia.su.util.events.impl.SetScreenEvent;
 import aporia.su.modules.impl.combat.NoInteract;
 import aporia.su.modules.impl.render.Hud;
-import aporia.su.screens.clickgui.ClickGui;
-import aporia.su.screens.menu.MainMenuScreen;
+import aporia.su.util.user.render.screens.clickgui.ClickGui;
+import aporia.su.util.user.render.screens.menu.MainMenuScreen;
 import aporia.su.util.config.ConfigSystem;
-import aporia.su.util.render.font.FontRenderer;
-import aporia.su.util.session.SessionChanger;
-import aporia.su.util.window.WindowStyle;
+import aporia.su.util.user.render.font.FontRenderer;
+import aporia.su.util.user.player.session.SessionChanger;
+import aporia.su.util.user.render.draw.WindowStyle;
 import anidumpproject.api.UserProfile;
 
-import static aporia.su.IMinecraft.mc;
+import static aporia.su.util.interfaces.IMinecraft.mc;
 
 @Mixin(MinecraftClient.class)
 public abstract class MinecraftClientMixin {

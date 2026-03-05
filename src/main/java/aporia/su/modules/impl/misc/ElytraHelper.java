@@ -18,23 +18,23 @@ import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.Hand;
 import org.lwjgl.glfw.GLFW;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.impl.HotBarScrollEvent;
-import aporia.su.events.impl.InputEvent;
-import aporia.su.events.impl.KeyEvent;
-import aporia.su.events.impl.TickEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.impl.HotBarScrollEvent;
+import aporia.su.util.events.impl.InputEvent;
+import aporia.su.util.events.impl.KeyEvent;
+import aporia.su.util.events.impl.TickEvent;
 import aporia.su.mixin.client.ClientWorldAccessor;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BindSetting;
 import aporia.su.modules.module.setting.implement.BooleanSetting;
 import aporia.su.modules.module.setting.implement.SelectSetting;
-import aporia.su.screens.clickgui.impl.settingsrender.BindComponent;
-import aporia.su.util.inventory.InventoryUtils;
-import aporia.su.util.inventory.MovementController;
-import aporia.su.util.inventory.SwapSettings;
-import aporia.su.util.string.chat.ChatMessage;
-import aporia.su.util.timer.StopWatch;
+import aporia.su.util.user.render.screens.clickgui.impl.settingsrender.BindComponent;
+import aporia.su.util.user.player.inventory.InventoryUtils;
+import aporia.su.util.user.player.inventory.MovementController;
+import aporia.su.util.user.player.inventory.SwapSettings;
+import aporia.su.util.user.chat.string.chat.ChatMessage;
+import aporia.su.util.user.player.timer.StopWatch;
 
 @Getter
 @FieldDefaults(level = AccessLevel.PRIVATE)

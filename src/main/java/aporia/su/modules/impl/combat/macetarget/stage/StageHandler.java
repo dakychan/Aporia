@@ -8,8 +8,8 @@ import aporia.su.modules.impl.combat.macetarget.armor.ArmorSwapHandler;
 import aporia.su.modules.impl.combat.macetarget.armor.FireworkHandler;
 import aporia.su.modules.impl.combat.macetarget.attack.AttackHandler;
 import aporia.su.modules.impl.combat.macetarget.state.MaceState.Stage;
-import aporia.su.util.inventory.InventoryUtils;
-import aporia.su.util.timer.StopWatch;
+import aporia.su.util.user.player.inventory.InventoryUtils;
+import aporia.su.util.user.player.timer.StopWatch;
 
 @Getter
 public class StageHandler {

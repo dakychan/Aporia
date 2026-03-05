@@ -7,11 +7,11 @@ import net.minecraft.util.Pair;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import aporia.su.Initialization;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.api.types.EventType;
-import aporia.su.events.impl.PacketEvent;
-import aporia.su.events.impl.RotationUpdateEvent;
-import aporia.su.events.impl.TickEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.api.types.EventType;
+import aporia.su.util.events.impl.PacketEvent;
+import aporia.su.util.events.impl.RotationUpdateEvent;
+import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 import aporia.su.modules.impl.combat.aura.MathAngle;
@@ -27,7 +27,7 @@ import aporia.su.modules.module.setting.implement.MultiSelectSetting;
 import aporia.su.modules.module.setting.implement.SelectSetting;
 import aporia.su.modules.module.setting.implement.SliderSettings;
 import aporia.su.util.Instance;
-import aporia.su.util.string.PlayerInteractionHelper;
+import aporia.su.util.user.string.PlayerInteractionHelper;
 
 import java.util.Objects;
 

@@ -2,10 +2,10 @@ package aporia.su.util.modules;
 
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
-import aporia.su.IMinecraft;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.impl.KeyEvent;
+import aporia.su.util.interfaces.IMinecraft;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.impl.KeyEvent;
 import aporia.su.modules.module.ModuleStructure;
 
 import java.util.List;

@@ -17,15 +17,15 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import aporia.su.IMinecraft;
+import aporia.su.util.interfaces.IMinecraft;
 import aporia.su.Initialization;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.impl.DrawEvent;
-import aporia.su.events.impl.HotbarItemRenderEvent;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.impl.DrawEvent;
+import aporia.su.util.events.impl.HotbarItemRenderEvent;
 import aporia.su.modules.impl.render.Hud;
 import aporia.su.modules.impl.render.NoRender;
-import aporia.su.screens.clickgui.ClickGui;
-import aporia.su.util.render.Render2D;
+import aporia.su.util.user.render.screens.clickgui.ClickGui;
+import aporia.su.util.user.render.Render2D;
 
 @Mixin(InGameHud.class)
 public abstract class InGameHudMixin implements IMinecraft {
@@ -87,6 +87,10 @@ public abstract class InGameHudMixin implements IMinecraft {
 
     @Inject(method = "render", at = @At("TAIL"))
     public void onRenderCustomHud(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
+        /**
+         * Null-check для client
+         */
+        if (this.client == null || this.client.options == null) return;
         if (this.client.options.hudHidden) return;
         if (client.world == null || client.player == null) return;
         if (client.getOverlay() != null) return;

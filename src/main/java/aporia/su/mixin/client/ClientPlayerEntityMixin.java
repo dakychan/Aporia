@@ -1,5 +1,6 @@
 package aporia.su.mixin.client;
 
+import aporia.su.util.events.impl.*;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.client.MinecraftClient;
@@ -17,13 +18,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.api.types.EventType;
-import aporia.su.events.impl.*;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.api.types.EventType;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
-import aporia.su.util.move.MoveUtil;
+import aporia.su.util.user.player.move.MoveUtil;
 
-import static aporia.su.IMinecraft.mc;
+import static aporia.su.util.interfaces.IMinecraft.mc;
 
 @Mixin(ClientPlayerEntity.class)
 public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity {

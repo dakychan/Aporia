@@ -8,18 +8,18 @@ import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import aporia.su.IMinecraft;
+import aporia.su.util.interfaces.IMinecraft;
 import aporia.su.Initialization;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.api.EventManager;
-import aporia.su.events.api.types.EventType;
-import aporia.su.events.impl.PacketEvent;
-import aporia.su.events.impl.PlayerVelocityStrafeEvent;
-import aporia.su.events.impl.RotationUpdateEvent;
-import aporia.su.events.impl.TickEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.api.EventManager;
+import aporia.su.util.events.api.types.EventType;
+import aporia.su.util.events.impl.PacketEvent;
+import aporia.su.util.events.impl.PlayerVelocityStrafeEvent;
+import aporia.su.util.events.impl.RotationUpdateEvent;
+import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.module.ModuleStructure;
-import aporia.su.util.math.TaskPriority;
-import aporia.su.util.math.TaskProcessor;
+import aporia.su.util.user.render.math.TaskPriority;
+import aporia.su.util.user.render.math.TaskProcessor;
 
 @Getter
 @FieldDefaults(level = AccessLevel.PRIVATE)

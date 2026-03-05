@@ -11,7 +11,7 @@ import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 import org.jetbrains.annotations.NotNull;
-import aporia.su.IMinecraft;
+import aporia.su.util.interfaces.IMinecraft;
 
 import static java.lang.Math.hypot;
 import static java.lang.Math.toDegrees;

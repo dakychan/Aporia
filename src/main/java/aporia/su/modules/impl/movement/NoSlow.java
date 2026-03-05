@@ -9,17 +9,17 @@ import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import aporia.su.events.api.EventHandler;
-import aporia.su.events.api.types.EventType;
-import aporia.su.events.impl.TickEvent;
-import aporia.su.events.impl.UsingItemEvent;
+import aporia.su.util.events.api.EventHandler;
+import aporia.su.util.events.api.types.EventType;
+import aporia.su.util.events.impl.TickEvent;
+import aporia.su.util.events.impl.UsingItemEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.SelectSetting;
 import aporia.su.util.Instance;
-import aporia.su.util.inventory.script.Script;
-import aporia.su.util.string.PlayerInteractionHelper;
-import aporia.su.util.timer.StopWatch;
+import aporia.su.util.user.player.inventory.script.Script;
+import aporia.su.util.user.string.PlayerInteractionHelper;
+import aporia.su.util.user.player.timer.StopWatch;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class NoSlow extends ModuleStructure {
