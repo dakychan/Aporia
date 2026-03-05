@@ -6,7 +6,7 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.WorldRenderEvent;
+import aporia.su.util.events.impl.ui.WorldRenderEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.util.Instance;

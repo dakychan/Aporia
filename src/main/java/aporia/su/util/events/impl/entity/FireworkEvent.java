@@ -1,0 +1,18 @@
+package aporia.su.util.events.impl.entity;
+
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.experimental.FieldDefaults;
+import net.minecraft.util.math.Vec3d;
+import aporia.su.util.events.api.events.Event;
+
+@AllArgsConstructor
+@Getter
+@Setter
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class FireworkEvent implements Event {
+    public Vec3d vector;
+
+}

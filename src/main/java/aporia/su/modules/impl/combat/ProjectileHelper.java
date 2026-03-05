@@ -15,7 +15,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import aporia.su.util.events.api.EventHandler;
 import aporia.su.util.events.api.types.EventType;
-import aporia.su.util.events.impl.RotationUpdateEvent;
+import aporia.su.util.events.impl.entity.RotationUpdateEvent;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.AngleConfig;
 import aporia.su.modules.impl.combat.aura.AngleConnection;

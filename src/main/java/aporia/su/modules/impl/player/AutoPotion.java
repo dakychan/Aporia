@@ -18,7 +18,7 @@ import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.Hand;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.RotationUpdateEvent;
+import aporia.su.util.events.impl.entity.RotationUpdateEvent;
 import aporia.su.util.events.impl.TickEvent;
 import aporia.su.util.events.api.types.EventType;
 import aporia.su.mixin.client.ClientWorldAccessor;

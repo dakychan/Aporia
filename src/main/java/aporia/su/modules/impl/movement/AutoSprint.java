@@ -4,7 +4,7 @@ import anidumpproject.api.annotation.Native;
 import lombok.Getter;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.PacketEvent;
+import aporia.su.util.events.impl.player.PacketEvent;
 import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;

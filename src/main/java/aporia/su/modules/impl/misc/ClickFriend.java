@@ -6,7 +6,7 @@ import lombok.experimental.FieldDefaults;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.hit.EntityHitResult;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.KeyEvent;
+import aporia.su.util.events.impl.entity.KeyEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BindSetting;

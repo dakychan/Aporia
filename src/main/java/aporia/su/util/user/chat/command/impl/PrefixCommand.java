@@ -2,9 +2,8 @@ package aporia.su.util.user.chat.command.impl;
 
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import aporia.su.util.user.chat.command.Command;
 import aporia.su.util.user.chat.command.CommandManager;
-import aporia.su.util.config.impl.prefix.PrefixConfig;
+import aporia.su.util.config.impl.player.prefix.PrefixConfig;
 
 import java.util.Arrays;
 import java.util.List;
@@ -12,7 +11,7 @@ import java.util.stream.Stream;
 
 import static aporia.su.util.user.chat.command.impl.HelpCommand.getLine;
 
-public class PrefixCommand extends Command {
+public class PrefixCommand extends CommandManager.Command {
 
     public PrefixCommand() {
         super("prefix", "Изменение префикса команд");

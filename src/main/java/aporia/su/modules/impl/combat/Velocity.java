@@ -15,7 +15,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.PacketEvent;
+import aporia.su.util.events.impl.player.PacketEvent;
 import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;

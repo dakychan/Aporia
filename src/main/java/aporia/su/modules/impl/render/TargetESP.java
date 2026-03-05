@@ -14,7 +14,7 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import aporia.su.util.interfaces.IMinecraft;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.WorldRenderEvent;
+import aporia.su.util.events.impl.ui.WorldRenderEvent;
 import aporia.su.modules.impl.combat.Aura;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;

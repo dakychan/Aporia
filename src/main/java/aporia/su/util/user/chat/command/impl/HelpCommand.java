@@ -6,7 +6,6 @@ import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import aporia.su.util.user.chat.command.Command;
 import aporia.su.util.user.chat.command.CommandManager;
 import aporia.su.util.user.chat.command.helpers.Paginator;
 import aporia.su.util.user.chat.command.helpers.TabCompleteHelper;
@@ -16,7 +15,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class HelpCommand extends Command {
+public class HelpCommand extends CommandManager.Command {
 
     public HelpCommand() {
         super("help", "Показывает список всех доступных команд");
@@ -32,11 +31,11 @@ public class HelpCommand extends Command {
                 page = Integer.parseInt(args[0]);
             }
 
-            List<Command> commands = manager.getCommands().stream()
+            List<CommandManager.Command> commands = manager.getCommands().stream()
                     .filter(cmd -> !cmd.hiddenFromHelp())
                     .collect(Collectors.toList());
 
-            Paginator<Command> paginator = new Paginator<>(commands);
+            Paginator<CommandManager.Command> paginator = new Paginator<>(commands);
             paginator.setPage(page);
 
             paginator.display(
@@ -71,7 +70,7 @@ public class HelpCommand extends Command {
             );
         } else {
             String commandName = args[0].toLowerCase();
-            Command command = manager.getCommand(commandName);
+            CommandManager.Command command = manager.getCommand(commandName);
 
             if (command == null) {
                 logDirect("Команда '" + commandName + "' не найдена!", Formatting.RED);

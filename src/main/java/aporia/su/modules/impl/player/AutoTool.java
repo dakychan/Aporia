@@ -2,6 +2,12 @@ package aporia.su.modules.impl.player;
 
 import anidumpproject.api.annotation.Native;
 import aporia.su.util.events.impl.*;
+import aporia.su.util.events.impl.player.BlockBreakingEvent;
+import aporia.su.util.events.impl.player.HeldItemUpdateEvent;
+import aporia.su.util.events.impl.ui.HotBarScrollEvent;
+import aporia.su.util.events.impl.ui.HotBarUpdateEvent;
+import aporia.su.util.events.impl.ui.HotbarItemRenderEvent;
+import aporia.su.util.events.impl.ui.ItemRendererEvent;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.experimental.FieldDefaults;

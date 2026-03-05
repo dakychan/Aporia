@@ -8,7 +8,7 @@ import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.PacketEvent;
+import aporia.su.util.events.impl.player.PacketEvent;
 import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;

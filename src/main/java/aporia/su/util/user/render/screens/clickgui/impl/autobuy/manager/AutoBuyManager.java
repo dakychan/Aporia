@@ -2,7 +2,7 @@ package aporia.su.util.user.render.screens.clickgui.impl.autobuy.manager;
 
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.AutoBuyableItem;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.items.ItemRegistry;
-import aporia.su.util.config.impl.autobuyconfig.AutoBuyConfig;
+import aporia.su.util.config.impl.player.autobuyconfig.AutoBuyConfig;
 import aporia.su.util.user.chat.string.chat.ChatMessage;
 import aporia.su.modules.impl.misc.AutoBuy;
 

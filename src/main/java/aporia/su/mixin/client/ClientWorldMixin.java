@@ -10,8 +10,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import aporia.su.util.interfaces.IMinecraft;
 import aporia.su.util.events.api.EventManager;
-import aporia.su.util.events.impl.EntitySpawnEvent;
-import aporia.su.util.events.impl.WorldLoadEvent;
+import aporia.su.util.events.impl.entity.EntitySpawnEvent;
+import aporia.su.util.events.impl.ui.WorldLoadEvent;
 import aporia.su.modules.impl.render.Ambience;
 import aporia.su.util.user.string.PlayerInteractionHelper;
 

@@ -5,7 +5,6 @@ import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import aporia.su.util.user.chat.command.Command;
 import aporia.su.util.user.chat.command.CommandManager;
 import aporia.su.util.user.chat.command.helpers.Paginator;
 import aporia.su.util.user.chat.command.helpers.TabCompleteHelper;
@@ -20,7 +19,7 @@ import java.util.stream.Stream;
 
 import static aporia.su.util.user.chat.command.impl.HelpCommand.getLine;
 
-public class MacroCommand extends Command {
+public class MacroCommand extends CommandManager.Command {
 
     public MacroCommand() {
         super("macro", "Управление макросами", "macros");

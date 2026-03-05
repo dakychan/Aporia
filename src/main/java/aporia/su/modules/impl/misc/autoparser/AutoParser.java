@@ -13,7 +13,7 @@ import aporia.su.modules.module.ModuleStructure;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.AutoBuyableItem;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.AuctionUtils;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.manager.AutoBuyManager;
-import aporia.su.util.modules.autoparser.AutoParserItems;
+import aporia.su.modules.wtf.autoparser.AutoParserItems;
 import aporia.su.util.user.chat.string.chat.ChatMessage;
 import aporia.su.util.user.player.timer.StopWatch;
 import aporia.su.util.user.player.timer.TimerUtil;

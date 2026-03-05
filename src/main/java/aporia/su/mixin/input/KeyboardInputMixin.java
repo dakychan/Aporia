@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import aporia.su.util.events.api.EventManager;
-import aporia.su.util.events.impl.InputEvent;
+import aporia.su.util.events.impl.entity.InputEvent;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 import aporia.su.modules.impl.combat.aura.AngleConstructor;

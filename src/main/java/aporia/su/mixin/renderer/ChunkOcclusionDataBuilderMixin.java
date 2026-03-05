@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import aporia.su.util.events.api.EventManager;
-import aporia.su.util.events.impl.ChunkOcclusionEvent;
+import aporia.su.util.events.impl.ui.ChunkOcclusionEvent;
 
 @Mixin(ChunkOcclusionDataBuilder.class)
 public abstract class ChunkOcclusionDataBuilderMixin {

@@ -6,7 +6,7 @@ import lombok.experimental.FieldDefaults;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.Vec3d;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.FireworkEvent;
+import aporia.su.util.events.impl.entity.FireworkEvent;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;

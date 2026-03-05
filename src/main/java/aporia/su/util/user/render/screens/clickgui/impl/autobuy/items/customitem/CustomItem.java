@@ -18,7 +18,7 @@ import net.minecraft.nbt.NbtList;
 import net.minecraft.text.Text;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.AutoBuyableItem;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.settings.AutoBuyItemSettings;
-import aporia.su.util.config.impl.autobuyconfig.AutoBuyConfig;
+import aporia.su.util.config.impl.player.autobuyconfig.AutoBuyConfig;
 
 import java.util.List;
 import java.util.Optional;

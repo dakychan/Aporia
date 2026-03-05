@@ -17,9 +17,9 @@ import aporia.su.modules.module.setting.implement.*;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.AutoBuyableItem;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.AuctionUtils;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.manager.AutoBuyManager;
-import aporia.su.util.modules.autobuy.BuyRequest;
-import aporia.su.util.modules.autobuy.NetworkManager;
-import aporia.su.util.modules.autobuy.ServerManager;
+import aporia.su.modules.wtf.autobuy.BuyRequest;
+import aporia.su.modules.wtf.autobuy.NetworkManager;
+import aporia.su.modules.wtf.autobuy.ServerManager;
 import aporia.su.util.user.player.timer.TimerUtil;
 
 import java.util.*;

@@ -1,5 +1,6 @@
 package aporia.su.mixin.client;
 
+import aporia.su.util.config.MainConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
@@ -21,14 +22,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import aporia.su.Initialization;
 import aporia.su.util.events.api.EventManager;
-import aporia.su.util.events.impl.GameLeftEvent;
-import aporia.su.util.events.impl.HotBarUpdateEvent;
-import aporia.su.util.events.impl.SetScreenEvent;
+import aporia.su.util.events.impl.player.GameLeftEvent;
+import aporia.su.util.events.impl.ui.HotBarUpdateEvent;
+import aporia.su.util.events.impl.ui.SetScreenEvent;
 import aporia.su.modules.impl.combat.NoInteract;
 import aporia.su.modules.impl.render.Hud;
 import aporia.su.util.user.render.screens.clickgui.ClickGui;
 import aporia.su.util.user.render.screens.menu.MainMenuScreen;
-import aporia.su.util.config.ConfigSystem;
 import aporia.su.util.user.render.font.FontRenderer;
 import aporia.su.util.user.player.session.SessionChanger;
 import aporia.su.util.user.render.draw.WindowStyle;
@@ -71,7 +71,7 @@ public abstract class MinecraftClientMixin {
 
     @Inject(method = "stop", at = @At("HEAD"))
     private void onStop(CallbackInfo ci) {
-        ConfigSystem configSystem = ConfigSystem.getInstance();
+        MainConfig.ConfigSystem configSystem = MainConfig.ConfigSystem.getInstance();
         if (configSystem != null) {
             configSystem.shutdown();
         }

@@ -9,7 +9,7 @@ import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.vehicle.BoatEntity;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.PlayerTravelEvent;
+import aporia.su.util.events.impl.entity.PlayerTravelEvent;
 import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;

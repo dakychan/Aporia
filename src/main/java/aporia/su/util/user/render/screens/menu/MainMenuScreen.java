@@ -18,7 +18,7 @@ import net.minecraft.util.math.MathHelper;
 import aporia.su.Initialization;
 import aporia.su.util.user.render.screens.account.AccountEntry;
 import aporia.su.util.user.render.screens.account.AccountRenderer;
-import aporia.su.util.config.impl.account.AccountConfig;
+import aporia.su.util.config.impl.player.account.AccountConfig;
 import aporia.su.util.user.render.Render2D;
 import aporia.su.util.user.render.font.Fonts;
 import aporia.su.util.user.player.session.SessionChanger;

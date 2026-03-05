@@ -4,9 +4,9 @@ import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import aporia.su.Initialization;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.PacketEvent;
+import aporia.su.util.events.impl.player.PacketEvent;
 import aporia.su.util.events.impl.TickEvent;
-import aporia.su.util.events.impl.UsingItemEvent;
+import aporia.su.util.events.impl.entity.UsingItemEvent;
 
 public class EventListener implements Listener {
     public static boolean serverSprint;

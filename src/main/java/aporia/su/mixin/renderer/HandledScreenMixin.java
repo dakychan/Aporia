@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import aporia.su.util.events.api.EventManager;
-import aporia.su.util.events.impl.HandledScreenEvent;
+import aporia.su.util.events.impl.ui.HandledScreenEvent;
 
 @Mixin(HandledScreen.class)
 public abstract class HandledScreenMixin {

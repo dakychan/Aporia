@@ -5,7 +5,7 @@ import net.minecraft.network.packet.s2c.play.WorldTimeUpdateS2CPacket;
 import net.minecraft.util.math.MathHelper;
 import aporia.su.Initialization;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.PacketEvent;
+import aporia.su.util.events.impl.player.PacketEvent;
 
 /**
  *  © 2025 Copyright Aporia.cc 2.0

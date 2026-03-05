@@ -6,7 +6,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.InputEvent;
+import aporia.su.util.events.impl.entity.InputEvent;
 import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.impl.combat.Aura;
 import aporia.su.modules.impl.combat.AutoTotem;

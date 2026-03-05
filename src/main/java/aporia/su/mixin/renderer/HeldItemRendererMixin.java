@@ -18,11 +18,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import aporia.su.util.events.api.EventManager;
-import aporia.su.util.events.impl.GlassHandsRenderEvent;
-import aporia.su.util.events.impl.HandAnimationEvent;
-import aporia.su.util.events.impl.HandOffsetEvent;
-import aporia.su.util.events.impl.HeldItemUpdateEvent;
-import aporia.su.util.events.impl.ItemRendererEvent;
+import aporia.su.util.events.impl.player.GlassHandsRenderEvent;
+import aporia.su.util.events.impl.player.HandAnimationEvent;
+import aporia.su.util.events.impl.player.HandOffsetEvent;
+import aporia.su.util.events.impl.player.HeldItemUpdateEvent;
+import aporia.su.util.events.impl.ui.ItemRendererEvent;
 import aporia.su.modules.impl.render.GlassHands;
 
 @Mixin(HeldItemRenderer.class)

@@ -1,5 +1,6 @@
 package aporia.su.util.user.chat.command.impl;
 
+import aporia.su.util.config.MainConfig;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
@@ -7,14 +8,12 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import org.lwjgl.glfw.GLFW;
 import aporia.su.Initialization;
-import aporia.su.util.user.chat.command.Command;
 import aporia.su.util.user.chat.command.CommandManager;
 import aporia.su.util.user.chat.command.helpers.Paginator;
 import aporia.su.util.user.chat.command.helpers.TabCompleteHelper;
 import aporia.su.modules.module.ModuleRepository;
 import aporia.su.modules.module.ModuleStructure;
-import aporia.su.util.config.ConfigSystem;
-import aporia.su.util.config.impl.bind.BindConfig;
+import aporia.su.util.config.impl.player.bind.BindConfig;
 import aporia.su.util.user.string.KeyHelper;
 
 import java.util.Arrays;
@@ -25,7 +24,7 @@ import java.util.stream.Stream;
 
 import static aporia.su.util.user.chat.command.impl.HelpCommand.getLine;
 
-public class BindCommand extends Command {
+public class BindCommand extends CommandManager.Command {
 
     public BindCommand() {
         super("bind", "Управление биндами модулей", "b");
@@ -66,7 +65,7 @@ public class BindCommand extends Command {
                 }
 
                 module.setKey(key);
-                ConfigSystem.getInstance().save();
+                MainConfig.ConfigSystem.getInstance().save();
 
                 logDirect(String.format("§aМодуль §f%s §aпривязан к клавише §f%s",
                         module.getName(), KeyHelper.getKeyName(key).toLowerCase()), Formatting.GREEN);
@@ -86,7 +85,7 @@ public class BindCommand extends Command {
                 }
 
                 module.setKey(GLFW.GLFW_KEY_UNKNOWN);
-                ConfigSystem.getInstance().save();
+                MainConfig.ConfigSystem.getInstance().save();
 
                 logDirect(String.format("Бинд для модуля %s удален!", module.getName()), Formatting.GREEN);
             }
@@ -98,7 +97,7 @@ public class BindCommand extends Command {
                         count++;
                     }
                 }
-                ConfigSystem.getInstance().save();
+                MainConfig.ConfigSystem.getInstance().save();
                 logDirect(String.format("Все бинды модулей удалены! Удалено: %d", count), Formatting.GREEN);
             }
             case "set" -> {

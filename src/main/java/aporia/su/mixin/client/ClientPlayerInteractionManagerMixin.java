@@ -14,9 +14,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import aporia.su.util.events.api.EventManager;
 import aporia.su.util.events.api.types.EventType;
-import aporia.su.util.events.impl.BlockBreakingEvent;
-import aporia.su.util.events.impl.ClickSlotEvent;
-import aporia.su.util.events.impl.UsingItemEvent;
+import aporia.su.util.events.impl.player.BlockBreakingEvent;
+import aporia.su.util.events.impl.ui.ClickSlotEvent;
+import aporia.su.util.events.impl.entity.UsingItemEvent;
 
 @Mixin(ClientPlayerInteractionManager.class)
 public class ClientPlayerInteractionManagerMixin {

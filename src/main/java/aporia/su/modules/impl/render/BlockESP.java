@@ -8,7 +8,7 @@ import net.minecraft.util.math.Box;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.chunk.WorldChunk;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.WorldRenderEvent;
+import aporia.su.util.events.impl.ui.WorldRenderEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BooleanSetting;

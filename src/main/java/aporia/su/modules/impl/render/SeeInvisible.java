@@ -3,7 +3,7 @@ package aporia.su.modules.impl.render;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.EntityColorEvent;
+import aporia.su.util.events.impl.ui.EntityColorEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.SliderSettings;

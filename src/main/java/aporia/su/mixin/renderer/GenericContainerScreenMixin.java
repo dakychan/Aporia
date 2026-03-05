@@ -20,7 +20,7 @@ import aporia.su.modules.impl.misc.AutoBuy;
 import aporia.su.modules.impl.misc.autoparser.AutoParser;
 import aporia.su.modules.impl.misc.autoparser.dev.ItemParser;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.manager.AutoBuyManager;
-import aporia.su.util.modules.autoparser.DiscountSliderWidget;
+import aporia.su.modules.wtf.autoparser.DiscountSliderWidget;
 import aporia.su.util.user.chat.string.chat.ChatMessage;
 
 import java.util.ArrayList;

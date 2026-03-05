@@ -10,9 +10,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import aporia.su.util.interfaces.IMinecraft;
 import aporia.su.util.events.api.EventManager;
-import aporia.su.util.events.impl.PlayerTravelEvent;
-import aporia.su.util.events.impl.PushEvent;
-import aporia.su.util.events.impl.SwimmingEvent;
+import aporia.su.util.events.impl.entity.PlayerTravelEvent;
+import aporia.su.util.events.impl.entity.PushEvent;
+import aporia.su.util.events.impl.entity.SwimmingEvent;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 
 

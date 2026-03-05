@@ -10,7 +10,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import aporia.su.Initialization;
-import aporia.su.util.user.chat.command.Command;
 import aporia.su.util.user.chat.command.CommandManager;
 import aporia.su.util.user.chat.command.helpers.Paginator;
 import aporia.su.util.user.chat.command.helpers.TabCompleteHelper;
@@ -24,7 +23,7 @@ import java.util.stream.Stream;
 
 import static aporia.su.util.user.chat.command.impl.HelpCommand.getLine;
 
-public class BlockESPCommand extends Command {
+public class BlockESPCommand extends CommandManager.Command {
 
     public BlockESPCommand() {
         super("blockesp", "Управление блоками для BlockESP", "besp");

@@ -12,7 +12,7 @@ import net.minecraft.util.math.Direction;
 import aporia.su.util.events.api.EventHandler;
 import aporia.su.util.events.api.types.EventType;
 import aporia.su.util.events.impl.TickEvent;
-import aporia.su.util.events.impl.UsingItemEvent;
+import aporia.su.util.events.impl.entity.UsingItemEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.SelectSetting;

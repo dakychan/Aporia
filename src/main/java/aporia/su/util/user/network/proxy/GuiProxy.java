@@ -11,7 +11,7 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 import org.apache.commons.lang3.StringUtils;
-import aporia.su.util.config.impl.proxy.ProxyConfig;
+import aporia.su.util.config.impl.player.proxy.ProxyConfig;
 
 public class GuiProxy extends Screen {
     private boolean isSocks4 = false;

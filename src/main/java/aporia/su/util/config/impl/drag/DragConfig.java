@@ -7,7 +7,7 @@ import com.google.gson.JsonParser;
 import aporia.su.Initialization;
 import aporia.su.util.user.render.screens.hud.api.HudElement;
 import aporia.su.util.user.render.screens.hud.api.HudManager;
-import aporia.su.util.config.impl.consolelogger.Logger;
+import aporia.su.util.config.impl.loggers.consolelogger.Logger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

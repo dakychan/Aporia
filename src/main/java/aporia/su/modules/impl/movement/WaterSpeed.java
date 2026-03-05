@@ -7,7 +7,7 @@ import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.SwimmingEvent;
+import aporia.su.util.events.impl.entity.SwimmingEvent;
 import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 import aporia.su.modules.module.ModuleStructure;

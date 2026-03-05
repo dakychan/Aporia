@@ -1,16 +1,14 @@
 package aporia.su.util.user.chat.command.impl;
 
+import aporia.su.util.config.MainConfig;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import aporia.su.util.user.chat.command.Command;
 import aporia.su.util.user.chat.command.CommandManager;
 import aporia.su.util.user.chat.command.helpers.Paginator;
 import aporia.su.util.user.chat.command.helpers.TabCompleteHelper;
-import aporia.su.util.config.ConfigSystem;
-import aporia.su.util.config.impl.ConfigPath;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,7 +21,7 @@ import java.util.stream.Stream;
 
 import static aporia.su.util.user.chat.command.impl.HelpCommand.getLine;
 
-public class ConfigCommand extends Command {
+public class ConfigCommand extends CommandManager.Command {
 
     public ConfigCommand() {
         super("config", "Управление конфигурациями", "cfg");
@@ -42,12 +40,12 @@ public class ConfigCommand extends Command {
                     return;
                 }
                 String name = args[1];
-                Path configDir = ConfigPath.getConfigDirectory();
+                Path configDir = MainConfig.ConfigPath.getConfigDirectory();
                 Path configFile = configDir.resolve(name + ".json");
 
                 if (Files.exists(configFile)) {
                     try {
-                        ConfigSystem.getInstance().load();
+                        MainConfig.ConfigSystem.getInstance().load();
                         logDirect(String.format("Конфигурация %s загружена!", name));
                     } catch (Exception e) {
                         logDirect(String.format("Ошибка при загрузке конфига! Детали: %s", e.getMessage()), Formatting.RED);
@@ -58,16 +56,16 @@ public class ConfigCommand extends Command {
             }
             case "save" -> {
                 if (args.length < 2) {
-                    ConfigSystem.getInstance().save();
+                    MainConfig.ConfigSystem.getInstance().save();
                     logDirect("Конфигурация сохранена!");
                     return;
                 }
                 String name = args[1];
                 try {
-                    Path configDir = ConfigPath.getConfigDirectory();
+                    Path configDir = MainConfig.ConfigPath.getConfigDirectory();
                     Path newConfig = configDir.resolve(name + ".json");
-                    ConfigSystem.getInstance().save();
-                    Path currentConfig = ConfigPath.getConfigFile();
+                    MainConfig.ConfigSystem.getInstance().save();
+                    Path currentConfig = MainConfig.ConfigPath.getConfigFile();
                     Files.copy(currentConfig, newConfig);
                     logDirect(String.format("Конфигурация %s сохранена!", name));
                 } catch (Exception e) {
@@ -115,7 +113,7 @@ public class ConfigCommand extends Command {
             }
             case "dir" -> {
                 try {
-                    Path configDir = ConfigPath.getConfigDirectory();
+                    Path configDir = MainConfig.ConfigPath.getConfigDirectory();
                     String os = System.getProperty("os.name").toLowerCase();
 
                     ProcessBuilder pb;
@@ -186,7 +184,7 @@ public class ConfigCommand extends Command {
     public List<String> getConfigs() {
         List<String> configs = new ArrayList<>();
         try {
-            Path configDir = ConfigPath.getConfigDirectory();
+            Path configDir = MainConfig.ConfigPath.getConfigDirectory();
             if (Files.exists(configDir)) {
                 Files.list(configDir)
                         .filter(path -> path.toString().endsWith(".json"))

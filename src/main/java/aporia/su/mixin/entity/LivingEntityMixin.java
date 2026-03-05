@@ -20,9 +20,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import aporia.su.util.events.api.EventManager;
-import aporia.su.util.events.impl.JumpEvent;
-import aporia.su.util.events.impl.PushEvent;
-import aporia.su.util.events.impl.SwingDurationEvent;
+import aporia.su.util.events.impl.entity.JumpEvent;
+import aporia.su.util.events.impl.entity.PushEvent;
+import aporia.su.util.events.impl.entity.SwingDurationEvent;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 
 import java.lang.reflect.Method;

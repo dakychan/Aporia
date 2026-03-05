@@ -2,7 +2,7 @@ package aporia.su.modules.impl.movement;
 
 import anidumpproject.api.annotation.Native;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.KeyEvent;
+import aporia.su.util.events.impl.entity.KeyEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BindSetting;

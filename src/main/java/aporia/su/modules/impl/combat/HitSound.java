@@ -3,7 +3,7 @@ package aporia.su.modules.impl.combat;
 import anidumpproject.api.annotation.Native;
 import net.minecraft.entity.LivingEntity;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.AttackEvent;
+import aporia.su.util.events.impl.player.AttackEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.SelectSetting;

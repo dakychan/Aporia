@@ -1,11 +1,8 @@
 package aporia.su.util.user.render.screens.hud.api;
 
 import aporia.su.util.user.render.screens.hud.impl.*;
-import aporia.su.util.user.render.screens.hud.impl.*;
-import aporia.su.util.user.render.screens.hud.impl.*;
-import aporia.su.util.user.render.screens.hud.impl.*;
 import net.minecraft.client.gui.DrawContext;
-import aporia.su.util.events.impl.PacketEvent;
+import aporia.su.util.events.impl.player.PacketEvent;
 import aporia.su.modules.impl.render.Hud;
 import aporia.su.util.config.impl.drag.DragConfig;
 

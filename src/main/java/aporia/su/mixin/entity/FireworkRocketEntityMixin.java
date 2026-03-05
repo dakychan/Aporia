@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import aporia.su.util.interfaces.IMinecraft;
 import aporia.su.util.events.api.EventManager;
-import aporia.su.util.events.impl.FireworkEvent;
+import aporia.su.util.events.impl.entity.FireworkEvent;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 
 @Mixin(FireworkRocketEntity.class)

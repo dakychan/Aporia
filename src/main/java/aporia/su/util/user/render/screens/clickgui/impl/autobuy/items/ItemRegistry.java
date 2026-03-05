@@ -7,7 +7,7 @@ import aporia.su.util.user.render.screens.clickgui.impl.autobuy.originalitems.Po
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.originalitems.SphereProvider;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.originalitems.TalismanProvider;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.util.KrushProvider;
-import aporia.su.util.config.impl.autobuyconfig.AutoBuyConfig;
+import aporia.su.util.config.impl.player.autobuyconfig.AutoBuyConfig;
 
 import java.util.ArrayList;
 import java.util.List;

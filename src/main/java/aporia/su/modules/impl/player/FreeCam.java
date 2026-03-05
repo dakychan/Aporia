@@ -1,7 +1,12 @@
 package aporia.su.modules.impl.player;
 
 import anidumpproject.api.annotation.Native;
-import aporia.su.util.events.impl.*;
+import aporia.su.util.events.impl.entity.InputEvent;
+import aporia.su.util.events.impl.player.CameraPositionEvent;
+import aporia.su.util.events.impl.player.GameLeftEvent;
+import aporia.su.util.events.impl.player.MoveEvent;
+import aporia.su.util.events.impl.player.PacketEvent;
+import aporia.su.util.events.impl.ui.ChunkOcclusionEvent;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import net.minecraft.client.option.Perspective;

@@ -11,7 +11,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.DrawEvent;
+import aporia.su.util.events.impl.ui.DrawEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.ColorSetting;

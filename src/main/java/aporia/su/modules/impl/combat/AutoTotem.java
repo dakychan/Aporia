@@ -17,7 +17,7 @@ import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.InputEvent;
+import aporia.su.util.events.impl.entity.InputEvent;
 import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;

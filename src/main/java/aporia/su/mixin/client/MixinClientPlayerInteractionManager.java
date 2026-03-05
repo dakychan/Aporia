@@ -9,9 +9,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import aporia.su.util.events.api.EventManager;
-import aporia.su.util.events.impl.AttackEvent;
-import aporia.su.util.events.impl.ClickSlotEvent;
-import aporia.su.util.events.impl.InteractEntityEvent;
+import aporia.su.util.events.impl.player.AttackEvent;
+import aporia.su.util.events.impl.ui.ClickSlotEvent;
+import aporia.su.util.events.impl.entity.InteractEntityEvent;
 
 @Mixin(ClientPlayerInteractionManager.class)
 public class MixinClientPlayerInteractionManager {

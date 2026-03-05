@@ -1,6 +1,5 @@
 package aporia.su.util.user.chat.command.helpers;
 
-import aporia.su.util.user.chat.command.Command;
 import aporia.su.util.user.chat.command.CommandManager;
 
 import java.util.ArrayList;
@@ -30,7 +29,7 @@ public class TabCompleteHelper {
     public TabCompleteHelper addCommands(CommandManager manager) {
         String filter = this.prefix.toLowerCase();
 
-        for (Command cmd : manager.getCommands()) {
+        for (CommandManager.Command cmd : manager.getCommands()) {
             String mainName = cmd.getName();
 
             if (filter.isEmpty()) {
@@ -49,10 +48,10 @@ public class TabCompleteHelper {
         return this;
     }
 
-    public TabCompleteHelper addCommands(List<Command> commands) {
+    public TabCompleteHelper addCommands(List<CommandManager.Command> commands) {
         String filter = this.prefix.toLowerCase();
 
-        for (Command cmd : commands) {
+        for (CommandManager.Command cmd : commands) {
             String mainName = cmd.getName();
 
             if (filter.isEmpty()) {

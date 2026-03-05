@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import aporia.su.util.events.api.EventManager;
-import aporia.su.util.events.impl.TabCompleteEvent;
+import aporia.su.util.events.impl.player.TabCompleteEvent;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

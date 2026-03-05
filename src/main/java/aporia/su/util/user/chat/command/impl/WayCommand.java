@@ -1,6 +1,6 @@
 package aporia.su.util.user.chat.command.impl;
 
-import aporia.su.util.config.impl.way.WayConfig;
+import aporia.su.util.config.impl.player.way.WayConfig;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
@@ -8,7 +8,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.Formatting;
 import aporia.su.util.interfaces.IMinecraft;
-import aporia.su.util.user.chat.command.Command;
 import aporia.su.util.user.chat.command.CommandManager;
 import aporia.su.util.user.chat.command.helpers.Paginator;
 import aporia.su.util.user.chat.command.helpers.TabCompleteHelper;
@@ -22,7 +21,7 @@ import java.util.stream.Stream;
 
 import static aporia.su.util.user.chat.command.impl.HelpCommand.getLine;
 
-public class WayCommand extends Command implements IMinecraft {
+public class WayCommand extends CommandManager.Command implements IMinecraft {
 
     public WayCommand() {
         super("way", "Управление точками на карте", "waypoint", "wp");

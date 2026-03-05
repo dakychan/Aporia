@@ -7,7 +7,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.Vec3d;
 import aporia.su.util.events.api.EventHandler;
 import aporia.su.util.events.impl.TickEvent;
-import aporia.su.util.events.impl.WorldRenderEvent;
+import aporia.su.util.events.impl.ui.WorldRenderEvent;
 import aporia.su.modules.impl.render.worldparticles.Particle;
 import aporia.su.modules.impl.render.worldparticles.ParticleSpawner;
 import aporia.su.modules.module.ModuleStructure;

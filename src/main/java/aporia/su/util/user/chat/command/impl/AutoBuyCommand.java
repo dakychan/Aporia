@@ -1,13 +1,13 @@
 package aporia.su.util.user.chat.command.impl;
 
+import aporia.su.util.user.chat.command.CommandManager;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import aporia.su.util.user.chat.command.Command;
 import aporia.su.util.user.chat.command.helpers.TabCompleteHelper;
 import aporia.su.modules.impl.misc.AutoBuy;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.items.ItemRegistry;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.manager.AutoBuyManager;
-import aporia.su.util.config.impl.autobuyconfig.AutoBuyConfig;
+import aporia.su.util.config.impl.player.autobuyconfig.AutoBuyConfig;
 
 import java.util.Arrays;
 import java.util.List;
@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 
 import static aporia.su.util.user.chat.command.impl.HelpCommand.getLine;
 
-public class AutoBuyCommand extends Command {
+public class AutoBuyCommand extends CommandManager.Command {
 
     public AutoBuyCommand() {
         super("autobuy", "Управление конфигурацией автобая", "ab");

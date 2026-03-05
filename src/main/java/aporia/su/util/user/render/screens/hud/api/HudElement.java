@@ -1,7 +1,7 @@
 package aporia.su.util.user.render.screens.hud.api;
 
 import net.minecraft.client.gui.DrawContext;
-import aporia.su.util.events.impl.PacketEvent;
+import aporia.su.util.events.impl.player.PacketEvent;
 
 public interface HudElement {
     void render(DrawContext context, float tickDelta);

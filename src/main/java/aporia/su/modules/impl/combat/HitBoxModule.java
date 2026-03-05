@@ -5,7 +5,7 @@ import lombok.experimental.FieldDefaults;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.math.Box;
 import aporia.su.util.events.api.EventHandler;
-import aporia.su.util.events.impl.BoundingBoxControlEvent;
+import aporia.su.util.events.impl.entity.BoundingBoxControlEvent;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.SliderSettings;

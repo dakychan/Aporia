@@ -1,6 +1,11 @@
 package aporia.su.mixin.client;
 
 import aporia.su.util.events.impl.*;
+import aporia.su.util.events.impl.entity.PlayerTravelEvent;
+import aporia.su.util.events.impl.entity.PushEvent;
+import aporia.su.util.events.impl.entity.UsingItemEvent;
+import aporia.su.util.events.impl.player.MoveEvent;
+import aporia.su.util.events.impl.ui.CloseScreenEvent;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.client.MinecraftClient;

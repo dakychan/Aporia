@@ -1,21 +1,21 @@
 package aporia.su;
 
+import aporia.su.util.config.MainConfig;
 import aporia.su.util.user.render.screens.hud.api.HudManager;
 import aporia.su.util.user.chat.command.CommandManager;
 import aporia.su.util.events.api.EventManager;
 import aporia.su.modules.impl.combat.aura.attack.StrikerConstructor;
 import aporia.su.modules.module.ModuleRepository;
 import aporia.su.util.user.render.screens.clickgui.ClickGui;
-import aporia.su.util.config.ConfigSystem;
-import aporia.su.util.config.impl.bind.BindConfig;
+import aporia.su.util.config.impl.player.bind.BindConfig;
 import aporia.su.util.config.impl.blockesp.BlockESPConfig;
 import aporia.su.util.config.impl.drag.DragConfig;
-import aporia.su.util.config.impl.friend.FriendConfig;
-import aporia.su.util.config.impl.prefix.PrefixConfig;
-import aporia.su.util.config.impl.proxy.ProxyConfig;
-import aporia.su.util.config.impl.staff.StaffConfig;
-import aporia.su.util.modules.ModuleProvider;
-import aporia.su.util.modules.ModuleSwitcher;
+import aporia.su.util.config.impl.player.friend.FriendConfig;
+import aporia.su.util.config.impl.player.prefix.PrefixConfig;
+import aporia.su.util.config.impl.player.proxy.ProxyConfig;
+import aporia.su.util.config.impl.player.staff.StaffConfig;
+import aporia.su.modules.wtf.ModuleProvider;
+import aporia.su.modules.wtf.ModuleSwitcher;
 import aporia.su.util.user.render.font.FontInitializer;
 import aporia.su.util.user.render.shader.RenderCore;
 import aporia.su.util.user.render.shader.Scissor;
@@ -54,7 +54,7 @@ public class Initialization implements ClientModInitializer {
         private ModuleRepository moduleRepository;
         private ModuleSwitcher moduleSwitcher;
         private ClickGui clickgui;
-        private ConfigSystem configSystem;
+        private MainConfig.ConfigSystem configSystem;
         private CommandManager commandManager;
         private TPSCalculate tpsCalculate;
         private HudManager hudManager = new HudManager();
@@ -82,7 +82,7 @@ public class Initialization implements ClientModInitializer {
             moduleRepository.setup();
             moduleProvider = new ModuleProvider(moduleRepository.modules());
             moduleSwitcher = new ModuleSwitcher(moduleRepository.modules(), eventManager);
-            configSystem = new ConfigSystem();
+            configSystem = new MainConfig.ConfigSystem();
             configSystem.init();
             commandManager = new CommandManager();
             commandManager.init();

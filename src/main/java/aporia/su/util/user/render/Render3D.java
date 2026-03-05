@@ -15,7 +15,7 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import aporia.su.util.interfaces.IMinecraft;
-import aporia.su.util.events.impl.WorldRenderEvent;
+import aporia.su.util.events.impl.ui.WorldRenderEvent;
 import aporia.su.util.user.render.color.ColorUtil;
 import aporia.su.util.user.render.math.MathUtils;
 

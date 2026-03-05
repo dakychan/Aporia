@@ -10,7 +10,7 @@ import org.lwjgl.glfw.GLFW;
 import aporia.su.util.interfaces.IMinecraft;
 import aporia.su.Initialization;
 import aporia.su.util.events.api.EventManager;
-import aporia.su.util.events.impl.ModuleToggleEvent;
+import aporia.su.util.events.impl.player.ModuleToggleEvent;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.SettingRepository;
 import aporia.su.modules.impl.render.Hud;

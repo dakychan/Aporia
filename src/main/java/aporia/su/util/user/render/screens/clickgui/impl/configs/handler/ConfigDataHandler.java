@@ -1,9 +1,8 @@
 package aporia.su.util.user.render.screens.clickgui.impl.configs.handler;
 
+import aporia.su.util.config.MainConfig;
 import lombok.Getter;
 import lombok.Setter;
-import aporia.su.util.config.ConfigSystem;
-import aporia.su.util.config.impl.ConfigPath;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -35,7 +34,7 @@ public class ConfigDataHandler {
         List<String> oldConfigs = new ArrayList<>(configs);
         configs.clear();
         try {
-            Path configDir = ConfigPath.getConfigDirectory();
+            Path configDir = MainConfig.ConfigPath.getConfigDirectory();
             if (Files.exists(configDir)) {
                 Files.list(configDir)
                         .filter(path -> path.toString().endsWith(".json"))
@@ -87,15 +86,15 @@ public class ConfigDataHandler {
         }
 
         try {
-            Path configDir = ConfigPath.getConfigDirectory();
+            Path configDir = MainConfig.ConfigPath.getConfigDirectory();
             Path newConfig = configDir.resolve(name + ".json");
 
             if (Files.exists(newConfig)) {
                 return false;
             }
 
-            ConfigSystem.getInstance().save();
-            Path currentConfig = ConfigPath.getConfigFile();
+            MainConfig.ConfigSystem.getInstance().save();
+            Path currentConfig = MainConfig.ConfigPath.getConfigFile();
             Files.copy(currentConfig, newConfig);
             refreshConfigs();
             return true;
@@ -106,7 +105,7 @@ public class ConfigDataHandler {
 
     public boolean loadConfig(String name) {
         try {
-            Path configDir = ConfigPath.getConfigDirectory();
+            Path configDir = MainConfig.ConfigPath.getConfigDirectory();
             Path configFile = configDir.resolve(name + ".json");
             return Files.exists(configFile);
         } catch (Exception e) {
@@ -116,16 +115,16 @@ public class ConfigDataHandler {
 
     public boolean refreshConfig(String name) {
         try {
-            Path configDir = ConfigPath.getConfigDirectory();
+            Path configDir = MainConfig.ConfigPath.getConfigDirectory();
             Path configFile = configDir.resolve(name + ".json");
 
             if (!Files.exists(configFile)) {
                 return false;
             }
 
-            ConfigSystem.getInstance().save();
+            MainConfig.ConfigSystem.getInstance().save();
             Files.deleteIfExists(configFile);
-            Path currentConfig = ConfigPath.getConfigFile();
+            Path currentConfig = MainConfig.ConfigPath.getConfigFile();
             Files.copy(currentConfig, configFile);
             return true;
         } catch (Exception e) {
@@ -135,7 +134,7 @@ public class ConfigDataHandler {
 
     public boolean deleteConfig(String name) {
         try {
-            Path configDir = ConfigPath.getConfigDirectory();
+            Path configDir = MainConfig.ConfigPath.getConfigDirectory();
             Path configFile = configDir.resolve(name + ".json");
 
             if (Files.exists(configFile)) {
