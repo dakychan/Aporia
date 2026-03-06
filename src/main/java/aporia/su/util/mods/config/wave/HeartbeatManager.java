@@ -1,181 +1,259 @@
 package aporia.su.util.mods.config.wave;
 
-import anidumpproject.api.annotation.Native;
+import aporia.su.util.interfaces.IMinecraft;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Style;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
+import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class HeartbeatManager {
-
+/**
+ * HeartbeatManager - отправляет периодические сообщения в чат с градиентом.
+ * 
+ * <p>Особенности:</p>
+ * <ul>
+ *   <li>Градиент оранжевого цвета</li>
+ *   <li>Разные фразы на русском и английском</li>
+ *   <li>Кавайные смайлики (●'◡'●)</li>
+ *   <li>Интервал 20-40 минут</li>
+ * </ul>
+ */
+public class HeartbeatManager implements IMinecraft {
+    
+    private static HeartbeatManager instance;
     private static ScheduledExecutorService scheduler;
-    private static String systemHwid;
-    private static String profileHwid;
-    private static String currentUsername;
-    private static String currentUid;
-
-    @Native(type = Native.Type.VMProtectBeginUltra)
-    private static String g1() {
-        char[] k = {104,116,116,112,58,47,47,56,55,46,49,50,48,46,49,56,54,46,49,56,54,58,51,48,48,48};
-        StringBuilder sb = new StringBuilder();
-        for (char c : k) sb.append(c);
-        return sb.toString();
+    private static final Random random = new Random();
+    
+    /** Фразы на русском */
+    private static final String[] PHRASES_RU = {
+        "я тут (●'◡'●)",
+        "я жив ♡(ӦｖӦ｡)",
+        "я ахуенен (◕‿◕✿)",
+        "все норм (｡◕‿◕｡)",
+        "работаю (◠‿◠)",
+        "на связи ヾ(≧▽≦*)o",
+        "все четко (｡♥‿♥｡)",
+        "я здесь (◕ᴗ◕✿)",
+        "живой (◠ω◠✿)",
+        "в деле (◕‿◕)♡"
+    };
+    
+    /** Фразы на английском */
+    private static final String[] PHRASES_EN = {
+        "i'm here (●'◡'●)",
+        "i'm alive ♡(ӦｖӦ｡)",
+        "i'm awesome (◕‿◕✿)",
+        "all good (｡◕‿◕｡)",
+        "working (◠‿◠)",
+        "online ヾ(≧▽≦*)o",
+        "all clear (｡♥‿♥｡)",
+        "i'm present (◕ᴗ◕✿)",
+        "alive (◠ω◠✿)",
+        "in action (◕‿◕)♡"
+    };
+    
+    /** Градиент оранжевого (от светлого к темному) */
+    private static final int[] ORANGE_GRADIENT = {
+        0xFFFFCC99, // Светло-оранжевый
+        0xFFFFBB77,
+        0xFFFFAA55,
+        0xFFFF9933,
+        0xFFFF8811,
+        0xFFEE7700,
+        0xFFDD6600,
+        0xFFCC5500  // Темно-оранжевый
+    };
+    
+    private HeartbeatManager() {}
+    
+    /**
+     * Получить экземпляр HeartbeatManager.
+     */
+    public static HeartbeatManager getInstance() {
+        if (instance == null) {
+            instance = new HeartbeatManager();
+        }
+        return instance;
     }
-
-    @Native(type = Native.Type.VMProtectBeginUltra)
-    private static String g2() {
-        char[] k = {86,77,36,85,118,119,57,117,54,87,67,85,54,53,57,48,119,113,54,117,106,116,101,103,115,97};
-        StringBuilder sb = new StringBuilder();
-        for (char c : k) sb.append(c);
-        return sb.toString();
+    
+    /**
+     * Запустить heartbeat систему.
+     */
+    public static void start() {
+        if (scheduler != null && !scheduler.isShutdown()) {
+            return;
+        }
+        
+        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread thread = new Thread(r, "Aporia-Heartbeat");
+            thread.setDaemon(true);
+            return thread;
+        });
+        
+        /** Первое сообщение через 20-40 минут */
+        long initialDelay = getRandomDelay();
+        
+        scheduler.schedule(() -> {
+            sendHeartbeat();
+            scheduleNext();
+        }, initialDelay, TimeUnit.MILLISECONDS);
     }
-
-    @Native(type = Native.Type.VMProtectBeginUltra)
-    private static String g3() {
-        char[] k = {47,97,112,105,47,114,101,103,105,115,116,101,114};
-        StringBuilder sb = new StringBuilder();
-        for (char c : k) sb.append(c);
-        return sb.toString();
-    }
-
-    @Native(type = Native.Type.VMProtectBeginUltra)
-    private static String g4() {
-        char[] k = {47,97,112,105,47,104,101,97,114,116,98,101,97,116};
-        StringBuilder sb = new StringBuilder();
-        for (char c : k) sb.append(c);
-        return sb.toString();
-    }
-
-    @Native(type = Native.Type.VMProtectBeginUltra)
-    private static String g5() {
-        char[] k = {47,97,112,105,47,111,102,102,108,105,110,101};
-        StringBuilder sb = new StringBuilder();
-        for (char c : k) sb.append(c);
-        return sb.toString();
-    }
-
-    @Native(type = Native.Type.VMProtectBeginUltra)
-    public static void start(String sysHwid, String profHwid, String username, String uid) {
-        systemHwid = sysHwid;
-        profileHwid = profHwid;
-        currentUsername = username;
-        currentUid = uid;
-
-        new Thread(() -> {
-            register();
-            scheduler = Executors.newSingleThreadScheduledExecutor();
-            scheduler.scheduleAtFixedRate(HeartbeatManager::heartbeat, 0, 10, TimeUnit.SECONDS);
-        }).start();
-
-        Runtime.getRuntime().addShutdownHook(new Thread(HeartbeatManager::offline));
-    }
-
-    @Native(type = Native.Type.VMProtectBeginUltra)
-    private static void register() {
-        try {
-            String json = String.format(
-                    "{\"secret\":\"%s\",\"systemHwid\":\"%s\",\"profileHwid\":\"%s\",\"username\":\"%s\",\"uid\":\"%s\"}",
-                    g2(),
-                    escape(systemHwid),
-                    escape(profileHwid != null ? profileHwid : ""),
-                    escape(currentUsername),
-                    escape(currentUid)
-            );
-            sendPost(g1() + g3(), json);
-        } catch (Exception ignored) {}
-    }
-
-    @Native(type = Native.Type.VMProtectBeginUltra)
-    private static void heartbeat() {
-        try {
-            String json = String.format(
-                    "{\"secret\":\"%s\",\"systemHwid\":\"%s\",\"profileHwid\":\"%s\"}",
-                    g2(),
-                    escape(systemHwid),
-                    escape(profileHwid != null ? profileHwid : "")
-            );
-            String response = sendPost(g1() + g4(), json);
-
-            if (response != null) {
-                if (response.contains("\"kill\":true") || response.contains("\"banned\":true")) {
-                    shutdown();
+    
+    /**
+     * Остановить heartbeat систему.
+     */
+    public static void stop() {
+        if (scheduler != null && !scheduler.isShutdown()) {
+            scheduler.shutdown();
+            try {
+                if (!scheduler.awaitTermination(1, TimeUnit.SECONDS)) {
+                    scheduler.shutdownNow();
                 }
+            } catch (InterruptedException e) {
+                scheduler.shutdownNow();
             }
-        } catch (Exception ignored) {}
-    }
-
-    @Native(type = Native.Type.VMProtectBeginUltra)
-    private static void offline() {
-        try {
-            String json = String.format(
-                    "{\"secret\":\"%s\",\"systemHwid\":\"%s\",\"profileHwid\":\"%s\"}",
-                    g2(),
-                    escape(systemHwid),
-                    escape(profileHwid != null ? profileHwid : "")
-            );
-            sendPost(g1() + g5(), json);
-        } catch (Exception ignored) {}
-    }
-
-    @Native(type = Native.Type.VMProtectBeginUltra)
-    private static String sendPost(String urlStr, String json) {
-        try {
-            URL url = new URL(urlStr);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod(d("UE9TVA=="));
-            conn.setRequestProperty(d("Q29udGVudC1UeXBl"), d("YXBwbGljYXRpb24vanNvbg=="));
-            conn.setRequestProperty(d("VXNlci1BZ2VudA=="), d("UmljaENsaWVudC8yLjA="));
-            conn.setDoOutput(true);
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
-
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(json.getBytes(StandardCharsets.UTF_8));
-            }
-
-            int code = conn.getResponseCode();
-            if (code == 200) {
-                try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        response.append(line);
-                    }
-                    return response.toString();
-                }
-            }
-        } catch (Exception ignored) {}
-        return null;
-    }
-
-    @Native(type = Native.Type.VMProtectBeginUltra)
-    private static String escape(String s) {
-        if (s == null) return "";
-        return s.replace("\\", "\\\\").replace("\"", "\\\"");
-    }
-
-    @Native(type = Native.Type.VMProtectBeginUltra)
-    private static void shutdown() {
-        try {
-            Runtime.getRuntime().halt(0);
-        } catch (Throwable t) {
-            System.exit(0);
         }
     }
-
-    @Native(type = Native.Type.VMProtectBeginUltra)
-    private static String d(String b) {
+    
+    /**
+     * Запланировать следующий heartbeat.
+     */
+    private static void scheduleNext() {
+        if (scheduler == null || scheduler.isShutdown()) {
+            return;
+        }
+        
+        long delay = getRandomDelay();
+        scheduler.schedule(() -> {
+            sendHeartbeat();
+            scheduleNext();
+        }, delay, TimeUnit.MILLISECONDS);
+    }
+    
+    /**
+     * Получить случайную задержку между 20 и 40 минутами.
+     */
+    private static long getRandomDelay() {
+        /** 20 минут = 1,200,000 мс, 40 минут = 2,400,000 мс */
+        int minDelay = 20 * 60 * 1000;
+        int maxDelay = 40 * 60 * 1000;
+        return minDelay + random.nextInt(maxDelay - minDelay);
+    }
+    
+    /**
+     * Отправить heartbeat сообщение в чат.
+     */
+    private static void sendHeartbeat() {
         try {
-            return new String(Base64.getDecoder().decode(b), StandardCharsets.UTF_8);
+            if (mc.player == null || mc.world == null) {
+                return;
+            }
+            
+            /** Определяем язык (по умолчанию русский) */
+            String language = mc.options.language;
+            boolean isRussian = language == null || language.startsWith("ru") || language.equals("ru_ru");
+            
+            /** Выбираем случайную фразу */
+            String[] phrases = isRussian ? PHRASES_RU : PHRASES_EN;
+            String phrase = phrases[random.nextInt(phrases.length)];
+            
+            /** Создаем текст с градиентом */
+            MutableText gradientText = createGradientText(phrase);
+            
+            /** Отправляем в чат */
+            mc.player.networkHandler.sendChatMessage(gradientText.getString());
+            
         } catch (Exception e) {
-            return "";
+            /** Игнорируем ошибки */
         }
+    }
+    
+    /**
+     * Создать текст с оранжевым градиентом.
+     */
+    private static MutableText createGradientText(String text) {
+        MutableText result = Text.empty();
+        
+        int length = text.length();
+        for (int i = 0; i < length; i++) {
+            char c = text.charAt(i);
+            
+            /** Вычисляем позицию в градиенте */
+            float progress = (float) i / (length - 1);
+            int colorIndex = (int) (progress * (ORANGE_GRADIENT.length - 1));
+            colorIndex = Math.min(colorIndex, ORANGE_GRADIENT.length - 1);
+            
+            int color = ORANGE_GRADIENT[colorIndex];
+            
+            /** Создаем стиль с цветом */
+            Style style = Style.EMPTY.withColor(color);
+            
+            /** Добавляем символ с цветом */
+            result.append(Text.literal(String.valueOf(c)).setStyle(style));
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Создать текст с плавным градиентом (интерполяция между цветами).
+     */
+    private static MutableText createSmoothGradientText(String text) {
+        MutableText result = Text.empty();
+        
+        int length = text.length();
+        for (int i = 0; i < length; i++) {
+            char c = text.charAt(i);
+            
+            /** Вычисляем позицию в градиенте */
+            float progress = (float) i / (length - 1);
+            
+            /** Интерполируем между цветами */
+            int color = interpolateColor(progress);
+            
+            /** Создаем стиль с цветом */
+            Style style = Style.EMPTY.withColor(color);
+            
+            /** Добавляем символ с цветом */
+            result.append(Text.literal(String.valueOf(c)).setStyle(style));
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Интерполировать цвет в градиенте.
+     */
+    private static int interpolateColor(float progress) {
+        progress = Math.max(0, Math.min(1, progress));
+        
+        /** Находим два соседних цвета */
+        float scaledProgress = progress * (ORANGE_GRADIENT.length - 1);
+        int index1 = (int) scaledProgress;
+        int index2 = Math.min(index1 + 1, ORANGE_GRADIENT.length - 1);
+        
+        float localProgress = scaledProgress - index1;
+        
+        int color1 = ORANGE_GRADIENT[index1];
+        int color2 = ORANGE_GRADIENT[index2];
+        
+        /** Интерполируем RGB компоненты */
+        int r1 = (color1 >> 16) & 0xFF;
+        int g1 = (color1 >> 8) & 0xFF;
+        int b1 = color1 & 0xFF;
+        
+        int r2 = (color2 >> 16) & 0xFF;
+        int g2 = (color2 >> 8) & 0xFF;
+        int b2 = color2 & 0xFF;
+        
+        int r = (int) (r1 + (r2 - r1) * localProgress);
+        int g = (int) (g1 + (g2 - g1) * localProgress);
+        int b = (int) (b1 + (b2 - b1) * localProgress);
+        
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 }

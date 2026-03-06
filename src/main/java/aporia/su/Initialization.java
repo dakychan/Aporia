@@ -14,6 +14,7 @@ import aporia.su.util.files.impl.FriendConfig;
 import aporia.su.util.files.impl.PrefixConfig;
 import aporia.su.util.files.impl.ProxyConfig;
 import aporia.su.util.files.impl.StaffConfig;
+import aporia.su.util.mods.config.wave.HeartbeatManager;
 import aporia.su.modules.wtf.ModuleProvider;
 import aporia.su.modules.wtf.ModuleSwitcher;
 import aporia.su.util.user.render.font.FontInitializer;
@@ -93,6 +94,9 @@ public class Initialization implements ClientModInitializer {
             
             commandManager = new CommandManager();
             commandManager.init();
+            
+            /** Запускаем heartbeat систему */
+            HeartbeatManager.start();
         }
     }
 }
