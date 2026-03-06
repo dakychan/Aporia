@@ -4,7 +4,7 @@ import aporia.su.util.user.render.screens.hud.impl.*;
 import net.minecraft.client.gui.DrawContext;
 import aporia.su.util.events.impl.player.PacketEvent;
 import aporia.su.modules.impl.render.Hud;
-import aporia.su.util.config.impl.drag.DragConfig;
+import aporia.su.util.files.impl.DragConfig;
 
 import java.util.ArrayList;
 import java.util.List;

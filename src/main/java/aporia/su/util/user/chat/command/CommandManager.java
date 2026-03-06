@@ -9,7 +9,7 @@ import aporia.su.util.events.api.EventManager;
 import aporia.su.util.events.api.EventHandler;
 import aporia.su.util.events.impl.ui.ChatEvent;
 import aporia.su.util.events.impl.player.TabCompleteEvent;
-import aporia.su.util.config.impl.player.prefix.PrefixConfig;
+import aporia.su.util.files.impl.PrefixConfig;
 import aporia.su.util.user.chat.string.chat.ChatMessage;
 
 import java.util.*;

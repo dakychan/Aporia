@@ -3,7 +3,7 @@ package aporia.su.util.user.render.screens.clickgui.impl.autobuy.settings;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.item.Item;
-import aporia.su.util.config.impl.player.autobuyconfig.AutoBuyConfig;
+import aporia.su.util.files.impl.AutoBuyConfig;
 
 @Getter
 @Setter

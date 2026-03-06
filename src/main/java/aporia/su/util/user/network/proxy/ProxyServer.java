@@ -1,7 +1,7 @@
 package aporia.su.util.user.network.proxy;
 
 import net.minecraft.client.gui.widget.ButtonWidget;
-import aporia.su.util.config.impl.player.proxy.ProxyConfig;
+import aporia.su.util.files.impl.ProxyConfig;
 
 public class ProxyServer {
     public static ButtonWidget proxyMenuButton;

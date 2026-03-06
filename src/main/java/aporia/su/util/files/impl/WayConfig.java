@@ -1,34 +1,28 @@
-package aporia.su.util.config.impl.player.way;
+package aporia.su.util.files.impl;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import aporia.cc.OsManager;
+import aporia.su.util.files.FilesManager;
+import aporia.su.util.helper.Logger;
+import aporia.su.util.user.repository.way.Way;
+import aporia.su.util.user.repository.way.WayRepository;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import aporia.su.util.config.impl.loggers.consolelogger.Logger;
-import aporia.su.util.user.repository.way.Way;
-import aporia.su.util.user.repository.way.WayRepository;
+import net.minecraft.util.math.BlockPos;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Конфиг для вейпоинтов.
+ */
 public class WayConfig {
     private static WayConfig instance;
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private final Path configPath;
+    private static final String CONFIG_NAME = "waypoints";
+    private static final Path CONFIG_DIR = OsManager.mainDirectory.resolve("configs");
 
-    private WayConfig() {
-        Path configDir = Paths.get("Aporia", "configs");
-        try {
-            Files.createDirectories(configDir);
-        } catch (IOException ignored) {}
-        configPath = configDir.resolve("waypoints.json");
-    }
+    private WayConfig() {}
 
     public static WayConfig getInstance() {
         if (instance == null) {
@@ -49,18 +43,32 @@ public class WayConfig {
                 obj.addProperty("server", way.server());
                 array.add(obj);
             }
-            Files.writeString(configPath, gson.toJson(array), StandardCharsets.UTF_8);
-        } catch (IOException e) {
+            
+            FilesManager.createFile(
+                CONFIG_DIR,
+                FilesManager.FileFormat.APR,
+                CONFIG_NAME,
+                array.toString(),
+                FilesManager.CheckMode.ALWAYS
+            );
+        } catch (Exception e) {
             Logger.error("WayConfig: Save failed! " + e.getMessage());
         }
     }
 
     public void load() {
         try {
-            if (!Files.exists(configPath)) {
+            Path configPath = FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR);
+            
+            if (!FilesManager.exists(configPath)) {
                 return;
             }
-            String json = Files.readString(configPath, StandardCharsets.UTF_8);
+            
+            String json = FilesManager.readFile(configPath);
+            if (json == null || json.isEmpty()) {
+                return;
+            }
+            
             JsonArray array = JsonParser.parseString(json).getAsJsonArray();
             List<Way> ways = new ArrayList<>();
             array.forEach(element -> {
@@ -70,10 +78,11 @@ public class WayConfig {
                 int y = obj.get("y").getAsInt();
                 int z = obj.get("z").getAsInt();
                 String server = obj.get("server").getAsString();
-                ways.add(new Way(name, new net.minecraft.util.math.BlockPos(x, y, z), server));
+                ways.add(new Way(name, new BlockPos(x, y, z), server));
             });
             WayRepository.getInstance().setWays(ways);
-            Logger.success("WayConfig: waypoints.json loaded successfully!");
+            
+            Logger.success("WayConfig loaded!");
         } catch (Exception e) {
             Logger.error("WayConfig: Load failed! " + e.getMessage());
         }

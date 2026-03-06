@@ -1,6 +1,7 @@
 package aporia.su.util.user.chat.command.impl;
 
-import aporia.su.util.config.MainConfig;
+import aporia.cc.OsManager;
+import aporia.su.util.files.FilesManager;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
@@ -40,12 +41,12 @@ public class ConfigCommand extends CommandManager.Command {
                     return;
                 }
                 String name = args[1];
-                Path configDir = MainConfig.ConfigPath.getConfigDirectory();
-                Path configFile = configDir.resolve(name + ".json");
+                Path configDir = OsManager.mainDirectory.resolve("configs");
+                Path configFile = configDir.resolve(name + ".apr");
 
                 if (Files.exists(configFile)) {
                     try {
-                        MainConfig.ConfigSystem.getInstance().load();
+                        FilesManager.getConfigManager().load();
                         logDirect(String.format("Конфигурация %s загружена!", name));
                     } catch (Exception e) {
                         logDirect(String.format("Ошибка при загрузке конфига! Детали: %s", e.getMessage()), Formatting.RED);
@@ -56,16 +57,16 @@ public class ConfigCommand extends CommandManager.Command {
             }
             case "save" -> {
                 if (args.length < 2) {
-                    MainConfig.ConfigSystem.getInstance().save();
+                    FilesManager.getConfigManager().save();
                     logDirect("Конфигурация сохранена!");
                     return;
                 }
                 String name = args[1];
                 try {
-                    Path configDir = MainConfig.ConfigPath.getConfigDirectory();
-                    Path newConfig = configDir.resolve(name + ".json");
-                    MainConfig.ConfigSystem.getInstance().save();
-                    Path currentConfig = MainConfig.ConfigPath.getConfigFile();
+                    Path configDir = OsManager.mainDirectory.resolve("configs");
+                    Path newConfig = configDir.resolve(name + ".apr");
+                    FilesManager.getConfigManager().save();
+                    Path currentConfig = FilesManager.getFilePath(configDir, "config", FilesManager.FileFormat.APR);
                     Files.copy(currentConfig, newConfig);
                     logDirect(String.format("Конфигурация %s сохранена!", name));
                 } catch (Exception e) {
@@ -113,7 +114,7 @@ public class ConfigCommand extends CommandManager.Command {
             }
             case "dir" -> {
                 try {
-                    Path configDir = MainConfig.ConfigPath.getConfigDirectory();
+                    Path configDir = OsManager.mainDirectory.resolve("configs");
                     String os = System.getProperty("os.name").toLowerCase();
 
                     ProcessBuilder pb;
@@ -184,13 +185,13 @@ public class ConfigCommand extends CommandManager.Command {
     public List<String> getConfigs() {
         List<String> configs = new ArrayList<>();
         try {
-            Path configDir = MainConfig.ConfigPath.getConfigDirectory();
+            Path configDir = OsManager.mainDirectory.resolve("configs");
             if (Files.exists(configDir)) {
                 Files.list(configDir)
-                        .filter(path -> path.toString().endsWith(".json"))
+                        .filter(path -> path.toString().endsWith(".apr"))
                         .forEach(path -> {
                             String name = path.getFileName().toString();
-                            configs.add(name.substring(0, name.length() - 5));
+                            configs.add(name.substring(0, name.length() - 4));
                         });
             }
         } catch (IOException ignored) {}

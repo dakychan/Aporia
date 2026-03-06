@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import aporia.su.util.events.api.EventManager;
 import aporia.su.util.events.impl.player.PacketEvent;
-import aporia.su.util.config.impl.player.proxy.ProxyConfig;
+import aporia.su.util.files.impl.ProxyConfig;
 import aporia.su.util.user.network.proxy.Proxy;
 
 import java.net.InetSocketAddress;

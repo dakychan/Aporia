@@ -3,7 +3,7 @@ package aporia.su.util.user.chat.command.impl;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import aporia.su.util.user.chat.command.CommandManager;
-import aporia.su.util.config.impl.player.prefix.PrefixConfig;
+import aporia.su.util.files.impl.PrefixConfig;
 
 import java.util.Arrays;
 import java.util.List;

@@ -1,32 +1,25 @@
-package aporia.su.util.config.impl.drag;
+package aporia.su.util.files.impl;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import aporia.cc.OsManager;
 import aporia.su.Initialization;
+import aporia.su.util.files.FilesManager;
+import aporia.su.util.helper.Logger;
 import aporia.su.util.user.render.screens.hud.api.HudElement;
 import aporia.su.util.user.render.screens.hud.api.HudManager;
-import aporia.su.util.config.impl.loggers.consolelogger.Logger;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
+/**
+ * Конфиг для позиций HUD элементов.
+ */
 public class DragConfig {
     private static DragConfig instance;
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private final Path configPath;
+    private static final String CONFIG_NAME = "draggables";
+    private static final Path CONFIG_DIR = OsManager.mainDirectory.resolve("configs");
 
-    private DragConfig() {
-        Path configDir = Paths.get("Aporia", "configs");
-        try {
-            Files.createDirectories(configDir);
-        } catch (IOException ignored) {}
-        configPath = configDir.resolve("draggables.json");
-    }
+    private DragConfig() {}
 
     public static DragConfig getInstance() {
         if (instance == null) {
@@ -38,7 +31,9 @@ public class DragConfig {
     public void save() {
         try {
             HudManager hudManager = getHudManager();
-            if (hudManager == null || !hudManager.isInitialized()) return;
+            if (hudManager == null || !hudManager.isInitialized()) {
+                return;
+            }
 
             JsonObject root = new JsonObject();
             for (HudElement element : hudManager.getElements()) {
@@ -49,17 +44,27 @@ public class DragConfig {
                 elementJson.addProperty("height", element.getHeight());
                 root.add(element.getName(), elementJson);
             }
-            Files.writeString(configPath, gson.toJson(root), StandardCharsets.UTF_8);
-            Logger.success("DragConfig: draggables.json saved successfully!");
-        } catch (IOException e) {
+            
+            FilesManager.createFile(
+                CONFIG_DIR,
+                FilesManager.FileFormat.APR,
+                CONFIG_NAME,
+                root.toString(),
+                FilesManager.CheckMode.ALWAYS
+            );
+            
+            Logger.success("DragConfig saved!");
+        } catch (Exception e) {
             Logger.error("DragConfig: Save failed! " + e.getMessage());
         }
     }
 
     public void load() {
         try {
-            if (!Files.exists(configPath)) {
-                Logger.info("DragConfig: No config file found, using defaults.");
+            Path configPath = FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR);
+            
+            if (!FilesManager.exists(configPath)) {
+                Logger.info("DragConfig: No config found, using defaults.");
                 return;
             }
 
@@ -69,7 +74,7 @@ public class DragConfig {
                 return;
             }
 
-            String json = Files.readString(configPath, StandardCharsets.UTF_8);
+            String json = FilesManager.readFile(configPath);
             if (json == null || json.trim().isEmpty()) {
                 Logger.error("DragConfig: Config file is empty.");
                 return;
@@ -94,7 +99,8 @@ public class DragConfig {
                     }
                 }
             }
-            Logger.success("DragConfig: draggables.json loaded successfully!");
+            
+            Logger.success("DragConfig loaded!");
         } catch (Exception e) {
             Logger.error("DragConfig: Load failed! " + e.getMessage());
         }

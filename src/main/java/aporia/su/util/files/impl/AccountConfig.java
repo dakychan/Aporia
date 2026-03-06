@@ -1,39 +1,34 @@
-package aporia.su.util.config.impl.player.account;
+package aporia.su.util.files.impl;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import aporia.cc.OsManager;
+import aporia.su.util.files.FilesManager;
+import aporia.su.util.helper.Logger;
+import aporia.su.util.user.player.session.SessionChanger;
+import aporia.su.util.user.render.screens.account.AccountEntry;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.util.Identifier;
-import aporia.su.util.user.render.screens.account.AccountEntry;
-import aporia.su.util.config.impl.loggers.consolelogger.Logger;
-import aporia.su.util.user.player.session.SessionChanger;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Конфиг для аккаунтов.
+ */
 public class AccountConfig {
-
     private static AccountConfig instance;
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private final Path configPath;
+    private static final String CONFIG_NAME = "accounts";
+    private static final Path CONFIG_DIR = OsManager.mainDirectory.resolve("configs");
+
     private final List<AccountEntry> accounts = new ArrayList<>();
     private String activeAccountName = "";
     private String activeAccountDate = "";
     private String activeAccountSkin = "";
 
     private AccountConfig() {
-        Path configDir = Paths.get("Aporia", "configs");
-        try {
-            Files.createDirectories(configDir);
-        } catch (IOException ignored) {}
-        configPath = configDir.resolve("accounts.json");
+        load();
     }
 
     public static AccountConfig getInstance() {
@@ -65,21 +60,29 @@ public class AccountConfig {
             activeObj.addProperty("skin", activeAccountSkin);
             root.add("active", activeObj);
 
-            Files.writeString(configPath, gson.toJson(root), StandardCharsets.UTF_8);
-            Logger.success("AccountConfig: accounts.json saved successfully!");
-        } catch (IOException e) {
+            FilesManager.createFile(
+                CONFIG_DIR,
+                FilesManager.FileFormat.APR,
+                CONFIG_NAME,
+                root.toString(),
+                FilesManager.CheckMode.ALWAYS
+            );
+            Logger.success("AccountConfig saved!");
+        } catch (Exception e) {
             Logger.error("AccountConfig: Save failed! " + e.getMessage());
         }
     }
 
     public void load() {
         try {
-            if (!Files.exists(configPath)) {
+            Path configPath = FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR);
+            
+            if (!FilesManager.exists(configPath)) {
                 Logger.info("AccountConfig: No config file found, using defaults.");
                 return;
             }
 
-            String json = Files.readString(configPath, StandardCharsets.UTF_8);
+            String json = FilesManager.readFile(configPath);
             if (json == null || json.trim().isEmpty()) {
                 Logger.error("AccountConfig: Config file is empty.");
                 return;
@@ -121,7 +124,7 @@ public class AccountConfig {
                 SessionChanger.changeUsername(activeAccountName);
             }
 
-            Logger.success("AccountConfig: accounts.json loaded successfully!");
+            Logger.success("AccountConfig loaded!");
         } catch (Exception e) {
             Logger.error("AccountConfig: Load failed! " + e.getMessage());
         }

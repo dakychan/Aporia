@@ -17,7 +17,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.AutoBuyableItem;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.settings.AutoBuyItemSettings;
-import aporia.su.util.config.impl.player.autobuyconfig.AutoBuyConfig;
+import aporia.su.util.files.impl.AutoBuyConfig;
 
 import java.util.List;
 import java.util.Optional;

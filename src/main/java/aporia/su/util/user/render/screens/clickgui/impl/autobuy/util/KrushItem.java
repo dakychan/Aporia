@@ -6,7 +6,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.AutoBuyableItem;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.settings.AutoBuyItemSettings;
-import aporia.su.util.config.impl.player.autobuyconfig.AutoBuyConfig;
+import aporia.su.util.files.impl.AutoBuyConfig;
 
 public class KrushItem implements AutoBuyableItem {
     private final String displayName;

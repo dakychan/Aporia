@@ -1,6 +1,6 @@
 package aporia.su.mixin.client;
 
-import aporia.su.util.config.MainConfig;
+import aporia.su.util.files.FilesManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
@@ -71,9 +71,9 @@ public abstract class MinecraftClientMixin {
 
     @Inject(method = "stop", at = @At("HEAD"))
     private void onStop(CallbackInfo ci) {
-        MainConfig.ConfigSystem configSystem = MainConfig.ConfigSystem.getInstance();
-        if (configSystem != null) {
-            configSystem.shutdown();
+        FilesManager.ConfigManager configManager = FilesManager.getConfigManager();
+        if (configManager != null) {
+            configManager.shutdown();
         }
     }
 

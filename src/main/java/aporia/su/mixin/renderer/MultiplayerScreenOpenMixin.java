@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import aporia.su.util.config.impl.player.proxy.ProxyConfig;
+import aporia.su.util.files.impl.ProxyConfig;
 import aporia.su.util.user.network.proxy.GuiProxy;
 import aporia.su.util.user.network.proxy.ProxyServer;
 

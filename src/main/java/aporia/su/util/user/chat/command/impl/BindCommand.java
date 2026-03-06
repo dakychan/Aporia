@@ -1,6 +1,6 @@
 package aporia.su.util.user.chat.command.impl;
 
-import aporia.su.util.config.MainConfig;
+import aporia.su.util.files.FilesManager;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
@@ -13,7 +13,7 @@ import aporia.su.util.user.chat.command.helpers.Paginator;
 import aporia.su.util.user.chat.command.helpers.TabCompleteHelper;
 import aporia.su.modules.module.ModuleRepository;
 import aporia.su.modules.module.ModuleStructure;
-import aporia.su.util.config.impl.player.bind.BindConfig;
+import aporia.su.util.files.impl.BindConfig;
 import aporia.su.util.user.string.KeyHelper;
 
 import java.util.Arrays;
@@ -65,7 +65,7 @@ public class BindCommand extends CommandManager.Command {
                 }
 
                 module.setKey(key);
-                MainConfig.ConfigSystem.getInstance().save();
+                FilesManager.getConfigManager().save();
 
                 logDirect(String.format("§aМодуль §f%s §aпривязан к клавише §f%s",
                         module.getName(), KeyHelper.getKeyName(key).toLowerCase()), Formatting.GREEN);
@@ -85,7 +85,7 @@ public class BindCommand extends CommandManager.Command {
                 }
 
                 module.setKey(GLFW.GLFW_KEY_UNKNOWN);
-                MainConfig.ConfigSystem.getInstance().save();
+                FilesManager.getConfigManager().save();
 
                 logDirect(String.format("Бинд для модуля %s удален!", module.getName()), Formatting.GREEN);
             }
@@ -97,7 +97,7 @@ public class BindCommand extends CommandManager.Command {
                         count++;
                     }
                 }
-                MainConfig.ConfigSystem.getInstance().save();
+                FilesManager.getConfigManager().save();
                 logDirect(String.format("Все бинды модулей удалены! Удалено: %d", count), Formatting.GREEN);
             }
             case "set" -> {

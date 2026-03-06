@@ -8,7 +8,7 @@ import aporia.su.util.interfaces.IMinecraft;
 import aporia.su.util.events.api.EventHandler;
 import aporia.su.util.events.api.EventManager;
 import aporia.su.util.events.impl.ui.DrawEvent;
-import aporia.su.util.config.impl.player.way.WayConfig;
+import aporia.su.util.files.impl.WayConfig;
 import aporia.su.util.user.render.math.Projection;
 import aporia.su.util.user.render.Render2D;
 import aporia.su.util.user.render.font.Font;

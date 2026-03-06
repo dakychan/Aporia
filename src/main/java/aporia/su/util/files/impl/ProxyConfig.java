@@ -1,24 +1,23 @@
-package aporia.su.util.config.impl.player.proxy;
+package aporia.su.util.files.impl;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import aporia.cc.OsManager;
+import aporia.su.util.files.FilesManager;
+import aporia.su.util.helper.Logger;
+import aporia.su.util.user.network.proxy.Proxy;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import lombok.Getter;
 import lombok.Setter;
-import aporia.su.util.config.impl.loggers.consolelogger.Logger;
-import aporia.su.util.user.network.proxy.Proxy;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
+/**
+ * Конфиг для прокси настроек.
+ */
 public class ProxyConfig {
     private static ProxyConfig instance;
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private final Path configPath;
+    private static final String CONFIG_NAME = "proxy";
+    private static final Path CONFIG_DIR = OsManager.mainDirectory.resolve("configs").resolve("proxy");
 
     @Getter @Setter
     private boolean proxyEnabled = false;
@@ -29,13 +28,7 @@ public class ProxyConfig {
     @Getter @Setter
     private Proxy lastUsedProxy = new Proxy();
 
-    private ProxyConfig() {
-        Path configDir = Paths.get("Aporia", "configs", "proxy");
-        try {
-            Files.createDirectories(configDir);
-        } catch (IOException ignored) {}
-        configPath = configDir.resolve("proxy.json");
-    }
+    private ProxyConfig() {}
 
     public static ProxyConfig getInstance() {
         if (instance == null) {
@@ -63,21 +56,29 @@ public class ProxyConfig {
             lastUsedProxyJson.addProperty("password", lastUsedProxy.password);
             root.add("lastUsedProxy", lastUsedProxyJson);
 
-            Files.writeString(configPath, gson.toJson(root), StandardCharsets.UTF_8);
-        } catch (IOException e) {
+            FilesManager.createFile(
+                CONFIG_DIR,
+                FilesManager.FileFormat.APR,
+                CONFIG_NAME,
+                root.toString(),
+                FilesManager.CheckMode.ALWAYS
+            );
+        } catch (Exception e) {
             Logger.error("ProxyConfig: Save failed! " + e.getMessage());
         }
     }
 
     public void load() {
         try {
-            if (!Files.exists(configPath)) {
+            Path configPath = FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR);
+            
+            if (!FilesManager.exists(configPath)) {
                 save();
                 return;
             }
 
-            String json = Files.readString(configPath, StandardCharsets.UTF_8);
-            if (json.isEmpty()) {
+            String json = FilesManager.readFile(configPath);
+            if (json == null || json.isEmpty()) {
                 return;
             }
 
@@ -95,7 +96,7 @@ public class ProxyConfig {
                 lastUsedProxy = parseProxy(root.getAsJsonObject("lastUsedProxy"));
             }
 
-            Logger.success("ProxyConfig: proxy.json loaded successfully!");
+            Logger.success("ProxyConfig loaded!");
         } catch (Exception e) {
             Logger.error("ProxyConfig: Load failed! " + e.getMessage());
         }

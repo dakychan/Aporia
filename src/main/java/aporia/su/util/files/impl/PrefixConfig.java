@@ -1,34 +1,27 @@
-package aporia.su.util.config.impl.player.prefix;
+package aporia.su.util.files.impl;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import aporia.cc.OsManager;
+import aporia.su.util.files.FilesManager;
+import aporia.su.util.helper.Logger;
+import aporia.su.util.user.chat.command.CommandManager;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import lombok.Getter;
-import aporia.su.util.user.chat.command.CommandManager;
-import aporia.su.util.config.impl.loggers.consolelogger.Logger;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
+/**
+ * Конфиг для префикса команд.
+ */
 public class PrefixConfig {
     private static PrefixConfig instance;
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private final Path configPath;
+    private static final String CONFIG_NAME = "prefix";
+    private static final Path CONFIG_DIR = OsManager.mainDirectory.resolve("configs");
 
     @Getter
     private String prefix = ".";
 
-    private PrefixConfig() {
-        Path configDir = Paths.get("Aporia", "configs");
-        try {
-            Files.createDirectories(configDir);
-        } catch (IOException ignored) {}
-        configPath = configDir.resolve("prefix.json");
-    }
+    private PrefixConfig() {}
 
     public static PrefixConfig getInstance() {
         if (instance == null) {
@@ -53,18 +46,32 @@ public class PrefixConfig {
         try {
             JsonObject obj = new JsonObject();
             obj.addProperty("prefix", prefix);
-            Files.writeString(configPath, gson.toJson(obj), StandardCharsets.UTF_8);
-        } catch (IOException e) {
+            
+            FilesManager.createFile(
+                CONFIG_DIR,
+                FilesManager.FileFormat.APR,
+                CONFIG_NAME,
+                obj.toString(),
+                FilesManager.CheckMode.ALWAYS
+            );
+        } catch (Exception e) {
             Logger.error("PrefixConfig: Save failed! " + e.getMessage());
         }
     }
 
     public void load() {
         try {
-            if (!Files.exists(configPath)) {
+            Path configPath = FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR);
+            
+            if (!FilesManager.exists(configPath)) {
                 return;
             }
-            String json = Files.readString(configPath, StandardCharsets.UTF_8);
+            
+            String json = FilesManager.readFile(configPath);
+            if (json == null || json.isEmpty()) {
+                return;
+            }
+            
             JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
             if (obj.has("prefix")) {
                 String loadedPrefix = obj.get("prefix").getAsString();
@@ -72,7 +79,8 @@ public class PrefixConfig {
                     this.prefix = loadedPrefix;
                 }
             }
-            Logger.success("PrefixConfig: prefix.json loaded successfully!");
+            
+            Logger.success("PrefixConfig loaded!");
         } catch (Exception e) {
             Logger.error("PrefixConfig: Load failed! " + e.getMessage());
         }

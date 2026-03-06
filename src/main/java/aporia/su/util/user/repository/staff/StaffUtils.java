@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.experimental.UtilityClass;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
-import aporia.su.util.config.impl.player.staff.StaffConfig;
+import aporia.su.util.files.impl.StaffConfig;
 
 import java.util.ArrayList;
 import java.util.List;

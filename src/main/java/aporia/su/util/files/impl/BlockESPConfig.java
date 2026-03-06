@@ -1,34 +1,28 @@
-package aporia.su.util.config.impl.blockesp;
+package aporia.su.util.files.impl;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import aporia.cc.OsManager;
+import aporia.su.util.files.FilesManager;
+import aporia.su.util.helper.Logger;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
-import aporia.su.util.config.impl.loggers.consolelogger.Logger;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+/**
+ * Конфиг для BlockESP модуля.
+ */
 public class BlockESPConfig {
     private static BlockESPConfig instance;
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private final Path configPath;
+    private static final String CONFIG_NAME = "blockesp";
+    private static final Path CONFIG_DIR = OsManager.mainDirectory.resolve("configs");
+    
     private final Set<String> blocks = new CopyOnWriteArraySet<>();
 
-    private BlockESPConfig() {
-        Path configDir = Paths.get("Aporia", "configs");
-        try {
-            Files.createDirectories(configDir);
-        } catch (IOException ignored) {}
-        configPath = configDir.resolve("blockesp.json");
-    }
+    private BlockESPConfig() {}
 
     public static BlockESPConfig getInstance() {
         if (instance == null) {
@@ -51,8 +45,7 @@ public class BlockESPConfig {
     }
 
     public boolean removeBlock(String block) {
-        boolean removed = blocks.remove(block);
-        return removed;
+        return blocks.remove(block);
     }
 
     public boolean removeBlockAndSave(String block) {
@@ -90,22 +83,37 @@ public class BlockESPConfig {
             for (String block : blocks) {
                 array.add(block);
             }
-            Files.writeString(configPath, gson.toJson(array), StandardCharsets.UTF_8);
-        } catch (IOException e) {
+            
+            FilesManager.createFile(
+                CONFIG_DIR,
+                FilesManager.FileFormat.APR,
+                CONFIG_NAME,
+                array.toString(),
+                FilesManager.CheckMode.ALWAYS
+            );
+        } catch (Exception e) {
             Logger.error("BlockESPConfig: Save failed! " + e.getMessage());
         }
     }
 
     public void load() {
         try {
-            if (!Files.exists(configPath)) {
+            Path configPath = FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR);
+            
+            if (!FilesManager.exists(configPath)) {
                 return;
             }
-            String json = Files.readString(configPath, StandardCharsets.UTF_8);
+            
+            String json = FilesManager.readFile(configPath);
+            if (json == null || json.isEmpty()) {
+                return;
+            }
+            
             JsonArray array = JsonParser.parseString(json).getAsJsonArray();
             blocks.clear();
             array.forEach(element -> blocks.add(element.getAsString()));
-            Logger.success("BlockESPConfig: blockesp.json loaded successfully!");
+            
+            Logger.success("BlockESPConfig loaded!");
         } catch (Exception e) {
             Logger.error("BlockESPConfig: Load failed! " + e.getMessage());
         }

@@ -8,7 +8,7 @@ import aporia.su.Initialization;
 import aporia.su.modules.impl.render.Hud;
 import aporia.su.util.user.render.color.ColorUtil;
 import aporia.su.util.user.render.animations.SweepAnim;
-import aporia.su.util.config.impl.drag.DragConfig;
+import aporia.su.util.files.impl.DragConfig;
 import aporia.su.util.user.render.Render2D;
 
 import java.util.HashMap;

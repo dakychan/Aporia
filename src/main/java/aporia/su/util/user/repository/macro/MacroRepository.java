@@ -5,7 +5,7 @@ import net.minecraft.client.MinecraftClient;
 import aporia.su.util.events.api.EventHandler;
 import aporia.su.util.events.api.EventManager;
 import aporia.su.util.events.impl.entity.KeyEvent;
-import aporia.su.util.config.impl.player.macro.MacroConfig;
+import aporia.su.util.files.impl.MacroConfig;
 
 import java.util.ArrayList;
 import java.util.List;

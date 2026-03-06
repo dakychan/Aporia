@@ -14,7 +14,7 @@ import aporia.su.util.user.chat.command.CommandManager;
 import aporia.su.util.user.chat.command.helpers.Paginator;
 import aporia.su.util.user.chat.command.helpers.TabCompleteHelper;
 import aporia.su.modules.impl.render.BlockESP;
-import aporia.su.util.config.impl.blockesp.BlockESPConfig;
+import aporia.su.util.files.impl.BlockESPConfig;
 
 import java.util.Arrays;
 import java.util.List;

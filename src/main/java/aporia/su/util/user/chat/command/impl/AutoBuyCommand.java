@@ -7,7 +7,7 @@ import aporia.su.util.user.chat.command.helpers.TabCompleteHelper;
 import aporia.su.modules.impl.misc.AutoBuy;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.items.ItemRegistry;
 import aporia.su.util.user.render.screens.clickgui.impl.autobuy.manager.AutoBuyManager;
-import aporia.su.util.config.impl.player.autobuyconfig.AutoBuyConfig;
+import aporia.su.util.files.impl.AutoBuyConfig;
 
 import java.util.Arrays;
 import java.util.List;

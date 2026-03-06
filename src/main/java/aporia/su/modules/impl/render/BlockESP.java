@@ -15,7 +15,7 @@ import aporia.su.modules.module.setting.implement.BooleanSetting;
 import aporia.su.modules.module.setting.implement.ColorSetting;
 import aporia.su.modules.module.setting.implement.SliderSettings;
 import aporia.su.util.user.render.color.ColorUtil;
-import aporia.su.util.config.impl.blockesp.BlockESPConfig;
+import aporia.su.util.files.impl.BlockESPConfig;
 import aporia.su.util.user.render.Render3D;
 import aporia.su.util.user.chat.string.chat.ChatMessage;
 

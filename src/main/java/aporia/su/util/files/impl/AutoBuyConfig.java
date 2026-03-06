@@ -1,21 +1,27 @@
-package aporia.su.util.config.impl.player.autobuyconfig;
+package aporia.su.util.files.impl;
 
+import aporia.cc.OsManager;
+import aporia.su.util.files.FilesManager;
+import aporia.su.util.helper.Logger;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Конфиг для автопокупки предметов.
+ */
 public class AutoBuyConfig {
     private static AutoBuyConfig instance;
+    private static final String CONFIG_NAME = "autobuy";
+    private static final Path CONFIG_DIR = OsManager.mainDirectory.resolve("configs").resolve("autobuy");
+    
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private final Path configPath;
+    
     @Getter
     private ConfigData data = new ConfigData();
 
@@ -43,11 +49,6 @@ public class AutoBuyConfig {
     }
 
     private AutoBuyConfig() {
-        Path configDir = Paths.get("Aporia", "configs", "autobuy");
-        try {
-            Files.createDirectories(configDir);
-        } catch (IOException ignored) {}
-        configPath = configDir.resolve("autobuy.json");
         load();
     }
 
@@ -60,33 +61,50 @@ public class AutoBuyConfig {
 
     public void load() {
         try {
-            if (Files.exists(configPath)) {
-                String json = Files.readString(configPath);
-                ConfigData loaded = gson.fromJson(json, ConfigData.class);
-                if (loaded != null) {
-                    this.data = loaded;
-                    if (this.data.getItems() == null) {
-                        this.data.setItems(new HashMap<>());
+            Path configPath = FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR);
+            
+            if (FilesManager.exists(configPath)) {
+                String json = FilesManager.readFile(configPath);
+                if (json != null && !json.isEmpty()) {
+                    ConfigData loaded = gson.fromJson(json, ConfigData.class);
+                    if (loaded != null) {
+                        this.data = loaded;
+                        if (this.data.getItems() == null) {
+                            this.data.setItems(new HashMap<>());
+                        }
                     }
                 }
             }
-        } catch (IOException ignored) {}
+        } catch (Exception e) {
+            Logger.error("AutoBuyConfig: Load failed! " + e.getMessage());
+        }
     }
 
     public void save() {
         try {
             String json = gson.toJson(data);
-            Files.writeString(configPath, json);
-        } catch (IOException ignored) {}
+            FilesManager.createFile(
+                CONFIG_DIR,
+                FilesManager.FileFormat.APR,
+                CONFIG_NAME,
+                json,
+                FilesManager.CheckMode.ALWAYS
+            );
+        } catch (Exception e) {
+            Logger.error("AutoBuyConfig: Save failed! " + e.getMessage());
+        }
     }
 
     public void reset() {
         data = new ConfigData();
         try {
-            if (Files.exists(configPath)) {
-                Files.delete(configPath);
+            Path configPath = FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR);
+            if (FilesManager.exists(configPath)) {
+                FilesManager.deleteFile(configPath);
             }
-        } catch (IOException ignored) {}
+        } catch (Exception e) {
+            Logger.error("AutoBuyConfig: Reset failed! " + e.getMessage());
+        }
         save();
     }
 

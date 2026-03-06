@@ -1,6 +1,6 @@
 package aporia.su.util.user.chat.command.impl;
 
-import aporia.su.util.config.impl.player.way.WayConfig;
+import aporia.su.util.files.impl.WayConfig;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;

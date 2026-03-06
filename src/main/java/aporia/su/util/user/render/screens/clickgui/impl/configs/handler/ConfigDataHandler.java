@@ -1,6 +1,7 @@
 package aporia.su.util.user.render.screens.clickgui.impl.configs.handler;
 
-import aporia.su.util.config.MainConfig;
+import aporia.cc.OsManager;
+import aporia.su.util.files.FilesManager;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -34,14 +35,14 @@ public class ConfigDataHandler {
         List<String> oldConfigs = new ArrayList<>(configs);
         configs.clear();
         try {
-            Path configDir = MainConfig.ConfigPath.getConfigDirectory();
+            Path configDir = OsManager.mainDirectory.resolve("configs");
             if (Files.exists(configDir)) {
                 Files.list(configDir)
-                        .filter(path -> path.toString().endsWith(".json"))
+                        .filter(path -> path.toString().endsWith(".apr"))
                         .forEach(path -> {
                             String name = path.getFileName().toString();
-                            String configName = name.substring(0, name.length() - 5);
-                            if (!configName.equalsIgnoreCase("autoconfig")) {
+                            String configName = name.substring(0, name.length() - 4);
+                            if (!configName.equalsIgnoreCase("config")) {
                                 configs.add(configName);
                             }
                         });
@@ -81,20 +82,20 @@ public class ConfigDataHandler {
     }
 
     public boolean saveConfig(String name) {
-        if (name.equalsIgnoreCase("autoconfig")) {
+        if (name.equalsIgnoreCase("config")) {
             return false;
         }
 
         try {
-            Path configDir = MainConfig.ConfigPath.getConfigDirectory();
-            Path newConfig = configDir.resolve(name + ".json");
+            Path configDir = OsManager.mainDirectory.resolve("configs");
+            Path newConfig = configDir.resolve(name + ".apr");
 
             if (Files.exists(newConfig)) {
                 return false;
             }
 
-            MainConfig.ConfigSystem.getInstance().save();
-            Path currentConfig = MainConfig.ConfigPath.getConfigFile();
+            FilesManager.getConfigManager().save();
+            Path currentConfig = FilesManager.getFilePath(configDir, "config", FilesManager.FileFormat.APR);
             Files.copy(currentConfig, newConfig);
             refreshConfigs();
             return true;
@@ -105,8 +106,8 @@ public class ConfigDataHandler {
 
     public boolean loadConfig(String name) {
         try {
-            Path configDir = MainConfig.ConfigPath.getConfigDirectory();
-            Path configFile = configDir.resolve(name + ".json");
+            Path configDir = OsManager.mainDirectory.resolve("configs");
+            Path configFile = configDir.resolve(name + ".apr");
             return Files.exists(configFile);
         } catch (Exception e) {
             return false;
@@ -115,16 +116,16 @@ public class ConfigDataHandler {
 
     public boolean refreshConfig(String name) {
         try {
-            Path configDir = MainConfig.ConfigPath.getConfigDirectory();
-            Path configFile = configDir.resolve(name + ".json");
+            Path configDir = OsManager.mainDirectory.resolve("configs");
+            Path configFile = configDir.resolve(name + ".apr");
 
             if (!Files.exists(configFile)) {
                 return false;
             }
 
-            MainConfig.ConfigSystem.getInstance().save();
+            FilesManager.getConfigManager().save();
             Files.deleteIfExists(configFile);
-            Path currentConfig = MainConfig.ConfigPath.getConfigFile();
+            Path currentConfig = FilesManager.getFilePath(configDir, "config", FilesManager.FileFormat.APR);
             Files.copy(currentConfig, configFile);
             return true;
         } catch (Exception e) {
@@ -134,8 +135,8 @@ public class ConfigDataHandler {
 
     public boolean deleteConfig(String name) {
         try {
-            Path configDir = MainConfig.ConfigPath.getConfigDirectory();
-            Path configFile = configDir.resolve(name + ".json");
+            Path configDir = OsManager.mainDirectory.resolve("configs");
+            Path configFile = configDir.resolve(name + ".apr");
 
             if (Files.exists(configFile)) {
                 Files.delete(configFile);

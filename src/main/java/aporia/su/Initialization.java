@@ -1,19 +1,19 @@
 package aporia.su;
 
-import aporia.su.util.config.MainConfig;
+import aporia.su.util.files.FilesManager;
 import aporia.su.util.user.render.screens.hud.api.HudManager;
 import aporia.su.util.user.chat.command.CommandManager;
 import aporia.su.util.events.api.EventManager;
 import aporia.su.modules.impl.combat.aura.attack.StrikerConstructor;
 import aporia.su.modules.module.ModuleRepository;
 import aporia.su.util.user.render.screens.clickgui.ClickGui;
-import aporia.su.util.config.impl.player.bind.BindConfig;
-import aporia.su.util.config.impl.blockesp.BlockESPConfig;
-import aporia.su.util.config.impl.drag.DragConfig;
-import aporia.su.util.config.impl.player.friend.FriendConfig;
-import aporia.su.util.config.impl.player.prefix.PrefixConfig;
-import aporia.su.util.config.impl.player.proxy.ProxyConfig;
-import aporia.su.util.config.impl.player.staff.StaffConfig;
+import aporia.su.util.files.impl.BindConfig;
+import aporia.su.util.files.impl.BlockESPConfig;
+import aporia.su.util.files.impl.DragConfig;
+import aporia.su.util.files.impl.FriendConfig;
+import aporia.su.util.files.impl.PrefixConfig;
+import aporia.su.util.files.impl.ProxyConfig;
+import aporia.su.util.files.impl.StaffConfig;
 import aporia.su.modules.wtf.ModuleProvider;
 import aporia.su.modules.wtf.ModuleSwitcher;
 import aporia.su.util.user.render.font.FontInitializer;
@@ -54,12 +54,16 @@ public class Initialization implements ClientModInitializer {
         private ModuleRepository moduleRepository;
         private ModuleSwitcher moduleSwitcher;
         private ClickGui clickgui;
-        private MainConfig.ConfigSystem configSystem;
+        private FilesManager.ConfigManager configManager;
         private CommandManager commandManager;
         private TPSCalculate tpsCalculate;
         private HudManager hudManager = new HudManager();
 
         public void init() {
+            /** Инициализируем файловую систему */
+            FilesManager.initialize();
+            
+            /** Загружаем конфиги */
             MacroRepository.getInstance().init();
             WayRepository.getInstance().init();
             BlockESPConfig.getInstance().load();
@@ -82,8 +86,11 @@ public class Initialization implements ClientModInitializer {
             moduleRepository.setup();
             moduleProvider = new ModuleProvider(moduleRepository.modules());
             moduleSwitcher = new ModuleSwitcher(moduleRepository.modules(), eventManager);
-            configSystem = new MainConfig.ConfigSystem();
-            configSystem.init();
+            
+            /** Инициализируем встроенный конфиг менеджер */
+            configManager = FilesManager.getConfigManager();
+            configManager.initialize(moduleRepository);
+            
             commandManager = new CommandManager();
             commandManager.init();
         }
