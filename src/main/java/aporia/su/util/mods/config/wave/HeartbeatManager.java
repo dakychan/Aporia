@@ -145,11 +145,11 @@ public class HeartbeatManager implements IMinecraft {
     }
     
     /**
-     * Отправить heartbeat сообщение в чат.
+     * Отправить heartbeat сообщение в чат (локально, не на сервер).
      */
     private static void sendHeartbeat() {
         try {
-            if (mc.player == null || mc.world == null) {
+            if (mc.player == null || mc.world == null || mc.inGameHud == null) {
                 return;
             }
             
@@ -161,11 +161,17 @@ public class HeartbeatManager implements IMinecraft {
             String[] phrases = isRussian ? PHRASES_RU : PHRASES_EN;
             String phrase = phrases[random.nextInt(phrases.length)];
             
-            /** Создаем текст с градиентом */
-            MutableText gradientText = createGradientText(phrase);
+            /** Префикс клиента */
+            MutableText prefix = Text.literal("[Dak AI] ").formatted(Formatting.GRAY);
             
-            /** Отправляем в чат */
-            mc.player.networkHandler.sendChatMessage(gradientText.getString());
+            /** Создаем текст с градиентом */
+            MutableText gradientText = createSmoothGradientText(phrase);
+            
+            /** Объединяем префикс и градиентный текст */
+            MutableText fullMessage = Text.empty().append(prefix).append(gradientText);
+            
+            /** Отправляем в чат клиента (не на сервер) */
+            mc.inGameHud.getChatHud().addMessage(fullMessage);
             
         } catch (Exception e) {
             /** Игнорируем ошибки */

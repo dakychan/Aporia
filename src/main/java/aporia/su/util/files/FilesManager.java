@@ -231,6 +231,12 @@ public class FilesManager {
                 return null;
             }
 
+            // Проверяем формат файла по расширению
+            String fileName = filePath.getFileName().toString();
+            if (fileName.endsWith(".apr")) {
+                return readAprFile(filePath);
+            }
+
             return Files.readString(filePath, StandardCharsets.UTF_8);
 
         } catch (Exception e) {
@@ -240,6 +246,7 @@ public class FilesManager {
             lock.readLock().unlock();
         }
     }
+
 
     /**
      * Прочитать JSON файл в объект.
@@ -334,6 +341,36 @@ public class FilesManager {
             zos.putNextEntry(contentEntry);
             zos.write(content.getBytes(StandardCharsets.UTF_8));
             zos.closeEntry();
+        }
+    }
+
+    /**
+     * Прочитать APR файл (custom archive format).
+     * Извлекает контент из ZIP архива, игнорируя метаданные.
+     */
+    private static String readAprFile(Path filePath) throws IOException {
+        try (ZipInputStream zis = new ZipInputStream(
+                new FileInputStream(filePath.toFile()))) {
+            
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                // Ищем entry с контентом
+                if (entry.getName().equals("content.dat")) {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    byte[] buffer = new byte[8192];
+                    int len;
+                    while ((len = zis.read(buffer)) > 0) {
+                        baos.write(buffer, 0, len);
+                    }
+                    zis.closeEntry();
+                    return baos.toString(StandardCharsets.UTF_8);
+                }
+                zis.closeEntry();
+            }
+            
+            // Если content.dat не найден, возвращаем null
+            Logger.error("content.dat not found in APR file: " + filePath);
+            return null;
         }
     }
 

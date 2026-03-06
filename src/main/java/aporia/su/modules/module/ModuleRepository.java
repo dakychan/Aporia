@@ -26,6 +26,8 @@ public class ModuleRepository {
         builder()
                 .add(new Hud())
                 .add(new Aura())
+                .add(new TpAura())
+                .add(new Criticals())
                 .add(new HitEffect())
                 .add(new Esp())
                 .add(new BlockESP())

@@ -1,6 +1,7 @@
 package aporia.su.modules.impl.misc;
 
 import anidumpproject.api.annotation.Native;
+import aporia.su.modules.module.setting.implement.BooleanSetting;
 import aporia.su.util.user.player.inventory.InventoryUtils;
 import aporia.su.util.user.player.inventory.MovementController;
 import aporia.su.util.user.player.inventory.SwapSettings;
@@ -18,6 +19,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.*;
+import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
@@ -27,6 +29,7 @@ import net.minecraft.util.math.*;
 import org.lwjgl.glfw.GLFW;
 import aporia.su.util.events.api.EventHandler;
 import aporia.su.util.events.impl.entity.RotationUpdateEvent;
+import aporia.su.util.events.impl.player.PacketEvent;
 import aporia.su.util.events.impl.ui.WorldRenderEvent;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.MathAngle;
@@ -49,12 +52,15 @@ import java.util.*;
 public class ServerHelper extends ModuleStructure {
 
     SelectSetting mode = new SelectSetting("Тип сервера", "Позволяет выбрать тип сервера")
-            .value("ReallyWorld", "HolyWorld", "FunTime")
-            .selected("FunTime");
+            .value("ReallyWorld", "HolyWorld", "FunTime", "JeNr0")
+            .selected("JeNr0");
 
     SelectSetting swapMode = new SelectSetting("Режим свапа", "Способ свапа предметов")
             .value("Instant", "Legit")
             .selected("Legit");
+    
+    BooleanSetting autoFlyMe = new BooleanSetting("AutoFlyMe", "Автоматически активирует /flyme при падении")
+            .visible(() -> mode.isSelected("JeNr0"));
 
     ColorSetting boxFillColor = new ColorSetting("Цвет заливки", "Цвет заливки бокса")
             .value(ColorUtil.getColor(130, 32, 16, 40))
@@ -141,7 +147,7 @@ public class ServerHelper extends ModuleStructure {
 
     @Native(type = Native.Type.VMProtectBeginMutation)
     public void initialize() {
-        settings(mode, swapMode, boxFillColor, boxLineColor);
+        settings(mode, swapMode, autoFlyMe, boxFillColor, boxLineColor);
 
         keyBindings.add(new KeyBind(Items.FIREWORK_STAR, new BindSetting("Анти полет", "Клавиша анти полета")
                 .visible(() -> mode.isSelected("ReallyWorld")), 0));
@@ -344,6 +350,7 @@ public class ServerHelper extends ModuleStructure {
         pendingItemKey = null;
         stopMovementUntil = 0;
         keysOverridden = false;
+        lastFlymeAttempt = 0;
     }
 
     @Override
@@ -403,6 +410,9 @@ public class ServerHelper extends ModuleStructure {
     public void onRotationUpdate(RotationUpdateEvent e) {
         if (mc.currentScreen != null) return;
 
+        /** Автоматический /flyme когда игрок падает */
+        checkAndActivateFly();
+
         boolean noMoveOrAction = System.currentTimeMillis() < stopMovementUntil || (actionState != ActionState.IDLE && actionState != ActionState.SPEEDING_UP);
         if (noMoveOrAction) {
             blockMovement();
@@ -415,6 +425,82 @@ public class ServerHelper extends ModuleStructure {
         }
 
         processItemQueue();
+    }
+    
+    @NonFinal
+    private long lastFlymeAttempt = 0;
+    
+    /**
+     * Обработчик пакетов чата для AutoFlyMe.
+     * Проверяет сообщения о невозможности летать.
+     */
+    @EventHandler
+    @Native(type = Native.Type.VMProtectBeginMutation)
+    public void onPacket(PacketEvent event) {
+        if (!autoFlyMe.isValue() || !mode.isSelected("JeNr0")) {
+            return;
+        }
+        
+        if (event.getPacket() instanceof GameMessageS2CPacket packet) {
+            String message = packet.content().getString().toLowerCase();
+            
+            /** Проверяем сообщения о невозможности летать */
+            if (message.contains("вы не можете летать") || 
+                message.contains("you can't fly") ||
+                message.contains("возможность летать была удалена") ||
+                message.contains("fly ability removed")) {
+                
+                /** Агрессивно отправляем /flyme без задержки */
+                activateFlymeAggressively();
+            }
+        }
+    }
+    
+    /**
+     * Проверить и активировать /flyme если игрок падает.
+     * Агрессивная проверка без задержек.
+     */
+    @Native(type = Native.Type.VMProtectBeginMutation)
+    private void checkAndActivateFly() {
+        if (mc.player == null || mc.world == null) {
+            return;
+        }
+        
+        /** Проверяем что AutoFlyMe включен и мы на JeNr0 */
+        if (!autoFlyMe.isValue() || !mode.isSelected("JeNr0")) {
+            return;
+        }
+        
+        /** Проверяем условия для активации /flyme */
+        boolean isFalling = !mc.player.isOnGround() && mc.player.getVelocity().y < -0.3;
+        boolean notFlying = !mc.player.getAbilities().flying;
+        
+        if (isFalling && notFlying) {
+            /** Агрессивно отправляем команду пока игрок падает */
+            long currentTime = System.currentTimeMillis();
+            
+            /** Отправляем каждые 50ms (20 раз в секунду) */
+            if (currentTime - lastFlymeAttempt >= 50) {
+                mc.player.networkHandler.sendChatCommand("flyme");
+                lastFlymeAttempt = currentTime;
+            }
+        }
+    }
+    
+    /**
+     * Агрессивная активация /flyme при получении сообщения в чате.
+     * Отправляет команду дважды без задержки.
+     */
+    @Native(type = Native.Type.VMProtectBeginMutation)
+    private void activateFlymeAggressively() {
+        if (mc.player == null || mc.player.networkHandler == null) {
+            return;
+        }
+        
+        /** Отправляем команду дважды для надежности */
+        mc.player.networkHandler.sendChatCommand("flyme");
+        mc.player.networkHandler.sendChatCommand("flyme");
+        lastFlymeAttempt = System.currentTimeMillis();
     }
 
     @Native(type = Native.Type.VMProtectBeginUltra)
