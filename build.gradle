@@ -119,6 +119,39 @@ tasks.named('remapJar') {
     }
 }
 
+tasks.register('copyToBeta', Copy) {
+    group = 'build'
+    description = 'Copy built JAR to beta/version and beta/latest directories'
+    dependsOn 'remapJar'
+    from(remapJar.archiveFile)
+    into file("${project.rootDir}/beta/${project.version}")
+    doFirst {
+        def betaVersionDir = file("${project.rootDir}/beta/${project.version}")
+        if (!betaVersionDir.exists()) {
+            betaVersionDir.mkdirs()
+        }
+    }
+    doLast {
+        def betaLatestDir = file("${project.rootDir}/beta/latest")
+        if (!betaLatestDir.exists()) {
+            betaLatestDir.mkdirs()
+        }
+        def sourceJar = remapJar.archiveFile.get().asFile
+        def destJar = file("${betaLatestDir}/Aporia.jar")
+        if (sourceJar.exists()) {
+            destJar.withOutputStream { out ->
+                sourceJar.withInputStream { it.transferTo(out) }
+            }
+            println "Copied to beta/${project.version}/${sourceJar.name}"
+            println "Copied to beta/latest/Aporia.jar"
+        }
+    }
+}
+
+tasks.named('build') {
+    finalizedBy 'copyToBeta'
+}
+
 tasks.register('chaosJar', Jar) {
     group = 'build'
     description = 'Create standalone chaos obfuscated JAR'
