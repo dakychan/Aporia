@@ -75,6 +75,9 @@ public abstract class MinecraftClientMixin {
         if (configManager != null) {
             configManager.shutdown();
         }
+        
+        /** Останавливаем heartbeat систему */
+        aporia.su.util.mods.config.wave.HeartbeatManager.stop();
     }
 
     @Inject(method = "setScreen", at = @At("HEAD"))
@@ -146,8 +149,8 @@ public abstract class MinecraftClientMixin {
     @Inject(method = "getWindowTitle", at = @At("RETURN"), cancellable = true)
     private void getWindowTitle(CallbackInfoReturnable<String> cir) {
         UserProfile userProfile = UserProfile.getInstance();
-        String username = userProfile.profile("kotay");
-        String role = userProfile.profile("DEV");
+        String username = userProfile.profile("username");
+        String role = userProfile.profile("role");
         cir.setReturnValue(String.format("Aporia.cc %s - %s", role, username));
     }
 

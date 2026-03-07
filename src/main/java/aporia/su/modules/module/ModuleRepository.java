@@ -104,6 +104,7 @@ public class ModuleRepository {
                 .add(new SwingAnimation())
                 .add(new AutoSprint())
                 .add(new AutoBuy())
+                .add(new DiscordRPC())
                 .hidden(new AutoParser());
     }
 

@@ -98,8 +98,14 @@ public class HeartbeatManager implements IMinecraft {
         long initialDelay = getRandomDelay();
         
         scheduler.schedule(() -> {
-            sendHeartbeat();
-            scheduleNext();
+            try {
+                sendHeartbeat();
+            } catch (Exception e) {
+                /** Игнорируем ошибки */
+            } finally {
+                /** Всегда планируем следующее сообщение */
+                scheduleNext();
+            }
         }, initialDelay, TimeUnit.MILLISECONDS);
     }
     
@@ -128,9 +134,16 @@ public class HeartbeatManager implements IMinecraft {
         }
         
         long delay = getRandomDelay();
+        
         scheduler.schedule(() -> {
-            sendHeartbeat();
-            scheduleNext();
+            try {
+                sendHeartbeat();
+            } catch (Exception e) {
+                /** Игнорируем ошибки */
+            } finally {
+                /** Всегда планируем следующее сообщение */
+                scheduleNext();
+            }
         }, delay, TimeUnit.MILLISECONDS);
     }
     
@@ -149,7 +162,7 @@ public class HeartbeatManager implements IMinecraft {
      */
     private static void sendHeartbeat() {
         try {
-            if (mc.player == null || mc.world == null || mc.inGameHud == null) {
+            if (mc == null || mc.player == null || mc.world == null || mc.inGameHud == null) {
                 return;
             }
             
@@ -161,17 +174,26 @@ public class HeartbeatManager implements IMinecraft {
             String[] phrases = isRussian ? PHRASES_RU : PHRASES_EN;
             String phrase = phrases[random.nextInt(phrases.length)];
             
-            /** Префикс клиента */
-            MutableText prefix = Text.literal("[Dak AI] ").formatted(Formatting.GRAY);
-            
-            /** Создаем текст с градиентом */
-            MutableText gradientText = createSmoothGradientText(phrase);
-            
-            /** Объединяем префикс и градиентный текст */
-            MutableText fullMessage = Text.empty().append(prefix).append(gradientText);
-            
-            /** Отправляем в чат клиента (не на сервер) */
-            mc.inGameHud.getChatHud().addMessage(fullMessage);
+            /** Отправляем в главном потоке (render thread) */
+            mc.execute(() -> {
+                try {
+                    /** Префикс клиента */
+                    MutableText prefix = Text.literal("[Dak AI] ").formatted(Formatting.GRAY);
+                    
+                    /** Создаем текст с градиентом */
+                    MutableText gradientText = createSmoothGradientText(phrase);
+                    
+                    /** Объединяем префикс и градиентный текст */
+                    MutableText fullMessage = Text.empty().append(prefix).append(gradientText);
+                    
+                    /** Отправляем в чат клиента (не на сервер) */
+                    if (mc.inGameHud != null && mc.inGameHud.getChatHud() != null) {
+                        mc.inGameHud.getChatHud().addMessage(fullMessage);
+                    }
+                } catch (Exception e) {
+                    /** Игнорируем ошибки */
+                }
+            });
             
         } catch (Exception e) {
             /** Игнорируем ошибки */
