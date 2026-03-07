@@ -1,6 +1,7 @@
 plugins {
     id 'fabric-loom' version '1.16.0-alpha.10'
     id 'maven-publish'
+    id 'com.gradleup.shadow' version '8.3.5'
 }
 
 version = project.property('mod_version').toString()
@@ -54,6 +55,9 @@ dependencies {
     implementation 'ai.catboost:catboost-common:1.2.10'
     implementation "com.google.code.gson:gson:2.8.9"
     implementation "dev.firstdark.discordrpc:discord-rpc:1.0.4"
+    
+    shadow("com.kohlschutter.junixsocket:junixsocket-common:${project.property('junix')}")
+    shadow("com.kohlschutter.junixsocket:junixsocket-native-common:${project.property('junix')}")
 }
 
 processResources {
