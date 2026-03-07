@@ -3,10 +3,12 @@ package aporia.su.modules.impl.combat;
 import anidumpproject.api.annotation.Native;
 import lombok.Getter;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
 import net.minecraft.util.math.Vec3d;
 import aporia.su.util.events.api.EventHandler;
 import aporia.su.util.events.api.types.EventType;
 import aporia.su.util.events.impl.entity.RotationUpdateEvent;
+import aporia.su.util.events.impl.player.PacketEvent;
 import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.AngleConfig;
@@ -24,8 +26,8 @@ import aporia.su.util.Instance;
 import aporia.su.util.user.render.math.TaskPriority;
 
 /**
- * TpAura - атака со спуфом позиции.
- * Не телепортируемся физически, только спуфим пакеты.
+ * TpAura - телепорт к цели, атака, возврат.
+ * Дробит пакеты если дистанция >20 блоков.
  */
 @Getter
 public class TpAura extends ModuleStructure {
@@ -43,11 +45,11 @@ public class TpAura extends ModuleStructure {
             .range(2.0f, 6.0f)
             .setValue(3.5f);
     
-    private final SliderSettings attackDelay = new SliderSettings("Задержка атаки", "Attack delay in ticks")
-            .range(1.0f, 20.0f)
-            .setValue(4.0f);
+    private final SliderSettings cycleDelay = new SliderSettings("Задержка", "Delay between attack cycles in ticks")
+            .range(1.0f, 40.0f)
+            .setValue(10.0f);
     
-    private final SliderSettings maxHits = new SliderSettings("Макс ударов", "Max hits before cooldown")
+    private final SliderSettings maxHits = new SliderSettings("Макс ударов", "Max hits per cycle")
             .range(1.0f, 10.0f)
             .setValue(3.0f);
     
@@ -60,11 +62,11 @@ public class TpAura extends ModuleStructure {
             .value("Игроки", "Мобы", "Животные")
             .selected("Игроки");
     
+    private final BooleanSetting autoReturn = new BooleanSetting("Авто-возврат", "Auto return to saved position")
+            .setValue(true);
+    
     private final BooleanSetting onlyOnGround = new BooleanSetting("Только на земле", "Only attack when on ground")
             .setValue(false);
-    
-    private final BooleanSetting grimCrit = new BooleanSetting("Grim Crit", "Enable Grim Crit bypass")
-            .setValue(true);
     
     /** Хендлеры */
     private final IsxodHandler isxodHandler = new IsxodHandler();
@@ -72,23 +74,31 @@ public class TpAura extends ModuleStructure {
     
     /** Состояние */
     private LivingEntity target = null;
-    private int ticksSinceLastAttack = 0;
-    private int hitCount = 0;
+    private int tickCounter = 0;
+    private int currentHit = 0;
+    private Vec3d savedPosition = null;
+    private boolean attackSuccessful = false;
     
     public TpAura() {
         super("TpAura", ModuleCategory.COMBAT);
-        settings(attackRange, tpDistance, attackDelay, maxHits, rotationMode, targetType, onlyOnGround, grimCrit);
+        settings(attackRange, tpDistance, cycleDelay, maxHits, rotationMode, targetType, autoReturn, onlyOnGround);
     }
     
     @Override
     @Native(type = Native.Type.VMProtectBeginMutation)
     public void activate() {
         reset();
+        /** Сохраняем позицию ДО начала ударов */
+        if (mc.player != null) {
+            savedPosition = mc.player.getEntityPos();
+            isxodHandler.saveIsxod();
+        }
     }
     
     @Override
     @Native(type = Native.Type.VMProtectBeginMutation)
     public void deactivate() {
+        returnToSavedPosition();
         reset();
         AngleConnection.INSTANCE.startReturning();
     }
@@ -100,7 +110,7 @@ public class TpAura extends ModuleStructure {
             return;
         }
         
-        ticksSinceLastAttack++;
+        tickCounter++;
         
         /** Проверяем условия */
         if (onlyOnGround.isValue() && !mc.player.isOnGround()) {
@@ -111,24 +121,50 @@ public class TpAura extends ModuleStructure {
         findTarget();
         
         if (target == null || !target.isAlive()) {
-            hitCount = 0;
+            if (currentHit > 0 && autoReturn.isValue()) {
+                returnToSavedPosition();
+            }
+            currentHit = 0;
+            tickCounter = 0;
             return;
         }
         
-        /** Проверяем задержку */
-        if (ticksSinceLastAttack < attackDelay.getValue()) {
+        /** Проверяем задержку цикла */
+        if (tickCounter < cycleDelay.getValue()) {
             return;
         }
         
         /** Проверяем лимит ударов */
-        if (hitCount >= (int)maxHits.getValue()) {
+        if (currentHit >= (int)maxHits.getValue()) {
+            if (autoReturn.isValue()) {
+                returnToSavedPosition();
+            }
+            currentHit = 0;
+            tickCounter = 0;
             return;
         }
         
-        /** Атакуем */
-        performSpoofAttack();
-        ticksSinceLastAttack = 0;
-        hitCount++;
+        /** Выполняем цикл: ТП -> Атака -> Возврат */
+        performAttackCycle();
+        
+        currentHit++;
+        tickCounter = 0;
+    }
+    
+    /**
+     * Обработчик пакетов чата.
+     * Проверяет сообщения "Вы атаковали" / "Вы были атакованы".
+     */
+    @EventHandler
+    @Native(type = Native.Type.VMProtectBeginMutation)
+    public void onPacket(PacketEvent event) {
+        if (event.getPacket() instanceof GameMessageS2CPacket packet) {
+            String message = packet.content().getString().toLowerCase();
+            
+            if (message.contains("вы атаковали") || message.contains("вы были атакованы")) {
+                attackSuccessful = true;
+            }
+        }
     }
     
     @EventHandler
@@ -170,70 +206,90 @@ public class TpAura extends ModuleStructure {
     }
     
     /**
-     * Атака со спуфом позиции.
-     * Алгоритм:
-     * 1. Сохраняем реальную позицию
-     * 2. Отправляем пакет что мы рядом с целью
-     * 3. Атакуем
-     * 4. Возвращаем позицию обратно
+     * Полный цикл атаки: ТП -> Атака -> Возврат.
      */
-    private void performSpoofAttack() {
-        if (target == null || mc.interactionManager == null || mc.getNetworkHandler() == null) {
+    private void performAttackCycle() {
+        if (target == null || mc.interactionManager == null || mc.getNetworkHandler() == null || savedPosition == null) {
             return;
         }
         
-        /** 1. Сохраняем реальную позицию */
-        Vec3d realPos = mc.player.getEntityPos();
-        float realYaw = mc.player.getYaw();
-        float realPitch = mc.player.getPitch();
-        
-        /** 2. Рассчитываем позицию рядом с целью */
+        /** 1. Рассчитываем позицию атаки */
         Vec3d targetPos = target.getEntityPos();
-        Vec3d direction = targetPos.subtract(realPos).normalize();
-        Vec3d spoofPos = targetPos.subtract(direction.multiply(tpDistance.getValue()));
+        Vec3d direction = targetPos.subtract(savedPosition).normalize();
+        Vec3d attackPos = targetPos.subtract(direction.multiply(tpDistance.getValue()));
         
-        /** 3. Рассчитываем ротацию к цели */
-        double deltaX = target.getX() - spoofPos.x;
-        double deltaZ = target.getZ() - spoofPos.z;
-        double deltaY = (target.getY() + target.getHeight() / 2) - (spoofPos.y + mc.player.getEyeHeight(mc.player.getPose()));
-        double distance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
+        /** 2. Телепортируемся к цели (дробим если >20 блоков) */
+        teleportToPosition(attackPos);
         
-        float spoofYaw = (float) Math.toDegrees(Math.atan2(deltaZ, deltaX)) - 90.0f;
-        float spoofPitch = (float) -Math.toDegrees(Math.atan2(deltaY, distance));
-        
-        /** 4. СПУФ: Отправляем пакет что мы рядом с целью */
-        mc.getNetworkHandler().sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.Full(
-            spoofPos.x,
-            spoofPos.y,
-            spoofPos.z,
-            spoofYaw,
-            spoofPitch,
-            false,
-            false
-        ));
-        
-        /** 5. Grim Crit (опционально) */
-        if (grimCrit.isValue()) {
-            mc.player.fallDistance = 1.0E-4f;
-            mc.getNetworkHandler().sendPacket(
-                new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.OnGroundOnly(false, false)
-            );
-        }
-        
-        /** 6. АТАКУЕМ */
+        /** 3. Атакуем */
         mc.interactionManager.attackEntity(mc.player, target);
         mc.player.swingHand(mc.player.getActiveHand());
         
-        /** 7. Возвращаем позицию обратно */
-        mc.getNetworkHandler().sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.Full(
-            realPos.x,
-            realPos.y,
-            realPos.z,
-            realYaw,
-            realPitch,
-            mc.player.isOnGround(),
-            false
-        ));
+        /** 4. Возвращаемся обратно (дробим если >20 блоков) */
+        if (autoReturn.isValue()) {
+            teleportToPosition(savedPosition);
+        }
+    }
+    
+    /**
+     * Телепортация к позиции.
+     * Дробит пакеты если дистанция >20 блоков.
+     */
+    private void teleportToPosition(Vec3d targetPos) {
+        if (mc.player == null || mc.getNetworkHandler() == null) {
+            return;
+        }
+        
+        Vec3d currentPos = mc.player.getEntityPos();
+        double distance = currentPos.distanceTo(targetPos);
+        
+        /** Если дистанция >20 - дробим пакеты */
+        if (distance > 20) {
+            /** Рассчитываем количество пакетов (каждый ~10 блоков) */
+            int packets = (int) Math.ceil(distance / 10.0);
+            packets = Math.max(2, Math.min(packets, 15));
+            
+            /** Отправляем пакеты БЕЗ задержки */
+            for (int i = 1; i <= packets; i++) {
+                double progress = (double) i / packets;
+                Vec3d intermediatePos = currentPos.lerp(targetPos, progress);
+                
+                mc.getNetworkHandler().sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.Full(
+                    intermediatePos.x,
+                    intermediatePos.y,
+                    intermediatePos.z,
+                    mc.player.getYaw(),
+                    mc.player.getPitch(),
+                    false,
+                    false
+                ));
+            }
+        } else {
+            /** Обычная телепортация для коротких дистанций */
+            mc.getNetworkHandler().sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.Full(
+                targetPos.x,
+                targetPos.y,
+                targetPos.z,
+                mc.player.getYaw(),
+                mc.player.getPitch(),
+                false,
+                false
+            ));
+        }
+        
+        /** Обновляем позицию локально */
+        mc.player.setPos(targetPos.x, targetPos.y, targetPos.z);
+    }
+    
+    /**
+     * Вернуться на сохраненную позицию.
+     */
+    private void returnToSavedPosition() {
+        if (!autoReturn.isValue() || savedPosition == null) {
+            return;
+        }
+        
+        teleportToPosition(savedPosition);
     }
     
     /**
@@ -242,8 +298,9 @@ public class TpAura extends ModuleStructure {
     @Native(type = Native.Type.VMProtectBeginMutation)
     private void reset() {
         target = null;
-        ticksSinceLastAttack = 0;
-        hitCount = 0;
+        tickCounter = 0;
+        currentHit = 0;
+        attackSuccessful = false;
         targetFinder.releaseTarget();
     }
 }
