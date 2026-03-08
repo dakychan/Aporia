@@ -1,5 +1,4 @@
-import org.gradle.api.DefaultTask
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.Project
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.*
 import java.io.File
@@ -21,7 +20,9 @@ import kotlin.random.Random
  * 5. Генерирует RuntimeMapper с алгоритмом восстановления
  * 6. UNICODE CHAOS - арабский, китайский, японский, руны, иероглифы
  */
-open class ChaosObfuscator : DefaultTask() {
+class ChaosObfuscator {
+    
+    lateinit var project: Project
     
     // UNICODE CHAOS - пиздец глазам
     private val unicodeChaos = listOf(
@@ -172,81 +173,81 @@ open class ChaosObfuscator : DefaultTask() {
     private lateinit var longObfuscator: LongObfuscator
     private lateinit var garbageGenerator: GarbageGenerator
     
-    @TaskAction
-    fun obfuscate() {
-        val javaClassesDir = File(project.buildDir, "classes/java/main")
-        val kotlinClassesDir = File(project.buildDir, "classes/kotlin/main")
-        val outputDir = File(project.buildDir, "chaos-obfuscated")
-        
-        if (!javaClassesDir.exists() && !kotlinClassesDir.exists()) {
-            println("Classes directory not found. Run 'build' first.")
-            return
-        }
-        
+    
+    fun obfuscateFromJar(jarFile: File, outputDir: File) {
         println("=== CHAOS OBFUSCATOR ===")
         dailySeed = getDailySeed()
         println("Daily seed: $dailySeed")
-        println("Date: ${LocalDate.now(ZoneId.of("UTC"))}")
         
-        /**
-         * Инициализация расширенных обфускаторов
-         */
         stringEncryptor = StringEncryptor(dailySeed)
         methodHandleGenerator = MethodHandleGenerator(dailySeed)
         threadLocalCache = ThreadLocalCacheGenerator(dailySeed)
         longObfuscator = LongObfuscator(dailySeed)
         garbageGenerator = GarbageGenerator(dailySeed)
         
-        // Сканируем Java классы
-        if (javaClassesDir.exists()) {
-            println("Scanning Java classes...")
-            scanClasses(javaClassesDir)
+        val tempDir = File(project.buildDir, "temp-obfuscate-scan")
+        tempDir.deleteRecursively()
+        tempDir.mkdirs()
+        
+        project.copy {
+            from(project.zipTree(jarFile))
+            into(tempDir)
         }
         
-        // Сканируем Kotlin классы
-        if (kotlinClassesDir.exists()) {
-            println("Scanning Kotlin classes...")
-            scanClasses(kotlinClassesDir)
-        }
+        println("Scanning classes...")
+        scanClasses(tempDir)
         
         if (classMappings.isEmpty()) {
-            println("No classes to obfuscate.")
+            println("No classes to obfuscate")
+            tempDir.deleteRecursively()
             return
         }
         
-        println("\nFound ${classMappings.size} classes to obfuscate")
-        println("Generating chaos mappings...")
+        println("Found ${classMappings.size} classes to obfuscate")
+        classMappings.forEach { (old, new) ->
+            println("  $old -> $new")
+        }
         
-        // Обфусцируем
         outputDir.deleteRecursively()
         outputDir.mkdirs()
         
-        // Обфусцируем Java классы
-        if (javaClassesDir.exists()) {
-            obfuscateClasses(javaClassesDir, outputDir)
-        }
+        obfuscateClasses(tempDir, outputDir)
         
-        // Обфусцируем Kotlin классы
-        if (kotlinClassesDir.exists()) {
-            obfuscateClasses(kotlinClassesDir, outputDir)
-        }
-        
-        // Сохраняем маппинги
         val date = LocalDate.now(ZoneId.of("UTC"))
         saveMappings(File(project.buildDir, "chaos-mappings-$date.txt"))
         
-        // Генерируем RuntimeMapper
         generateRuntimeMapper(outputDir)
         
-        println("\n✅ Chaos obfuscation complete!")
-        println("📁 Output: ${outputDir.absolutePath}")
-        println("🗺️  Mappings: chaos-mappings-$date.txt")
-        println("⚠️  Mappings expire tomorrow at 00:00 UTC!")
+        tempDir.deleteRecursively()
+        println("✅ Obfuscation complete")
     }
     
-    /**
-     * Генерирует seed на основе даты UTC
-     */
+    fun obfuscateExtracted(inputDir: File, outputDir: File) {
+        dailySeed = getDailySeed()
+        
+        stringEncryptor = StringEncryptor(dailySeed)
+        methodHandleGenerator = MethodHandleGenerator(dailySeed)
+        threadLocalCache = ThreadLocalCacheGenerator(dailySeed)
+        longObfuscator = LongObfuscator(dailySeed)
+        garbageGenerator = GarbageGenerator(dailySeed)
+        
+        scanClasses(inputDir)
+        
+        if (classMappings.isEmpty()) {
+            return
+        }
+        
+        outputDir.deleteRecursively()
+        outputDir.mkdirs()
+        
+        obfuscateClasses(inputDir, outputDir)
+        
+        val date = LocalDate.now(ZoneId.of("UTC"))
+        saveMappings(File(project.buildDir, "chaos-mappings-$date.txt"))
+        
+        generateRuntimeMapper(outputDir)
+    }
+    
     private fun getDailySeed(): Long {
         val date = LocalDate.now(ZoneId.of("UTC"))
         val dateStr = "${date.year}${date.monthValue}${date.dayOfMonth}"
@@ -255,9 +256,6 @@ open class ChaosObfuscator : DefaultTask() {
         return hash.fold(0L) { acc, byte -> (acc shl 8) or (byte.toLong() and 0xFF) }
     }
     
-    /**
-     * Сканирует классы
-     */
     private fun scanClasses(dir: File) {
         dir.walkTopDown().forEach { file ->
             if (file.extension == "class") {
@@ -272,61 +270,64 @@ open class ChaosObfuscator : DefaultTask() {
                 val level = getObfuscationLevel(classNode)
                 if (level != ObfuscationLevel.NONE) {
                     val oldName = classNode.name
+                    
+                    if (oldName.contains("$")) {
+                        return@forEach
+                    }
+                    
                     val newName = generateChaosClassName(oldName, level)
                     classMappings[oldName] = newName
                     
-                    // Генерируем маппинги для методов и полей
                     methodMappings[oldName] = mutableMapOf()
                     fieldMappings[oldName] = mutableMapOf()
+                }
+            }
+        }
+        
+        // Второй проход - обрабатываем внутренние классы
+        dir.walkTopDown().forEach { file ->
+            if (file.extension == "class") {
+                val classNode = readClass(file)
+                val oldName = classNode.name
+                
+                // Это внутренний класс?
+                if (oldName.contains("$")) {
+                    // Находим родительский класс
+                    val outerClassName = oldName.substringBefore("$")
                     
-                    // LIGHT и MEDIUM - только классы
-                    // HEAVY и EXTREME - классы + методы + поля
-                    if (level == ObfuscationLevel.HEAVY || level == ObfuscationLevel.EXTREME) {
-                        classNode.methods?.forEach { method ->
-                            if (!method.name.startsWith("<")) { // Не трогаем <init> и <clinit>
-                                val newMethodName = generateChaosName(method.name, 2, level = level)
-                                methodMappings[oldName]!![method.name + method.desc] = newMethodName
-                            }
-                        }
+                    // Если родительский класс обфусцирован, обфусцируем и внутренний
+                    if (classMappings.containsKey(outerClassName)) {
+                        val outerNewName = classMappings[outerClassName]!!
+                        val innerPart = oldName.substringAfter("$")
+                        val newName = "$outerNewName\$$innerPart"
+                        classMappings[oldName] = newName
                         
-                        classNode.fields?.forEach { field ->
-                            val newFieldName = generateChaosName(field.name, 2, level = level)
-                            fieldMappings[oldName]!![field.name] = newFieldName
-                        }
+                        methodMappings[oldName] = mutableMapOf()
+                        fieldMappings[oldName] = mutableMapOf()
                     }
                 }
             }
         }
     }
     
-    /**
-     * Проверяет миксин
-     */
     private fun isMixin(classNode: ClassNode): Boolean {
         return classNode.visibleAnnotations?.any { 
             it.desc.contains("Mixin") || it.desc.contains("mixin")
         } ?: false
     }
     
-    /**
-     * Определяет уровень обфускации
-     */
     private fun getObfuscationLevel(classNode: ClassNode): ObfuscationLevel {
-        // Объединяем visible и invisible аннотации
         val allAnnotations = (classNode.visibleAnnotations ?: emptyList()) + 
                             (classNode.invisibleAnnotations ?: emptyList())
         
-        // @MainClass - не обфусцируем
         allAnnotations.forEach { ann ->
             if (ann.desc.contains("MainClass")) {
                 return ObfuscationLevel.NONE
             }
         }
         
-        // @Obfuscate
         allAnnotations.forEach { ann ->
             if (ann.desc.contains("Obfuscate")) {
-                // Читаем level
                 if (ann.values != null) {
                     for (i in 0 until ann.values.size step 2) {
                         if (ann.values[i] == "level") {
@@ -344,11 +345,10 @@ open class ChaosObfuscator : DefaultTask() {
                         }
                     }
                 }
-                return ObfuscationLevel.MEDIUM // По умолчанию
+                return ObfuscationLevel.MEDIUM
             }
         }
         
-        // @Native
         allAnnotations.forEach { ann ->
             if (ann.desc.contains("Native")) {
                 return ObfuscationLevel.HEAVY
@@ -358,13 +358,9 @@ open class ChaosObfuscator : DefaultTask() {
         return ObfuscationLevel.NONE
     }
     
-    /**
-     * Генерирует хаотичное имя класса
-     */
     private fun generateChaosClassName(oldName: String, level: ObfuscationLevel): String {
         val random = Random(oldName.hashCode().toLong() + dailySeed)
         
-        // Генерируем хаотичный пакет
         val packageParts = oldName.split("/").dropLast(1)
         val className = oldName.split("/").last()
         
@@ -402,46 +398,34 @@ open class ChaosObfuscator : DefaultTask() {
         val asciiLetters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
         val asciiSymbols = "_$"
         
-        // Собираем пул символов в зависимости от уровня
         val charPool = buildString {
             append(asciiLetters)
             append(asciiSymbols)
             
             when (level) {
-                ObfuscationLevel.LIGHT -> {
-                }
+                ObfuscationLevel.LIGHT -> {}
                 ObfuscationLevel.MEDIUM -> {
-                    // + Греческий + Кириллица
                     append("αβγδεζηθικλμνξοπρστυφχψω")
                     append("ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ")
                     append("абвгдежзийклмнопрстуфхцчшщъыьэюя")
                     append("АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ")
                 }
                 ObfuscationLevel.HEAVY -> {
-                    // + Азиатские языки
                     append("αβγδεζηθικλμνξοπρστυφχψω")
                     append("абвгдежзийклмнопрстуфхцчшщъыьэюя")
-                    // Китайский
                     append("的一是不了人我在有他这为之大来以个中上们到说时")
                     append("要就出会可也你得对生能下面孩子对工动力已经面")
-                    // Японский
                     append("あいうえおかきくけこさしすせそたちつてとなにぬねの")
                     append("アイウエオカキクケコサシスセソタチツテトナニヌネノ")
-                    // Корейский
                     append("가나다라마바사아자차카타파하")
                     append("거너더러머버서어저처커터퍼허")
-                    // Тайский
                     append("กขคงจฉชซญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ")
-                    // Деванагари
                     append("अआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसह")
                 }
                 ObfuscationLevel.EXTREME -> {
-                    // ВСЁ! Полный пиздец!
-                    // Базовые unicode
                     append("αβγδεζηθικλμνξοπρστυφχψω")
                     append("абвгдежзийклмнопрстуфхцчшщъыьэюя")
                     
-                    // Азиатские
                     unicodeChaos.forEach { charset ->
                         append(charset)
                     }
@@ -525,19 +509,23 @@ open class ChaosObfuscator : DefaultTask() {
                 val classNode = readClass(file)
                 val oldName = classNode.name
                 
-                // Обновляем ссылки
-                remapReferences(classNode)
-                
                 /**
-                 * Переименовываем класс
+                 * Если класс в маппингах - создаем обфусцированную КОПИЮ
                  */
                 if (classMappings.containsKey(oldName)) {
-                    classNode.name = classMappings[oldName]!!
+                    // Создаем копию для обфускации
+                    val obfuscatedNode = ClassNode()
+                    classNode.accept(obfuscatedNode)
+                    
+                    // Обновляем ссылки ТОЛЬКО в обфусцированной копии
+                    remapReferences(obfuscatedNode)
+                    
+                    obfuscatedNode.name = classMappings[oldName]!!
                     
                     /**
-                     * Переименовываем методы
+                     * Переименовываем методы (если есть маппинги)
                      */
-                    classNode.methods?.forEach { method ->
+                    obfuscatedNode.methods?.forEach { method ->
                         val key = method.name + method.desc
                         if (methodMappings[oldName]?.containsKey(key) == true) {
                             method.name = methodMappings[oldName]!![key]!!
@@ -545,9 +533,9 @@ open class ChaosObfuscator : DefaultTask() {
                     }
                     
                     /**
-                     * Переименовываем поля
+                     * Переименовываем поля (если есть маппинги)
                      */
-                    classNode.fields?.forEach { field ->
+                    obfuscatedNode.fields?.forEach { field ->
                         if (fieldMappings[oldName]?.containsKey(field.name) == true) {
                             field.name = fieldMappings[oldName]!![field.name]!!
                         }
@@ -556,20 +544,20 @@ open class ChaosObfuscator : DefaultTask() {
                     /**
                      * РАСШИРЕННАЯ ОБФУСКАЦИЯ (Catlean-style)
                      */
-                    val level = getObfuscationLevelForProcessing(classNode, oldName)
+                    val level = getObfuscationLevelForProcessing(obfuscatedNode, oldName)
                     if (level != ObfuscationLevel.NONE && level != ObfuscationLevel.LIGHT) {
-                        applyAdvancedObfuscation(classNode, level)
+                        applyAdvancedObfuscation(obfuscatedNode, level)
                     }
+                    
+                    // Сохраняем обфусцированную копию
+                    val outputFile = File(outputDir, "${obfuscatedNode.name}.class")
+                    outputFile.parentFile.mkdirs()
+                    writeClass(obfuscatedNode, outputFile)
                 }
                 
-                // Определяем выходной файл
-                val outputFile = if (classMappings.containsKey(oldName)) {
-                    File(outputDir, "${classNode.name}.class")
-                } else {
-                    val relativePath = file.relativeTo(inputDir)
-                    File(outputDir, relativePath.path)
-                }
-                
+                // ВСЕГДА сохраняем оригинальный класс (БЕЗ изменений)
+                val relativePath = file.relativeTo(inputDir)
+                val outputFile = File(outputDir, relativePath.path)
                 outputFile.parentFile.mkdirs()
                 writeClass(classNode, outputFile)
             }
@@ -787,13 +775,15 @@ open class ChaosObfuscator : DefaultTask() {
         val classNode = ClassNode()
         FileInputStream(file).use { fis ->
             val classReader = ClassReader(fis)
-            classReader.accept(classNode, 0)
+            // EXPAND_FRAMES - расширяем frames для корректной обработки
+            classReader.accept(classNode, ClassReader.EXPAND_FRAMES)
         }
         return classNode
     }
     
     private fun writeClass(classNode: ClassNode, file: File) {
-        val classWriter = ClassWriter(0) // БЕЗ COMPUTE_MAXS!
+        // COMPUTE_MAXS вместо COMPUTE_FRAMES - безопаснее, не требует полного classpath
+        val classWriter = ClassWriter(ClassWriter.COMPUTE_MAXS)
         classNode.accept(classWriter)
         FileOutputStream(file).use { fos ->
             fos.write(classWriter.toByteArray())

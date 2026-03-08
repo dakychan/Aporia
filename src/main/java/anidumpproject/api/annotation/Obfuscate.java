@@ -63,7 +63,7 @@ import java.lang.annotation.Target;
  * @see Native
  * @see MainClass
  */
-@Retention(RetentionPolicy.CLASS)
+@Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE, ElementType.METHOD})
 public @interface Obfuscate {
     

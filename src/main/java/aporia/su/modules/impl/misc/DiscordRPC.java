@@ -1,6 +1,5 @@
 package aporia.su.modules.impl.misc;
 
-import anidumpproject.api.annotation.Native;
 import anidumpproject.api.annotation.Obfuscate;
 import aporia.cc.UserData;
 import aporia.su.modules.module.ModuleStructure;
@@ -69,7 +68,6 @@ public class DiscordRPC extends ModuleStructure {
     }
     
     @Override
-    @Native(type = Native.Type.VMProtectBeginMutation)
     public void activate() {
         kills = 0;
         deaths = 0;
@@ -81,7 +79,6 @@ public class DiscordRPC extends ModuleStructure {
     }
     
     @Override
-    @Native(type = Native.Type.VMProtectBeginMutation)
     public void deactivate() {
         /** Останавливаем Discord RPC */
         stopDiscordRPC();
@@ -149,7 +146,6 @@ public class DiscordRPC extends ModuleStructure {
     }
     
     @EventHandler
-    @Native(type = Native.Type.VMProtectBeginUltra)
     public void onTick(TickEvent event) {
         if (mc.player == null || mc.world == null || !rpcRunning) {
             return;
@@ -170,7 +166,6 @@ public class DiscordRPC extends ModuleStructure {
      * Считает убийства и смерти.
      */
     @EventHandler
-    @Native(type = Native.Type.VMProtectBeginMutation)
     public void onPacket(PacketEvent event) {
         if (event.getPacket() instanceof GameMessageS2CPacket packet) {
             String message = packet.content().getString().toLowerCase();

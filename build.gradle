@@ -55,7 +55,6 @@ dependencies {
     implementation 'ai.catboost:catboost-common:1.2.10'
     implementation "com.google.code.gson:gson:2.8.9"
     implementation "dev.firstdark.discordrpc:discord-rpc:1.0.4"
-    
     shadow("com.kohlschutter.junixsocket:junixsocket-common:${project.property('junix')}")
     shadow("com.kohlschutter.junixsocket:junixsocket-native-common:${project.property('junix')}")
 }
@@ -79,54 +78,67 @@ tasks.withType(JavaCompile).configureEach {
     options.release.set(targetJavaVersion)
 }
 
-jar {
-    from('LICENSE') {
-        rename { "${it}_${base.archivesName.get()}" }
-    }
-}
-
-tasks.register('chaosObfuscate', ChaosObfuscator) {
-    group = 'build'
-    description = 'Chaos obfuscation with daily rotating mappings'
-    dependsOn 'classes'
-}
-
-tasks.register('obfuscatedJar', Jar) {
-    group = 'build'
-    description = 'Create obfuscated JAR before remapping'
-    dependsOn 'chaosObfuscate'
-    dependsOn jar // Явная зависимость от задачи jar
-    archiveClassifier = 'obfuscated-dev'
-    from file("${project.buildDir}/chaos-obfuscated")
-    from {
-        zipTree(jar.archiveFile.get().asFile)
-    } {
-        exclude '**/*.class'
-    }
-    manifest {
-        from(jar.manifest)
-    }
-}
-
-tasks.named('remapJar') {
-    dependsOn 'obfuscatedJar'
-    doFirst {
-        def obfJar = tasks.named('obfuscatedJar', Jar).get()
-        def normalJar = jar.archiveFile.get().asFile
-        def obfuscatedJarFile = obfJar.archiveFile.get().asFile
-        if (obfuscatedJarFile.exists()) {
-            normalJar.delete()
-            normalJar.withOutputStream { out ->
-                obfuscatedJarFile.withInputStream { it.transferTo(out) }
-            }
+tasks.register('obfuscateRemappedJar') {
+    dependsOn 'remapJar'
+    
+    doLast {
+        println "=== Starting obfuscation task ==="
+        def remappedJar = remapJar.archiveFile.get().asFile
+        def tempDir = file("${project.buildDir}/temp-jar-extract")
+        def chaosDir = file("${project.buildDir}/chaos-obfuscated")
+        
+        println "Remapped jar: ${remappedJar}"
+        println "Jar exists: ${remappedJar.exists()}"
+        
+        if (!remappedJar.exists()) {
+            throw new GradleException("Remapped jar not found: ${remappedJar}")
         }
+        
+        def obfuscator = new ChaosObfuscator()
+        obfuscator.project = project
+        obfuscator.obfuscateFromJar(remappedJar, chaosDir)
+        
+        println "Chaos dir exists: ${chaosDir.exists()}"
+        println "Chaos dir files: ${chaosDir.exists() ? chaosDir.listFiles()?.length : 0}"
+        
+        if (!chaosDir.exists() || chaosDir.listFiles()?.length == 0) {
+            println "No obfuscated classes generated, skipping"
+            return
+        }
+        
+        if (tempDir.exists()) {
+            tempDir.deleteDir()
+        }
+        tempDir.mkdirs()
+        copy {
+            from zipTree(remappedJar)
+            into tempDir
+        }
+        
+        copy {
+            from chaosDir
+            into tempDir
+            include '**/*.class'
+        }
+        
+        def backupJar = new File(remappedJar.parentFile, remappedJar.name + ".backup")
+        if (backupJar.exists()) backupJar.delete()
+        remappedJar.renameTo(backupJar)
+        
+        ant.zip(destfile: remappedJar) {
+            fileset(dir: tempDir)
+        }
+        
+        backupJar.delete()
+        tempDir.deleteDir()
+        
+        println "=== Obfuscation task complete ==="
     }
 }
-
 tasks.register('copyToBeta', Copy) {
     group = 'build'
     description = 'Copy built JAR to beta/version and beta/latest directories'
-    dependsOn 'remapJar'
+    dependsOn 'obfuscateRemappedJar'
     from(remapJar.archiveFile)
     into file("${project.rootDir}/beta/${project.version}")
     doFirst {
@@ -154,19 +166,6 @@ tasks.register('copyToBeta', Copy) {
 
 tasks.named('build') {
     finalizedBy 'copyToBeta'
-}
-
-tasks.register('chaosJar', Jar) {
-    group = 'build'
-    description = 'Create standalone chaos obfuscated JAR'
-    dependsOn 'chaosObfuscate'
-    archiveClassifier = 'chaos'
-    from file("${project.buildDir}/chaos-obfuscated")
-    manifest {
-        attributes(
-            'Main-Class': 'aporia.su.Initialization'
-        )
-    }
 }
 
 publishing {
