@@ -908,17 +908,31 @@ public class FilesManager {
          * Сохранить конфиг.
          */
         public void save() {
+            save(FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR));
+        }
+
+        /**
+         * Сохранить конфиг в указанный файл.
+         * @param targetPath путь к файлу для сохранения
+         */
+        public void save(Path targetPath) {
             if (!initialized.get()) {
                 return;
             }
-            
+
             if (!saving.compareAndSet(false, true)) {
                 return;
             }
 
             try {
                 JsonObject root = new JsonObject();
-                
+
+                /** Добавляем метаданные */
+                root.addProperty("version", "0.4");
+                root.addProperty("timestamp", System.currentTimeMillis());
+                root.addProperty("client", "Aporia.cc");
+                root.addProperty("type", "cfg");
+
                 /** Сериализуем модули */
                 JsonObject modulesJson = new JsonObject();
                 if (moduleRepository != null) {
@@ -927,27 +941,19 @@ public class FilesManager {
                     }
                 }
                 root.add("modules", modulesJson);
-                
-                /** Добавляем метаданные */
-                root.addProperty("version", "0.4");
-                root.addProperty("timestamp", System.currentTimeMillis());
-                root.addProperty("client", "Aporia.cc");
 
                 /** Сохраняем в APR формат */
                 String json = gson.toJson(root);
-                boolean success = FilesManager.createFile(
-                    CONFIG_DIR,
-                    FilesManager.FileFormat.APR,
-                    CONFIG_NAME,
-                    json,
-                    FilesManager.CheckMode.ALWAYS
-                );
 
-                if (success) {
-                    Logger.success("Config saved!");
-                } else {
-                    Logger.error("Failed to save config!");
+                // Создаем директорию если не существует
+                if (!Files.exists(targetPath.getParent())) {
+                    Files.createDirectories(targetPath.getParent());
                 }
+
+                // Записываем файл напрямую (перезаписываем существующий)
+                Files.writeString(targetPath, json, StandardCharsets.UTF_8);
+
+                Logger.success("Config saved!");
 
             } catch (Exception e) {
                 Logger.error("Error saving config: " + e.getMessage());
@@ -960,9 +966,15 @@ public class FilesManager {
          * Загрузить конфиг.
          */
         public void load() {
+            load(FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR));
+        }
+
+        /**
+         * Загрузить конфиг из указанного файла.
+         * @param configPath путь к файлу конфига
+         */
+        public void load(Path configPath) {
             try {
-                Path configPath = FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR);
-                
                 if (!FilesManager.exists(configPath)) {
                     Logger.info("No config found, creating new...");
                     save();
@@ -976,7 +988,7 @@ public class FilesManager {
                 }
 
                 JsonObject root = JsonParser.parseString(json).getAsJsonObject();
-                
+
                 /** Десериализуем модули */
                 if (root.has("modules") && moduleRepository != null) {
                     JsonObject modulesJson = root.getAsJsonObject("modules");

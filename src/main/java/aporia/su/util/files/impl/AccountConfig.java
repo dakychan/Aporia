@@ -10,6 +10,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.util.Identifier;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +44,12 @@ public class AccountConfig {
         try {
             JsonObject root = new JsonObject();
 
+            // Добавляем метаданные
+            root.addProperty("version", "0.4");
+            root.addProperty("timestamp", System.currentTimeMillis());
+            root.addProperty("client", "Aporia.cc");
+            root.addProperty("type", "acc");
+
             JsonArray accountsArray = new JsonArray();
             for (AccountEntry entry : accounts) {
                 JsonObject accountObj = new JsonObject();
@@ -60,13 +68,16 @@ public class AccountConfig {
             activeObj.addProperty("skin", activeAccountSkin);
             root.add("active", activeObj);
 
-            FilesManager.createFile(
-                CONFIG_DIR,
-                FilesManager.FileFormat.APR,
-                CONFIG_NAME,
-                root.toString(),
-                FilesManager.CheckMode.ALWAYS
-            );
+            Path configPath = FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR);
+            
+            // Создаем директорию если не существует
+            if (!Files.exists(configPath.getParent())) {
+                Files.createDirectories(configPath.getParent());
+            }
+            
+            // Записываем файл напрямую
+            Files.writeString(configPath, root.toString(), StandardCharsets.UTF_8);
+            
             Logger.success("AccountConfig saved!");
         } catch (Exception e) {
             Logger.error("AccountConfig: Save failed! " + e.getMessage());
@@ -76,7 +87,7 @@ public class AccountConfig {
     public void load() {
         try {
             Path configPath = FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR);
-            
+
             if (!FilesManager.exists(configPath)) {
                 Logger.info("AccountConfig: No config file found, using defaults.");
                 return;

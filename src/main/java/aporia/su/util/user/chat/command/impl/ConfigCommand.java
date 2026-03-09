@@ -2,6 +2,8 @@ package aporia.su.util.user.chat.command.impl;
 
 import aporia.cc.OsManager;
 import aporia.su.util.files.FilesManager;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
@@ -12,6 +14,7 @@ import aporia.su.util.user.chat.command.helpers.Paginator;
 import aporia.su.util.user.chat.command.helpers.TabCompleteHelper;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -46,7 +49,7 @@ public class ConfigCommand extends CommandManager.Command {
 
                 if (Files.exists(configFile)) {
                     try {
-                        FilesManager.getConfigManager().load();
+                        FilesManager.getConfigManager().load(configFile);
                         logDirect(String.format("Конфигурация %s загружена!", name));
                     } catch (Exception e) {
                         logDirect(String.format("Ошибка при загрузке конфига! Детали: %s", e.getMessage()), Formatting.RED);
@@ -64,10 +67,11 @@ public class ConfigCommand extends CommandManager.Command {
                 String name = args[1];
                 try {
                     Path configDir = OsManager.mainDirectory.resolve("configs");
-                    Path newConfig = configDir.resolve(name + ".apr");
-                    FilesManager.getConfigManager().save();
-                    Path currentConfig = FilesManager.getFilePath(configDir, "config", FilesManager.FileFormat.APR);
-                    Files.copy(currentConfig, newConfig);
+                    Path targetConfig = configDir.resolve(name + ".apr");
+                    
+                    // Сохраняем конфиг сразу в нужный файл
+                    FilesManager.getConfigManager().save(targetConfig);
+                    
                     logDirect(String.format("Конфигурация %s сохранена!", name));
                 } catch (Exception e) {
                     logDirect(String.format("Ошибка при сохранении конфига! Детали: %s", e.getMessage()), Formatting.RED);
@@ -190,8 +194,32 @@ public class ConfigCommand extends CommandManager.Command {
                 Files.list(configDir)
                         .filter(path -> path.toString().endsWith(".apr"))
                         .forEach(path -> {
-                            String name = path.getFileName().toString();
-                            configs.add(name.substring(0, name.length() - 4));
+                            String fileName = path.getFileName().toString();
+                            String name = fileName.substring(0, fileName.length() - 4);
+                            
+                            // Пропускаем accounts.apr - это не конфиг
+                            if (name.equals("accounts")) {
+                                return;
+                            }
+                            
+                            // Проверяем тип конфига внутри файла
+                            try {
+                                String json = Files.readString(path, StandardCharsets.UTF_8);
+                                JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+                                if (root.has("type")) {
+                                    String type = root.get("type").getAsString();
+                                    // Добавляем только cfg типы (конфиги модулей)
+                                    if ("cfg".equals(type)) {
+                                        configs.add(name);
+                                    }
+                                } else {
+                                    // Если типа нет, считаем что это старый конфиг
+                                    configs.add(name);
+                                }
+                            } catch (Exception e) {
+                                // Если не смогли прочитать, добавляем на всякий случай
+                                configs.add(name);
+                            }
                         });
             }
         } catch (IOException ignored) {}
