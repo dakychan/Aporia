@@ -1,0 +1,4 @@
+rootProject.name = 'Aporia.cc'
+
+include ':Aporia'
+project(":Aporia").projectDir = file("projects/Aporia.cc")

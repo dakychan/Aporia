@@ -1,0 +1,190 @@
+<div align="center">
+
+<img src="src/main/resources/assets/Aporia.png" width="300">
+
+# ✨ Aporia Client ✨
+
+*Современный Minecraft клиент для версии 1.21.1* 🚀
+
+[![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1-red)](https://www.minecraft.net)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.0-purple)](https://kotlinlang.org)
+[![Java](https://img.shields.io/badge/Java-21-green)](https://openjdk.org)
+
+</div>
+
+---
+
+## 🌟 Особенности
+
+### 🎮 Модульная система
+- **5 категорий модулей**: Combat, Movement, Visuals, Player, Miscellaneous
+- **Горячие клавиши** - настраиваемые кейбинды для каждого модуля
+- **Гибкие настройки** - Number, Boolean, Mode, String, MultiSetting
+
+### 🎨 Продвинутый UI
+- **ClickGUI** - современный интерфейс с drag & drop панелями
+- **MSDF рендеринг** - четкий текст любого размера
+- **Blur эффекты** - стильное размытие фона
+- **Плавные анимации** - cubic easing для всех элементов
+- **Слайдеры** - точное управление числовыми значениями
+- **MultiSetting** - компактные inline кнопки с переносом строк
+
+### 💬 Система команд
+- **Динамический префикс** - настраиваемый префикс команд
+- **Команды**: help, prefix, config, info, alias, friend
+- **Цветные сообщения** - INFO, SUCCESS, ERROR, WARNING типы
+- **Автодополнение** - удобный ввод команд
+
+### 📊 HUD система
+- **ArrayList** - список активных модулей
+- **WaterMark** - водяной знак с иконкой
+- **KeyBinds** - отображение активных кейбиндов
+- **Drag & Drop** - перемещение элементов по экрану
+- **Настройки позиций** - сохранение координат
+
+### 🔔 Уведомления
+- **Notify система** - красивые всплывающие уведомления
+- **4 типа**: INFO, SUCCESS, ERROR, MODULE
+- **Анимации** - плавное появление и исчезновение
+- **Очередь** - автоматическое управление показом
+
+### 🎮 Discord RPC
+- **Rich Presence** - отображение статуса в Discord
+- **Динамический статус** - меню, одиночная игра, мультиплеер с IP
+- **Сохранение времени сессии** - непрерывный таймер
+- **Кнопка Discord** - прямая ссылка на сервер
+
+### 📁 Файловая система
+- **ModuleConfig** - сохранение состояния модулей
+- **Keybinds** - сохранение привязок клавиш
+- **UserData** - статистика пользователя
+- **Logger** - независимая система логирования с ASCII лого
+
+---
+
+## 🛠️ Технологии
+
+- **Minecraft 1.21.1** - базовая версия игры
+- **Kotlin 2.0.0** - основной язык разработки
+- **Java 21** - JVM и legacy код
+- **CometRenderer** - кастомный OpenGL рендеринг
+- **LWJGL** - низкоуровневая графика
+- **Gradle 8.10** - система сборки
+
+---
+
+## 📦 Структура проекта
+
+```
+src/main/
+├── kotlin/
+│   ├── aporia/cc/          # Основная логика клиента
+│   │   ├── Logger.kt       # Система логирования
+│   │   ├── chat/           # Чат утилиты
+│   │   ├── files/          # Файловая система
+│   │   └── user/           # Данные пользователя
+│   └── ru/
+│       ├── module/         # Модули клиента
+│       │   └── impl/       # Реализации модулей
+│       ├── ui/             # UI компоненты
+│       │   ├── clickgui/   # ClickGUI система
+│       │   ├── hud/        # HUD элементы
+│       │   └── notify/     # Уведомления
+│       ├── command/        # Система команд
+│       ├── render/         # Рендеринг утилиты
+│       └── input/          # Обработка ввода
+│
+├── java/
+│   ├── ru/                 # Java компоненты
+│   │   ├── Aporia.java     # Главный класс
+│   │   ├── ui/clickgui/    # ClickGUI компоненты
+│   │   │   ├── comp/       # UI компоненты
+│   │   │   │   ├── Slider.java
+│   │   │   │   └── MultiSetting.java
+│   │   │   └── ClickGuiScreen.java
+│   │   └── help/discord/   # Discord интеграция
+│   └── net/minecraft/      # Модифицированные классы MC
+│
+└── resources/
+    └── assets/aporia/      # Ресурсы клиента
+        ├── fonts/          # MSDF шрифты
+        └── icons/          # Иконки модулей
+```
+
+---
+
+## 🚀 Сборка и запуск
+
+### Требования:
+- Java 21 или выше
+- Gradle 8.10+
+
+### Команды:
+```bash
+# Сборка проекта
+.\gradlew.bat build
+
+# Сборка без тестов
+.\gradlew.bat build -x test
+
+# Запуск клиента
+.\gradlew.bat runClient
+
+# Очистка
+.\gradlew.bat clean
+```
+
+---
+
+## 🎯 Основные компоненты
+
+### Модули
+- **Combat** - боевые функции
+- **Movement** - улучшения передвижения
+- **Visuals** - визуальные улучшения (ClickGui, Interface)
+- **Player** - функции игрока
+- **Miscellaneous** - разное (BetterChat, DiscordRPC)
+
+### UI компоненты
+- **Slider** - слайдер с точным hit detection
+- **MultiSetting** - inline кнопки с автопереносом
+- **CategoryPanel** - панели категорий с drag & drop
+- **NotifyRenderer** - рендеринг уведомлений
+
+### Системы
+- **CommandManager** - управление командами
+- **ModuleManager** - управление модулями
+- **KeybindManager** - управление горячими клавишами
+- **FilesManager** - управление файлами
+- **DiscordManager** - Discord Rich Presence
+
+---
+
+## 📝 Последние изменения
+
+### UI & System Fixes
+- ✅ Исправлен hit detection слайдеров
+- ✅ Исправлено сохранение значений слайдеров
+- ✅ Добавлена динамическая система префиксов команд
+- ✅ Реализовано сохранение времени Discord сессии
+- ✅ Добавлено определение игрового состояния для Discord
+- ✅ Исправлена видимость MultiSetting компонентов
+- ✅ Создана независимая система Logger с ASCII лого
+- ✅ Мигрирован ModuleConfig в aporia.cc.files
+- ✅ Переписан MultiSetting с inline кнопками и переносом строк
+
+---
+
+## 💎 Автор
+
+Создано **protect3ed** ❤️
+
+---
+
+<div align="center">
+
+### ⭐ Поставь звезду, если проект понравился! ⭐
+
+**Aporia** - *современный Minecraft клиент* 🌈
+
+</div>
