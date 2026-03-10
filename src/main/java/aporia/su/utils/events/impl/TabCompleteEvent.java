@@ -1,4 +1,6 @@
-package aporia.su.utils.events;
+package aporia.su.utils.events.impl;
+
+import aporia.su.utils.events.api.Event;
 
 public class TabCompleteEvent extends Event {
     private final String prefix;

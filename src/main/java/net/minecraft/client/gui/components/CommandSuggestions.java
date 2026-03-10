@@ -1,5 +1,8 @@
 package net.minecraft.client.gui.components;
 
+import aporia.su.utils.chat.CommandManager;
+import aporia.su.utils.events.api.EventManager;
+import aporia.su.utils.events.impl.TabCompleteEvent;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -228,22 +231,16 @@ public class CommandSuggestions {
             }
         } else {
             String s1 = s.substring(0, i);
-            
-            // Вызываем событие TabComplete
-            aporia.su.utils.events.TabCompleteEvent event = new aporia.su.utils.events.TabCompleteEvent(s1);
-            aporia.su.utils.events.EventManager.callEvent(event);
-            
+            TabCompleteEvent event = new TabCompleteEvent(s1);
+            EventManager.callEvent(event);
             if (event.isCancelled()) {
                 this.pendingSuggestions = Suggestions.empty();
                 return;
             }
-            
-            // Если событие предоставило свои автодополнения
             if (event.completions != null && event.completions.length > 0) {
                 int k = getLastWordIndex(s1);
                 List<String> completionList = new ArrayList<>();
-                // Добавляем префикс к каждому автодополнению
-                String currentPrefix = aporia.su.utils.chat.CommandManager.INSTANCE.getPrefix();
+                String currentPrefix = CommandManager.INSTANCE.getPrefix();
                 for (String completion : event.completions) {
                     completionList.add(currentPrefix + completion);
                 }
@@ -254,8 +251,7 @@ public class CommandSuggestions {
                     }
                 });
             }
-            // Проверяем наши кастомные команды
-            else if (s1.startsWith(aporia.su.utils.chat.CommandManager.INSTANCE.getPrefix())) {
+            else if (s1.startsWith(CommandManager.INSTANCE.getPrefix())) {
                 Collection<String> customCompletions = this.minecraft.player.connection.getSuggestionsProvider().getCustomCommandSuggestions(s1);
                 int k = getLastWordIndex(s1);
                 this.pendingSuggestions = SharedSuggestionProvider.suggest(customCompletions, new SuggestionsBuilder(s1, k));

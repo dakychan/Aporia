@@ -1,5 +1,9 @@
 package aporia.su.utils.chat;
 
+import aporia.su.utils.chat.impl.AliasCommand;
+import aporia.su.utils.chat.impl.InfoCommand;
+import aporia.su.utils.chat.impl.PrefixCommand;
+
 import java.util.*;
 import java.util.stream.Collectors;
 

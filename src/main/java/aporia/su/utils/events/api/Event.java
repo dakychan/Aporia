@@ -1,4 +1,4 @@
-package aporia.su.utils.events;
+package aporia.su.utils.events.api;
 
 public abstract class Event {
     private boolean cancelled = false;

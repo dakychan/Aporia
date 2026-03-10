@@ -1,5 +1,6 @@
 package net.minecraft.client.multiplayer;
 
+import aporia.su.utils.chat.CommandManager;
 import com.google.common.collect.Lists;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
@@ -70,8 +71,7 @@ public class ClientSuggestionProvider implements SharedSuggestionProvider {
     }
     
     public Collection<String> getCustomCommandSuggestions(String input) {
-        // Получаем предложения от нашего CommandManager
-        String[] completions = aporia.su.utils.chat.CommandManager.INSTANCE.getCompletions(input);
+        String[] completions = CommandManager.INSTANCE.getCompletions(input);
         Set<String> set = new HashSet<>();
         for (String completion : completions) {
             set.add(completion);

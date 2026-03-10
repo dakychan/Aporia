@@ -1,4 +1,4 @@
-package aporia.su.utils.events;
+package aporia.su.utils.events.api;
 
 import java.util.ArrayList;
 import java.util.HashMap;

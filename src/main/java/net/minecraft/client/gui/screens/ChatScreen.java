@@ -1,5 +1,6 @@
 package net.minecraft.client.gui.screens;
 
+import aporia.su.utils.chat.CommandManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.ActiveTextCollector;
 import net.minecraft.client.gui.GuiGraphics;
@@ -271,8 +272,7 @@ public class ChatScreen extends Screen {
     public void handleChatInput(String p_242400_, boolean p_242161_) {
         p_242400_ = this.normalizeChatMessage(p_242400_);
         if (!p_242400_.isEmpty()) {
-            // Проверяем наши кастомные команды
-            if (aporia.su.utils.chat.CommandManager.INSTANCE.executeCommand(p_242400_)) {
+            if (CommandManager.INSTANCE.executeCommand(p_242400_)) {
                 if (p_242161_) {
                     this.minecraft.gui.getChat().addRecentChat(p_242400_);
                 }

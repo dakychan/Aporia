@@ -1,5 +1,7 @@
-package aporia.su.utils.chat;
+package aporia.su.utils.chat.impl;
 
+import aporia.su.utils.chat.Command;
+import aporia.su.utils.chat.CommandManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
