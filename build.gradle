@@ -47,14 +47,9 @@ repositories {
 
 dependencies {
     implementation 'net.minecraftforge:forgespi:' + spi_version
-//    Use the shade to add the lib to the jar
-//    or use compile if you want to load the lib from the version.json
-//    from a maven repo
-//    shade 'package-here'
-//    compile 'package-here'
 }
 
-project(':mcp') {
+project(':aporia') {
     apply plugin: 'net.minecraftforge.gradle.mcp'
     mcp {
         config = minecraft_version + '-' + mcp_version
@@ -62,10 +57,10 @@ project(':mcp') {
     }
 }
 
-evaluationDependsOn(':mcp')
+evaluationDependsOn(':aporia')
 
 patcher {
-    parent = project(':mcp')
+    parent = project(':aporia')
     patchedSrc = file('src/main/java')
     mappings channel: mappings_channel, version: mappings_version
     mcVersion = minecraft_version

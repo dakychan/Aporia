@@ -68,6 +68,16 @@ public class ClientSuggestionProvider implements SharedSuggestionProvider {
             return set;
         }
     }
+    
+    public Collection<String> getCustomCommandSuggestions(String input) {
+        // Получаем предложения от нашего CommandManager
+        String[] completions = aporia.su.utils.chat.CommandManager.INSTANCE.getCompletions(input);
+        Set<String> set = new HashSet<>();
+        for (String completion : completions) {
+            set.add(completion);
+        }
+        return set;
+    }
 
     @Override
     public Collection<String> getSelectedEntities() {

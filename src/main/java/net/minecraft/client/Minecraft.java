@@ -672,6 +672,8 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
         }
 
         this.packetProcessor = new PacketProcessor(this.gameThread);
+        
+        aporia.su.AporiaInit.init();
     }
 
     public boolean hasShiftDown() {

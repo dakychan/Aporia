@@ -1,4 +1,4 @@
-rootProject.name = 'mcp-reborn'
+rootProject.name = 'aporia-reborn'
 
-include ':mcp'
-project(":mcp").projectDir = file("projects/mcp")
+include ':aporia'
+project(":aporia").projectDir = file("projects/aporia")

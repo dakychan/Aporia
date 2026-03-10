@@ -271,6 +271,14 @@ public class ChatScreen extends Screen {
     public void handleChatInput(String p_242400_, boolean p_242161_) {
         p_242400_ = this.normalizeChatMessage(p_242400_);
         if (!p_242400_.isEmpty()) {
+            // Проверяем наши кастомные команды
+            if (aporia.su.utils.chat.CommandManager.INSTANCE.executeCommand(p_242400_)) {
+                if (p_242161_) {
+                    this.minecraft.gui.getChat().addRecentChat(p_242400_);
+                }
+                return;
+            }
+            
             if (p_242161_) {
                 this.minecraft.gui.getChat().addRecentChat(p_242400_);
             }

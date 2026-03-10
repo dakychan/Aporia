@@ -17,6 +17,7 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -227,9 +228,47 @@ public class CommandSuggestions {
             }
         } else {
             String s1 = s.substring(0, i);
-            int k = getLastWordIndex(s1);
-            Collection<String> collection = this.minecraft.player.connection.getSuggestionsProvider().getCustomTabSugggestions();
-            this.pendingSuggestions = SharedSuggestionProvider.suggest(collection, new SuggestionsBuilder(s1, k));
+            
+            // Вызываем событие TabComplete
+            aporia.su.utils.events.TabCompleteEvent event = new aporia.su.utils.events.TabCompleteEvent(s1);
+            aporia.su.utils.events.EventManager.callEvent(event);
+            
+            if (event.isCancelled()) {
+                this.pendingSuggestions = Suggestions.empty();
+                return;
+            }
+            
+            // Если событие предоставило свои автодополнения
+            if (event.completions != null && event.completions.length > 0) {
+                int k = getLastWordIndex(s1);
+                List<String> completionList = new ArrayList<>();
+                // Добавляем префикс к каждому автодополнению
+                String currentPrefix = aporia.su.utils.chat.CommandManager.INSTANCE.getPrefix();
+                for (String completion : event.completions) {
+                    completionList.add(currentPrefix + completion);
+                }
+                this.pendingSuggestions = SharedSuggestionProvider.suggest(completionList, new SuggestionsBuilder(s1, k));
+                this.pendingSuggestions.thenRun(() -> {
+                    if (this.pendingSuggestions.isDone()) {
+                        this.showSuggestions(false);
+                    }
+                });
+            }
+            // Проверяем наши кастомные команды
+            else if (s1.startsWith(aporia.su.utils.chat.CommandManager.INSTANCE.getPrefix())) {
+                Collection<String> customCompletions = this.minecraft.player.connection.getSuggestionsProvider().getCustomCommandSuggestions(s1);
+                int k = getLastWordIndex(s1);
+                this.pendingSuggestions = SharedSuggestionProvider.suggest(customCompletions, new SuggestionsBuilder(s1, k));
+                this.pendingSuggestions.thenRun(() -> {
+                    if (this.pendingSuggestions.isDone()) {
+                        this.showSuggestions(false);
+                    }
+                });
+            } else {
+                int k = getLastWordIndex(s1);
+                Collection<String> collection = this.minecraft.player.connection.getSuggestionsProvider().getCustomTabSugggestions();
+                this.pendingSuggestions = SharedSuggestionProvider.suggest(collection, new SuggestionsBuilder(s1, k));
+            }
         }
     }
 
