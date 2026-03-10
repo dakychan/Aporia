@@ -10,6 +10,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Команда для управления алиасами (сокращениями) других команд.
+ * Позволяет создавать короткие имена для длинных команд.
+ * 
+ * Использование:
+ * - alias add <имя> - создать новый алиас (интерактивно)
+ * - alias list - показать все алиасы
+ * - alias remove <имя> - удалить алиас
+ * - alias <имя> - выполнить алиас
+ * 
+ * @author Aporia
+ */
 public class AliasCommand extends Command {
     private final Map<String, String> aliases = new HashMap<>();
     private String awaitingCommand = null;
@@ -23,6 +35,7 @@ public class AliasCommand extends Command {
     public void execute(List<String> args) {
         Minecraft mc = Minecraft.getInstance();
         
+        // Обработка второго шага создания алиаса (ввод команды)
         if (awaitingCommand != null) {
             String command = String.join(" ", args);
             aliases.put(awaitingCommand, command);
@@ -33,6 +46,7 @@ public class AliasCommand extends Command {
             return;
         }
         
+        // Обработка первого шага создания алиаса (ввод имени)
         if (awaitingAlias != null) {
             awaitingCommand = awaitingAlias;
             awaitingAlias = null;
@@ -92,6 +106,7 @@ public class AliasCommand extends Command {
                 }
             }
         } else {
+            // Попытка выполнить алиас
             String aliasName = args.get(0);
             String command = aliases.get(aliasName);
             if (command != null) {

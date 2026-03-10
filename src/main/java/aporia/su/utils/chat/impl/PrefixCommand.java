@@ -7,6 +7,16 @@ import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
+/**
+ * Команда для изменения префикса команд.
+ * Позволяет установить новый символ(ы) перед командами.
+ * 
+ * Использование:
+ * - prefix - показать текущий префикс
+ * - prefix <новый> - установить новый префикс (максимум 3 символа)
+ * 
+ * @author Aporia
+ */
 public class PrefixCommand extends Command {
     
     public PrefixCommand() {

@@ -7,6 +7,14 @@ import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
+/**
+ * Команда для отображения информации о системе команд.
+ * Показывает текущий префикс и список всех доступных команд с их описаниями.
+ * 
+ * Алиасы: help, ?
+ * 
+ * @author Aporia
+ */
 public class InfoCommand extends Command {
     
     public InfoCommand() {

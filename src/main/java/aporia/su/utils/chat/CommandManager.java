@@ -7,18 +7,35 @@ import aporia.su.utils.chat.impl.PrefixCommand;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Менеджер команд - центральная система управления всеми командами.
+ * Singleton класс, который регистрирует, выполняет команды и предоставляет автодополнение.
+ * 
+ * @author Aporia
+ */
 public class CommandManager {
+    /** Единственный экземпляр менеджера команд */
     public static final CommandManager INSTANCE = new CommandManager();
     
     private final Map<String, Command> commands = new HashMap<>();
     private String prefix = "^";
     
+    /**
+     * Приватный конструктор для Singleton паттерна.
+     * Регистрирует встроенные команды.
+     */
     private CommandManager() {
         registerCommand(new AliasCommand());
         registerCommand(new PrefixCommand());
         registerCommand(new InfoCommand());
     }
     
+    /**
+     * Регистрирует команду в системе.
+     * Команда будет доступна по своему имени и всем алиасам.
+     * 
+     * @param command команда для регистрации
+     */
     public void registerCommand(Command command) {
         commands.put(command.getName(), command);
         for (String alias : command.getAliases()) {
@@ -26,6 +43,12 @@ public class CommandManager {
         }
     }
     
+    /**
+     * Выполняет команду из строки ввода.
+     * 
+     * @param input полная строка ввода (с префиксом)
+     * @return true если команда была найдена и выполнена, false иначе
+     */
     public boolean executeCommand(String input) {
         if (!input.startsWith(prefix)) {
             return false;
@@ -51,6 +74,12 @@ public class CommandManager {
         return true;
     }
     
+    /**
+     * Получает список автодополнений для текущего ввода.
+     * 
+     * @param input текущая строка ввода (с префиксом)
+     * @return массив возможных автодополнений
+     */
     public String[] getCompletions(String input) {
         if (!input.startsWith(prefix)) {
             return new String[0];
@@ -81,14 +110,25 @@ public class CommandManager {
         }
     }
     
+    /**
+     * @return список всех зарегистрированных команд (без дубликатов алиасов)
+     */
     public List<Command> getAllCommands() {
         return commands.values().stream().distinct().collect(Collectors.toList());
     }
     
+    /**
+     * @return текущий префикс команд
+     */
     public String getPrefix() {
         return prefix;
     }
     
+    /**
+     * Устанавливает новый префикс для команд.
+     * 
+     * @param prefix новый префикс
+     */
     public void setPrefix(String prefix) {
         this.prefix = prefix;
     }
