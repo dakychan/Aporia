@@ -1,12 +1,21 @@
 .gradle
-.kotlin
-.github
-.kiro
+build/
+
+# Source code
+src/*
+
+#Run files
+runclient
+
+# Ignore Gradle GUI config
+gradle-app.setting
+
+# Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
+!gradle-wrapper.jar
+
+#IDE files
 .idea
-build
-out
-run
-runserver
-projects
-logs
-.gitverse
+*.iml
+run/
+
+out/
