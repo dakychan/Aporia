@@ -1,5 +1,6 @@
 package net.minecraft.client.gui.screens;
 
+import aporia.su.utils.chat.Command;
 import aporia.su.utils.chat.CommandManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.ActiveTextCollector;
@@ -116,6 +117,16 @@ public class ChatScreen extends Screen {
         } else if (p_426273_.isConfirmation()) {
             this.handleChatInput(this.input.getValue(), true);
             this.exitReason = ChatScreen.ExitReason.DONE;
+            this.minecraft.setScreen(null);
+            return true;
+        } else if (p_426273_.key() == 256) {
+            // Escape - отменяем режим ожидания если активен
+            if (CommandManager.INSTANCE.isWaitingForInput()) {
+                CommandManager.INSTANCE.cancelWaiting();
+                if (this.minecraft.player != null) {
+                    this.minecraft.player.displayClientMessage(Component.literal("§cРежим создания алиаса отменен."), false);
+                }
+            }
             this.minecraft.setScreen(null);
             return true;
         } else {
@@ -243,6 +254,19 @@ public class ChatScreen extends Screen {
         this.minecraft.gui.getChat().render(p_282470_, this.font, this.minecraft.gui.getGuiTicks(), p_282674_, p_282014_, true, this.insertionClickMode());
         super.render(p_282470_, p_282674_, p_282014_, p_283132_);
         this.commandSuggestions.render(p_282470_, p_282674_, p_282014_);
+
+        // Рисуем подсказку если активен режим ожидания
+        if (CommandManager.INSTANCE.isWaitingForInput()) {
+            Command waitingCommand = CommandManager.INSTANCE.getWaitingCommand();
+            if (waitingCommand != null) {
+                int step = CommandManager.INSTANCE.getCurrentStep();
+                int totalSteps = waitingCommand.getExpectedSteps();
+                String prompt = waitingCommand.getStepPrompt(step + 1);
+                if (!prompt.isEmpty()) {
+                    p_282470_.drawString(this.font, "» " + prompt, 4, this.height - 24, 0xFFFF55, true);
+                }
+            }
+        }
     }
 
     @Override
@@ -272,13 +296,21 @@ public class ChatScreen extends Screen {
     public void handleChatInput(String p_242400_, boolean p_242161_) {
         p_242400_ = this.normalizeChatMessage(p_242400_);
         if (!p_242400_.isEmpty()) {
+            // Проверяем режим ожидания ввода (интерактивные команды)
+            if (CommandManager.INSTANCE.isWaitingForInput()) {
+                CommandManager.INSTANCE.handleWaitingInput(p_242400_);
+                return;
+            }
+
+            // Проверяем команду Aporia
             if (CommandManager.INSTANCE.executeCommand(p_242400_)) {
                 if (p_242161_) {
                     this.minecraft.gui.getChat().addRecentChat(p_242400_);
                 }
                 return;
             }
-            
+
+            // Обычная обработка чата
             if (p_242161_) {
                 this.minecraft.gui.getChat().addRecentChat(p_242400_);
             }

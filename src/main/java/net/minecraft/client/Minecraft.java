@@ -1,5 +1,6 @@
 package net.minecraft.client;
 
+import aporia.su.Aporia;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
@@ -22,7 +23,6 @@ import com.mojang.blaze3d.platform.IconSet;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.platform.WindowEventHandler;
-import com.mojang.blaze3d.shaders.ShaderType;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.systems.TimerQuery;
@@ -153,7 +153,6 @@ import net.minecraft.client.resources.MapTextureManager;
 import net.minecraft.client.resources.SkinManager;
 import net.minecraft.client.resources.SplashManager;
 import net.minecraft.client.resources.WaypointStyleManager;
-import net.minecraft.client.resources.language.ClientLanguage;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.client.resources.language.LanguageManager;
 import net.minecraft.client.resources.model.AtlasManager;
@@ -170,7 +169,6 @@ import net.minecraft.client.tutorial.Tutorial;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -183,7 +181,6 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.contents.KeybindResolver;
 import net.minecraft.network.protocol.game.ServerboundClientTickEndPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
@@ -673,7 +670,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
         this.packetProcessor = new PacketProcessor(this.gameThread);
         
-        aporia.su.AporiaInit.init();
+        Aporia.init();
     }
 
     public boolean hasShiftDown() {

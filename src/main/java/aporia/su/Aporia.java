@@ -11,16 +11,14 @@ import aporia.su.utils.events.impl.TabCompleteEvent;
  * 
  * @author Aporia
  */
-public class AporiaInit {
+public class Aporia {
     /**
      * Инициализирует систему команд и регистрирует обработчики событий.
      * Вызывается автоматически при запуске Minecraft клиента.
      */
     public static void init() {
         System.out.println("[Aporia] Command system initialized with prefix: " + CommandManager.INSTANCE.getPrefix());
-        
-        // Регистрируем обработчики событий через аннотации
-        EventManager.registerListener(new AporiaInit());
+        EventManager.registerListener(new Aporia());
     }
     
     /**
@@ -32,8 +30,6 @@ public class AporiaInit {
     @EventHandler
     public void onTabComplete(TabCompleteEvent event) {
         String prefix = event.getPrefix();
-        
-        // Если текст начинается с нашего префикса команд
         if (prefix.startsWith(CommandManager.INSTANCE.getPrefix())) {
             String[] completions = CommandManager.INSTANCE.getCompletions(prefix);
             if (completions.length > 0) {
