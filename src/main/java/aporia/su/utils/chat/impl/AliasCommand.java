@@ -2,6 +2,7 @@ package aporia.su.utils.chat.impl;
 
 import aporia.su.utils.chat.Command;
 import aporia.su.utils.chat.CommandManager;
+import aporia.su.utils.chat.GradientText;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
@@ -40,7 +41,7 @@ public class AliasCommand extends Command {
             String command = String.join(" ", args);
             aliases.put(awaitingCommand, command);
             if (mc.player != null) {
-                mc.player.displayClientMessage(Component.literal("§aАлиас '" + awaitingCommand + "' -> '" + command + "' создан!"), false);
+                mc.player.displayClientMessage(GradientText.createPrefix().append(Component.literal(" §7Алиас §a'" + awaitingCommand + "' §7-> §a'" + command + "' §7создан!")), false);
             }
             awaitingCommand = null;
             return;

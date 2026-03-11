@@ -2,6 +2,7 @@ package aporia.su.utils.chat.impl;
 
 import aporia.su.utils.chat.Command;
 import aporia.su.utils.chat.CommandManager;
+import aporia.su.utils.chat.GradientText;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
@@ -45,7 +46,7 @@ public class PrefixCommand extends Command {
         
         CommandManager.INSTANCE.setPrefix(newPrefix);
         if (mc.player != null) {
-            mc.player.displayClientMessage(Component.literal("§aПрефикс изменен на: §f" + newPrefix), false);
+            mc.player.displayClientMessage(GradientText.createPrefix().append(Component.literal(" §7Префикс изменен на: §f" + newPrefix)), false);
         }
     }
     

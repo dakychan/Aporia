@@ -2,6 +2,7 @@ package aporia.su.utils.chat.impl;
 
 import aporia.su.utils.chat.Command;
 import aporia.su.utils.chat.CommandManager;
+import aporia.su.utils.chat.GradientText;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
@@ -27,7 +28,7 @@ public class InfoCommand extends Command {
         
         if (mc.player != null) {
             mc.player.displayClientMessage(Component.literal("§8§m                                    "), false);
-            mc.player.displayClientMessage(Component.literal("§6§lAporia §fCommand System"), false);
+            mc.player.displayClientMessage(GradientText.createPrefix().append(Component.literal(" §fCommand System")), false);
             mc.player.displayClientMessage(Component.literal("§7Префикс: §a" + CommandManager.INSTANCE.getPrefix()), false);
             mc.player.displayClientMessage(Component.literal(""), false);
             mc.player.displayClientMessage(Component.literal("§eДоступные команды:"), false);
