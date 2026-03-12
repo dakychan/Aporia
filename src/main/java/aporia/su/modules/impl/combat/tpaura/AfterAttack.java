@@ -42,7 +42,7 @@ public class AfterAttack implements IMinecraft {
         /** Рассчитываем количество пакетов */
         double distance = currentPos.distanceTo(position);
         int packets = (int) Math.ceil(distance / 10.0);
-        packets = Math.max(1, Math.min(packets, 10)); // Ограничиваем 1-10 пакетами
+        packets = Math.max(1, Math.min(packets, 10));
         
         /** Отправляем пакеты постепенно */
         for (int i = 1; i <= packets; i++) {

@@ -163,8 +163,6 @@ public class SelectComponent extends AbstractSettingComponent {
 
         float rotatedX = centerX + (offsetX * cos - offsetY * sin);
         float rotatedY = centerY + (offsetX * sin + offsetY * cos);
-
-//        Fonts.GUI_ICONS.draw("W", rotatedX, rotatedY, 8, applyAlpha(new Color(180, 180, 185, arrowAlpha)).getRGB());
     }
 
     private void renderAnimatedSelectedText(float boxX, float boxY, float boxHeight) {

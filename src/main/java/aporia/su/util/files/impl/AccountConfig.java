@@ -43,13 +43,10 @@ public class AccountConfig {
     public void save() {
         try {
             JsonObject root = new JsonObject();
-
-            // Добавляем метаданные
             root.addProperty("version", "0.4");
             root.addProperty("timestamp", System.currentTimeMillis());
             root.addProperty("client", "Aporia.cc");
             root.addProperty("type", "acc");
-
             JsonArray accountsArray = new JsonArray();
             for (AccountEntry entry : accounts) {
                 JsonObject accountObj = new JsonObject();
@@ -61,23 +58,17 @@ public class AccountConfig {
                 accountsArray.add(accountObj);
             }
             root.add("accounts", accountsArray);
-
             JsonObject activeObj = new JsonObject();
             activeObj.addProperty("name", activeAccountName);
             activeObj.addProperty("date", activeAccountDate);
             activeObj.addProperty("skin", activeAccountSkin);
             root.add("active", activeObj);
-
             Path configPath = FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR);
-            
-            // Создаем директорию если не существует
             if (!Files.exists(configPath.getParent())) {
                 Files.createDirectories(configPath.getParent());
             }
-            
-            // Записываем файл напрямую
-            Files.writeString(configPath, root.toString(), StandardCharsets.UTF_8);
-            
+            String json = root.toString();
+            FilesManager.createFile(CONFIG_DIR, FilesManager.FileFormat.APR, CONFIG_NAME, json, FilesManager.CheckMode.NEVER);
             Logger.success("AccountConfig saved!");
         } catch (Exception e) {
             Logger.error("AccountConfig: Save failed! " + e.getMessage());
@@ -87,20 +78,16 @@ public class AccountConfig {
     public void load() {
         try {
             Path configPath = FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR);
-
             if (!FilesManager.exists(configPath)) {
                 Logger.info("AccountConfig: No config file found, using defaults.");
                 return;
             }
-
             String json = FilesManager.readFile(configPath);
             if (json == null || json.trim().isEmpty()) {
                 Logger.error("AccountConfig: Config file is empty.");
                 return;
             }
-
             JsonObject root = JsonParser.parseString(json).getAsJsonObject();
-
             accounts.clear();
             if (root.has("accounts")) {
                 JsonArray accountsArray = root.getAsJsonArray("accounts");

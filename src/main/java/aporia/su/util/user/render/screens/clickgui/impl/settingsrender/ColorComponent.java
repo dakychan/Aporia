@@ -517,8 +517,6 @@ public class ColorComponent extends AbstractSettingComponent {
             float selectionWidth = Fonts.BOLD.getWidth(selection, 5);
 
             int selAlpha = clamp((int)(100 * hexSelectionAnimation * expandAnimation * contentAlpha * alphaMultiplier));
-//            Render2D.rect(selectionX - 1, inputY + 4.25f, selectionWidth + 2, inputHeight - 8,
-//                    new Color(100, 140, 180, selAlpha).getRGB(), 2f);
         }
 
         int textAlpha = clamp((int)((180 + hexInputAnimation * 40) * expandAnimation * contentAlpha * alphaMultiplier));

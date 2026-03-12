@@ -68,10 +68,7 @@ public class ConfigCommand extends CommandManager.Command {
                 try {
                     Path configDir = OsManager.mainDirectory.resolve("configs");
                     Path targetConfig = configDir.resolve(name + ".apr");
-                    
-                    // Сохраняем конфиг сразу в нужный файл
                     FilesManager.getConfigManager().save(targetConfig);
-                    
                     logDirect(String.format("Конфигурация %s сохранена!", name));
                 } catch (Exception e) {
                     logDirect(String.format("Ошибка при сохранении конфига! Детали: %s", e.getMessage()), Formatting.RED);
@@ -84,17 +81,13 @@ public class ConfigCommand extends CommandManager.Command {
                         page = Integer.parseInt(args[1]);
                     } catch (NumberFormatException ignored) {}
                 }
-
                 List<String> configs = getConfigs();
-
                 if (configs.isEmpty()) {
                     logDirect("Конфигурации не найдены!", Formatting.RED);
                     return;
                 }
-
                 Paginator<String> paginator = new Paginator<>(configs);
                 paginator.setPage(page);
-
                 paginator.display(
                         () -> {
                             logDirectRaw(Text.literal(getLine()));
@@ -196,28 +189,21 @@ public class ConfigCommand extends CommandManager.Command {
                         .forEach(path -> {
                             String fileName = path.getFileName().toString();
                             String name = fileName.substring(0, fileName.length() - 4);
-                            
-                            // Пропускаем accounts.apr - это не конфиг
                             if (name.equals("accounts")) {
                                 return;
                             }
-                            
-                            // Проверяем тип конфига внутри файла
                             try {
                                 String json = Files.readString(path, StandardCharsets.UTF_8);
                                 JsonObject root = JsonParser.parseString(json).getAsJsonObject();
                                 if (root.has("type")) {
                                     String type = root.get("type").getAsString();
-                                    // Добавляем только cfg типы (конфиги модулей)
                                     if ("cfg".equals(type)) {
                                         configs.add(name);
                                     }
                                 } else {
-                                    // Если типа нет, считаем что это старый конфиг
                                     configs.add(name);
                                 }
                             } catch (Exception e) {
-                                // Если не смогли прочитать, добавляем на всякий случай
                                 configs.add(name);
                             }
                         });

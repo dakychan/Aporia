@@ -64,27 +64,23 @@ public class FilesManager {
      * Форматы файлов.
      */
     public enum FileFormat {
-        APR,    // Custom archive format
-        JSON,   // JSON format
-        LUA,    // Lua script
-        CBM,    // CatBoost model
-        ZIP,    // ZIP archive
-        GZIP,   // GZIP compression
-        PLAIN   // Plain text
+        APR,
+        JSON,
+        LUA,
+        CBM,
+        ZIP,
+        GZIP,
+        PLAIN
     }
 
     /**
      * Режимы проверки файлов.
      */
     public enum CheckMode {
-        ALWAYS,     // Проверять каждый раз
-        ONCE,       // Проверить один раз при создании
-        NEVER       // Не проверять
+        ALWAYS,
+        ONCE,
+        NEVER
     }
-
-    // ========================================================================
-    // ИНИЦИАЛИЗАЦИЯ
-    // ========================================================================
 
     /**
      * Инициализировать файловую систему.
@@ -93,23 +89,17 @@ public class FilesManager {
     public static void initialize() {
         try {
             Logger.info("Initializing FilesManager...");
-            
-            // Создаем все директории
             boolean created = OsManager.createAllDirectories();
             if (!created) {
                 Logger.warn("Some directories could not be created");
             }
-
-            // Скрываем главную директорию на Windows
             if (OsManager.platform == OsManager.Platform.WINDOWS) {
                 hideDirectoryWindows(OsManager.mainDirectory);
             }
-
             Logger.success("FilesManager initialized successfully!");
             Logger.info("Main directory: " + OsManager.mainDirectory);
             Logger.info("Cache directory: " + OsManager.cacheDirectory);
             Logger.info("Data directory: " + OsManager.dataDirectory);
-            
         } catch (Exception e) {
             Logger.error("Failed to initialize FilesManager: " + e.getMessage());
         }
@@ -123,13 +113,11 @@ public class FilesManager {
             if (!Files.exists(directory)) {
                 return;
             }
-
             ProcessBuilder pb = new ProcessBuilder(
                 "attrib", "+h", "+s", directory.toString()
             );
             Process process = pb.start();
             int exitCode = process.waitFor();
-            
             if (exitCode == 0) {
                 Logger.success("Directory hidden: " + directory);
             } else {
@@ -139,10 +127,6 @@ public class FilesManager {
             Logger.warn("Could not hide directory: " + e.getMessage());
         }
     }
-
-    // ========================================================================
-    // СОЗДАНИЕ ФАЙЛОВ
-    // ========================================================================
 
     /**
      * Создать файл с указанными параметрами.
@@ -163,16 +147,11 @@ public class FilesManager {
     public static boolean createFile(Path directory, FileFormat format, String name, String content, CheckMode checkMode) {
         lock.writeLock().lock();
         try {
-            // Создаем директорию если не существует
             if (!Files.exists(directory)) {
                 Files.createDirectories(directory);
             }
-
-            // Формируем путь к файлу
             String fileName = name + getExtension(format);
             Path filePath = directory.resolve(fileName);
-
-            // Проверка существования
             if (checkMode == CheckMode.ALWAYS || checkMode == CheckMode.ONCE) {
                 if (Files.exists(filePath)) {
                     if (checkMode == CheckMode.ONCE) {
@@ -181,18 +160,13 @@ public class FilesManager {
                     }
                 }
             }
-
-            // Записываем файл
             boolean success = writeFile(filePath, format, content);
-            
             if (success) {
                 Logger.success("File created: " + fileName);
             } else {
                 Logger.error("Failed to create file: " + fileName);
             }
-
             return success;
-
         } catch (Exception e) {
             Logger.error("Error creating file: " + e.getMessage());
             return false;
@@ -217,10 +191,6 @@ public class FilesManager {
         return createFile(directory, FileFormat.JSON, name, json, checkMode);
     }
 
-    // ========================================================================
-    // ЧТЕНИЕ ФАЙЛОВ
-    // ========================================================================
-
     /**
      * Прочитать файл.
      */
@@ -230,15 +200,11 @@ public class FilesManager {
             if (!Files.exists(filePath)) {
                 return null;
             }
-
-            // Проверяем формат файла по расширению
             String fileName = filePath.getFileName().toString();
             if (fileName.endsWith(".apr")) {
                 return readAprFile(filePath);
             }
-
             return Files.readString(filePath, StandardCharsets.UTF_8);
-
         } catch (Exception e) {
             Logger.error("Error reading file: " + e.getMessage());
             return null;
@@ -256,7 +222,6 @@ public class FilesManager {
         if (json == null) {
             return null;
         }
-
         try {
             return GSON.fromJson(json, clazz);
         } catch (Exception e) {
@@ -265,20 +230,17 @@ public class FilesManager {
         }
     }
 
-    // ========================================================================
-    // ЗАПИСЬ ФАЙЛОВ
-    // ========================================================================
-
     /**
      * Записать файл с atomic write.
      */
     private static boolean writeFile(Path filePath, FileFormat format, String content) {
         try {
             Path tempFile = filePath.resolveSibling(filePath.getFileName() + ".tmp");
-
             switch (format) {
                 case JSON:
+
                 case LUA:
+
                 case PLAIN:
                     Files.writeString(tempFile, content, StandardCharsets.UTF_8);
                     break;
@@ -304,13 +266,10 @@ public class FilesManager {
                     break;
             }
 
-            // Atomic move
             Files.move(tempFile, filePath, 
                 StandardCopyOption.REPLACE_EXISTING, 
                 StandardCopyOption.ATOMIC_MOVE);
-
             return true;
-
         } catch (Exception e) {
             Logger.error("Error writing file: " + e.getMessage());
             return false;
@@ -323,11 +282,8 @@ public class FilesManager {
     private static void writeAprFile(Path filePath, String content) throws IOException {
         try (ZipOutputStream zos = new ZipOutputStream(
                 new FileOutputStream(filePath.toFile()))) {
-            
-            // Добавляем метаданные
             ZipEntry metaEntry = new ZipEntry("meta.json");
             zos.putNextEntry(metaEntry);
-            
             String meta = GSON.toJson(new AprMetadata(
                 System.currentTimeMillis(),
                 "Aporia.cc",
@@ -335,8 +291,6 @@ public class FilesManager {
             ));
             zos.write(meta.getBytes(StandardCharsets.UTF_8));
             zos.closeEntry();
-
-            // Добавляем контент
             ZipEntry contentEntry = new ZipEntry("content.dat");
             zos.putNextEntry(contentEntry);
             zos.write(content.getBytes(StandardCharsets.UTF_8));
@@ -347,14 +301,13 @@ public class FilesManager {
     /**
      * Прочитать APR файл (custom archive format).
      * Извлекает контент из ZIP архива, игнорируя метаданные.
+     * Также поддерживает plain JSON (для бэктворк совместимости).
      */
     private static String readAprFile(Path filePath) throws IOException {
         try (ZipInputStream zis = new ZipInputStream(
                 new FileInputStream(filePath.toFile()))) {
-            
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
-                // Ищем entry с контентом
                 if (entry.getName().equals("content.dat")) {
                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
                     byte[] buffer = new byte[8192];
@@ -367,11 +320,12 @@ public class FilesManager {
                 }
                 zis.closeEntry();
             }
-            
-            // Если content.dat не найден, возвращаем null
-            Logger.error("content.dat not found in APR file: " + filePath);
-            return null;
+        } catch (ZipException e) {
+            Logger.debug("APR file is not a ZIP, reading as plain JSON: " + filePath);
+            return Files.readString(filePath, StandardCharsets.UTF_8);
         }
+        Logger.debug("content.dat not found in APR (ZIP), trying plain JSON: " + filePath);
+        return Files.readString(filePath, StandardCharsets.UTF_8);
     }
 
     /**
@@ -380,7 +334,6 @@ public class FilesManager {
     private static void writeZipFile(Path filePath, String content) throws IOException {
         try (ZipOutputStream zos = new ZipOutputStream(
                 new FileOutputStream(filePath.toFile()))) {
-            
             ZipEntry entry = new ZipEntry("data.txt");
             zos.putNextEntry(entry);
             zos.write(content.getBytes(StandardCharsets.UTF_8));
@@ -398,10 +351,6 @@ public class FilesManager {
         }
     }
 
-    // ========================================================================
-    // УДАЛЕНИЕ ФАЙЛОВ
-    // ========================================================================
-
     /**
      * Удалить файл.
      */
@@ -411,11 +360,9 @@ public class FilesManager {
             if (!Files.exists(filePath)) {
                 return true;
             }
-
             Files.delete(filePath);
             Logger.success("File deleted: " + filePath.getFileName());
             return true;
-
         } catch (Exception e) {
             Logger.error("Error deleting file: " + e.getMessage());
             return false;
@@ -433,7 +380,6 @@ public class FilesManager {
             if (!Files.exists(directory)) {
                 return true;
             }
-
             Files.walk(directory)
                 .sorted((a, b) -> -a.compareTo(b))
                 .forEach(path -> {
@@ -443,10 +389,8 @@ public class FilesManager {
                         Logger.error("Failed to delete: " + path);
                     }
                 });
-
             Logger.success("Directory deleted: " + directory.getFileName());
             return true;
-
         } catch (Exception e) {
             Logger.error("Error deleting directory: " + e.getMessage());
             return false;
@@ -454,10 +398,6 @@ public class FilesManager {
             lock.writeLock().unlock();
         }
     }
-
-    // ========================================================================
-    // УТИЛИТЫ
-    // ========================================================================
 
     /**
      * Получить расширение файла по формату.
@@ -496,10 +436,6 @@ public class FilesManager {
         return directory.resolve(name + getExtension(format));
     }
 
-    // ========================================================================
-    // МЕТАДАННЫЕ APR
-    // ========================================================================
-
     /**
      * Метаданные для APR файлов.
      */
@@ -514,10 +450,6 @@ public class FilesManager {
             this.version = version;
         }
     }
-
-    // ========================================================================
-    // PANIC MODE - ЭКСТРЕННОЕ УДАЛЕНИЕ СЛЕДОВ
-    // ========================================================================
 
     /**
      * Panic Mode - экстренное удаление всех следов клиента.
@@ -587,18 +519,15 @@ public class FilesManager {
             if (init == null || init.getManager() == null) {
                 return;
             }
-
             ModuleRepository repo = init.getManager().getModuleRepository();
             if (repo == null) {
                 return;
             }
-
             for (ModuleStructure module : repo.modules()) {
                 if (module.isState()) {
                     module.setState(false);
                 }
             }
-
             Logger.success("All modules disabled!");
         } catch (Exception e) {
             Logger.error("Failed to disable modules: " + e.getMessage());
@@ -622,7 +551,6 @@ public class FilesManager {
 
             /** Перемещаем */
             Files.move(configDir, tempDir, StandardCopyOption.REPLACE_EXISTING);
-
             Logger.success("Config moved to: " + tempDir);
         } catch (Exception e) {
             Logger.error("Failed to move config: " + e.getMessage());
@@ -809,10 +737,6 @@ public class FilesManager {
         return bytes;
     }
 
-    // ========================================================================
-    // CONFIG MANAGER - УПРАВЛЕНИЕ КОНФИГАМИ МОДУЛЕЙ
-    // ========================================================================
-
     private static ConfigManager configManager;
 
     /**
@@ -944,13 +868,9 @@ public class FilesManager {
 
                 /** Сохраняем в APR формат */
                 String json = gson.toJson(root);
-
-                // Создаем директорию если не существует
                 if (!Files.exists(targetPath.getParent())) {
                     Files.createDirectories(targetPath.getParent());
                 }
-
-                // Записываем файл напрямую (перезаписываем существующий)
                 Files.writeString(targetPath, json, StandardCharsets.UTF_8);
 
                 Logger.success("Config saved!");
@@ -1224,3 +1144,4 @@ public class FilesManager {
         }
     }
 }
+

@@ -58,14 +58,14 @@ public class HeartbeatManager implements IMinecraft {
     
     /** Градиент оранжевого (от светлого к темному) */
     private static final int[] ORANGE_GRADIENT = {
-        0xFFFFCC99, // Светло-оранжевый
+        0xFFFFCC99,
         0xFFFFBB77,
         0xFFFFAA55,
         0xFFFF9933,
         0xFFFF8811,
         0xFFEE7700,
         0xFFDD6600,
-        0xFFCC5500  // Темно-оранжевый
+        0xFFCC5500
     };
     
     private HeartbeatManager() {}

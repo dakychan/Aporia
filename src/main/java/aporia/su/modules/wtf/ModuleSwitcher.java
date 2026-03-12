@@ -37,14 +37,4 @@ public class ModuleSwitcher implements IMinecraft {
             moduleStructure.switchState();
         }
     }
-
-//    private void handleException(String moduleName, Exception e) {
-//        final ConsoleLogger consoleLogger = new ConsoleLogger();
-//
-//        if (e instanceof ModuleException) {
-//            logDirect("[" + moduleName + "] " + Formatting.RED + e.getMessage());
-//        } else {
-//            consoleLogger.log("Error in module " + moduleName + ": " + e.getMessage());
-//        }
-//    }
 }

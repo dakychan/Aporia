@@ -242,8 +242,6 @@ public class MultiSelectComponent extends AbstractSettingComponent {
 
         float rotatedX = centerX + (offsetX * cos - offsetY * sin);
         float rotatedY = centerY + (offsetX * sin + offsetY * cos);
-
-//        Fonts.GUI_ICONS.draw("W", rotatedX, rotatedY, 8, applyAlpha(new Color(180, 180, 185, arrowAlpha)).getRGB());
     }
 
     private void renderScrollingDescription(String description, float deltaTime) {

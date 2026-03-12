@@ -90,7 +90,6 @@ public class RaycastAngle implements IMinecraft {
 
     public boolean rayTrace(Vec3d clientVec, double range, Box box) {
         Vec3d cameraVec = Objects.requireNonNull(mc.player).getEyePos();
-        // Расширяем хитбокс для более стабильных ударов при резких движениях
         Box expandedBox = box.expand(0.15);
         return expandedBox.contains(cameraVec)
                 || expandedBox.raycast(cameraVec, cameraVec.add(clientVec.multiply(range))).isPresent();

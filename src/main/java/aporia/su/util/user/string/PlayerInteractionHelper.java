@@ -64,29 +64,9 @@ public class PlayerInteractionHelper implements IMinecraft {
         mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.Full(mc.player.getX(), mc.player.getY() + y, mc.player.getZ(), angle.getYaw(), angle.getPitch(), mc.player.isOnGround(), mc.player.horizontalCollision));
     }
 
-//    public String getHealthString(LivingEntity entity) {
-//        return getHealthString(getHealth(entity));
-//    }
-
     public String getHealthString(float hp) {
         return String.format("%.1f", hp).replace(",",".").replace(".0","");
     }
-
-//    public float getHealth(LivingEntity entity) {
-//        float hp = entity.getHealth() + entity.getAbsorptionAmount();
-//        if (entity instanceof PlayerEntity player) switch (Network.server) {
-//            case "FunTime", "ReallyWorld", "GulPvP" -> {
-//                ScoreboardObjective scoreBoard = player.getScoreboard().getObjectiveForSlot(ScoreboardDisplaySlot.BELOW_NAME);
-//                if (scoreBoard != null) {
-//                    MutableText text2 = ReadableScoreboardScore.getFormattedScore(player.getScoreboard().getScore(player, scoreBoard), scoreBoard.getNumberFormatOr(StyledNumberFormat.EMPTY));
-//                    try {
-//                        hp = Float.parseFloat(ColorAssist.removeFormatting(text2.getString()));
-//                    } catch (NumberFormatException ignored) {}
-//                }
-//            }
-//        }
-//        return MathHelper.clamp(hp,0,entity.getMaxHealth());
-//    }
 
     public void jump() {
         if (mc.player.isSprinting()) {

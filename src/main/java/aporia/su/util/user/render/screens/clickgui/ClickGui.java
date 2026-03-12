@@ -280,7 +280,6 @@ public class ClickGui extends Screen implements IMinecraft {
             float centerX = vw / 2f;
             float centerY = vh / 2f;
             float textY = centerY + BackgroundComponent.BG_HEIGHT / 2f + 10f;
-//            Fonts.TEST.drawCentered("Press CTRL + ALT to reset position", centerX, textY + 65, 6, new Color(150, 150, 150, hintAlpha).getRGB());
         }
 
         context.getMatrices().popMatrix();
@@ -340,12 +339,6 @@ public class ClickGui extends Screen implements IMinecraft {
                 return true;
             }
         }
-
-//        if (selectedCategory == ModuleCategory.CONFIGS) {
-//            if (configsRenderer.mouseClicked(mx, my, click.button(), bgX, bgY, selectedCategory)) {
-//                return true;
-//            }
-//        }
 
         float mlX = bgX + 92f, mlY = bgY + 38f, mlW = 120f, mlH = BackgroundComponent.BG_HEIGHT - 48f;
 
@@ -414,10 +407,6 @@ public class ClickGui extends Screen implements IMinecraft {
             autoBuyRenderer.mouseReleased(click.x(), click.y(), click.button());
         }
 
-//        if (selectedCategory == ModuleCategory.CONFIGS) {
-//            configsRenderer.mouseReleased(click.x(), click.y(), click.button());
-//        }
-
         for (AbstractSettingComponent c : moduleComponent.getSettingComponents()) {
             if (c.getSetting().isVisible() && c.mouseReleased(click.x(), click.y(), click.button())) {
                 return true;
@@ -469,12 +458,6 @@ public class ClickGui extends Screen implements IMinecraft {
             }
         }
 
-//        if (selectedCategory == ModuleCategory.CONFIGS) {
-//            if (configsRenderer.mouseScrolled(mx, my, vertical, bgX, bgY, selectedCategory)) {
-//                return true;
-//            }
-//        }
-
         float mlX = bgX + 92f, mlY = bgY + 38f, mlW = 120f, mlH = BackgroundComponent.BG_HEIGHT - 48f;
         if (mx >= mlX && mx <= mlX + mlW && my >= mlY && my <= mlY + mlH) {
             moduleComponent.handleModuleScroll(vertical, mlH);
@@ -514,12 +497,6 @@ public class ClickGui extends Screen implements IMinecraft {
             }
         }
 
-//        if (selectedCategory == ModuleCategory.CONFIGS) {
-//            if (configsRenderer.keyPressed(input.key(), input.scancode(), input.modifiers())) {
-//                return true;
-//            }
-//        }
-
         if (background.isSearchActive()) {
             if (background.handleSearchKey(input.key())) {
                 return true;
@@ -554,12 +531,6 @@ public class ClickGui extends Screen implements IMinecraft {
                 return true;
             }
         }
-
-//        if (selectedCategory == ModuleCategory.CONFIGS) {
-//            if (configsRenderer.charTyped((char) input.codepoint(), input.modifiers())) {
-//                return true;
-//            }
-//        }
 
         if (background.isSearchActive()) {
             if (background.handleSearchChar((char) input.codepoint())) {

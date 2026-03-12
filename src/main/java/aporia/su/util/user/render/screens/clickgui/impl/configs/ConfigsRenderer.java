@@ -42,21 +42,6 @@ public class ConfigsRenderer {
     public void render(DrawContext context, float bgX, float bgY, float mouseX, float mouseY,
                        float delta, int guiScale, float alphaMultiplier, ModuleCategory category) {
 
-//        boolean shouldBeActive = category == ModuleCategory.CONFIGS;
-//
-//        if (shouldBeActive && !wasActive) {
-//            isActive = true;
-//            animationHandler.reset();
-//            dataHandler.refreshConfigs();
-//            animationHandler.initItemAnimations(dataHandler.getConfigs());
-//        } else if (!shouldBeActive && wasActive) {
-//            isActive = false;
-//        }
-//
-//        wasActive = shouldBeActive;
-//
-//        animationHandler.update(isActive, dataHandler.getConfigs(), dataHandler.isCreating());
-
         if (animationHandler.isFullyHidden() && !isActive) {
             return;
         }
@@ -93,7 +78,6 @@ public class ConfigsRenderer {
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button, float bgX, float bgY, ModuleCategory category) {
-//        if (category != ModuleCategory.CONFIGS) return false;
         if (animationHandler.getPanelAlpha() < 0.5f) return false;
 
         float panelX = bgX + PANEL_X_OFFSET;
@@ -118,7 +102,6 @@ public class ConfigsRenderer {
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double vertical, float bgX, float bgY, ModuleCategory category) {
-//        if (category != ModuleCategory.CONFIGS) return false;
         if (animationHandler.getPanelAlpha() < 0.5f) return false;
 
         float panelX = bgX + PANEL_X_OFFSET;

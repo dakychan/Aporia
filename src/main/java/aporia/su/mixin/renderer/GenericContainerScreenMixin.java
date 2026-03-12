@@ -187,13 +187,6 @@ public abstract class GenericContainerScreenMixin extends HandledScreen<GenericC
         ItemParser parser2 = ItemParser.getInstance();
         boolean parserActive = parser2 != null && parser2.isState();
 
-//        this.parseButton = ButtonWidget.builder(
-//                Text.literal(parserActive ? "§aПарсить всё" : "§7Парсить всё"),
-//                button -> handleParseButtonClick()
-//        ).dimensions(autoBuyX, autoBuyY - 22, 80, 20).build();
-//        this.parseButton.active = parserActive;
-//        this.addDrawableChild(parseButton);
-
         String initialStatus;
         if (!moduleActive) {
             initialStatus = "§cOFF";

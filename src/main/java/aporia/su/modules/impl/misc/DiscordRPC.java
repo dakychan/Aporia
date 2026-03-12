@@ -156,7 +156,7 @@ public class DiscordRPC extends ModuleStructure {
         /** Обновляем статус каждые 5 минут */
         if (tickCounter >= STATUS_CHANGE_INTERVAL) {
             tickCounter = 0;
-            statusIndex = (statusIndex + 1) % 3; // 0, 1, 2
+            statusIndex = (statusIndex + 1) % 3;
             updateDiscordPresence();
         }
     }
@@ -268,10 +268,9 @@ public class DiscordRPC extends ModuleStructure {
                     if (discordRpc != null) {
                         discordRpc.runCallbacks();
                     }
-                    Thread.sleep(15000L); // 15 секунд
+                    Thread.sleep(15000L);
                 }
             } catch (InterruptedException e) {
-                // Thread interrupted, exit gracefully
             } catch (Exception e) {
                 aporia.su.util.helper.Logger.error("Discord RPC thread error: " + e.getMessage());
                 stopDiscordRPC();
