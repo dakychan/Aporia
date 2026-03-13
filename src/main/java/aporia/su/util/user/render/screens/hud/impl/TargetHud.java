@@ -16,6 +16,8 @@ import aporia.su.util.user.player.timer.StopWatch;
 
 import java.awt.*;
 
+import static aporia.su.modules.impl.combat.Aura.target;
+
 public class TargetHud extends AbstractHudElement {
 
     private final StopWatch stopWatch = new StopWatch();
@@ -39,8 +41,8 @@ public class TargetHud extends AbstractHudElement {
 
     @Override
     public void tick() {
-        LivingEntity auraTarget = Aura.target;
-        LivingEntity tpAuraTarget = aporia.su.modules.impl.combat.TpAura.target;
+        LivingEntity auraTarget = target;
+        LivingEntity tpAuraTarget = target;
         
         // Берем таргет из Aura или TpAura
         LivingEntity currentTarget = auraTarget != null ? auraTarget : tpAuraTarget;

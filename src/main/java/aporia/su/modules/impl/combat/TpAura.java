@@ -1,592 +1,585 @@
 package aporia.su.modules.impl.combat;
 
 import anidumpproject.api.annotation.Native;
+import lombok.AccessLevel;
 import lombok.Getter;
-import net.minecraft.client.option.KeyBinding;
+import lombok.Setter;
+import lombok.experimental.FieldDefaults;
+import lombok.experimental.NonFinal;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
-import net.minecraft.util.math.Box;
+import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.util.Hand;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import org.lwjgl.glfw.GLFW;
+import aporia.su.util.Instance;
 import aporia.su.util.events.api.EventHandler;
 import aporia.su.util.events.api.types.EventType;
-import aporia.su.util.events.impl.entity.InputEvent;
 import aporia.su.util.events.impl.entity.RotationUpdateEvent;
-import aporia.su.util.events.impl.player.CameraPositionEvent;
-import aporia.su.util.events.impl.player.PacketEvent;
 import aporia.su.util.events.impl.TickEvent;
 import aporia.su.modules.impl.combat.aura.Angle;
 import aporia.su.modules.impl.combat.aura.AngleConfig;
 import aporia.su.modules.impl.combat.aura.AngleConnection;
 import aporia.su.modules.impl.combat.aura.MathAngle;
 import aporia.su.modules.impl.combat.aura.impl.LinearConstructor;
-import aporia.su.modules.impl.combat.aura.impl.RotateConstructor;
-import aporia.su.modules.impl.combat.aura.rotations.MatrixAngle;
-import aporia.su.modules.impl.combat.aura.rotations.SPAngle;
 import aporia.su.modules.impl.combat.aura.target.TargetFinder;
 import aporia.su.modules.impl.combat.tpaura.IsxodHandler;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
 import aporia.su.modules.module.setting.implement.BooleanSetting;
 import aporia.su.modules.module.setting.implement.MultiSelectSetting;
-import aporia.su.modules.module.setting.implement.SliderSettings;
 import aporia.su.modules.module.setting.implement.SelectSetting;
-import aporia.su.util.Instance;
+import aporia.su.modules.module.setting.implement.SliderSettings;
 import aporia.su.util.user.render.math.TaskPriority;
-import aporia.su.util.user.render.math.MathUtils;
-import aporia.su.util.user.player.move.MoveUtil;
-import aporia.su.util.events.impl.ui.Event3D;
-import aporia.su.util.user.render.Render3D;
-import aporia.su.util.user.render.color.ColorUtil;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * TpAura module - teleport to target, attack, return.
- * <p>
- * Modes:
- * <ul>
- *   <li>Default - classic TP with packet splitting</li>
- *   <li>Spoof - Matrix/Grim bypass with advanced rotations</li>
- * </ul>
- * <p>
- * Features:
- * <ul>
- *   <li>Track TP - gradually teleport to distant targets</li>
- *   <li>Advanced rotations (Matrix/SpookyTime) for Spoof mode</li>
- *   <li>Packet splitting for long-distance teleportation</li>
- * </ul>
+ * TpAura - телепорт к цели с атакой и возвратом.
+ *
+ * Режимы:
+ * - Default: ТП → Удар → Возврат (цикл)
+ * - Spoof: Обход Matrix + Grim через spoof-пакеты
  */
 @Getter
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class TpAura extends ModuleStructure {
-    
+
     @Native(type = Native.Type.VMProtectBeginUltra)
     public static TpAura getInstance() {
         return Instance.get(TpAura.class);
     }
-    
+
+    // ==================== SETTINGS ====================
+
     private final SelectSetting mode = new SelectSetting("Режим", "Mode")
             .value("Default", "Spoof")
             .selected("Default");
-    
-    private final BooleanSetting followAura = new BooleanSetting("Следовать за аурой", "Follow aura rotation")
-            .setValue(true);
-    
-    private final SliderSettings freeCamSpeed = new SliderSettings("Скорость камеры", "FreeCam speed")
-            .range(0.5f, 5.0f)
-            .setValue(2.0f)
-            .visible(() -> !followAura.isValue());
-    
-    private final MultiSelectSetting targetType = new MultiSelectSetting("Цели", "Target types")
-            .value("Игроки", "Мобы", "Животные", "Креатив")
-            .selected("Игроки");
-    
-    private final SliderSettings attackRange = new SliderSettings("Дистанция", "Search range")
-            .range(10.0f, 100.0f)
-            .setValue(30.0f)
-            .visible(() -> mode.isSelected("Default"));
-    
-    private final SliderSettings cycleDelay = new SliderSettings("Задержка", "Delay between attack cycles in ticks")
-            .range(1.0f, 40.0f)
-            .setValue(10.0f)
-            .visible(() -> mode.isSelected("Default"));
-    
-    private final SliderSettings maxHits = new SliderSettings("Макс ударов", "Max hits per cycle")
-            .range(1.0f, 10.0f)
-            .setValue(3.0f)
-            .visible(() -> mode.isSelected("Default"));
-    
-    private final BooleanSetting autoReturn = new BooleanSetting("Авто-возврат", "Auto return to saved position")
-            .setValue(true)
-            .visible(() -> mode.isSelected("Default"));
-    
-    private final BooleanSetting smoothRotation = new BooleanSetting("Плавная ротация", "Smooth rotation")
-            .setValue(true)
-            .visible(() -> mode.isSelected("Default"));
-    
-    private final SliderSettings spoofRange = new SliderSettings("Дистанция", "Attack range")
-            .range(3.0f, 100.0f)
-            .setValue(30.0f)
-            .visible(() -> mode.isSelected("Spoof"));
-    
-    private final SliderSettings spoofDelay = new SliderSettings("Задержка между ударами", "Delay between attacks in ticks")
+
+    // Default mode settings
+    private final SliderSettings attackDistance = new SliderSettings("Дистанция атаки", "Attack distance from target")
+            .range(0.0f, 3.0f)
+            .setValue(0.0f);
+
+    private final SliderSettings hitsPerSecond = new SliderSettings("Ударов в секунду", "Hits per second")
             .range(1.0f, 20.0f)
-            .setValue(5.0f)
-            .visible(() -> mode.isSelected("Spoof"));
-    
-    private final SliderSettings spoofMaxHits = new SliderSettings("Ударов до ТП", "Hits before TP again")
-            .range(2.0f, 50.0f)
-            .setValue(5.0f)
-            .visible(() -> mode.isSelected("Spoof"));
-    
-    private final SelectSetting spoofRotationType = new SelectSetting("Тип ротации", "Rotation type")
-            .value("Matrix", "SpookyTime")
-            .selected("Matrix")
-            .visible(() -> mode.isSelected("Spoof"));
-    
-    private final BooleanSetting trackMode = new BooleanSetting("Трек ТП", "Track TP - gradually teleport to target")
+            .setValue(10.0f);
+
+    // Spoof mode settings
+    private final SliderSettings spoofRate = new SliderSettings("Частота ТП", "Real TP every N hits")
+            .range(3.0f, 10.0f)
+            .setValue(5.0f);
+
+    private final BooleanSetting flightPackets = new BooleanSetting("Пакеты полёта", "Send flight packets for Grim")
+            .setValue(true);
+
+    // Target settings
+    private final MultiSelectSetting targetType = new MultiSelectSetting("Цели", "Target types")
+            .value("Игроки", "Мобы", "Животные")
+            .selected("Игроки");
+
+    private final BooleanSetting ignoreWalls = new BooleanSetting("Бить сквозь стены", "Attack through walls")
+            .setValue(true);
+
+    private final BooleanSetting autoReturn = new BooleanSetting("Авто-возврат", "Auto return to start position")
+            .setValue(true);
+
+    private final BooleanSetting lockTargetBtn = new BooleanSetting("Фикс. цель", "Lock on single target")
             .setValue(false);
-    
-    private final SliderSettings trackDistance = new SliderSettings("Дистанция трека", "Track distance per second")
-            .range(10.0f, 50.0f)
-            .setValue(20.0f)
-            .visible(() -> trackMode.isValue());
-    
+
+    // ==================== HANDLERS ====================
+
     private final IsxodHandler isxodHandler = new IsxodHandler();
     private final TargetFinder targetFinder = new TargetFinder();
-    
-    @lombok.experimental.NonFinal
-    public static LivingEntity target;
-    
-    @lombok.experimental.NonFinal
-    public LivingEntity lastTarget;
-    
-    private int tickCounter = 0;
-    private int hitCounter = 0;
-    private Vec3d savedPosition = null;
-    private boolean attackSuccessful = false;
-    
-    public Vec3d freeCamPos, freeCamPrevPos;
-    private float freeCamYaw = 0, freeCamPitch = 0;
-    private long lastDamageTime = 0;
-    private long lastHealTime = 0;
-    private long lastToggleTime = 0;
-    private boolean isTransitioning = false;
-    private Vec3d transitionStart = null;
-    private Vec3d transitionTarget = null;
-    private float transitionProgress = 0;
-    
+
+    // ==================== STATE ====================
+
+    @Setter
+    @NonFinal
+    LivingEntity target = null;
+
+    @NonFinal
+    LivingEntity lockedTarget = null;
+
+    @NonFinal
+    int spoofHitCounter = 0;
+
+    /** Время последней атаки */
+    @NonFinal
+    long lastAttackTime = 0;
+
+    // ==================== CACHED FILTER ====================
+
+    TargetFinder.EntityFilter entityFilter;
+
     public TpAura() {
         super("TpAura", ModuleCategory.COMBAT);
-        settings(mode, followAura, freeCamSpeed, targetType, attackRange, cycleDelay, maxHits, autoReturn, smoothRotation,
-                 spoofRange, spoofDelay, spoofMaxHits, spoofRotationType,
-                 trackMode, trackDistance);
+        settings(mode, attackDistance, hitsPerSecond, spoofRate, flightPackets,
+                targetType, ignoreWalls, autoReturn, lockTargetBtn);
     }
-    
+
+    // ==================== LIFECYCLE ====================
+
     @Override
     @Native(type = Native.Type.VMProtectBeginMutation)
     public void activate() {
-        reset();
+        resetState();
+
         if (mc.player != null) {
-            savedPosition = mc.player.getEntityPos();
             isxodHandler.saveIsxod();
-            
-            if (!followAura.isValue()) {
-                freeCamPrevPos = freeCamPos = mc.player.getEyePos();
-                freeCamYaw = mc.player.getYaw();
-                freeCamPitch = mc.player.getPitch();
-            }
         }
+
+        updateEntityFilter();
+        lastAttackTime = System.currentTimeMillis();
     }
-    
+
     @Override
     @Native(type = Native.Type.VMProtectBeginMutation)
     public void deactivate() {
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastToggleTime < 2000 && mc.player != null && mc.player.getVelocity().lengthSquared() > 0.01) {
-            return;
+        // Возвращаемся на исходную при выключении (если авто-возврат включён)
+        if (autoReturn.isValue()) {
+            returnToIsxodAuto();
         }
-        
-        if (!followAura.isValue() && freeCamPos != null && mc.player != null) {
-            isTransitioning = true;
-            transitionStart = freeCamPos;
-            transitionTarget = mc.player.getEyePos();
-            transitionProgress = 0;
-        } else {
-            reset();
-            AngleConnection.INSTANCE.startReturning();
-            targetFinder.releaseTarget();
-            target = null;
-            lastTarget = null;
-        }
-        
-        lastToggleTime = currentTime;
+
+        // СБРОС РОТАЦИИ - важно!
+        AngleConnection.INSTANCE.clear();
+        AngleConnection.INSTANCE.setRotation(null);
+
+        resetState();
     }
-    
+
+    @Native(type = Native.Type.VMProtectBeginMutation)
+    private void resetState() {
+        target = null;
+        lockedTarget = null;
+        spoofHitCounter = 0;
+        lastAttackTime = 0;
+        targetFinder.releaseTarget();
+        isxodHandler.reset();
+    }
+
+    private void updateEntityFilter() {
+        this.entityFilter = new TargetFinder.EntityFilter(targetType.getSelected());
+    }
+
+    // ==================== MAIN LOGIC ====================
+
     @EventHandler
     @Native(type = Native.Type.VMProtectBeginUltra)
     public void onTick(TickEvent event) {
         if (mc.player == null || mc.world == null) {
             return;
         }
-        
-        tickCounter++;
-        
+
+        // Проверка задержки атаки (CPS)
+        long attackDelay = (long) (1000.0 / hitsPerSecond.getValue());
+        if (System.currentTimeMillis() - lastAttackTime < attackDelay) {
+            return;
+        }
+
+        // Поиск цели
+        findTarget();
+
+        // Если цели нет - возвращаемся на исходную (если авто-возврат включён)
         if (target == null || !target.isAlive()) {
+            if (autoReturn.isValue()) {
+                returnToIsxodAuto();
+            }
             return;
         }
-        
-        if (trackMode.isValue()) {
-            handleTrackTP();
-        }
-        
+
+        // Выполняем атаку в зависимости от режима
         if (mode.isSelected("Default")) {
-            handleDefaultMode();
+            performDefaultAttack();
         } else if (mode.isSelected("Spoof")) {
-            handleSpoofMode();
+            performSpoofAttack();
         }
+
+        lastAttackTime = System.currentTimeMillis();
     }
-    
-    @EventHandler
-    @Native(type = Native.Type.VMProtectBeginMutation)
-    public void onPacket(PacketEvent event) {
-        if (event.getPacket() instanceof GameMessageS2CPacket packet) {
-            String message = packet.content().getString().toLowerCase();
-            if (message.contains("вы атаковали") || message.contains("вы были атакованы")) {
-                attackSuccessful = true;
-            }
-            if (message.contains("урон") || message.contains("damage")) {
-                lastDamageTime = System.currentTimeMillis();
-            }
-            if (message.contains("хил") || message.contains("heal") || message.contains("восстановлен")) {
-                lastHealTime = System.currentTimeMillis();
-            }
-        }
-    }
-    
-    @EventHandler
-    @Native(type = Native.Type.VMProtectBeginUltra)
-    public void onInput(InputEvent event) {
-        if (followAura.isValue() || mc.player == null) {
-            return;
-        }
-        
-        float speed = freeCamSpeed.getValue();
-        boolean up = false, down = false;
-        
-        long window = mc.getWindow().getHandle();
-        
-        float forward = 0, sideways = 0;
-        
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_UP) == GLFW.GLFW_PRESS || 
-            GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_8) == GLFW.GLFW_PRESS) {
-            forward += 1;
-        }
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_DOWN) == GLFW.GLFW_PRESS || 
-            GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_2) == GLFW.GLFW_PRESS) {
-            forward -= 1;
-        }
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT) == GLFW.GLFW_PRESS || 
-            GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_4) == GLFW.GLFW_PRESS) {
-            sideways += 1;
-        }
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT) == GLFW.GLFW_PRESS || 
-            GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_6) == GLFW.GLFW_PRESS) {
-            sideways -= 1;
-        }
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_9) == GLFW.GLFW_PRESS) {
-            up = true;
-        }
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_3) == GLFW.GLFW_PRESS) {
-            down = true;
-        }
-        
-        double[] motion = MoveUtil.calculateDirection(forward, sideways, speed);
-        
-        freeCamPrevPos = freeCamPos;
-        freeCamPos = freeCamPos.add(motion[0], up ? speed : down ? -speed : 0, motion[1]);
-        
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_7) == GLFW.GLFW_PRESS) {
-            freeCamYaw -= 2.0f;
-        }
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_1) == GLFW.GLFW_PRESS) {
-            freeCamYaw += 2.0f;
-        }
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_5) == GLFW.GLFW_PRESS) {
-            freeCamPitch = Math.max(-90, Math.min(90, freeCamPitch - 2.0f));
-        }
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_0) == GLFW.GLFW_PRESS) {
-            freeCamPitch = Math.max(-90, Math.min(90, freeCamPitch + 2.0f));
-        }
-    }
-    
-    @EventHandler
-    public void onCameraPosition(CameraPositionEvent event) {
-        if (isTransitioning) {
-            transitionProgress += 0.05f;
-            if (transitionProgress >= 1.0f) {
-                isTransitioning = false;
-                transitionProgress = 0;
-                reset();
-                AngleConnection.INSTANCE.startReturning();
-                targetFinder.releaseTarget();
-                target = null;
-                lastTarget = null;
-            } else {
-                Vec3d smoothPos = transitionStart.lerp(transitionTarget, transitionProgress);
-                event.setPos(smoothPos);
-            }
-        } else if (!followAura.isValue() && freeCamPos != null && freeCamPrevPos != null) {
-            event.setPos(MathUtils.interpolate(freeCamPrevPos, freeCamPos));
-        }
-    }
-    
-    @EventHandler
-    public void onRender3D(Event3D event) {
-        if (!followAura.isValue() && mc.player != null) {
-            renderPlayerBox(event);
-        }
-    }
-    
+
     @EventHandler
     @Native(type = Native.Type.VMProtectBeginUltra)
     public void onRotationUpdate(RotationUpdateEvent event) {
-        if (mc.player == null) {
+        if (mc.player == null || target == null) {
             return;
         }
-        
-        if (event.getType() == EventType.PRE) {
-            LivingEntity previousTarget = target;
-            target = updateTarget();
-            
-            if (previousTarget != null && target != null && previousTarget != target) {
-                hitCounter = 0;
-            }
-            
-            if (previousTarget != null && target == null) {
-                hitCounter = 0;
-                tickCounter = 0;
-            }
-            
-            if (target != null) {
-                rotateToTarget();
-                lastTarget = target;
-            }
+
+        // Ротация только для Spoof режима (плавная)
+        if (mode.isSelected("Spoof") && event.getType() == EventType.PRE) {
+            rotateToTargetSmooth();
         }
     }
-    
-    /**
-     * Updates and returns current target entity.
-     *
-     * @return current target or null if no valid target found
-     */
-    private LivingEntity updateTarget() {
-        TargetFinder.EntityFilter filter = new TargetFinder.EntityFilter(targetType.getSelected());
-        float range = mode.isSelected("Spoof") ? spoofRange.getValue() : attackRange.getValue();
-        
-        targetFinder.searchTargets(mc.world.getEntities(), range, 360, true);
-        targetFinder.validateTarget(filter::isValid);
-        return targetFinder.getCurrentTarget();
-    }
-    
-    /**
-     * Rotates player view towards target using configured rotation mode.
-     */
-    private void rotateToTarget() {
-        if (target == null) {
+
+    // ==================== TARGET FINDING ====================
+
+    @Native(type = Native.Type.VMProtectBeginMutation)
+    private void findTarget() {
+        // Если включён лок таргет и есть заблокированная цель
+        if (lockTargetBtn.isValue() && lockedTarget != null && lockedTarget.isAlive()) {
+            target = lockedTarget;
             return;
         }
-        
-        Angle targetAngle = MathAngle.calculateAngle(target.getEntityPos().add(0, target.getHeight() / 2, 0));
-        
-        RotateConstructor rotationMode;
-        
-        if (mode.isSelected("Spoof")) {
-            rotationMode = spoofRotationType.isSelected("Matrix") ? new MatrixAngle() : new SPAngle();
-        } else if (mode.isSelected("Default")) {
-            if (!smoothRotation.isValue()) {
-                return;
+
+        // Поиск новой цели
+        float searchRange = mode.isSelected("Default") ? 50.0f : 30.0f;
+
+        targetFinder.searchTargets(
+                mc.world.getEntities(),
+                searchRange,
+                360,
+                ignoreWalls.isValue()
+        );
+
+        targetFinder.validateTarget(entityFilter::isValid);
+
+        LivingEntity newTarget = targetFinder.getCurrentTarget();
+
+        if (newTarget != null) {
+            // Если цель сменилась - сбрасываем счётчик только для Spoof
+            if (target != null && target != newTarget && mode.isSelected("Spoof")) {
+                spoofHitCounter = 0;
             }
-            rotationMode = new LinearConstructor();
+
+            target = newTarget;
+
+            // Сохраняем цель при локе
+            if (lockTargetBtn.isValue() && lockedTarget == null) {
+                lockedTarget = newTarget;
+            }
         } else {
-            return;
+            target = null;
         }
-        
-        AngleConfig config = new AngleConfig(rotationMode, true, false);
-        Angle.VecRotation rotation = new Angle.VecRotation(targetAngle, targetAngle.toVector());
-        
-        AngleConnection.INSTANCE.rotateTo(rotation, target, 1, config, TaskPriority.HIGH_IMPORTANCE_1, this);
     }
-    
+
+    // ==================== DEFAULT MODE ====================
+
     /**
-     * Handles Default mode attack logic - classic TP to target.
+     * Default режим: ТП → Удар → Возврат
+     * Каждый удар - полный цикл
      */
-    private void handleDefaultMode() {
-        if (tickCounter < cycleDelay.getValue()) {
+    @Native(type = Native.Type.VMProtectBeginMutation)
+    private void performDefaultAttack() {
+        if (target == null || mc.interactionManager == null || !isxodHandler.hasSavedPosition()) {
             return;
         }
-        
-        if (hitCounter >= (int)maxHits.getValue()) {
-            hitCounter = 0;
-            tickCounter = 0;
-            return;
-        }
-        
-        if (mc.interactionManager != null && target != null && isxodHandler.hasSavedPosition()) {
-            Vec3d isxod = isxodHandler.getIsxodPosition();
-            Vec3d targetPos = target.getEntityPos();
-            Vec3d direction = targetPos.subtract(isxod).normalize();
-            Vec3d attackPos = targetPos.subtract(direction.multiply(3.5));
-            
-            teleportFromTo(isxod, attackPos);
-            
-            mc.interactionManager.attackEntity(mc.player, target);
-            mc.player.swingHand(mc.player.getActiveHand());
-            
-            if (autoReturn.isValue()) {
-                teleportFromTo(attackPos, isxod);
-            }
-        }
-        
-        hitCounter++;
-        tickCounter = 0;
-    }
-    
-    /**
-     * Handles Spoof mode attack logic - packet attacks with rare TP cycles.
-     */
-    private void handleSpoofMode() {
-        if (tickCounter < spoofDelay.getValue()) {
-            return;
-        }
-        
-        if (!isxodHandler.hasSavedPosition()) {
-            return;
-        }
-        
-        Vec3d isxod = isxodHandler.getIsxodPosition();
-        double distance = isxod.distanceTo(target.getEntityPos());
-        
-        if (distance > spoofRange.getValue()) {
-            return;
-        }
-        
-        if (mc.interactionManager != null) {
-            int maxHits = (int)spoofMaxHits.getValue();
-            
-            if (hitCounter > 0 && hitCounter % maxHits == 0) {
-                Vec3d targetPos = target.getEntityPos();
-                Vec3d direction = targetPos.subtract(isxod).normalize();
-                Vec3d attackPos = targetPos.subtract(direction.multiply(3.5));
-                
-                teleportFromTo(isxod, attackPos);
-                
-                mc.interactionManager.attackEntity(mc.player, target);
-                mc.player.swingHand(mc.player.getActiveHand());
-                
-                teleportFromTo(attackPos, isxod);
-            } else {
-                mc.interactionManager.attackEntity(mc.player, target);
-                mc.player.swingHand(mc.player.getActiveHand());
-            }
-            
-            hitCounter++;
-            tickCounter = 0;
+
+        Vec3d isxodPos = isxodHandler.getIsxodPosition();
+        Vec3d targetPos = target.getEntityPos();
+
+        // Позиция атаки (в хитбоксе или рядом)
+        Vec3d attackPos = calculateAttackPosition(targetPos, isxodPos);
+
+        // Snap ротация (мгновенная) к цели
+        Angle targetAngle = MathAngle.calculateAngle(targetPos.add(0, target.getHeight() / 2, 0));
+        snapRotation(targetAngle);
+
+        // 1. ТП к цели
+        teleportToPosition(attackPos, true);
+
+        // 2. Атака
+        mc.interactionManager.attackEntity(mc.player, target);
+        mc.player.swingHand(Hand.MAIN_HAND);
+
+        // 3. ТП обратно на исходную (если авто-возврат включён)
+        if (autoReturn.isValue()) {
+            teleportToPosition(isxodPos, true);
         }
     }
-    
+
+    // ==================== SPOOF MODE ====================
+
     /**
-     * Teleports player from one position to another with packet splitting for long distances.
-     * Splits packets every 10 blocks.
+     * Spoof режим: Обход Matrix + Grim
      *
-     * @param fromPos starting position
-     * @param toPos destination position
+     * Обычные удары: spoof пакеты (игрок визуально на месте)
+     * Каждый N-й удар: реальный ТП + flight packets
      */
-    private void teleportFromTo(Vec3d fromPos, Vec3d toPos) {
+    @Native(type = Native.Type.VMProtectBeginUltra)
+    private void performSpoofAttack() {
+        if (target == null || mc.interactionManager == null || !isxodHandler.hasSavedPosition()) {
+            return;
+        }
+
+        Vec3d isxodPos = isxodHandler.getIsxodPosition();
+        Vec3d targetPos = target.getEntityPos();
+
+        // Позиция атаки
+        Vec3d attackPos = calculateAttackPosition(targetPos, isxodPos);
+
+        spoofHitCounter++;
+
+        // Проверяем: это spoof удар или реальный ТП?
+        boolean shouldRealTeleport = (spoofHitCounter % (int) spoofRate.getValue() == 0);
+
+        if (shouldRealTeleport) {
+            // ===== РЕАЛЬНЫЙ ТП (каждый N-й удар) =====
+
+            // Flight packets ТУДА (имитация полёта к цели)
+            if (flightPackets.isValue()) {
+                sendFlightPackets(isxodPos, attackPos);
+            }
+
+            // ТП к цели
+            teleportToPosition(attackPos, true);
+
+            // Удар
+            mc.interactionManager.attackEntity(mc.player, target);
+            mc.player.swingHand(Hand.MAIN_HAND);
+
+            // ТП обратно (если авто-возврат включён)
+            if (autoReturn.isValue()) {
+                teleportToPosition(isxodPos, true);
+
+                // Flight packets ОБРАТНО
+                if (flightPackets.isValue()) {
+                    sendFlightPackets(attackPos, isxodPos);
+                }
+            }
+
+        } else {
+            // ===== SPOOF АТАКА (без реального ТП) =====
+            // Сервер думает что мы у цели, но локально мы стоим на месте
+
+            // Spoof пакет к цели (сервер думает мы там)
+            sendSpoofPositionPacket(attackPos);
+
+            // Удар (сервер засчитывает)
+            mc.interactionManager.attackEntity(mc.player, target);
+            mc.player.swingHand(Hand.MAIN_HAND);
+
+            // Spoof пакет обратно (сервер думает мы вернулись)
+            if (autoReturn.isValue()) {
+                sendSpoofPositionPacket(isxodPos);
+            }
+
+            // ЛОКАЛЬНАЯ ПОЗИЦИЯ НЕ МЕНЯЕТСЯ!
+        }
+    }
+
+    // ==================== TELEPORT UTILS ====================
+
+    /**
+     * Реальная телепортация с обновлением локальной позиции
+     */
+    @Native(type = Native.Type.VMProtectBeginMutation)
+    private void teleportToPosition(Vec3d targetPos, boolean updateLocal) {
         if (mc.player == null || mc.getNetworkHandler() == null) {
             return;
         }
-        
-        double distance = fromPos.distanceTo(toPos);
-        
-        if (distance > 10) {
+
+        if (!isValidPosition(targetPos)) {
+            return;
+        }
+
+        Vec3d currentPos = mc.player.getEntityPos();
+        double distance = currentPos.distanceTo(targetPos);
+
+        // Если дистанция > 20 блоков - дробим на пакеты
+        if (distance > 20.0) {
             int packets = (int) Math.ceil(distance / 10.0);
-            packets = Math.max(2, Math.min(packets, 15));
-            
+            packets = MathHelper.clamp(packets, 2, 15);
+
             for (int i = 1; i <= packets; i++) {
                 double progress = (double) i / packets;
-                Vec3d intermediatePos = fromPos.lerp(toPos, progress);
-                
-                mc.getNetworkHandler().sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.Full(
-                    intermediatePos.x,
-                    intermediatePos.y,
-                    intermediatePos.z,
-                    mc.player.getYaw(),
-                    mc.player.getPitch(),
-                    false,
-                    false
-                ));
+                Vec3d intermediatePos = currentPos.lerp(targetPos, progress);
+                intermediatePos = addRandomOffset(intermediatePos, 0.01);
+                sendPositionPacket(intermediatePos);
             }
         } else {
-            mc.getNetworkHandler().sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.Full(
-                toPos.x,
-                toPos.y,
-                toPos.z,
+            sendPositionPacket(targetPos);
+        }
+
+        // Обновляем локальную позицию
+        if (updateLocal) {
+            mc.player.setPos(targetPos.x, targetPos.y, targetPos.z);
+        }
+    }
+
+    /**
+     * Отправить пакет позиции (реальный)
+     */
+    private void sendPositionPacket(Vec3d pos) {
+        if (mc.player == null || mc.getNetworkHandler() == null) return;
+
+        mc.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.Full(
+                pos.x, pos.y, pos.z,
                 mc.player.getYaw(),
                 mc.player.getPitch(),
-                false,
-                false
-            ));
-        }
-        
-        mc.player.setPos(toPos.x, toPos.y, toPos.z);
+                mc.player.isOnGround(),
+                mc.player.horizontalCollision
+        ));
     }
-    
+
     /**
-     * Handles Track TP mode - gradually teleports to distant targets (horizontal only).
-     */
-    private void handleTrackTP() {
-        if (target == null || mc.player == null) {
-            return;
-        }
-        
-        Vec3d playerPos = mc.player.getEntityPos();
-        Vec3d targetPos = target.getEntityPos();
-        
-        Vec3d playerPosFlat = new Vec3d(playerPos.x, 0, playerPos.z);
-        Vec3d targetPosFlat = new Vec3d(targetPos.x, 0, targetPos.z);
-        double horizontalDistance = playerPosFlat.distanceTo(targetPosFlat);
-        float trackDist = trackDistance.getValue();
-        
-        if (horizontalDistance > trackDist) {
-            Vec3d direction = targetPosFlat.subtract(playerPosFlat).normalize();
-            Vec3d newPosFlat = playerPosFlat.add(direction.multiply(trackDist));
-            Vec3d newPos = new Vec3d(newPosFlat.x, playerPos.y, newPosFlat.z);
-            
-            teleportFromTo(playerPos, newPos);
-        }
-    }
-    
-    /**
-     * Renders 3D box around player model with color based on state.
-     */
-    private void renderPlayerBox(Event3D event) {
-        if (mc.player == null) {
-            return;
-        }
-        
-        Box playerBox = mc.player.getBoundingBox();
-        
-        long currentTime = System.currentTimeMillis();
-        int color;
-        
-        if (currentTime - lastDamageTime < 500) {
-            color = 0xFFFF0000;
-        } else if (currentTime - lastHealTime < 500) {
-            color = 0xFF00FF00;
-        } else {
-            color = 0xFFFFFFFF;
-        }
-        
-        int fillColor = ColorUtil.multAlpha(color, 0.3f);
-        
-        Render3D.drawBoxWithCross(playerBox, color, fillColor, 2.0f);
-    }
-    
-    /**
-     * Returns whether FreeCam mode is active (for external checks).
-     */
-    public boolean isFreeCamActive() {
-        return isState() && !followAura.isValue();
-    }
-    
-    /**
-     * Resets module state.
+     * Отправить spoof-пакет позиции
+     * Сервер получает позицию, но клиентская позиция НЕ меняется
      */
     @Native(type = Native.Type.VMProtectBeginMutation)
-    private void reset() {
-        target = null;
-        tickCounter = 0;
-        hitCounter = 0;
-        attackSuccessful = false;
-        targetFinder.releaseTarget();
+    private void sendSpoofPositionPacket(Vec3d pos) {
+        if (mc.player == null || mc.getNetworkHandler() == null) return;
+
+        // Микро-оффсет чтобы сервер не отклонил как дубликат
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        Vec3d spoofPos = new Vec3d(
+                pos.x + random.nextDouble(-0.0001, 0.0001),
+                pos.y + random.nextDouble(-0.0001, 0.0001),
+                pos.z + random.nextDouble(-0.0001, 0.0001)
+        );
+
+        mc.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.Full(
+                spoofPos.x, spoofPos.y, spoofPos.z,
+                mc.player.getYaw(),
+                mc.player.getPitch(),
+                mc.player.isOnGround(),
+                mc.player.horizontalCollision
+        ));
+
+        // НЕ вызываем mc.player.setPos()!
+        // Игрок остаётся визуально на месте
+    }
+
+    /**
+     * Отправить пакеты "полёта" для Grim
+     */
+    @Native(type = Native.Type.VMProtectBeginMutation)
+    private void sendFlightPackets(Vec3d from, Vec3d to) {
+        if (!flightPackets.isValue() || mc.getNetworkHandler() == null || mc.player == null) return;
+
+        double distance = from.distanceTo(to);
+
+        // Grim любит пакеты каждые ~8 блоков
+        int packets = (int) Math.ceil(distance / 8.0);
+        packets = MathHelper.clamp(packets, 1, 5);
+
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+
+        for (int i = 1; i <= packets; i++) {
+            double progress = (double) i / (packets + 1);
+            Vec3d intermediatePos = from.lerp(to, progress);
+
+            // Случайный оффсет
+            intermediatePos = new Vec3d(
+                    intermediatePos.x + random.nextDouble(-0.05, 0.05),
+                    intermediatePos.y + random.nextDouble(-0.02, 0.02),
+                    intermediatePos.z + random.nextDouble(-0.05, 0.05)
+            );
+
+            mc.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.Full(
+                    intermediatePos.x, intermediatePos.y, intermediatePos.z,
+                    mc.player.getYaw() + random.nextFloat(-5, 5),
+                    mc.player.getPitch() + random.nextFloat(-2, 2),
+                    false,
+                    false
+            ));
+        }
+    }
+
+    // ==================== ROTATION ====================
+
+    /**
+     * Мгновенная snap ротация (для Default режима)
+     */
+    private void snapRotation(Angle angle) {
+        Angle adjusted = angle.adjustSensitivity();
+        AngleConnection.INSTANCE.setRotation(adjusted);
+    }
+
+    /**
+     * Плавная ротация к цели (для Spoof режима)
+     */
+    private void rotateToTargetSmooth() {
+        if (target == null) return;
+
+        Vec3d targetVec = target.getEntityPos().add(0, target.getHeight() / 2, 0);
+        Angle targetAngle = MathAngle.calculateAngle(targetVec);
+
+        AngleConfig config = new AngleConfig(new LinearConstructor(), true, false);
+        Angle.VecRotation rotation = new Angle.VecRotation(targetAngle, targetAngle.toVector());
+
+        AngleConnection.INSTANCE.rotateTo(
+                rotation,
+                target,
+                1,
+                config,
+                TaskPriority.HIGH_IMPORTANCE_1,
+                this
+        );
+    }
+
+    // ==================== HELPERS ====================
+
+    /**
+     * Рассчитать позицию атаки
+     */
+    private Vec3d calculateAttackPosition(Vec3d targetPos, Vec3d fromPos) {
+        double distance = attackDistance.getValue();
+
+        if (distance <= 0) {
+            // Прямо в хитбокс
+            return targetPos.add(0, 0.1, 0);
+        }
+
+        // На расстоянии от цели
+        Vec3d direction = fromPos.subtract(targetPos).normalize();
+        return targetPos.add(direction.multiply(distance));
+    }
+
+    /**
+     * Авто-возврат на исходную позицию
+     * Вызывается когда цель умерла/пропала или модуль выключен
+     */
+    @Native(type = Native.Type.VMProtectBeginMutation)
+    private void returnToIsxodAuto() {
+        if (!isxodHandler.hasSavedPosition() || mc.player == null) return;
+
+        Vec3d isxodPos = isxodHandler.getIsxodPosition();
+        Vec3d currentPos = mc.player.getEntityPos();
+
+        // Проверяем - мы уже на исходной? (допуск 1 блок)
+        if (currentPos.distanceTo(isxodPos) < 1.0) return;
+
+        // Реальный ТП на исходную
+        teleportToPosition(isxodPos, true);
+    }
+
+    /**
+     * Валидация координат
+     */
+    private boolean isValidPosition(Vec3d pos) {
+        if (pos == null) return false;
+        if (Double.isNaN(pos.x) || Double.isNaN(pos.y) || Double.isNaN(pos.z)) return false;
+        if (Double.isInfinite(pos.x) || Double.isInfinite(pos.y) || Double.isInfinite(pos.z)) return false;
+        if (Math.abs(pos.x) > 30000000 || Math.abs(pos.z) > 30000000) return false;
+        return true;
+    }
+
+    /**
+     * Добавить случайный оффсет
+     */
+    private Vec3d addRandomOffset(Vec3d pos, double maxOffset) {
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        return new Vec3d(
+                pos.x + random.nextDouble(-maxOffset, maxOffset),
+                pos.y + random.nextDouble(-maxOffset, maxOffset),
+                pos.z + random.nextDouble(-maxOffset, maxOffset)
+        );
+    }
+
+    /**
+     * Разблокировать цель
+     */
+    public void unlockTarget() {
+        lockedTarget = null;
+        lockTargetBtn.setValue(false);
+    }
+
+    /**
+     * Заблокировать текущую цель
+     */
+    public void lockCurrentTarget() {
+        if (target != null) {
+            lockedTarget = target;
+            lockTargetBtn.setValue(true);
+        }
     }
 }
