@@ -27,8 +27,18 @@ public class MatrixAngle extends RotateConstructor {
         StrikeManager attackHandler = Initialization.getInstance().getManager().getAttackPerpetrator().getAttackHandler();
         Aura aura = Aura.getInstance();
         StopWatch attackTimer = attackHandler.getAttackTimer();
-        boolean canAttack = entity != null && attackHandler.canAttack(aura.getConfig(), 0);
-        if (entity !=null && canAttack) {
+        
+        // Безопасная проверка canAttack - только если Aura включена
+        boolean canAttack = false;
+        if (entity != null && aura != null && aura.isState()) {
+            try {
+                canAttack = attackHandler.canAttack(aura.getConfig(), 0);
+            } catch (Exception e) {
+                // Игнорируем ошибки если вызывается не из Aura
+            }
+        }
+        
+        if (entity != null && canAttack) {
             Vec3d aimPoint = Vector.hitbox(entity, 1, entity.isOnGround() ? 0.9F : 1.4F, 1, 2);
             targetAngle = MathAngle.calculateAngle(aimPoint);
         }
@@ -36,8 +46,12 @@ public class MatrixAngle extends RotateConstructor {
         float yawDelta = angleDelta.getYaw(), pitchDelta = angleDelta.getPitch();
         float rotationDifference = (float) Math.hypot(Math.abs(yawDelta), Math.abs(pitchDelta));
         boolean lookingAtHitbox = false;
-        if (entity != null && !canAttack && RaycastAngle.rayTrace(AngleConnection.INSTANCE.getRotation().toVector(), 4.0, entity.getBoundingBox())) {
-            lookingAtHitbox = true;
+        if (entity != null && !canAttack) {
+            try {
+                lookingAtHitbox = RaycastAngle.rayTrace(AngleConnection.INSTANCE.getRotation().toVector(), 4.0, entity.getBoundingBox());
+            } catch (Exception e) {
+                // Игнорируем ошибки
+            }
         }
         float preAttackSpeed = 1F;
         float postAttackSpeed = lookingAtHitbox ? 0.06F : randomLerp(0F, 0.5F);
@@ -49,7 +63,7 @@ public class MatrixAngle extends RotateConstructor {
 
         float resolve1 = canAttack ? 0 : 13, resolve2 = canAttack ? 0 : 8;
 
-        if (!aura.isState() || entity == null) {
+        if ((!aura.isState() && !aporia.su.modules.impl.combat.TpAura.getInstance().isState()) || entity == null) {
             float speedFactor3 = MathHelper.clamp(1f - (rotationDifference / 180.0f), 0.1f, 1.0f);
             speed = !attackTimer.finished(550) ? 0.05F : 0.8F * speedFactor3;
             jitterYaw = 0;

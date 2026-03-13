@@ -40,8 +40,13 @@ public class TargetHud extends AbstractHudElement {
     @Override
     public void tick() {
         LivingEntity auraTarget = Aura.target;
-        if (auraTarget != null) {
-            lastTarget = auraTarget;
+        LivingEntity tpAuraTarget = aporia.su.modules.impl.combat.TpAura.target;
+        
+        // Берем таргет из Aura или TpAura
+        LivingEntity currentTarget = auraTarget != null ? auraTarget : tpAuraTarget;
+        
+        if (currentTarget != null) {
+            lastTarget = currentTarget;
             startAnimation();
             stopWatch.reset();
         } else if (isChat(mc.currentScreen)) {

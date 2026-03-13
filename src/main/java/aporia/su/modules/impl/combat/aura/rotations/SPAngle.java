@@ -41,7 +41,16 @@ public class SPAngle extends RotateConstructor {
         Aura aura = Aura.getInstance();
         StopWatch attackTimer = attackHandler.getAttackTimer();
         int count = attackHandler.getCount();
-        boolean canAttack = entity != null && attackHandler.canAttack(aura.getConfig(), 0);
+        
+        // Безопасная проверка canAttack - только если Aura включена
+        boolean canAttack = false;
+        if (entity != null && aura != null && aura.isState()) {
+            try {
+                canAttack = attackHandler.canAttack(aura.getConfig(), 0);
+            } catch (Exception e) {
+                // Игнорируем ошибки если вызывается не из Aura
+            }
+        }
 
         if (entity != null && canAttack) {
             Vec3d aimPoint = Vector.hitbox(entity, 1, entity.isOnGround() ? 1F : 1.256F, 1, 2);
@@ -57,11 +66,15 @@ public class SPAngle extends RotateConstructor {
 
         boolean lookingAtHitbox = false;
         if (entity != null && !canAttack) {
-            lookingAtHitbox = RaycastAngle.rayTrace(
-                    AngleConnection.INSTANCE.getRotation().toVector(),
-                    4.0,
-                    entity.getBoundingBox()
-            );
+            try {
+                lookingAtHitbox = RaycastAngle.rayTrace(
+                        AngleConnection.INSTANCE.getRotation().toVector(),
+                        4.0,
+                        entity.getBoundingBox()
+                );
+            } catch (Exception e) {
+                // Игнорируем ошибки
+            }
         }
 
         float deltaTime = 0.75f;
@@ -123,7 +136,7 @@ public class SPAngle extends RotateConstructor {
         float totalJitterYaw = currentJitterYaw + circleYaw;
         float totalJitterPitch = currentJitterPitch + circlePitch;
 
-        if (!aura.isState() || entity == null) {
+        if ((!aura.isState() && !aporia.su.modules.impl.combat.TpAura.getInstance().isState()) || entity == null) {
             if (attackTimer.finished(800)) {
                 totalJitterYaw *= 0.3f;
                 totalJitterPitch *= 0.3f;
