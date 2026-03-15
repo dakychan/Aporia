@@ -14,7 +14,6 @@ import aporia.su.util.user.chat.command.helpers.Paginator;
 import aporia.su.util.user.chat.command.helpers.TabCompleteHelper;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -193,18 +192,14 @@ public class ConfigCommand extends CommandManager.Command {
                                 return;
                             }
                             try {
-                                String json = Files.readString(path, StandardCharsets.UTF_8);
+                                String json = FilesManager.readFile(path);
+                                if (json == null) return;
                                 JsonObject root = JsonParser.parseString(json).getAsJsonObject();
-                                if (root.has("type")) {
-                                    String type = root.get("type").getAsString();
-                                    if ("cfg".equals(type)) {
-                                        configs.add(name);
-                                    }
-                                } else {
+                                if (root.has("type") && "cfg".equals(root.get("type").getAsString())) {
                                     configs.add(name);
                                 }
-                            } catch (Exception e) {
-                                configs.add(name);
+                            } catch (Exception ignored) {
+                                // не добавляем файл при ошибке чтения
                             }
                         });
             }

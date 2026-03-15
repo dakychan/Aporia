@@ -868,10 +868,8 @@ public class FilesManager {
 
                 /** Сохраняем в APR формат */
                 String json = gson.toJson(root);
-                if (!Files.exists(targetPath.getParent())) {
-                    Files.createDirectories(targetPath.getParent());
-                }
-                Files.writeString(targetPath, json, StandardCharsets.UTF_8);
+                String configName = targetPath.getFileName().toString().replace(".apr", "");
+                FilesManager.createFile(targetPath.getParent(), FilesManager.FileFormat.APR, configName, json, FilesManager.CheckMode.NEVER);
 
                 Logger.success("Config saved!");
 

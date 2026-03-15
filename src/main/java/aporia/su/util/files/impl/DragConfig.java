@@ -36,6 +36,7 @@ public class DragConfig {
             }
 
             JsonObject root = new JsonObject();
+            root.addProperty("type", "drag");
             for (HudElement element : hudManager.getElements()) {
                 JsonObject elementJson = new JsonObject();
                 elementJson.addProperty("x", element.getX());
@@ -50,7 +51,7 @@ public class DragConfig {
                 FilesManager.FileFormat.APR,
                 CONFIG_NAME,
                 root.toString(),
-                FilesManager.CheckMode.ALWAYS
+                FilesManager.CheckMode.NEVER
             );
             
             Logger.success("DragConfig saved!");

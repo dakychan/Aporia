@@ -46,13 +46,14 @@ public class PrefixConfig {
         try {
             JsonObject obj = new JsonObject();
             obj.addProperty("prefix", prefix);
+            obj.addProperty("type", "prefix");
             
             FilesManager.createFile(
                 CONFIG_DIR,
                 FilesManager.FileFormat.APR,
                 CONFIG_NAME,
                 obj.toString(),
-                FilesManager.CheckMode.ALWAYS
+                FilesManager.CheckMode.NEVER
             );
         } catch (Exception e) {
             Logger.error("PrefixConfig: Save failed! " + e.getMessage());

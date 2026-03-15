@@ -10,6 +10,7 @@ import aporia.su.modules.impl.misc.autoparser.AutoParser;
 import aporia.su.modules.impl.movement.*;
 import aporia.su.modules.impl.player.*;
 import aporia.su.modules.impl.render.*;
+import aporia.su.modules.impl.render.hud2.*;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -38,6 +39,7 @@ public class ModuleRepository {
                 .add(new Particles())
                 .add(new AuctionHelper())
                 .add(new GlassHands())
+                .add(new BlurCube())
                 .add(new ChunkAnimator())
                 .add(new MaceTarget())
                 .add(new TriggerBot())

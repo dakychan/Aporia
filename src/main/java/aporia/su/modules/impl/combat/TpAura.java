@@ -9,7 +9,6 @@ import lombok.experimental.NonFinal;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.util.Hand;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import aporia.su.util.Instance;
 import aporia.su.util.events.api.EventHandler;
@@ -22,6 +21,10 @@ import aporia.su.modules.impl.combat.aura.AngleConnection;
 import aporia.su.modules.impl.combat.aura.MathAngle;
 import aporia.su.modules.impl.combat.aura.impl.LinearConstructor;
 import aporia.su.modules.impl.combat.aura.target.TargetFinder;
+import aporia.su.modules.impl.combat.aura.target.Vector;
+import aporia.su.modules.impl.combat.aura.rotations.MatrixAngle;
+import aporia.su.modules.impl.combat.aura.rotations.SPAngle;
+import aporia.su.modules.impl.combat.aura.impl.RotateConstructor;
 import aporia.su.modules.impl.combat.tpaura.IsxodHandler;
 import aporia.su.modules.module.ModuleStructure;
 import aporia.su.modules.module.category.ModuleCategory;
@@ -30,15 +33,15 @@ import aporia.su.modules.module.setting.implement.MultiSelectSetting;
 import aporia.su.modules.module.setting.implement.SelectSetting;
 import aporia.su.modules.module.setting.implement.SliderSettings;
 import aporia.su.util.user.render.math.TaskPriority;
+import aporia.su.util.user.string.PlayerInteractionHelper;
 
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * TpAura - телепорт к цели с атакой и возвратом.
  *
- * Режимы:
- * - Default: ТП → Удар → Возврат (цикл)
- * - Spoof: Обход Matrix + Grim через spoof-пакеты
+ * Default: Реальный ТП → Удар → Возврат на ИСХОДНУЮ позицию
+ * Spoof: 4 spoof атаки (пакеты) + 1 реальный ТП каждый 5-й удар
  */
 @Getter
 @FieldDefaults(level = AccessLevel.PRIVATE)
@@ -55,7 +58,10 @@ public class TpAura extends ModuleStructure {
             .value("Default", "Spoof")
             .selected("Default");
 
-    // Default mode settings
+    private final SelectSetting rotationMode = new SelectSetting("Ротация", "Rotation mode")
+            .value("Matrix", "SpookyTime", "Linear")
+            .selected("Matrix");
+
     private final SliderSettings attackDistance = new SliderSettings("Дистанция атаки", "Attack distance from target")
             .range(0.0f, 3.0f)
             .setValue(0.0f);
@@ -64,23 +70,21 @@ public class TpAura extends ModuleStructure {
             .range(1.0f, 20.0f)
             .setValue(10.0f);
 
-    // Spoof mode settings
-    private final SliderSettings spoofRate = new SliderSettings("Частота ТП", "Real TP every N hits")
-            .range(3.0f, 10.0f)
+    private final SliderSettings realTpRate = new SliderSettings("Реальный ТП раз в N", "Real TP every N hits")
+            .range(2.0f, 10.0f)
             .setValue(5.0f);
 
     private final BooleanSetting flightPackets = new BooleanSetting("Пакеты полёта", "Send flight packets for Grim")
             .setValue(true);
 
-    // Target settings
+    private final BooleanSetting autoReturn = new BooleanSetting("Авто-возврат", "Auto return to start position")
+            .setValue(true);
+
     private final MultiSelectSetting targetType = new MultiSelectSetting("Цели", "Target types")
             .value("Игроки", "Мобы", "Животные")
             .selected("Игроки");
 
     private final BooleanSetting ignoreWalls = new BooleanSetting("Бить сквозь стены", "Attack through walls")
-            .setValue(true);
-
-    private final BooleanSetting autoReturn = new BooleanSetting("Авто-возврат", "Auto return to start position")
             .setValue(true);
 
     private final BooleanSetting lockTargetBtn = new BooleanSetting("Фикс. цель", "Lock on single target")
@@ -101,58 +105,52 @@ public class TpAura extends ModuleStructure {
     LivingEntity lockedTarget = null;
 
     @NonFinal
-    int spoofHitCounter = 0;
+    int spoofCounter = 0;
 
-    /** Время последней атаки */
     @NonFinal
     long lastAttackTime = 0;
 
-    // ==================== CACHED FILTER ====================
+    // Флаг - мы сейчас в процессе ТП (не перезаписывать isxod!)
+    @NonFinal
+    boolean inTeleport = false;
 
     TargetFinder.EntityFilter entityFilter;
 
     public TpAura() {
         super("TpAura", ModuleCategory.COMBAT);
-        settings(mode, attackDistance, hitsPerSecond, spoofRate, flightPackets,
-                targetType, ignoreWalls, autoReturn, lockTargetBtn);
+        settings(mode, rotationMode, attackDistance, hitsPerSecond, realTpRate, flightPackets,
+                autoReturn, targetType, ignoreWalls, lockTargetBtn);
     }
 
     // ==================== LIFECYCLE ====================
 
     @Override
-    @Native(type = Native.Type.VMProtectBeginMutation)
     public void activate() {
         resetState();
+        updateEntityFilter();
+        lastAttackTime = System.currentTimeMillis();
+        spoofCounter = 0;
+        inTeleport = false;
 
+        // Сохраняем исходную позицию ПРИ АКТИВАЦИИ
         if (mc.player != null) {
             isxodHandler.saveIsxod();
         }
-
-        updateEntityFilter();
-        lastAttackTime = System.currentTimeMillis();
     }
 
     @Override
-    @Native(type = Native.Type.VMProtectBeginMutation)
     public void deactivate() {
-        // Возвращаемся на исходную при выключении (если авто-возврат включён)
-        if (autoReturn.isValue()) {
-            returnToIsxodAuto();
-        }
-
-        // СБРОС РОТАЦИИ - важно!
         AngleConnection.INSTANCE.clear();
         AngleConnection.INSTANCE.setRotation(null);
-
         resetState();
     }
 
-    @Native(type = Native.Type.VMProtectBeginMutation)
     private void resetState() {
         target = null;
         lockedTarget = null;
-        spoofHitCounter = 0;
+        spoofCounter = 0;
         lastAttackTime = 0;
+        inTeleport = false;
         targetFinder.releaseTarget();
         isxodHandler.reset();
     }
@@ -164,30 +162,23 @@ public class TpAura extends ModuleStructure {
     // ==================== MAIN LOGIC ====================
 
     @EventHandler
-    @Native(type = Native.Type.VMProtectBeginUltra)
     public void onTick(TickEvent event) {
         if (mc.player == null || mc.world == null) {
             return;
         }
 
-        // Проверка задержки атаки (CPS)
         long attackDelay = (long) (1000.0 / hitsPerSecond.getValue());
         if (System.currentTimeMillis() - lastAttackTime < attackDelay) {
             return;
         }
 
-        // Поиск цели
         findTarget();
 
-        // Если цели нет - возвращаемся на исходную (если авто-возврат включён)
         if (target == null || !target.isAlive()) {
-            if (autoReturn.isValue()) {
-                returnToIsxodAuto();
-            }
             return;
         }
 
-        // Выполняем атаку в зависимости от режима
+        // Выполняем атаку
         if (mode.isSelected("Default")) {
             performDefaultAttack();
         } else if (mode.isSelected("Spoof")) {
@@ -198,29 +189,24 @@ public class TpAura extends ModuleStructure {
     }
 
     @EventHandler
-    @Native(type = Native.Type.VMProtectBeginUltra)
     public void onRotationUpdate(RotationUpdateEvent event) {
         if (mc.player == null || target == null) {
             return;
         }
 
-        // Ротация только для Spoof режима (плавная)
-        if (mode.isSelected("Spoof") && event.getType() == EventType.PRE) {
-            rotateToTargetSmooth();
+        if (event.getType() == EventType.PRE) {
+            rotateToTargetConstant();
         }
     }
 
     // ==================== TARGET FINDING ====================
 
-    @Native(type = Native.Type.VMProtectBeginMutation)
     private void findTarget() {
-        // Если включён лок таргет и есть заблокированная цель
         if (lockTargetBtn.isValue() && lockedTarget != null && lockedTarget.isAlive()) {
             target = lockedTarget;
             return;
         }
 
-        // Поиск новой цели
         float searchRange = mode.isSelected("Default") ? 50.0f : 30.0f;
 
         targetFinder.searchTargets(
@@ -235,14 +221,11 @@ public class TpAura extends ModuleStructure {
         LivingEntity newTarget = targetFinder.getCurrentTarget();
 
         if (newTarget != null) {
-            // Если цель сменилась - сбрасываем счётчик только для Spoof
-            if (target != null && target != newTarget && mode.isSelected("Spoof")) {
-                spoofHitCounter = 0;
+            if (target != null && target != newTarget) {
+                spoofCounter = 0;
             }
-
             target = newTarget;
 
-            // Сохраняем цель при локе
             if (lockTargetBtn.isValue() && lockedTarget == null) {
                 lockedTarget = newTarget;
             }
@@ -254,150 +237,185 @@ public class TpAura extends ModuleStructure {
     // ==================== DEFAULT MODE ====================
 
     /**
-     * Default режим: ТП → Удар → Возврат
-     * Каждый удар - полный цикл
+     * Default: Реальный ТП → Удар → Возврат на ИСХОДНУЮ
      */
-    @Native(type = Native.Type.VMProtectBeginMutation)
     private void performDefaultAttack() {
-        if (target == null || mc.interactionManager == null || !isxodHandler.hasSavedPosition()) {
+        if (target == null || mc.interactionManager == null || mc.player == null) {
             return;
         }
 
+        if (!isxodHandler.hasSavedPosition()) {
+            return;
+        }
+
+        // ИСХОДНАЯ позиция (сохранена при активации!)
         Vec3d isxodPos = isxodHandler.getIsxodPosition();
-        Vec3d targetPos = target.getEntityPos();
 
-        // Позиция атаки (в хитбоксе или рядом)
-        Vec3d attackPos = calculateAttackPosition(targetPos, isxodPos);
+        // Позиция атаки рядом с целью
+        Vec3d attackPos = calculateAttackPosition(target.getEntityPos());
 
-        // Snap ротация (мгновенная) к цели
-        Angle targetAngle = MathAngle.calculateAngle(targetPos.add(0, target.getHeight() / 2, 0));
-        snapRotation(targetAngle);
+        // Устанавливаем флаг чтобы не перезаписать isxod
+        inTeleport = true;
 
         // 1. ТП к цели
-        teleportToPosition(attackPos, true);
+        teleportReal(attackPos);
 
-        // 2. Атака
+        // 2. Удар
         mc.interactionManager.attackEntity(mc.player, target);
         mc.player.swingHand(Hand.MAIN_HAND);
 
-        // 3. ТП обратно на исходную (если авто-возврат включён)
+        // 3. Возврат на ИСХОДНУЮ позицию
         if (autoReturn.isValue()) {
-            teleportToPosition(isxodPos, true);
+            teleportReal(isxodPos);
         }
+
+        inTeleport = false;
     }
 
     // ==================== SPOOF MODE ====================
 
     /**
-     * Spoof режим: Обход Matrix + Grim
-     *
-     * Обычные удары: spoof пакеты (игрок визуально на месте)
-     * Каждый N-й удар: реальный ТП + flight packets
+     * Spoof режим:
+     * - spoofCounter < N → spoof пакеты (игрок визуально на месте)
+     * - spoofCounter >= N → реальный ТП + сброс
      */
-    @Native(type = Native.Type.VMProtectBeginUltra)
     private void performSpoofAttack() {
-        if (target == null || mc.interactionManager == null || !isxodHandler.hasSavedPosition()) {
+        if (target == null || mc.interactionManager == null || mc.player == null) {
             return;
         }
 
-        Vec3d isxodPos = isxodHandler.getIsxodPosition();
-        Vec3d targetPos = target.getEntityPos();
+        int tpRate = (int) realTpRate.getValue();
 
-        // Позиция атаки
-        Vec3d attackPos = calculateAttackPosition(targetPos, isxodPos);
+        spoofCounter++;
 
-        spoofHitCounter++;
-
-        // Проверяем: это spoof удар или реальный ТП?
-        boolean shouldRealTeleport = (spoofHitCounter % (int) spoofRate.getValue() == 0);
+        boolean shouldRealTeleport = (spoofCounter >= tpRate);
 
         if (shouldRealTeleport) {
-            // ===== РЕАЛЬНЫЙ ТП (каждый N-й удар) =====
-
-            // Flight packets ТУДА (имитация полёта к цели)
-            if (flightPackets.isValue()) {
-                sendFlightPackets(isxodPos, attackPos);
-            }
-
-            // ТП к цели
-            teleportToPosition(attackPos, true);
-
-            // Удар
-            mc.interactionManager.attackEntity(mc.player, target);
-            mc.player.swingHand(Hand.MAIN_HAND);
-
-            // ТП обратно (если авто-возврат включён)
-            if (autoReturn.isValue()) {
-                teleportToPosition(isxodPos, true);
-
-                // Flight packets ОБРАТНО
-                if (flightPackets.isValue()) {
-                    sendFlightPackets(attackPos, isxodPos);
-                }
-            }
-
+            performRealTeleportAttack();
+            spoofCounter = 0;
         } else {
-            // ===== SPOOF АТАКА (без реального ТП) =====
-            // Сервер думает что мы у цели, но локально мы стоим на месте
-
-            // Spoof пакет к цели (сервер думает мы там)
-            sendSpoofPositionPacket(attackPos);
-
-            // Удар (сервер засчитывает)
-            mc.interactionManager.attackEntity(mc.player, target);
-            mc.player.swingHand(Hand.MAIN_HAND);
-
-            // Spoof пакет обратно (сервер думает мы вернулись)
-            if (autoReturn.isValue()) {
-                sendSpoofPositionPacket(isxodPos);
-            }
-
-            // ЛОКАЛЬНАЯ ПОЗИЦИЯ НЕ МЕНЯЕТСЯ!
+            performPureSpoofAttack();
         }
     }
 
-    // ==================== TELEPORT UTILS ====================
+    /**
+     * Реальный ТП с атакой (для обхода античита)
+     */
+    private void performRealTeleportAttack() {
+        if (!isxodHandler.hasSavedPosition()) return;
+
+        Vec3d isxodPos = isxodHandler.getIsxodPosition();
+        Vec3d attackPos = calculateAttackPosition(target.getEntityPos());
+
+        inTeleport = true;
+
+        // Flight packets ТУДА
+        if (flightPackets.isValue()) {
+            sendFlightPackets(mc.player.getEntityPos(), attackPos);
+        }
+
+        // ТП к цели
+        teleportReal(attackPos);
+
+        // Удар
+        mc.interactionManager.attackEntity(mc.player, target);
+        mc.player.swingHand(Hand.MAIN_HAND);
+
+        // Возврат на ИСХОДНУЮ
+        if (autoReturn.isValue()) {
+            teleportReal(isxodPos);
+
+            if (flightPackets.isValue()) {
+                sendFlightPackets(attackPos, isxodPos);
+            }
+        }
+
+        inTeleport = false;
+    }
 
     /**
-     * Реальная телепортация с обновлением локальной позиции
+     * Чистый SPOOF - только пакеты, игрок визуально на месте
      */
-    @Native(type = Native.Type.VMProtectBeginMutation)
-    private void teleportToPosition(Vec3d targetPos, boolean updateLocal) {
-        if (mc.player == null || mc.getNetworkHandler() == null) {
-            return;
+    private void performPureSpoofAttack() {
+        if (!isxodHandler.hasSavedPosition() || mc.player == null) return;
+
+        // ИСХОДНАЯ позиция - сюда возвращаемся в пакете
+        Vec3d isxodPos = isxodHandler.getIsxodPosition();
+
+        // Позиция атаки рядом с целью
+        Vec3d attackPos = calculateAttackPosition(target.getEntityPos());
+
+        float yaw = mc.player.getYaw();
+        float pitch = mc.player.getPitch();
+
+        // ===== SPOOF К ЦЕЛИ (сервер думает мы там) =====
+        sendSpoofPositionPacket(attackPos, yaw, pitch);
+
+        // ===== АТАКА =====
+        mc.interactionManager.attackEntity(mc.player, target);
+        mc.player.swingHand(Hand.MAIN_HAND);
+
+        // ===== SPOOF ВОЗВРАТ НА ИСХОДНУЮ =====
+        if (autoReturn.isValue()) {
+            sendSpoofPositionPacket(isxodPos, yaw, pitch);
         }
 
-        if (!isValidPosition(targetPos)) {
-            return;
-        }
+        // ВАЖНО: mc.player.setPos() НЕ вызываем!
+        // Игрок визуально остаётся на ИСХОДНОЙ позиции!
+    }
+
+    /**
+     * SPOOF пакет - отправляем позицию серверу, локальную НЕ меняем
+     */
+    private void sendSpoofPositionPacket(Vec3d pos, float yaw, float pitch) {
+        if (mc.player == null || mc.getNetworkHandler() == null) return;
+
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+
+        PlayerMoveC2SPacket.Full packet = new PlayerMoveC2SPacket.Full(
+                pos.x + random.nextDouble(-0.0001, 0.0001),
+                pos.y + random.nextDouble(-0.0001, 0.0001),
+                pos.z + random.nextDouble(-0.0001, 0.0001),
+                yaw,
+                pitch,
+                false,
+                false
+        );
+
+        PlayerInteractionHelper.sendPacketWithOutEvent(packet);
+
+        // НЕ вызываем mc.player.setPos()!
+    }
+
+    // ==================== TELEPORT METHODS ====================
+
+    /**
+     * Реальная телепортация С обновлением локальной позиции
+     */
+    private void teleportReal(Vec3d targetPos) {
+        if (mc.player == null || mc.getNetworkHandler() == null) return;
+        if (!isValidPosition(targetPos)) return;
 
         Vec3d currentPos = mc.player.getEntityPos();
         double distance = currentPos.distanceTo(targetPos);
 
-        // Если дистанция > 20 блоков - дробим на пакеты
         if (distance > 20.0) {
             int packets = (int) Math.ceil(distance / 10.0);
-            packets = MathHelper.clamp(packets, 2, 15);
+            packets = Math.max(2, Math.min(packets, 15));
 
             for (int i = 1; i <= packets; i++) {
                 double progress = (double) i / packets;
                 Vec3d intermediatePos = currentPos.lerp(targetPos, progress);
-                intermediatePos = addRandomOffset(intermediatePos, 0.01);
                 sendPositionPacket(intermediatePos);
             }
         } else {
             sendPositionPacket(targetPos);
         }
 
-        // Обновляем локальную позицию
-        if (updateLocal) {
-            mc.player.setPos(targetPos.x, targetPos.y, targetPos.z);
-        }
+        // Обновляем локальную позицию (РЕАЛЬНЫЙ ТП)
+        mc.player.setPos(targetPos.x, targetPos.y, targetPos.z);
     }
 
-    /**
-     * Отправить пакет позиции (реальный)
-     */
     private void sendPositionPacket(Vec3d pos) {
         if (mc.player == null || mc.getNetworkHandler() == null) return;
 
@@ -410,46 +428,12 @@ public class TpAura extends ModuleStructure {
         ));
     }
 
-    /**
-     * Отправить spoof-пакет позиции
-     * Сервер получает позицию, но клиентская позиция НЕ меняется
-     */
-    @Native(type = Native.Type.VMProtectBeginMutation)
-    private void sendSpoofPositionPacket(Vec3d pos) {
-        if (mc.player == null || mc.getNetworkHandler() == null) return;
-
-        // Микро-оффсет чтобы сервер не отклонил как дубликат
-        ThreadLocalRandom random = ThreadLocalRandom.current();
-        Vec3d spoofPos = new Vec3d(
-                pos.x + random.nextDouble(-0.0001, 0.0001),
-                pos.y + random.nextDouble(-0.0001, 0.0001),
-                pos.z + random.nextDouble(-0.0001, 0.0001)
-        );
-
-        mc.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.Full(
-                spoofPos.x, spoofPos.y, spoofPos.z,
-                mc.player.getYaw(),
-                mc.player.getPitch(),
-                mc.player.isOnGround(),
-                mc.player.horizontalCollision
-        ));
-
-        // НЕ вызываем mc.player.setPos()!
-        // Игрок остаётся визуально на месте
-    }
-
-    /**
-     * Отправить пакеты "полёта" для Grim
-     */
-    @Native(type = Native.Type.VMProtectBeginMutation)
     private void sendFlightPackets(Vec3d from, Vec3d to) {
         if (!flightPackets.isValue() || mc.getNetworkHandler() == null || mc.player == null) return;
 
         double distance = from.distanceTo(to);
-
-        // Grim любит пакеты каждые ~8 блоков
         int packets = (int) Math.ceil(distance / 8.0);
-        packets = MathHelper.clamp(packets, 1, 5);
+        packets = Math.max(1, Math.min(packets, 5));
 
         ThreadLocalRandom random = ThreadLocalRandom.current();
 
@@ -457,7 +441,6 @@ public class TpAura extends ModuleStructure {
             double progress = (double) i / (packets + 1);
             Vec3d intermediatePos = from.lerp(to, progress);
 
-            // Случайный оффсет
             intermediatePos = new Vec3d(
                     intermediatePos.x + random.nextDouble(-0.05, 0.05),
                     intermediatePos.y + random.nextDouble(-0.02, 0.02),
@@ -476,24 +459,14 @@ public class TpAura extends ModuleStructure {
 
     // ==================== ROTATION ====================
 
-    /**
-     * Мгновенная snap ротация (для Default режима)
-     */
-    private void snapRotation(Angle angle) {
-        Angle adjusted = angle.adjustSensitivity();
-        AngleConnection.INSTANCE.setRotation(adjusted);
-    }
-
-    /**
-     * Плавная ротация к цели (для Spoof режима)
-     */
-    private void rotateToTargetSmooth() {
+    private void rotateToTargetConstant() {
         if (target == null) return;
 
-        Vec3d targetVec = target.getEntityPos().add(0, target.getHeight() / 2, 0);
-        Angle targetAngle = MathAngle.calculateAngle(targetVec);
+        Vec3d aimPoint = Vector.hitbox(target, 1, target.isOnGround() ? 0.9F : 1.4F, 1, 2);
+        Angle targetAngle = MathAngle.calculateAngle(aimPoint);
 
-        AngleConfig config = new AngleConfig(new LinearConstructor(), true, false);
+        RotateConstructor rotator = getRotationConstructor();
+        AngleConfig config = new AngleConfig(rotator, true, false);
         Angle.VecRotation rotation = new Angle.VecRotation(targetAngle, targetAngle.toVector());
 
         AngleConnection.INSTANCE.rotateTo(
@@ -506,45 +479,32 @@ public class TpAura extends ModuleStructure {
         );
     }
 
+    private RotateConstructor getRotationConstructor() {
+        return switch (rotationMode.getSelected()) {
+            case "Matrix" -> new MatrixAngle();
+            case "SpookyTime" -> new SPAngle();
+            default -> new LinearConstructor();
+        };
+    }
+
     // ==================== HELPERS ====================
 
-    /**
-     * Рассчитать позицию атаки
-     */
-    private Vec3d calculateAttackPosition(Vec3d targetPos, Vec3d fromPos) {
+    private Vec3d calculateAttackPosition(Vec3d targetPos) {
         double distance = attackDistance.getValue();
 
         if (distance <= 0) {
-            // Прямо в хитбокс
             return targetPos.add(0, 0.1, 0);
         }
 
-        // На расстоянии от цели
-        Vec3d direction = fromPos.subtract(targetPos).normalize();
-        return targetPos.add(direction.multiply(distance));
+        if (mc.player != null) {
+            Vec3d playerPos = mc.player.getEntityPos();
+            Vec3d direction = playerPos.subtract(targetPos).normalize();
+            return targetPos.add(direction.multiply(distance));
+        }
+
+        return targetPos;
     }
 
-    /**
-     * Авто-возврат на исходную позицию
-     * Вызывается когда цель умерла/пропала или модуль выключен
-     */
-    @Native(type = Native.Type.VMProtectBeginMutation)
-    private void returnToIsxodAuto() {
-        if (!isxodHandler.hasSavedPosition() || mc.player == null) return;
-
-        Vec3d isxodPos = isxodHandler.getIsxodPosition();
-        Vec3d currentPos = mc.player.getEntityPos();
-
-        // Проверяем - мы уже на исходной? (допуск 1 блок)
-        if (currentPos.distanceTo(isxodPos) < 1.0) return;
-
-        // Реальный ТП на исходную
-        teleportToPosition(isxodPos, true);
-    }
-
-    /**
-     * Валидация координат
-     */
     private boolean isValidPosition(Vec3d pos) {
         if (pos == null) return false;
         if (Double.isNaN(pos.x) || Double.isNaN(pos.y) || Double.isNaN(pos.z)) return false;
@@ -553,29 +513,11 @@ public class TpAura extends ModuleStructure {
         return true;
     }
 
-    /**
-     * Добавить случайный оффсет
-     */
-    private Vec3d addRandomOffset(Vec3d pos, double maxOffset) {
-        ThreadLocalRandom random = ThreadLocalRandom.current();
-        return new Vec3d(
-                pos.x + random.nextDouble(-maxOffset, maxOffset),
-                pos.y + random.nextDouble(-maxOffset, maxOffset),
-                pos.z + random.nextDouble(-maxOffset, maxOffset)
-        );
-    }
-
-    /**
-     * Разблокировать цель
-     */
     public void unlockTarget() {
         lockedTarget = null;
         lockTargetBtn.setValue(false);
     }
 
-    /**
-     * Заблокировать текущую цель
-     */
     public void lockCurrentTarget() {
         if (target != null) {
             lockedTarget = target;
