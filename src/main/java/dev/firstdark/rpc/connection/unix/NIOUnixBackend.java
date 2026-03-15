@@ -1,9 +1,6 @@
 package dev.firstdark.rpc.connection.unix;
 
 import java.io.IOException;
-//#if modernjava
-//$$ import java.net.UnixDomainSocketAddress;
-//#endif
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -21,11 +18,7 @@ public class NIOUnixBackend implements IUnixBackend {
      */
     @Override
     public void openPipe(String path) throws IOException {
-        //#if modernjava
-        //$$ this.channel = SocketChannel.open(UnixDomainSocketAddress.of(path));
-        //#else
         this.channel = null;
-        //#endif
     }
 
     /**

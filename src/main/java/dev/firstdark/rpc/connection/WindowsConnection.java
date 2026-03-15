@@ -18,7 +18,6 @@ import java.nio.file.Path;
  */
 class WindowsConnection extends BaseConnection {
 
-    // Windows uses a random file, instead of sockets
     private RandomAccessFile pipe;
     private boolean opened;
 

@@ -102,6 +102,7 @@ public class ModuleRepository {
                 .add(new AutoSwap())
                 .add(new NoPush())
                 .add(new NoSlow())
+                .add(new MaceSpoof())
                 .add(new Velocity())
                 .add(new SwingAnimation())
                 .add(new AutoSprint())

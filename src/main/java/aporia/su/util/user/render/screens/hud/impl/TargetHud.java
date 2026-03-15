@@ -43,10 +43,7 @@ public class TargetHud extends AbstractHudElement {
     public void tick() {
         LivingEntity auraTarget = target;
         LivingEntity tpAuraTarget = target;
-        
-        // Берем таргет из Aura или TpAura
         LivingEntity currentTarget = auraTarget != null ? auraTarget : tpAuraTarget;
-        
         if (currentTarget != null) {
             lastTarget = currentTarget;
             startAnimation();

@@ -1,5 +1,6 @@
 package aporia.su.mixin.renderer;
 
+import aporia.su.util.user.render.web.screen.BrowserScreen;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.client.MinecraftClient;
@@ -26,7 +27,6 @@ import aporia.su.modules.impl.render.Hud;
 import aporia.su.modules.impl.render.NoRender;
 import aporia.su.util.user.render.screens.clickgui.ClickGui;
 import aporia.su.util.user.render.Render2D;
-import aporia.su.util.user.render.web.screen.BrowserScreen;
 
 @Mixin(InGameHud.class)
 public abstract class InGameHudMixin implements IMinecraft {

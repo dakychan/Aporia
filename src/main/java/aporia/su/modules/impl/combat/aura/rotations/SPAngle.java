@@ -41,8 +41,6 @@ public class SPAngle extends RotateConstructor {
         Aura aura = Aura.getInstance();
         StopWatch attackTimer = attackHandler.getAttackTimer();
         int count = attackHandler.getCount();
-        
-        // Безопасная проверка canAttack - только если Aura включена
         boolean canAttack = false;
         if (entity != null && aura != null && aura.isState()) {
             try {

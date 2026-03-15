@@ -133,8 +133,6 @@ public class RPCConnection {
 
         if (this.state == RPCState.DISCONNECTED && !this.baseConnection.open())
             return;
-
-        // We received the handshake packet from discord, so we need to process it
         if (this.state == RPCState.SENT_HANDSHAKE) {
             JsonObject data = new JsonObject();
 
@@ -142,11 +140,9 @@ public class RPCConnection {
                 String cmd = data.has("cmd") && !data.get("cmd").isJsonNull() ? data.get("cmd").getAsString() : null;
                 String evt = data.has("evt") && !data.get("evt").isJsonNull() ? data.get("evt").getAsString() : null;
 
-                // Check if the RPC is ready and dispatch the ready event
                 if (cmd != null && evt != null && cmd.equals("DISPATCH") && evt.equals("READY")) {
                     this.state = RPCState.CONNECTED;
 
-                    // Construct the user class from the returned data
                     JsonObject userData = data.get("data").getAsJsonObject().get("user").getAsJsonObject();
                     User user = GSON.fromJson(userData, User.class);
 
@@ -158,7 +154,6 @@ public class RPCConnection {
             return;
         }
 
-        // Connection is not yet open, so we send our handshake packet
         MessageFrame messageFrame = new MessageFrame(OpCode.HANDSHAKE, this.writeHandshake());
         boolean success;
 
@@ -226,7 +221,6 @@ public class RPCConnection {
         MessageFrame messageFrame = new MessageFrame();
 
         while (true) {
-            // Process the OpCode header
             boolean didRead = this.baseConnection.read(messageFrame.getHeaderBuffer(), messageFrame.getHeaderBuffer().length);
             if (!didRead || !messageFrame.parseHeader()) {
                 if (!this.baseConnection.isOpen()) {
@@ -238,7 +232,6 @@ public class RPCConnection {
                 return false;
             }
 
-            // Read the JSON data from the packet
             if (messageFrame.getLength() > 0) {
                 didRead = this.baseConnection.read(messageFrame.getMessageBuffer(), messageFrame.getLength());
 
@@ -254,9 +247,7 @@ public class RPCConnection {
             JsonObject object = GSON.fromJson(messageFrame.getMessage(), JsonObject.class);
             rpcClient.printDebug("Got Message %s", object.toString());
 
-            // Check what OpCode was sent to us
             switch (messageFrame.getOpCode()) {
-                // Connection terminated, so we need to close our client
                 case CLOSE:
                     object.entrySet().forEach(entry -> jsonObject.add(entry.getKey(), entry.getValue()));
 
@@ -269,7 +260,6 @@ public class RPCConnection {
                     this.close();
                     return false;
 
-                // Generic update update
                 case FRAME:
                     object.entrySet().forEach(entry -> jsonObject.add(entry.getKey(), entry.getValue()));
                     return true;

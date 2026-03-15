@@ -9,19 +9,12 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-/**
- * @author HypherionSA
- * Represents an RPC packet in its byte/string form
- * // TODO Clean this shit up
- */
 @Getter
 public class MessageFrame {
 
-    // Message and header buffers
     byte[] headerBuffer;
     byte[] messageBuffer;
 
-    // Packet contents
     @Setter
     private OpCode opCode;
     private int length;

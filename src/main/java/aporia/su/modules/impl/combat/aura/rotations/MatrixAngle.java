@@ -27,14 +27,11 @@ public class MatrixAngle extends RotateConstructor {
         StrikeManager attackHandler = Initialization.getInstance().getManager().getAttackPerpetrator().getAttackHandler();
         Aura aura = Aura.getInstance();
         StopWatch attackTimer = attackHandler.getAttackTimer();
-        
-        // Безопасная проверка canAttack - только если Aura включена
         boolean canAttack = false;
         if (entity != null && aura != null && aura.isState()) {
             try {
                 canAttack = attackHandler.canAttack(aura.getConfig(), 0);
             } catch (Exception e) {
-                // Игнорируем ошибки если вызывается не из Aura
             }
         }
         
@@ -50,7 +47,6 @@ public class MatrixAngle extends RotateConstructor {
             try {
                 lookingAtHitbox = RaycastAngle.rayTrace(AngleConnection.INSTANCE.getRotation().toVector(), 4.0, entity.getBoundingBox());
             } catch (Exception e) {
-                // Игнорируем ошибки
             }
         }
         float preAttackSpeed = 1F;

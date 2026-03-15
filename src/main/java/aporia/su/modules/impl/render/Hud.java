@@ -20,8 +20,6 @@ public class Hud extends ModuleStructure {
                     "Staff",
                     "test",
                     "TargetHud",
-//                    "CoolDowns",
-//                    "Inventory",
                     "Info",
                     "Notifications")
 
@@ -30,8 +28,6 @@ public class Hud extends ModuleStructure {
                     "Potions",
                     "Staff",
                     "TargetHud",
-//                    "CoolDowns",
-//                    "Inventory",
                     "Info",
                     "Notifications");
 

@@ -55,9 +55,6 @@ class WinRegistry {
         WinRegistry.writeStringValue(WinRegistry.userRoot, WinRegistry.HKEY_CURRENT_USER, key, valueName, value);
     }
 
-
-    // =====================
-
     static String readString() throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
         int[] handles = (int[]) WinRegistry.regOpenKey.invoke(WinRegistry.userRoot, WinRegistry.HKEY_CURRENT_USER, toCstr("Software\\\\Valve\\\\Steam"), WinRegistry.KEY_READ);
         if (handles[1] != WinRegistry.REG_SUCCESS)
@@ -79,7 +76,6 @@ class WinRegistry {
         WinRegistry.regCloseKey.invoke(root, handles[0]);
     }
 
-    // utility
     private static byte[] toCstr(String str) {
         byte[] result = new byte[str.length() + 1];
 

@@ -199,7 +199,7 @@ public class ConfigCommand extends CommandManager.Command {
                                     configs.add(name);
                                 }
                             } catch (Exception ignored) {
-                                // не добавляем файл при ошибке чтения
+                                // не сосать америка
                             }
                         });
             }

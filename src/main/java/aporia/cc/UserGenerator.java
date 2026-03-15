@@ -151,7 +151,6 @@ public class UserGenerator {
                 try (BufferedReader reader = new BufferedReader(
                         new InputStreamReader(process.getInputStream()))) {
                     if (os.contains("win")) {
-                        // Skip header line for Windows
                         reader.readLine();
                         String line = reader.readLine();
                         return line != null ? line.trim() : null;

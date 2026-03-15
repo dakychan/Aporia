@@ -42,7 +42,6 @@ public class DiscordRichPresence {
     private String spectateSecret;
     private boolean instance;
 
-    // Urls
     private String stateUrl;
     private String detailsUrl;
     private String largeUrl;
@@ -89,24 +88,19 @@ public class DiscordRichPresence {
      */
     public JsonObject toJson(long pid, long nonce) {
         JsonObject data = new JsonObject();
-        // Add the required command info
         data.addProperty("nonce", nonce);
         data.addProperty("cmd", "SET_ACTIVITY");
 
-        // Add the Process ID
         JsonObject args = new JsonObject();
         args.addProperty("pid", pid);
 
         JsonObject activity = new JsonObject();
 
-        // Set the name
         if (isNotNullOrEmpty(name))
             activity.addProperty("name", name);
 
-        // Display Type
         activity.addProperty("status_display_type", statusDisplayType.getId());
 
-        // Check if the STATE value is set
         if (isNotNullOrEmpty(state)) {
             activity.addProperty("state", state);
 
@@ -114,7 +108,6 @@ public class DiscordRichPresence {
                 activity.addProperty("state_url", stateUrl);
         }
 
-        // Check if the DETAILS value is set
         if (isNotNullOrEmpty(details)) {
             activity.addProperty("details", details);
 
@@ -122,7 +115,6 @@ public class DiscordRichPresence {
                 activity.addProperty("details_url", detailsUrl);
         }
 
-        // Check if the timestamps are set and need to be sent
         if (this.startTimestamp != 0 || this.endTimestamp != 0) {
             JsonObject timestamps = new JsonObject();
 
@@ -135,7 +127,6 @@ public class DiscordRichPresence {
             activity.add("timestamps", timestamps);
         }
 
-        // Check if the image keys/texts are set
         if (isNotNullOrEmpty(largeImageKey) || isNotNullOrEmpty(largeImageText) || isNotNullOrEmpty(smallImageKey) || isNotNullOrEmpty(smallImageText)) {
             JsonObject assets = new JsonObject();
 
@@ -162,7 +153,6 @@ public class DiscordRichPresence {
             activity.add("assets", assets);
         }
 
-        // Check if the party information is set
         if (isNotNullOrEmpty(partyId) || this.partySize > 0 || this.partyMax > 0) {
             JsonObject party = new JsonObject();
 
@@ -183,7 +173,6 @@ public class DiscordRichPresence {
             activity.add("party", party);
         }
 
-        // Check if the join/spectate secrets are set
         if (isNotNullOrEmpty(matchSecret) || isNotNullOrEmpty(spectateSecret) || isNotNullOrEmpty(joinSecret)) {
             JsonObject secrets = new JsonObject();
 
@@ -199,7 +188,6 @@ public class DiscordRichPresence {
             activity.add("secrets", secrets);
         }
 
-        // Parse and add the buttons
         if (!buttons.isEmpty()) {
             List<RPCButton> finalButtons = buttons.stream().filter(RPCButton::isValid).collect(Collectors.toList());
             if (finalButtons.size() > 2)
@@ -211,7 +199,6 @@ public class DiscordRichPresence {
             activity.add("buttons", btns);
         }
 
-        // Put it all together
         activity.addProperty("type", activityType.ordinal());
         activity.addProperty("instance", instance);
         args.add("activity", activity);
@@ -256,7 +243,6 @@ public class DiscordRichPresence {
         public JsonObject toJson() {
             JsonObject button = new JsonObject();
 
-            // Button labels have a length limit, so we apply it here
             button.addProperty("label", label.substring(0, Math.min(label.length(), 32)));
             button.addProperty("url", url);
             return button;

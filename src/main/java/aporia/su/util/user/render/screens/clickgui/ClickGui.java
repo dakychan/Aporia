@@ -396,8 +396,6 @@ public class ClickGui extends Screen implements IMinecraft {
                 }
             }
         }
-
-        // Soon button (browser)
         if (click.button() == 0 && mx >= bgX + 12.5f && mx <= bgX + 82.5f && my >= bgY + 220.5f && my <= bgY + 237.5f) {
             mc.setScreen(new BrowserScreen("https://google.com"));
             return true;

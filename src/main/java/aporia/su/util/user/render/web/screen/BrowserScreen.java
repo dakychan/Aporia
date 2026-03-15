@@ -1,12 +1,16 @@
 package aporia.su.util.user.render.web.screen;
 
+import aporia.cc.OsManager;
 import aporia.su.util.user.render.web.WebRendererConfig;
 import aporia.su.util.user.render.web.WebRendererInstance;
 import aporia.su.util.user.render.web.WebRendererManager;
-import aporia.su.Initialization;
+import aporia.su.util.files.FilesManager;
 import aporia.su.util.interfaces.IMinecraft;
 import aporia.su.util.user.render.Render2D;
-import aporia.su.util.user.render.font.FontRenderer;
+import aporia.su.util.user.render.font.Fonts;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -15,220 +19,254 @@ import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
+import java.awt.Color;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Fullscreen in-game browser with a floating, draggable tab bar.
+ * Tabs are persisted to {@code browser.apr} on close.
+ */
 public class BrowserScreen extends Screen implements IMinecraft {
 
-    private static final int TAB_BAR_H = 22;
-    private static final int TAB_W     = 140;
-    private static final int TAB_H     = 18;
-    private static final int CLOSE_W   = 14;
-    private static final int BAR_COLOR = 0xFF141418;
-    private static final int TAB_ACTIVE_COLOR  = 0xFF1E1E26;
-    private static final int TAB_HOVER_COLOR   = 0xFF1A1A22;
-    private static final int TAB_NORMAL_COLOR  = 0xFF111116;
-    private static final int ACCENT_COLOR      = 0xFF6060FF;
-    private static final int TEXT_COLOR        = 0xFFCCCCCC;
-    private static final int TEXT_DIM_COLOR    = 0xFF888888;
+    private static final int   BAR_H     = 26;
+    private static final int   TAB_H     = 20;
+    private static final int   TAB_MAX_W = 160;
+    private static final int   TAB_MIN_W = 60;
+    private static final int   PLUS_W    = 22;
+    private static final int   CLOSE_W   = 12;
+    private static final float FONT_SIZE = 6.5f;
+
+    private static final int C_BAR        = new Color(12, 12, 16, 230).getRGB();
+    private static final int C_TAB_ACTIVE = new Color(30, 30, 44, 255).getRGB();
+    private static final int C_TAB_HOVER  = new Color(22, 22, 32, 255).getRGB();
+    private static final int C_TAB_IDLE   = new Color(16, 16, 24, 200).getRGB();
+    private static final int C_ACCENT     = new Color(90, 90, 220, 255).getRGB();
+    private static final int C_TEXT       = new Color(215, 215, 225, 255).getRGB();
+    private static final int C_TEXT_DIM   = new Color(110, 110, 130, 255).getRGB();
+    private static final int C_CLOSE_HOV  = new Color(220, 60, 60, 255).getRGB();
+    private static final int C_OUTLINE    = new Color(40, 40, 58, 180).getRGB();
+
+    private static final Path   CONFIG_DIR  = OsManager.mainDirectory.resolve("configs");
+    private static final String CONFIG_NAME = "browser";
 
     private final WebRendererManager rendererManager = WebRendererManager.INSTANCE;
-
-    // tab state
     private final List<Tab> tabs = new ArrayList<>();
     private int activeTab = 0;
 
-    // url bar editing
-    private boolean editingUrl = false;
-    private String urlEditBuffer = "";
-    private int urlCursor = 0;
+    private float barX, barY;
+    private boolean draggingBar = false;
+    private double dragStartMx, dragStartMy;
+    private float  dragStartBx, dragStartBy;
 
-    // hover tracking
-    private double mouseX, mouseY;
+    private boolean editingUrl = false;
+    private String  urlBuf     = "";
+    private int     urlCursor  = 0;
+
+    private double mx, my;
 
     public BrowserScreen(String url) {
         super(Text.literal("Browser"));
-        tabs.add(new Tab(url));
+        loadState();
+        if (tabs.isEmpty()) tabs.add(new Tab(url));
     }
-
-    // ── lifecycle ────────────────────────────────────────────────────────────
 
     @Override
     protected void init() {
         rendererManager.initialize();
-        for (Tab tab : tabs) {
-            if (tab.instance == null) {
-                tab.instance = rendererManager.create(tab.config);
-                if (tab.instance != null) {
-                    tab.instance.resize(width, height - TAB_BAR_H);
-                    tab.instance.setFocused(true);
-                }
-            }
+        if (barX == 0 && barY == 0) {
+            barX = (width - Math.min(TAB_MAX_W * tabs.size() + PLUS_W + 10, width * 0.7f)) / 2f;
+            barY = 2;
         }
+        for (Tab tab : tabs) tab.ensureInstance(rendererManager, width, height);
+        focusActive();
     }
 
     @Override
     public void removed() {
         super.removed();
+        saveState();
         for (Tab tab : tabs) tab.close();
         tabs.clear();
         rendererManager.shutdown();
     }
 
+    @Override public boolean shouldPause() { return false; }
+
+
+    /** Total height occupied by the floating bar + url row below it. */
+    private static final int URL_H    = 14;
+    private static final int URL_PAD  = 3;
+
     @Override
-    public boolean shouldPause() { return false; }
+    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        mx = mouseX; my = mouseY;
 
-    // ── render ───────────────────────────────────────────────────────────────
+        for (Tab tab : tabs) tab.updateAnim(delta);
 
-    @Override
-    public void render(DrawContext ctx, int mx, int my, float delta) {
-        mouseX = mx; mouseY = my;
-
-        // browser content
         Tab active = activeTab();
         if (active != null && active.instance != null) {
-            active.instance.render(ctx, 0, TAB_BAR_H, width, height - TAB_BAR_H, delta);
+            active.instance.render(ctx, 0, 0, width, height, delta);
         } else {
-            ctx.fill(0, TAB_BAR_H, width, height, 0xFF101018);
+            Render2D.rect(0, 0, width, height, new Color(10, 10, 14, 255).getRGB());
             if (!rendererManager.hasRealEngine()) {
-                ctx.drawTextWithShadow(textRenderer,
-                    Text.literal("MCEF not installed"), 12, TAB_BAR_H + 12, 0xFFD0D0D0);
+                Fonts.REGULAR.draw("MCEF not installed", 12, 12, FONT_SIZE, C_TEXT_DIM);
             }
         }
 
-        // tab bar background
-        Render2D.rect(0, 0, width, TAB_BAR_H, BAR_COLOR);
+        renderTabBar();
+        renderUrlBar();
+    }
 
-        // tabs
-        FontRenderer font = getFont();
-        int tabX = 2;
-        for (int i = 0; i < tabs.size(); i++) {
+    private void renderTabBar() {
+        int tabCount = tabs.size();
+        float tabW   = tabWidth(tabCount);
+        float totalW = tabBarWidth(tabCount, tabW);
+
+        Render2D.rect(barX, barY, totalW, BAR_H, C_BAR, 6f);
+        Render2D.outline(barX, barY, totalW, BAR_H, 0.5f, C_OUTLINE, 6f);
+
+        float tx = barX + 2;
+        for (int i = 0; i < tabCount; i++) {
             Tab tab = tabs.get(i);
             boolean isActive = (i == activeTab);
-            boolean hovered = mx >= tabX && mx < tabX + TAB_W && my >= 2 && my < 2 + TAB_H;
+            boolean hovered  = isTabHovered(tx, tabW);
+            float   anim     = tab.animValue;
 
-            int bg = isActive ? TAB_ACTIVE_COLOR : (hovered ? TAB_HOVER_COLOR : TAB_NORMAL_COLOR);
-            Render2D.rect(tabX, 2, TAB_W, TAB_H, bg, 4f, 4f, 0f, 0f);
+            int bg = isActive ? C_TAB_ACTIVE : (hovered ? C_TAB_HOVER : C_TAB_IDLE);
+            float tabY  = barY + (BAR_H - TAB_H) / 2f;
+            float drawW = tabW * anim;
+            float drawH = TAB_H * anim;
+            float drawY = tabY + (TAB_H - drawH) / 2f;
+
+            Render2D.rect(tx, drawY, drawW, drawH, bg, 4f);
 
             if (isActive) {
-                Render2D.rect(tabX, TAB_H + 1, TAB_W, 1, ACCENT_COLOR);
+                Render2D.rect(tx + 2, barY + BAR_H - 3, (tabW - 4) * anim, 2, C_ACCENT, 1f);
             }
 
-            // title text
-            String title = tab.title.isEmpty() ? tab.config.initialUrl() : tab.title;
-            if (title.length() > 18) title = title.substring(0, 17) + "…";
-            int textColor = isActive ? TEXT_COLOR : TEXT_DIM_COLOR;
-            if (font != null) {
-                font.drawText("regular", title, tabX + 5, 2 + (TAB_H - 7) / 2f, 7f, textColor);
-            } else {
-                ctx.drawTextWithShadow(textRenderer, Text.literal(title), tabX + 5, 7, textColor);
+            if (anim > 0.4f) {
+                float cx = tx + tabW - CLOSE_W - 3;
+                float cy = barY + (BAR_H - CLOSE_W) / 2f;
+                boolean closeHov = mx >= cx && mx < cx + CLOSE_W && my >= cy && my < cy + CLOSE_W;
+                Fonts.BOLD.drawCentered("×", cx + CLOSE_W / 2f,
+                    barY + (BAR_H - Fonts.BOLD.getHeight(8f)) / 2f, 8f,
+                    closeHov ? C_CLOSE_HOV : C_TEXT_DIM);
+
+                String title = tab.displayTitle();
+                float maxTW = tabW - CLOSE_W - 10;
+                while (title.length() > 1 && Fonts.REGULAR.getWidth(title, FONT_SIZE) > maxTW)
+                    title = title.substring(0, title.length() - 1);
+                if (!tab.displayTitle().equals(title)) title += "…";
+                Fonts.REGULAR.draw(title, tx + 5,
+                    barY + (BAR_H - Fonts.REGULAR.getHeight(FONT_SIZE)) / 2f, FONT_SIZE,
+                    isActive ? C_TEXT : C_TEXT_DIM);
             }
 
-            // close button
-            int cx = tabX + TAB_W - CLOSE_W - 2;
-            boolean closeHovered = mx >= cx && mx < cx + CLOSE_W && my >= 2 && my < 2 + TAB_H;
-            int closeColor = closeHovered ? 0xFFFF5555 : TEXT_DIM_COLOR;
-            if (font != null) {
-                font.drawCenteredText("regular", "×", cx + CLOSE_W / 2f, 2 + (TAB_H - 7) / 2f, 9f, closeColor);
-            } else {
-                ctx.drawTextWithShadow(textRenderer, Text.literal("×"), cx + 3, 7, closeColor);
-            }
-
-            tabX += TAB_W + 2;
+            tx += tabW + 1;
         }
 
-        // new tab button
-        boolean newTabHovered = mx >= tabX && mx < tabX + 18 && my >= 2 && my < 2 + TAB_H;
-        Render2D.rect(tabX, 2, 18, TAB_H, newTabHovered ? TAB_HOVER_COLOR : TAB_NORMAL_COLOR, 4f);
-        if (font != null) {
-            font.drawCenteredText("regular", "+", tabX + 9, 2 + (TAB_H - 7) / 2f, 9f, TEXT_DIM_COLOR);
-        } else {
-            ctx.drawTextWithShadow(textRenderer, Text.literal("+"), tabX + 5, 7, TEXT_DIM_COLOR);
-        }
-
-        // url bar (right side)
-        renderUrlBar(ctx, mx, my, font);
+        float plusX = barX + totalW - PLUS_W - 2;
+        float plusY = barY + (BAR_H - TAB_H) / 2f;
+        boolean plusHov = mx >= plusX && mx < plusX + PLUS_W && my >= plusY && my < plusY + TAB_H;
+        Render2D.rect(plusX, plusY, PLUS_W, TAB_H, plusHov ? C_TAB_HOVER : C_TAB_IDLE, 4f);
+        Fonts.BOLD.drawCentered("+", plusX + PLUS_W / 2f,
+            barY + (BAR_H - Fonts.BOLD.getHeight(8f)) / 2f, 8f,
+            plusHov ? C_TEXT : C_TEXT_DIM);
     }
 
-    private void renderUrlBar(DrawContext ctx, int mx, int my, FontRenderer font) {
-        int urlX = (tabs.size() + 1) * (TAB_W + 2) + 6;
-        int urlW = width - urlX - 4;
-        if (urlW < 40) return;
+    /** URL bar rendered below the tab bar, centered under it. */
+    private void renderUrlBar() {
+        int tabCount = tabs.size();
+        float tabW   = tabWidth(tabCount);
+        float totalW = tabBarWidth(tabCount, tabW);
 
-        boolean hovered = mx >= urlX && mx < urlX + urlW && my >= 2 && my < 2 + TAB_H;
-        int urlBg = editingUrl ? 0xFF1E1E2E : (hovered ? 0xFF1A1A22 : 0xFF111116);
-        Render2D.rect(urlX, 2, urlW, TAB_H, urlBg, 4f);
-        if (editingUrl) {
-            Render2D.outline(urlX, 2, urlW, TAB_H, 1f, ACCENT_COLOR, 4f);
-        }
+        float urlW = Math.min(totalW, Math.max(160f, totalW * 0.7f));
+        float urlX = barX + (totalW - urlW) / 2f;
+        float urlY = barY + BAR_H + URL_PAD;
 
-        String display = editingUrl ? urlEditBuffer : currentUrl();
-        if (display.length() > 60) display = display.substring(0, 59) + "…";
-        if (font != null) {
-            font.drawText("regular", display, urlX + 6, 2 + (TAB_H - 7) / 2f, 7f,
-                editingUrl ? TEXT_COLOR : TEXT_DIM_COLOR);
-        } else {
-            ctx.drawTextWithShadow(textRenderer, Text.literal(display), urlX + 6, 7,
-                editingUrl ? TEXT_COLOR : TEXT_DIM_COLOR);
-        }
+        boolean urlHov = mx >= urlX && mx < urlX + urlW && my >= urlY && my < urlY + URL_H;
+        int urlBg = editingUrl ? new Color(18, 18, 30, 255).getRGB()
+                               : (urlHov ? C_TAB_HOVER : new Color(12, 12, 18, 210).getRGB());
+        Render2D.rect(urlX, urlY, urlW, URL_H, urlBg, 4f);
+        Render2D.outline(urlX, urlY, urlW, URL_H, 0.5f, editingUrl ? C_ACCENT : C_OUTLINE, 4f);
+
+        String display = editingUrl ? urlBuf : currentUrl();
+        while (display.length() > 1 && Fonts.REGULAR.getWidth(display, 5f) > urlW - 10)
+            display = display.substring(0, display.length() - 1);
+        Fonts.REGULAR.draw(display, urlX + 5, urlY + (URL_H - Fonts.REGULAR.getHeight(5f)) / 2f,
+            5f, editingUrl ? C_TEXT : C_TEXT_DIM);
     }
 
-    // ── mouse ────────────────────────────────────────────────────────────────
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
-        double mx = click.x(), my = click.y();
+        double cmx = click.x(), cmy = click.y();
         int btn = click.button();
 
-        if (my < TAB_BAR_H) {
-            // check close buttons
-            int tabX = 2;
-            for (int i = 0; i < tabs.size(); i++) {
-                int cx = tabX + TAB_W - CLOSE_W - 2;
-                if (btn == 0 && mx >= cx && mx < cx + CLOSE_W && my >= 2 && my < 2 + TAB_H) {
-                    closeTab(i);
-                    return true;
-                }
-                if (btn == 0 && mx >= tabX && mx < tabX + TAB_W && my >= 2 && my < 2 + TAB_H) {
-                    switchTab(i);
-                    return true;
-                }
-                tabX += TAB_W + 2;
-            }
-            // new tab button
-            if (btn == 0 && mx >= tabX && mx < tabX + 18 && my >= 2 && my < 2 + TAB_H) {
-                openNewTab("https://google.com");
-                return true;
-            }
-            // url bar
-            int urlX = (tabs.size() + 1) * (TAB_W + 2) + 6;
-            int urlW = width - urlX - 4;
-            if (btn == 0 && mx >= urlX && mx < urlX + urlW && my >= 2 && my < 2 + TAB_H) {
-                editingUrl = true;
-                urlEditBuffer = currentUrl();
-                urlCursor = urlEditBuffer.length();
-                return true;
-            }
-            editingUrl = false;
+        if (isInBar(cmx, cmy) && (btn == 2 || btn == 1)) {
+            draggingBar = true;
+            dragStartMx = cmx; dragStartMy = cmy;
+            dragStartBx = barX; dragStartBy = barY;
             return true;
         }
 
-        editingUrl = false;
-        Tab active = activeTab();
-        if (active != null && active.instance != null) {
-            active.instance.setFocused(true);
-            active.instance.mouseButton(mx, my - TAB_BAR_H, btn, true, getCurrentModifiers());
+        if (isInBar(cmx, cmy) && btn == 0) {
+            editingUrl = false;
+            int tabCount = tabs.size();
+            float tabW = tabWidth(tabCount);
+            float totalW = tabBarWidth(tabCount, tabW);
+
+            float plusX = barX + totalW - PLUS_W - 2;
+            float plusY = barY + (BAR_H - TAB_H) / 2f;
+            if (cmx >= plusX && cmx < plusX + PLUS_W && cmy >= plusY && cmy < plusY + TAB_H) {
+                openNewTab("https://google.com");
+                return true;
+            }
+
+            float tx = barX + 2;
+            for (int i = 0; i < tabCount; i++) {
+                if (cmx >= tx && cmx < tx + tabW) {
+                    float cx = tx + tabW - CLOSE_W - 3;
+                    float cy = barY + (BAR_H - CLOSE_W) / 2f;
+                    if (cmx >= cx && cmx < cx + CLOSE_W && cmy >= cy && cmy < cy + CLOSE_W) {
+                        closeTab(i); return true;
+                    }
+                    switchTab(i); return true;
+                }
+                tx += tabW + 1;
+            }
             return true;
+        }
+
+        // url bar click (below tab bar)
+        if (btn == 0 && isInUrlBar(cmx, cmy)) {
+            editingUrl = true;
+            urlBuf = currentUrl();
+            urlCursor = urlBuf.length();
+            return true;
+        }
+
+        if (!isInAnyHud(cmx, cmy)) {
+            editingUrl = false;
+            Tab active = activeTab();
+            if (active != null && active.instance != null) {
+                active.instance.setFocused(true);
+                active.instance.mouseButton(cmx, cmy, btn, true, mods());
+                return true;
+            }
         }
         return false;
     }
 
     @Override
     public boolean mouseReleased(Click click) {
-        if (click.y() >= TAB_BAR_H) {
+        draggingBar = false;
+        if (!isInAnyHud(click.x(), click.y())) {
             Tab active = activeTab();
             if (active != null && active.instance != null) {
-                active.instance.mouseButton(click.x(), click.y() - TAB_BAR_H, click.button(), false, getCurrentModifiers());
+                active.instance.mouseButton(click.x(), click.y(), click.button(), false, mods());
                 return true;
             }
         }
@@ -236,40 +274,50 @@ public class BrowserScreen extends Screen implements IMinecraft {
     }
 
     @Override
-    public void mouseMoved(double mx, double my) {
-        mouseX = mx; mouseY = my;
-        if (my >= TAB_BAR_H) {
+    public void mouseMoved(double mouseX, double mouseY) {
+        mx = mouseX; my = mouseY;
+        if (draggingBar) {
+            barX = dragStartBx + (float)(mouseX - dragStartMx);
+            barY = dragStartBy + (float)(mouseY - dragStartMy);
+            barX = Math.max(0, Math.min(barX, width - 40));
+            barY = Math.max(0, Math.min(barY, height - BAR_H));
+            return;
+        }
+        if (!isInAnyHud(mouseX, mouseY)) {
             Tab active = activeTab();
             if (active != null && active.instance != null)
-                active.instance.mouseMove(mx, my - TAB_BAR_H);
+                active.instance.mouseMove(mouseX, mouseY);
         }
     }
 
     @Override
-    public boolean mouseScrolled(double mx, double my, double h, double v) {
-        if (my >= TAB_BAR_H) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double h, double v) {
+        if (!isInAnyHud(mouseX, mouseY)) {
             Tab active = activeTab();
-            if (active != null && active.instance != null) {
-                active.instance.scroll(h, v);
-                return true;
-            }
+            if (active != null && active.instance != null) { active.instance.scroll(h, v); return true; }
         }
         return false;
     }
 
     @Override
     public boolean mouseDragged(Click click, double dx, double dy) {
-        if (click.y() >= TAB_BAR_H) {
+        if (draggingBar) {
+            barX = dragStartBx + (float)(click.x() - dragStartMx);
+            barY = dragStartBy + (float)(click.y() - dragStartMy);
+            barX = Math.max(0, Math.min(barX, width - 40));
+            barY = Math.max(0, Math.min(barY, height - BAR_H));
+            return true;
+        }
+        if (!isInAnyHud(click.x(), click.y())) {
             Tab active = activeTab();
             if (active != null && active.instance != null) {
-                active.instance.mouseMove(click.x(), click.y() - TAB_BAR_H);
+                active.instance.mouseMove(click.x(), click.y());
                 return true;
             }
         }
         return false;
     }
 
-    // ── keyboard ─────────────────────────────────────────────────────────────
 
     @Override
     public boolean keyPressed(KeyInput input) {
@@ -278,9 +326,7 @@ public class BrowserScreen extends Screen implements IMinecraft {
             if (editingUrl) { editingUrl = false; return true; }
             close(); return true;
         }
-        if (editingUrl) {
-            return handleUrlKey(key, input.modifiers());
-        }
+        if (editingUrl) return handleUrlKey(key);
         Tab active = activeTab();
         if (active != null && active.instance != null) {
             active.instance.keyEvent(key, input.scancode(), input.modifiers(), true);
@@ -305,61 +351,51 @@ public class BrowserScreen extends Screen implements IMinecraft {
     public boolean charTyped(CharInput input) {
         if (editingUrl) {
             String ch = new String(Character.toChars(input.codepoint()));
-            urlEditBuffer = urlEditBuffer.substring(0, urlCursor) + ch + urlEditBuffer.substring(urlCursor);
+            urlBuf = urlBuf.substring(0, urlCursor) + ch + urlBuf.substring(urlCursor);
             urlCursor++;
             return true;
         }
         Tab active = activeTab();
-        if (active != null && active.instance != null) {
-            active.instance.charTyped(input.codepoint());
-            return true;
-        }
+        if (active != null && active.instance != null) { active.instance.charTyped(input.codepoint()); return true; }
         return false;
     }
 
     @Override
     public void resize(int w, int h) {
         super.resize(w, h);
-        for (Tab tab : tabs) {
-            if (tab.instance != null) tab.instance.resize(w, h - TAB_BAR_H);
-        }
+        for (Tab tab : tabs) if (tab.instance != null) tab.instance.resize(w, h);
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
-
-    private boolean handleUrlKey(int key, int mods) {
+    private boolean handleUrlKey(int key) {
         if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
-            String url = urlEditBuffer.trim();
+            String url = urlBuf.trim();
             if (!url.contains("://")) url = "https://" + url;
             Tab active = activeTab();
             if (active != null) {
-                active.config = WebRendererConfig.builder().url(url).transparent(false).build();
+                active.url = url;
+                active.title = "";
                 if (active.instance != null) active.instance.loadUrl(url);
             }
             editingUrl = false;
             return true;
         }
         if (key == GLFW.GLFW_KEY_BACKSPACE && urlCursor > 0) {
-            urlEditBuffer = urlEditBuffer.substring(0, urlCursor - 1) + urlEditBuffer.substring(urlCursor);
+            urlBuf = urlBuf.substring(0, urlCursor - 1) + urlBuf.substring(urlCursor);
             urlCursor--;
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_LEFT && urlCursor > 0) { urlCursor--; return true; }
-        if (key == GLFW.GLFW_KEY_RIGHT && urlCursor < urlEditBuffer.length()) { urlCursor++; return true; }
-        if (key == GLFW.GLFW_KEY_HOME) { urlCursor = 0; return true; }
-        if (key == GLFW.GLFW_KEY_END) { urlCursor = urlEditBuffer.length(); return true; }
+        } else if (key == GLFW.GLFW_KEY_DELETE && urlCursor < urlBuf.length()) {
+            urlBuf = urlBuf.substring(0, urlCursor) + urlBuf.substring(urlCursor + 1);
+        } else if (key == GLFW.GLFW_KEY_LEFT  && urlCursor > 0) urlCursor--;
+        else if (key == GLFW.GLFW_KEY_RIGHT && urlCursor < urlBuf.length()) urlCursor++;
+        else if (key == GLFW.GLFW_KEY_HOME) urlCursor = 0;
+        else if (key == GLFW.GLFW_KEY_END)  urlCursor = urlBuf.length();
         return true;
     }
 
     private void openNewTab(String url) {
         Tab tab = new Tab(url);
-        tab.instance = rendererManager.create(tab.config);
-        if (tab.instance != null) {
-            tab.instance.resize(width, height - TAB_BAR_H);
-            tab.instance.setFocused(true);
-        }
+        tab.ensureInstance(rendererManager, width, height);
         tabs.add(tab);
-        activeTab = tabs.size() - 1;
+        switchTab(tabs.size() - 1);
     }
 
     private void closeTab(int i) {
@@ -367,15 +403,19 @@ public class BrowserScreen extends Screen implements IMinecraft {
         tabs.get(i).close();
         tabs.remove(i);
         if (activeTab >= tabs.size()) activeTab = tabs.size() - 1;
+        focusActive();
     }
 
     private void switchTab(int i) {
-        if (activeTab == i) return;
         Tab prev = activeTab();
         if (prev != null && prev.instance != null) prev.instance.setFocused(false);
         activeTab = i;
-        Tab next = activeTab();
-        if (next != null && next.instance != null) next.instance.setFocused(true);
+        focusActive();
+    }
+
+    private void focusActive() {
+        Tab t = activeTab();
+        if (t != null && t.instance != null) t.instance.setFocused(true);
     }
 
     private Tab activeTab() {
@@ -385,36 +425,129 @@ public class BrowserScreen extends Screen implements IMinecraft {
 
     private String currentUrl() {
         Tab t = activeTab();
-        return t == null ? "" : t.config.initialUrl();
+        return t == null ? "" : t.url;
     }
 
-    private FontRenderer getFont() {
-        try {
-            return Initialization.getInstance().getManager().getRenderCore().getFontRenderer();
-        } catch (Exception e) { return null; }
+    private float tabWidth(int count) {
+        float avail = Math.min(width * 0.7f, 800f) - PLUS_W - 6;
+        return Math.min(TAB_MAX_W, Math.max(TAB_MIN_W, avail / Math.max(1, count)));
     }
 
-    private int getCurrentModifiers() {
+    private float tabBarWidth(int count, float tabW) {
+        return tabW * count + count - 1 + PLUS_W + 4;
+    }
+
+    private float tabBarWidth() {
+        int count = tabs.size();
+        float tabW = tabWidth(count);
+        return tabBarWidth(count, tabW);
+    }
+
+    private boolean isTabHovered(float tx, float tabW) {
+        return mx >= tx && mx < tx + tabW && my >= barY && my < barY + BAR_H;
+    }
+
+    private boolean isInBar(double x, double y) {
+        float totalW = tabBarWidth();
+        return x >= barX && x < barX + totalW && y >= barY && y < barY + BAR_H;
+    }
+
+    private boolean isInUrlBar(double x, double y) {
+        int tabCount = tabs.size();
+        float tabW   = tabWidth(tabCount);
+        float totalW = tabBarWidth(tabCount, tabW);
+        float urlW   = Math.min(totalW, Math.max(160f, totalW * 0.7f));
+        float urlX   = barX + (totalW - urlW) / 2f;
+        float urlY   = barY + BAR_H + URL_PAD;
+        return x >= urlX && x < urlX + urlW && y >= urlY && y < urlY + URL_H;
+    }
+
+    private boolean isInAnyHud(double x, double y) {
+        return isInBar(x, y) || isInUrlBar(x, y);
+    }
+
+    private int mods() {
         int m = 0;
         long h = mc.getWindow().getHandle();
-        if (GLFW.glfwGetKey(h, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS ||
-            GLFW.glfwGetKey(h, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS) m |= 0x1;
-        if (GLFW.glfwGetKey(h, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS ||
+        if (GLFW.glfwGetKey(h, GLFW.GLFW_KEY_LEFT_SHIFT)    == GLFW.GLFW_PRESS ||
+            GLFW.glfwGetKey(h, GLFW.GLFW_KEY_RIGHT_SHIFT)   == GLFW.GLFW_PRESS) m |= 0x1;
+        if (GLFW.glfwGetKey(h, GLFW.GLFW_KEY_LEFT_CONTROL)  == GLFW.GLFW_PRESS ||
             GLFW.glfwGetKey(h, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS) m |= 0x2;
-        if (GLFW.glfwGetKey(h, GLFW.GLFW_KEY_LEFT_ALT) == GLFW.GLFW_PRESS ||
-            GLFW.glfwGetKey(h, GLFW.GLFW_KEY_RIGHT_ALT) == GLFW.GLFW_PRESS) m |= 0x4;
+        if (GLFW.glfwGetKey(h, GLFW.GLFW_KEY_LEFT_ALT)      == GLFW.GLFW_PRESS ||
+            GLFW.glfwGetKey(h, GLFW.GLFW_KEY_RIGHT_ALT)     == GLFW.GLFW_PRESS) m |= 0x4;
         return m;
     }
 
-    // ── Tab inner class ───────────────────────────────────────────────────────
 
+    private void saveState() {
+        try {
+            JsonObject root = new JsonObject();
+            root.addProperty("barX", barX);
+            root.addProperty("barY", barY);
+            root.addProperty("active", activeTab);
+            JsonArray arr = new JsonArray();
+            for (Tab t : tabs) {
+                JsonObject o = new JsonObject();
+                o.addProperty("url", t.url);
+                o.addProperty("title", t.title);
+                arr.add(o);
+            }
+            root.add("tabs", arr);
+            FilesManager.createFile(CONFIG_DIR, FilesManager.FileFormat.APR, CONFIG_NAME, root.toString(), FilesManager.CheckMode.ALWAYS);
+        } catch (Exception ignored) {}
+    }
+
+    private void loadState() {
+        try {
+            Path p = FilesManager.getFilePath(CONFIG_DIR, CONFIG_NAME, FilesManager.FileFormat.APR);
+            if (!FilesManager.exists(p)) return;
+            String raw = FilesManager.readFile(p);
+            if (raw == null || raw.isBlank()) return;
+            JsonObject root = JsonParser.parseString(raw).getAsJsonObject();
+            barX = root.has("barX") ? root.get("barX").getAsFloat() : 0;
+            barY = root.has("barY") ? root.get("barY").getAsFloat() : 0;
+            int savedActive = root.has("active") ? root.get("active").getAsInt() : 0;
+            if (root.has("tabs")) {
+                for (var el : root.getAsJsonArray("tabs")) {
+                    JsonObject o = el.getAsJsonObject();
+                    Tab t = new Tab(o.get("url").getAsString());
+                    t.title = o.has("title") ? o.get("title").getAsString() : "";
+                    tabs.add(t);
+                }
+            }
+            activeTab = Math.min(savedActive, Math.max(0, tabs.size() - 1));
+        } catch (Exception ignored) {}
+    }
+
+
+    /** Single browser tab: holds URL, display title, and the renderer instance. */
     private class Tab {
-        WebRendererConfig config;
-        WebRendererInstance instance;
+        String url;
         String title = "";
+        float  animValue = 0f;
+        WebRendererInstance instance;
 
-        Tab(String url) {
-            this.config = WebRendererConfig.builder().url(url).transparent(false).build();
+        Tab(String url) { this.url = url; }
+
+        void ensureInstance(WebRendererManager mgr, int w, int h) {
+            if (instance != null) return;
+            WebRendererConfig cfg = WebRendererConfig.builder().url(url).transparent(false).build();
+            instance = mgr.create(cfg);
+            if (instance != null) instance.resize(w, h);
+        }
+
+        /** Hostname extracted from URL, or raw URL if parsing fails. */
+        String displayTitle() {
+            if (!title.isEmpty()) return title;
+            try {
+                String u = url.contains("://") ? url : "https://" + url;
+                String host = new java.net.URI(u).getHost();
+                return host != null ? host : url;
+            } catch (Exception e) { return url; }
+        }
+
+        void updateAnim(float delta) {
+            animValue = Math.min(1f, animValue + delta * 0.15f);
         }
 
         void close() {

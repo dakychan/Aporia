@@ -2,11 +2,7 @@ package dev.firstdark.rpc.connection;
 
 import dev.firstdark.rpc.DiscordRpc;
 import dev.firstdark.rpc.connection.unix.IUnixBackend;
-//#if modernjava
-//$$ import dev.firstdark.rpc.connection.unix.NIOUnixBackend;
-//#else
 import dev.firstdark.rpc.connection.unix.JUnixBackend;
-//#endif
 import dev.firstdark.rpc.exceptions.NoDiscordClientException;
 import java.io.File;
 import java.io.FileWriter;
@@ -21,7 +17,6 @@ import java.nio.file.Paths;
  */
 class UnixConnection extends BaseConnection {
 
-    // Linux/Mac uses sockets to communicate with Discord
     private IUnixBackend unixBackend;
 
     /**
@@ -31,11 +26,7 @@ class UnixConnection extends BaseConnection {
      */
     UnixConnection(DiscordRpc rpc) {
         super(rpc);
-        //#if modernjava
-        //$$ this.unixBackend = new NIOUnixBackend();
-        //#else
         this.unixBackend = new JUnixBackend();
-        //#endif
     }
 
     /**
@@ -149,13 +140,8 @@ class UnixConnection extends BaseConnection {
         try {
             long available = this.unixBackend.getAvailable();
 
-            //#if modernjava
-            //$$ if (available == 0)
-            //$$       return false;
-            //#else
             if (available < length)
                 return false;
-            //#endif
 
             byte[] buf = new byte[length];
             int read = this.unixBackend.read(buf);

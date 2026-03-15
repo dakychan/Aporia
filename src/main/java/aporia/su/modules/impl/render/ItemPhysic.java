@@ -19,7 +19,6 @@ public class ItemPhysic extends ModuleStructure {
 
     public ItemPhysic() {
         super("ItemPhysic", "Item Physic", ModuleCategory.RENDER);
-//        setup(mode);
     }
 
     @EventHandler

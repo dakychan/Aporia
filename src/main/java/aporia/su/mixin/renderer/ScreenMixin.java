@@ -1,5 +1,6 @@
 package aporia.su.mixin.renderer;
 
+import aporia.su.util.user.render.web.screen.BrowserScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -10,7 +11,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import aporia.su.util.user.chat.command.CommandManager;
 import aporia.su.util.user.render.screens.clickgui.ClickGui;
-import aporia.su.util.user.render.web.screen.BrowserScreen;
 
 @Mixin(Screen.class)
 public class ScreenMixin {
