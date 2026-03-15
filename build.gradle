@@ -164,8 +164,46 @@ tasks.register('copyToBeta', Copy) {
     }
 }
 
+tasks.register('buildToReadme') {
+    group = 'build'
+    description = 'Write build date to README.md after the closing </div> on line 15'
+    dependsOn 'copyToBeta'
+
+    doLast {
+        def readme = file("${project.rootDir}/README.md")
+        def buildDate = new Date().format("dd.MM.yyyy HH:mm:ss", TimeZone.getTimeZone("UTC"))
+        def buildLine = "\n> 🕐 Last build: **${buildDate} UTC** — v${project.version}\n"
+
+        def lines = readme.readLines('UTF-8')
+        def insertIndex = -1
+        for (int i = 0; i < lines.size(); i++) {
+            if (lines[i].trim() == '</div>') {
+                insertIndex = i + 1
+                break
+            }
+        }
+
+        if (insertIndex == -1) {
+            println "WARNING: </div> not found in README.md, skipping buildToReadme"
+            return
+        }
+
+        // Remove previous build date line if present
+        if (insertIndex < lines.size() && lines[insertIndex].startsWith('> 🕐 Last build:')) {
+            lines.remove(insertIndex)
+            if (insertIndex < lines.size() && lines[insertIndex].trim().isEmpty()) {
+                lines.remove(insertIndex)
+            }
+        }
+
+        lines.add(insertIndex, buildLine)
+        readme.write(lines.join('\n') + '\n', 'UTF-8')
+        println "README.md updated with build date: ${buildDate}"
+    }
+}
+
 tasks.named('build') {
-    finalizedBy 'copyToBeta'
+    finalizedBy 'buildToReadme'
 }
 
 publishing {
