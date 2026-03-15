@@ -38,7 +38,7 @@ public class BackgroundRenderer {
         Render2D.blur(bgX + 12.5f, bgY + 220.5f, 70, 17, 4, 5, new Color(25, 25, 25, blurAlpha).getRGB());
 
         float textSize = 6f;
-        String soonText = "Soon...";
+        String soonText = "Browser";
         float textWidth = Fonts.BOLD.getWidth(soonText, textSize);
         float textHeight = Fonts.BOLD.getHeight(textSize);
         float centerX = bgX + 12.5f + (70 - textWidth) / 2f;

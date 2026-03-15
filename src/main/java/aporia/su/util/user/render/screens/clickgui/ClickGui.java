@@ -27,6 +27,7 @@ import aporia.su.util.user.render.Render2D;
 import aporia.su.util.user.render.shader.Scissor;
 import aporia.su.util.user.render.gif.GifRender;
 
+import aporia.su.util.user.render.web.screen.BrowserScreen;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -394,6 +395,12 @@ public class ClickGui extends Screen implements IMinecraft {
                     if (c.getSetting().isVisible() && c.mouseClicked(mx, my, click.button())) return true;
                 }
             }
+        }
+
+        // Soon button (browser)
+        if (click.button() == 0 && mx >= bgX + 12.5f && mx <= bgX + 82.5f && my >= bgY + 220.5f && my <= bgY + 237.5f) {
+            mc.setScreen(new BrowserScreen("https://google.com"));
+            return true;
         }
 
         return super.mouseClicked(click, doubled);

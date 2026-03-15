@@ -10,13 +10,14 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import aporia.su.util.user.chat.command.CommandManager;
 import aporia.su.util.user.render.screens.clickgui.ClickGui;
+import aporia.su.util.user.render.web.screen.BrowserScreen;
 
 @Mixin(Screen.class)
 public class ScreenMixin {
 
     @Inject(method = "renderBackground", at = @At("HEAD"), cancellable = true)
     private void disableBackgroundBlurAndDimming(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        if ((Object) this instanceof ClickGui) {
+        if ((Object) this instanceof ClickGui || (Object) this instanceof BrowserScreen) {
             ci.cancel();
         }
     }

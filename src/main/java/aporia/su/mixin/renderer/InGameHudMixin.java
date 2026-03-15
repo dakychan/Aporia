@@ -26,6 +26,7 @@ import aporia.su.modules.impl.render.Hud;
 import aporia.su.modules.impl.render.NoRender;
 import aporia.su.util.user.render.screens.clickgui.ClickGui;
 import aporia.su.util.user.render.Render2D;
+import aporia.su.util.user.render.web.screen.BrowserScreen;
 
 @Mixin(InGameHud.class)
 public abstract class InGameHudMixin implements IMinecraft {
@@ -85,6 +86,13 @@ public abstract class InGameHudMixin implements IMinecraft {
         }
     }
 
+    @Inject(method = "render", at = @At("HEAD"), cancellable = true)
+    public void onRenderHudHead(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
+        if (client.currentScreen instanceof BrowserScreen) {
+            ci.cancel();
+        }
+    }
+
     @Inject(method = "render", at = @At("TAIL"))
     public void onRenderCustomHud(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
         /**
@@ -128,6 +136,7 @@ public abstract class InGameHudMixin implements IMinecraft {
     private boolean shouldRenderHud(Screen screen) {
         if (screen == null) return true;
         if (screen instanceof ClickGui) return false;
+        if (screen instanceof BrowserScreen) return false;
         if (screen instanceof ChatScreen) return false;
         if (isLoadingScreen(screen)) return false;
         return true;

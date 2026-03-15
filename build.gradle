@@ -27,6 +27,10 @@ repositories {
         url = "https://ferra13671.github.io/maven/"
     }
     maven {
+        name = "keksuccino-maven"
+        url = "https://keksuccino.github.io/maven/"
+    }
+    maven {
         url "https://maven.firstdark.dev/releases"
     }
     maven {
@@ -52,11 +56,19 @@ dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.42'
     annotationProcessor 'org.projectlombok:lombok:1.18.42'
     modCompileOnly 'de.maxhenkel.voicechat:voicechat-api:2.6.0'
+    modImplementation "de.keksuccino:mcef-fabric:2.2.0-1.21.11"
     implementation 'ai.catboost:catboost-common:1.2.10'
     implementation "com.google.code.gson:gson:2.8.9"
     implementation "dev.firstdark.discordrpc:discord-rpc:1.0.4"
     shadow("com.kohlschutter.junixsocket:junixsocket-common:${project.property('junix')}")
     shadow("com.kohlschutter.junixsocket:junixsocket-native-common:${project.property('junix')}")
+    implementation 'net.java.dev.jna:jna:5.15.0'
+    compileOnly "io.netty:netty-all:4.1.97.Final"
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+    testImplementation 'org.mockito:mockito-core:5.5.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.5.0'
+    modImplementation "de.keksuccino:mcef-fabric:2.2.0-1.21.11"
 }
 
 processResources {
@@ -76,6 +88,11 @@ processResources {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release.set(targetJavaVersion)
+}
+
+shadowJar {
+    configurations = [project.configurations.shadow]
+    mergeServiceFiles()
 }
 
 tasks.register('obfuscateRemappedJar') {
