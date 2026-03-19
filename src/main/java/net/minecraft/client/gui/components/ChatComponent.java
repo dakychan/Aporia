@@ -204,6 +204,9 @@ public class ChatComponent {
         this.messageDeletionQueue.clear();
         this.trimmedMessages.clear();
         this.allMessages.clear();
+        so.aporia.render.ui.chat.AporiaChatScreen.WinMgr.I.wins.forEach(
+            w -> w.clear()
+        );
         if (p_93796_) {
             this.recentChat.clear();
             this.recentChat.addAll(this.minecraft.commandHistory().history());
@@ -219,6 +222,7 @@ public class ChatComponent {
         this.logChatMessage(guimessage);
         this.addMessageToDisplayQueue(guimessage);
         this.addMessageToQueue(guimessage);
+        so.aporia.render.ui.chat.AporiaChatScreen.WinMgr.I.route(guimessage, this.minecraft.font);
     }
 
     private void logChatMessage(GuiMessage p_328461_) {
@@ -308,6 +312,7 @@ public class ChatComponent {
         for (GuiMessage guimessage : Lists.reverse(this.allMessages)) {
             this.addMessageToDisplayQueue(guimessage);
         }
+        so.aporia.render.ui.chat.AporiaChatScreen.WinMgr.I.rebuild(this, this.minecraft.font);
     }
 
     public ArrayListDeque<String> getRecentChat() {
