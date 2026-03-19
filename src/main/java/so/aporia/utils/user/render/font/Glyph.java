@@ -1,4 +1,4 @@
-package so.aporia.render.font;
+package so.aporia.utils.user.render.font;
 
 /** Represents a single glyph entry from an MSDF font atlas. */
 public class Glyph {

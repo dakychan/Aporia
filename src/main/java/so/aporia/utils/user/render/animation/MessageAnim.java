@@ -1,4 +1,4 @@
-package so.aporia.render.animation;
+package so.aporia.utils.user.render.animation;
 
 /**
  * Per-message physics animation: alpha fade + horizontal slide-in.

@@ -1,4 +1,4 @@
-package so.aporia.render.ui.chat;
+package so.aporia.utils.user.render.ui.chat;
 
 import net.minecraft.client.GuiMessage;
 import net.minecraft.client.gui.GuiGraphics;
@@ -12,10 +12,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import so.aporia.render.animation.MessageAnim;
-import so.aporia.render.color.ColorUtil;
-import so.aporia.render.core.AporiaRenderer;
 import so.aporia.utils.KeyboardLayout;
+import so.aporia.utils.user.render.animation.MessageAnim;
+import so.aporia.utils.user.render.color.ColorUtil;
+import so.aporia.utils.user.render.core.AporiaRenderer;
 import so.aporia.utils.events.EventBus;
 import so.aporia.utils.events.impl.KeyInputEvent;
 import so.aporia.utils.events.impl.MouseClickEvent;
@@ -160,7 +160,7 @@ public class AporiaChatScreen extends ChatScreen {
 
         private static boolean matchesKw(String text, String kw) {
             if (kw.isEmpty()) return false;
-            String[] v = so.aporia.utils.KeyboardLayout.both(kw.toLowerCase());
+            String[] v = KeyboardLayout.both(kw.toLowerCase());
             return text.contains(v[0]) || text.contains(v[1]);
         }
 
@@ -695,10 +695,13 @@ public class AporiaChatScreen extends ChatScreen {
     @Override
     public void handleChatInput(String msg, boolean addToHistory) {
         WinCfg c = cfg();
-        /* Prepend prefix and append suffix if set */
-        if (!c.msgPrefix.isEmpty()) msg = c.msgPrefix + msg;
-        if (!c.msgSuffix.isEmpty()) msg = msg + c.msgSuffix;
-        super.handleChatInput(msg, addToHistory);
+        /* Always save raw text to history before decorating */
+        if (addToHistory) this.minecraft.gui.getChat().addRecentChat(msg);
+        /* Prepend prefix and append suffix if set — always separated by a space */
+        if (!c.msgPrefix.isEmpty()) msg = c.msgPrefix + " " + msg;
+        if (!c.msgSuffix.isEmpty()) msg = msg + " " + c.msgSuffix;
+        /* Pass false — history already handled above */
+        super.handleChatInput(msg, false);
     }
 
     /* ============================================================ */

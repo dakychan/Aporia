@@ -1,4 +1,4 @@
-package so.aporia.render.core;
+package so.aporia.utils.user.render.core;
 
 import com.mojang.blaze3d.ProjectionType;
 import com.mojang.blaze3d.buffers.GpuBuffer;
@@ -12,7 +12,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
 import net.minecraft.resources.Identifier;
-import so.aporia.render.font.Fonts;
+import so.aporia.utils.user.render.font.Fonts;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -76,7 +76,7 @@ public class AporiaRenderer {
     /** Filled circle */
     public void drawCircle(float cx, float cy, float radius, int color) {
         float x = cx - radius, y = cy - radius, d = radius * 2;
-        drawQuadTriangles(x, y, d, d, color, MODE_CIRCLE, x, y, d, d, radius);
+        drawShape(x, y, d, d, color, MODE_CIRCLE, x, y, d, d, radius, 0, 0f, 0f);
     }
 
     /** Filled triangle with 3 explicit vertices */
@@ -91,21 +91,40 @@ public class AporiaRenderer {
     /** Filled rectangle, optionally rounded */
     public void drawRect(float x, float y, float w, float h, float radius, int color) {
         int mode = radius > 0 ? MODE_ROUNDED_RECT : MODE_FILL;
-        drawQuadTriangles(x, y, w, h, color, mode, x, y, w, h, radius);
+        drawShape(x, y, w, h, color, mode, x, y, w, h, radius, 0, 0f, 0f);
+    }
+
+    /**
+     * Rounded rectangle stroke.
+     * {@code borderMode} — 1=full outline, 2=corners-only.
+     * {@code thickness}  — stroke width in pixels.
+     * {@code fadeCorner} — 0..1, how much straight edges fade (only for mode 2).
+     */
+    public void drawStroke(float x, float y, float w, float h, float radius,
+                           float thickness, int borderMode, float fadeCorner, int color) {
+        drawShape(x, y, w, h, color, MODE_ROUNDED_RECT, x, y, w, h, radius,
+                  borderMode, thickness, fadeCorner);
     }
 
     /** Internal helpers. */
 
-    private void drawQuadTriangles(float x, float y, float w, float h, int color,
-                                   int mode, float bx, float by, float bw, float bh, float radius) {
+    private void drawShape(float x, float y, float w, float h, int color,
+                           int mode, float bx, float by, float bw, float bh,
+                           float radius, int borderMode, float thickness, float fadeCorner) {
         draw(new float[][]{
             {x,   y+h}, {x+w, y+h}, {x+w, y},
             {x,   y+h}, {x+w, y  }, {x,   y}
-        }, color, mode, bx, by, bw, bh, radius);
+        }, color, mode, bx, by, bw, bh, radius, borderMode, thickness, fadeCorner);
     }
 
     private void draw(float[][] verts, int color, int mode,
                       float bx, float by, float bw, float bh, float radius) {
+        draw(verts, color, mode, bx, by, bw, bh, radius, 0, 0f, 0f);
+    }
+
+    private void draw(float[][] verts, int color, int mode,
+                      float bx, float by, float bw, float bh, float radius,
+                      int borderMode, float thickness, float fadeCorner) {
         Minecraft mc = Minecraft.getInstance();
         var window    = mc.getWindow();
         var colorView = mc.getMainRenderTarget().getColorTextureView();
@@ -135,11 +154,12 @@ public class AporiaRenderer {
             mesh.vertexBuffer()
         );
 
-        /* ShapeData UBO layout: bounds(4 floats) + params(4 floats) = 32 bytes. */
-        var shapeBuf = device.createBuffer(() -> "aporia:shape", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 32L);
-        var bb = ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder());
-        bb.putFloat(bx); bb.putFloat(by); bb.putFloat(bw); bb.putFloat(bh); // bounds
-        bb.putFloat(radius); bb.putFloat(1.0f); bb.putFloat(mode); bb.putFloat(0f); // params
+        /* ShapeData UBO layout: bounds(4) + params(4) + params2(4) = 48 bytes */
+        var shapeBuf = device.createBuffer(() -> "aporia:shape", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 48L);
+        var bb = ByteBuffer.allocateDirect(48).order(ByteOrder.nativeOrder());
+        bb.putFloat(bx); bb.putFloat(by); bb.putFloat(bw); bb.putFloat(bh);       /* bounds  */
+        bb.putFloat(radius); bb.putFloat(1.0f); bb.putFloat(mode); bb.putFloat((float) borderMode); /* params  */
+        bb.putFloat(thickness); bb.putFloat(fadeCorner); bb.putFloat(0f); bb.putFloat(0f);           /* params2 */
         bb.flip();
         encoder.writeToBuffer(shapeBuf.slice(), bb);
 
@@ -164,7 +184,7 @@ public class AporiaRenderer {
     public void onRenderHud(Minecraft mc) {
     }
 
-    /** Draws text via the shared {@link so.aporia.render.font.FontRenderer}. */
+    /** Draws text via the shared {@link so.aporia.utils.user.render.font.FontRenderer}. */
     public void drawText(String font, String text, float x, float y, float size, int color) {
         so.aporia.Aporia.FONTS.drawText(font, text, x, y, size, color);
     }

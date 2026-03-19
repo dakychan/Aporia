@@ -1,4 +1,4 @@
-package so.aporia.render.font;
+package so.aporia.utils.user.render.font;
 
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;

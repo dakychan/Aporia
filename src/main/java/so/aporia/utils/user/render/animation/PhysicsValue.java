@@ -1,4 +1,4 @@
-package so.aporia.render.animation;
+package so.aporia.utils.user.render.animation;
 
 /**
  * A single animated float value driven by configurable physics.

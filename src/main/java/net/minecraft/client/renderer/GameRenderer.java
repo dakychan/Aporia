@@ -7,7 +7,6 @@ import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.resource.CrossFrameResourcePool;
 import com.mojang.blaze3d.shaders.ShaderSource;
-import com.mojang.blaze3d.shaders.ShaderType;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -46,7 +45,6 @@ import net.minecraft.client.gui.render.pip.GuiSignRenderer;
 import net.minecraft.client.gui.render.pip.GuiSkinRenderer;
 import net.minecraft.client.gui.render.state.ColoredRectangleRenderState;
 import net.minecraft.client.gui.render.state.GuiRenderState;
-import net.minecraft.client.gui.render.state.GuiTextRenderState;
 import net.minecraft.client.gui.screens.debug.DebugOptionsScreen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -514,10 +512,12 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
             this.minecraft.gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
             this.guiRenderState.reset();
             if (this.minecraft.player != null) {
-                so.aporia.render.core.AporiaRenderer.INSTANCE.onRenderHud(this.minecraft);
             }
             profilerfiller.push("guiExtraction");
             GuiGraphics guigraphics = new GuiGraphics(this.minecraft, this.guiRenderState, i, j);
+            if (this.minecraft.player != null) {
+                so.aporia.Aporia.INSTANCE.render(guigraphics, p_343467_.getGameTimeDeltaTicks());
+            }
             if (flag && p_109096_ && this.minecraft.level != null) {
                 this.minecraft.gui.render(guigraphics, p_343467_);
             }
@@ -768,7 +768,7 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
             .levelRenderer
             .renderLevel(this.resourcePool, p_342230_, flag, this.mainCamera, matrix4f1, matrix4f, this.getProjectionMatrixForCulling(f1), gpubufferslice, vector4f, !flag1);
         if (this.minecraft.player != null) {
-            so.aporia.render.core.AporiaRenderer.INSTANCE.onRenderWorld(this.minecraft);
+            so.aporia.utils.user.render.core.AporiaRenderer.INSTANCE.onRenderWorld(this.minecraft);
         }
         profilerfiller.popPush("hand");
         boolean flag2 = this.minecraft.getCameraEntity() instanceof LivingEntity && ((LivingEntity)this.minecraft.getCameraEntity()).isSleeping();

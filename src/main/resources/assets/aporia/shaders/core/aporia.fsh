@@ -1,8 +1,9 @@
 #version 330
 
 layout(std140) uniform ShapeData {
-    vec4 bounds;
-    vec4 params;
+    vec4 bounds;   /* x, y, w, h */
+    vec4 params;   /* radius, smoothing, mode, borderMode */
+    vec4 params2;  /* thickness, fadeAtCorners, unused, unused */
 };
 
 in vec2 uv;
@@ -21,21 +22,49 @@ float roundedBoxSDF(vec2 p, vec2 center, vec2 halfSize, float r) {
 }
 
 void main() {
-    int mode = int(params.z);
-    float radius = params.x;
-    float smoothing = max(params.y, 0.5);
-    float alpha = vertColor.a;
+    int  mode        = int(params.z);
+    int  borderMode  = int(params.w);  /* 0=fill, 1=full stroke, 2=corners-only */
+    float radius     = params.x;
+    float smoothing  = max(params.y, 0.5);
+    float thickness  = params2.x;      /* stroke thickness in px */
+    float fadeCorner = params2.y;      /* 0..1 — how much alpha fades toward corners */
+    float alpha      = vertColor.a;
 
     if (mode == 1) {
-        vec2 center = bounds.xy + bounds.zw * 0.5;
-        float r = bounds.z * 0.5;
-        float d = circleSDF(fragPos, center, r);
+        /* circle */
+        vec2  center = bounds.xy + bounds.zw * 0.5;
+        float r      = bounds.z * 0.5;
+        float d      = circleSDF(fragPos, center, r);
         alpha *= 1.0 - smoothstep(-smoothing, smoothing, d);
     } else if (mode == 2) {
-        vec2 center = bounds.xy + bounds.zw * 0.5;
-        vec2 halfSize = bounds.zw * 0.5;
-        float d = roundedBoxSDF(fragPos, center, halfSize, radius);
-        alpha *= 1.0 - smoothstep(-smoothing, smoothing, d);
+        vec2  center   = bounds.xy + bounds.zw * 0.5;
+        vec2  halfSize = bounds.zw * 0.5;
+        float d        = roundedBoxSDF(fragPos, center, halfSize, radius);
+
+        if (borderMode == 0) {
+            /* normal fill */
+            alpha *= 1.0 - smoothstep(-smoothing, smoothing, d);
+        } else {
+            /* stroke = ring between outer and inner SDF */
+            float outer = 1.0 - smoothstep(-smoothing, smoothing, d);
+            float inner = 1.0 - smoothstep(-smoothing, smoothing, d + thickness);
+            float stroke = outer - inner;
+
+            if (borderMode == 2) {
+                /* corners-only: fade out the straight edges */
+                /* measure how close we are to a corner arc vs a straight edge */
+                vec2 lp = abs(fragPos - center);
+                /* corner region: both axes are within radius of the corner */
+                vec2 cornerDist = lp - (halfSize - radius);
+                float inCorner = smoothstep(0.0, radius, max(cornerDist.x, 0.0))
+                               * smoothstep(0.0, radius, max(cornerDist.y, 0.0));
+                /* also fade straight edges based on fadeCorner param */
+                float edgeFade = mix(1.0 - fadeCorner, 1.0, inCorner);
+                stroke *= edgeFade;
+            }
+
+            alpha *= stroke;
+        }
     }
 
     fragColor = vec4(vertColor.rgb, alpha);

@@ -1,4 +1,4 @@
-package so.aporia.render.color;
+package so.aporia.utils.user.render.color;
 
 /**
  * Central color utility for Aporia.

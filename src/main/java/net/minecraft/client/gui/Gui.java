@@ -2,7 +2,7 @@ package net.minecraft.client.gui;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
-import com.mojang.blaze3d.platform.Window;
+
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Map;
@@ -382,7 +382,7 @@ public class Gui {
 
     private void renderChat(GuiGraphics p_329202_, DeltaTracker p_342328_) {
         if (!this.chat.isChatFocused()) {
-            so.aporia.render.ui.chat.HudChatRenderer.render(p_329202_, this.getFont(), this.chat, this.tickCount);
+            so.aporia.utils.user.render.ui.chat.HudChatRenderer.render(p_329202_, this.getFont(), this.chat, this.tickCount);
         }
     }
 

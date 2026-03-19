@@ -1,4 +1,4 @@
-package so.aporia.render.animation;
+package so.aporia.utils.user.render.animation;
 
 /**
  * Real-time spring physics simulator.

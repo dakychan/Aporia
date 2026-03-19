@@ -1,4 +1,4 @@
-package so.aporia.render.animation;
+package so.aporia.utils.user.render.animation;
 
 import java.util.function.Function;
 

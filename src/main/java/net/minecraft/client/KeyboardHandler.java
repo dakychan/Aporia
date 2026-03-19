@@ -420,6 +420,16 @@ public class KeyboardHandler {
     private void keyPress(long p_90894_, @KeyEvent.Action int p_90895_, KeyEvent p_423534_) {
         Window window = this.minecraft.getWindow();
         if (p_90894_ == window.handle()) {
+            so.aporia.utils.events.EventBus.INSTANCE.post(
+                new so.aporia.utils.events.impl.KeyInputEvent(
+                    p_423534_.key(), p_423534_.scancode(), p_423534_.modifiers(),
+                    p_90895_ == 0
+                        ? so.aporia.utils.events.impl.KeyInputEvent.Action.RELEASE
+                        : p_90895_ == 2
+                            ? so.aporia.utils.events.impl.KeyInputEvent.Action.REPEAT
+                            : so.aporia.utils.events.impl.KeyInputEvent.Action.PRESS
+                )
+            );
             this.minecraft.getFramerateLimitTracker().onInputReceived();
             Options options = this.minecraft.options;
             boolean flag = options.keyDebugModifier.key.getValue() == options.keyDebugOverlay.key.getValue();

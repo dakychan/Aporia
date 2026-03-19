@@ -1,6 +1,5 @@
-package so.aporia.render.font;
+package so.aporia.utils.user.render.font;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;

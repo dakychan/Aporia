@@ -1,14 +1,13 @@
-package so.aporia.render.ui.chat;
+package so.aporia.utils.user.render.ui.chat;
 
 import net.minecraft.client.GuiMessage;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ChatComponent;
-import so.aporia.render.animation.Easing;
-import so.aporia.render.animation.MessageAnim;
-import so.aporia.render.color.ColorUtil;
-import so.aporia.render.core.AporiaRenderer;
+import so.aporia.utils.user.render.animation.Easing;
+import so.aporia.utils.user.render.animation.MessageAnim;
+import so.aporia.utils.user.render.color.ColorUtil;
+import so.aporia.utils.user.render.core.AporiaRenderer;
 
 import java.util.HashMap;
 import java.util.List;
@@ -54,13 +53,16 @@ public final class HudChatRenderer {
         anims.entrySet().removeIf(e -> e.getValue().isDead());
         if (maxAlpha < 0.01f) return;
 
-        AporiaRenderer.INSTANCE.drawRect(c.x, boxY, c.w, boxH, AporiaChatScreen.RADIUS,
+        /* Dynamic background — shrinks when fewer messages than max */
+        int actualH  = Math.min(boxH, count * AporiaChatScreen.LINE_H + AporiaChatScreen.BOX_PAD * 2);
+        int actualBoxY = boxY + boxH - actualH;
+        AporiaRenderer.INSTANCE.drawRect(c.x, actualBoxY, c.w, actualH, AporiaChatScreen.RADIUS,
             ColorUtil.rgba(0, 0, 0, (int)(150 * maxAlpha)));
 
         int textX = c.x + AporiaChatScreen.BOX_PAD;
         for (int i = 0; i < count; i++) {
             if (alphas[i] < 0.01f) continue;
-            int lineY = boxY + AporiaChatScreen.BOX_PAD + (maxL-1-i) * AporiaChatScreen.LINE_H;
+            int lineY = actualBoxY + AporiaChatScreen.BOX_PAD + (count-1-i) * AporiaChatScreen.LINE_H;
             int tx    = textX + (int) offsets[i];
             gfx.drawString(font, lines.get(i).content(), tx, lineY,
                 ColorUtil.rgba(255, 255, 255, (int)(255 * alphas[i])), false);
