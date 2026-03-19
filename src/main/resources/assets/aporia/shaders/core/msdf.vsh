@@ -1,11 +1,11 @@
 #version 150
 
 layout(std140) uniform FontData {
-    vec4 screenData;
-    vec4 outlineColor;
-    vec4 atlasData;
-    ivec4 charCount;
-    vec4 chars[1024];
+    vec4 screenData;    // xy = screen size, z = guiScale, w = outlineWidth
+    vec4 outlineColor;  // rgba
+    vec4 atlasData;     // xy = atlas size, z = distanceRange, w = fontSize
+    ivec4 charCount;    // x = number of glyphs in batch
+    vec4 chars[1024];   // 4 vec4 per glyph: posSize, uvCoords, color, rotationData
 };
 
 out vec2 texCoord;
@@ -23,27 +23,27 @@ vec2 rotate(vec2 point, vec2 pivot, float angle) {
 }
 
 void main() {
-    int charIndex = gl_VertexID / 6;
+    int charIndex   = gl_VertexID / 6;
     int vertexIndex = gl_VertexID % 6;
 
-    vec4 posSize = chars[charIndex * 4];
-    vec4 uvCoords = chars[charIndex * 4 + 1];
-    vec4 color = chars[charIndex * 4 + 2];
+    vec4 posSize      = chars[charIndex * 4];
+    vec4 uvCoords     = chars[charIndex * 4 + 1];
+    vec4 color        = chars[charIndex * 4 + 2];
     vec4 rotationData = chars[charIndex * 4 + 3];
 
     float rotation = rotationData.x;
-    vec2 pivot = rotationData.yz;
+    vec2  pivot    = rotationData.yz;
 
     vec2 positions[6] = vec2[](
-    vec2(0.0, 0.0),
-    vec2(1.0, 0.0),
-    vec2(1.0, 1.0),
-    vec2(0.0, 0.0),
-    vec2(1.0, 1.0),
-    vec2(0.0, 1.0)
+        vec2(0.0, 0.0),
+        vec2(1.0, 0.0),
+        vec2(1.0, 1.0),
+        vec2(0.0, 0.0),
+        vec2(1.0, 1.0),
+        vec2(0.0, 1.0)
     );
 
-    vec2 pos = positions[vertexIndex];
+    vec2 pos       = positions[vertexIndex];
     vec2 screenPos = posSize.xy + pos * posSize.zw;
 
     if (rotation != 0.0) {
@@ -55,14 +55,11 @@ void main() {
 
     gl_Position = vec4(ndcPos, 0.0, 1.0);
 
-    texCoord = vec2(
-    mix(uvCoords.x, uvCoords.z, pos.x),
-    mix(uvCoords.y, uvCoords.w, pos.y)
-    );
-
-    charColor = color;
+    texCoord     = vec2(mix(uvCoords.x, uvCoords.z, pos.x),
+                        mix(uvCoords.y, uvCoords.w, pos.y));
+    charColor    = color;
     outlineWidth = screenData.w;
-    outColor = outlineColor;
-    atlasSize = atlasData.xy;
-    pxRange = atlasData.z;
+    outColor     = outlineColor;
+    atlasSize    = atlasData.xy;
+    pxRange      = atlasData.z;
 }

@@ -1,235 +1,125 @@
-plugins {
-    id 'fabric-loom' version '1.16.0-alpha.10'
-    id 'maven-publish'
-    id 'com.gradleup.shadow' version '8.3.5'
-}
-
-version = project.property('mod_version').toString()
-group = project.property('maven_group').toString()
-
-base {
-    archivesName = project.property('archives_base_name').toString()
-}
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(26)
+buildscript {
+    repositories {
+        mavenLocal()
+        maven { url = 'https://maven.minecraftforge.net' }
+        mavenCentral()
+        gradlePluginPortal()
     }
-    withSourcesJar()
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:6+'
+        classpath "gradle.plugin.org.jetbrains.gradle.plugin.idea-ext:gradle-idea-ext:1.1.3"
+    }
 }
 
-def targetJavaVersion = 26
+import net.minecraftforge.gradle.common.util.Utils
+import net.minecraftforge.gradle.common.util.VersionJson
+import org.jetbrains.gradle.ext.*
+
+apply plugin: 'net.minecraftforge.gradle.patcher'
+apply plugin: "org.jetbrains.gradle.plugin.idea-ext"
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+configurations {
+    shade
+    compile.extendsFrom shade
+}
+
+group = 'so.aporia'
+version = '1.0.0'
+
+ext {
+    minecraft_version = '1.21.11'
+    mcp_version = '20251209.095502'
+    mappings_channel = 'official'
+    mappings_version = '1.21.11'
+    spi_version = '7.0.0'
+}
 
 repositories {
     mavenCentral()
-    maven {
-        name = "ferra13671-maven"
-        url = "https://ferra13671.github.io/maven/"
-    }
-    maven {
-        name = "keksuccino-maven"
-        url = "https://keksuccino.github.io/maven/"
-    }
-    maven {
-        url "https://maven.firstdark.dev/releases"
-    }
-    maven {
-        url = uri("https://jitpack.io")
-        name = "jitpack.io"
-    }
-    maven {
-        url 'https://maven.maxhenkel.de/repository/public'
-    }
-}
-
-loom {
-    accessWidenerPath = file('src/main/resources/accesswidener')
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:${project.property('minecraft_version')}"
-    mappings "net.fabricmc:yarn:${project.property('yarn_mappings')}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.property('loader_version')}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.property('fabric_version')}"
-    include modImplementation('io.netty:netty-handler-proxy:4.1.82.Final')
-    include modImplementation('io.netty:netty-codec-socks:4.1.82.Final')
-    compileOnly 'org.projectlombok:lombok:1.18.42'
-    annotationProcessor 'org.projectlombok:lombok:1.18.42'
-    modCompileOnly 'de.maxhenkel.voicechat:voicechat-api:2.6.0'
-    modImplementation "de.keksuccino:mcef-fabric:2.2.0-1.21.11"
-    implementation 'ai.catboost:catboost-common:1.2.10'
-    implementation "com.google.code.gson:gson:2.8.9"
-    implementation "dev.firstdark.discordrpc:discord-rpc:1.0.4"
-    shadow("com.kohlschutter.junixsocket:junixsocket-common:${project.property('junix')}")
-    shadow("com.kohlschutter.junixsocket:junixsocket-native-common:${project.property('junix')}")
-    implementation 'net.java.dev.jna:jna:5.15.0'
-    compileOnly "io.netty:netty-all:4.1.97.Final"
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
-    testImplementation 'org.mockito:mockito-core:5.5.0'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.5.0'
-    modImplementation "de.keksuccino:mcef-fabric:2.2.0-1.21.11"
+    implementation 'net.minecraftforge:forgespi:' + spi_version
 }
 
-processResources {
-    inputs.property 'version', project.version
-    inputs.property 'minecraft_version', project.property('minecraft_version')
-    inputs.property 'loader_version', project.property('loader_version')
-    filteringCharset = 'UTF-8'
-    filesMatching('fabric.mod.json') {
-        expand(
-            'version': project.version,
-        'minecraft_version': project.property('minecraft_version'),
-        'loader_version': project.property('loader_version')
-        )
+project(':Aporia') {
+    apply plugin: 'net.minecraftforge.gradle.mcp'
+    mcp {
+        config = minecraft_version + '-' + mcp_version
+        pipeline = 'joined'
     }
 }
 
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
-    options.release.set(targetJavaVersion)
+evaluationDependsOn(':Aporia')
+
+patcher {
+    parent = project(':Aporia')
+    patchedSrc = file('src/main/java')
+    mappings channel: mappings_channel, version: mappings_version
+    mcVersion = minecraft_version
 }
 
-shadowJar {
-    configurations = [project.configurations.shadow]
-    mergeServiceFiles()
-}
-
-tasks.register('obfuscateRemappedJar') {
-    dependsOn 'remapJar'
-    
-    doLast {
-        println "=== Starting obfuscation task ==="
-        def remappedJar = remapJar.archiveFile.get().asFile
-        def tempDir = file("${project.buildDir}/temp-jar-extract")
-        def chaosDir = file("${project.buildDir}/chaos-obfuscated")
-        
-        println "Remapped jar: ${remappedJar}"
-        println "Jar exists: ${remappedJar.exists()}"
-        
-        if (!remappedJar.exists()) {
-            throw new GradleException("Remapped jar not found: ${remappedJar}")
-        }
-        
-        def obfuscator = new ChaosObfuscator()
-        obfuscator.project = project
-        obfuscator.obfuscateFromJar(remappedJar, chaosDir)
-        
-        println "Chaos dir exists: ${chaosDir.exists()}"
-        println "Chaos dir files: ${chaosDir.exists() ? chaosDir.listFiles()?.length : 0}"
-        
-        if (!chaosDir.exists() || chaosDir.listFiles()?.length == 0) {
-            println "No obfuscated classes generated, skipping"
-            return
-        }
-        
-        if (tempDir.exists()) {
-            tempDir.deleteDir()
-        }
-        tempDir.mkdirs()
-        copy {
-            from zipTree(remappedJar)
-            into tempDir
-        }
-        
-        copy {
-            from chaosDir
-            into tempDir
-            include '**/*.class'
-        }
-        
-        def backupJar = new File(remappedJar.parentFile, remappedJar.name + ".backup")
-        if (backupJar.exists()) backupJar.delete()
-        remappedJar.renameTo(backupJar)
-        
-        ant.zip(destfile: remappedJar) {
-            fileset(dir: tempDir)
-        }
-        
-        backupJar.delete()
-        tempDir.deleteDir()
-        
-        println "=== Obfuscation task complete ==="
-    }
-}
-tasks.register('copyToBeta', Copy) {
-    group = 'build'
-    description = 'Copy built JAR to beta/version and beta/latest directories'
-    dependsOn 'obfuscateRemappedJar'
-    from(remapJar.archiveFile)
-    into file("${project.rootDir}/beta/${project.version}")
-    doFirst {
-        def betaVersionDir = file("${project.rootDir}/beta/${project.version}")
-        if (!betaVersionDir.exists()) {
-            betaVersionDir.mkdirs()
-        }
-    }
-    doLast {
-        def betaLatestDir = file("${project.rootDir}/beta/latest")
-        if (!betaLatestDir.exists()) {
-            betaLatestDir.mkdirs()
-        }
-        def sourceJar = remapJar.archiveFile.get().asFile
-        def destJar = file("${betaLatestDir}/Aporia.jar")
-        if (sourceJar.exists()) {
-            destJar.withOutputStream { out ->
-                sourceJar.withInputStream { it.transferTo(out) }
-            }
-            println "Copied to beta/${project.version}/${sourceJar.name}"
-            println "Copied to beta/latest/Aporia.jar"
+jar {
+    configurations.shade.each { dep ->
+        from(project.zipTree(dep)) {
+            exclude 'META-INF', 'META-INF/**'
         }
     }
 }
 
-tasks.register('buildToReadme') {
-    group = 'build'
-    description = 'Write build date to README.md after the closing </div> on line 15'
-    dependsOn 'copyToBeta'
+var assetsFolder = file('run/assets')
 
-    doLast {
-        def readme = file("${project.rootDir}/README.md")
-        def buildDate = new Date().format("dd.MM.yyyy HH:mm:ss", TimeZone.getTimeZone("UTC"))
-        def buildLine = "\n> 🕐 Last build: **${buildDate} UTC** — v${project.version}\n"
+tasks.register('runclient', JavaExec) {
+    group = "MCP"
+    description = "Runs the client"
+    classpath sourceSets.main.runtimeClasspath
+    if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+        jvmArgs '-XstartOnFirstThread'
+    }
 
-        def lines = readme.readLines('UTF-8')
-        def insertIndex = -1
-        for (int i = 0; i < lines.size(); i++) {
-            if (lines[i].trim() == '</div>') {
-                insertIndex = i + 1
-                break
-            }
-        }
+    var runFolder = file('run')
+    var versionJson = Utils.loadJson(downloadAssets.getMeta().get().getAsFile(), VersionJson.class)
 
-        if (insertIndex == -1) {
-            println "WARNING: </div> not found in README.md, skipping buildToReadme"
-            return
-        }
+    workingDir runFolder
+    args '--gameDir', '.'
+    args '--version', minecraft_version
+    args '--assetsDir', runFolder.relativePath(assetsFolder)
+    args '--assetIndex', versionJson.assetIndex.id
+    args '--accessToken', '0'
+    main 'net.minecraft.client.main.Main'
+}
 
-        // Remove previous build date line if present
-        if (insertIndex < lines.size() && lines[insertIndex].startsWith('> 🕐 Last build:')) {
-            lines.remove(insertIndex)
-            if (insertIndex < lines.size() && lines[insertIndex].trim().isEmpty()) {
-                lines.remove(insertIndex)
-            }
-        }
 
-        lines.add(insertIndex, buildLine)
-        readme.write(lines.join('\n') + '\n', 'UTF-8')
-        println "README.md updated with build date: ${buildDate}"
+tasks.register('setup') {
+    group = "MCP"
+    description = "Setups the dev workspace"
+    dependsOn ':extractMapped'
+    mkdir assetsFolder
+    copy {
+        from downloadAssets.output.path
+        into assetsFolder
     }
 }
 
-tasks.named('build') {
-    finalizedBy 'buildToReadme'
+tasks.register('copyAssets') {
+    group = "MCP"
+    description = "Download and place the assets into the run folder"
+    dependsOn ':downloadAssets'
+    mkdir 'run/assets'
+    copy {
+        from downloadAssets.output.path
+        into assetsFolder
+    }
 }
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            artifactId = project.property('archives_base_name').toString()
-            from components.java
+idea.project.settings {
+    runConfigurations {
+        "Minecraft"(Application) {
+            mainClass = 'mcp.client.Start'
+            workingDirectory = "$projectDir/run"
+            moduleName = idea.module.name + '.main'
         }
-    }
-    repositories {
     }
 }
