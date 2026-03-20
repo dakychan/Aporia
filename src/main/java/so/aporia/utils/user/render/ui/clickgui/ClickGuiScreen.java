@@ -19,107 +19,97 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ClickGui — BTHack-style.
+ * ClickGui — three-column layout inspired by modern client GUIs.
  *
- *  ┌──────────────────────────────────────┐
- *  │  ⊕ APORIA                [Search..] │
- *  ├──────────┬───────────────────────────┤
- *  │ ⚔ Combat │ ┌──────────┐ ┌──────────┐│
- *  │ ↝ Move   │ │ Module A │ │ Module B ││
- *  │ ◎ Visual │ └──────────┘ └──────────┘│
- *  │ ☺ Player │ ┌──────────┐             │
- *  │ ◉ World  │ │ Module C │             │
- *  │ ··· Misc │ └──────────┘             │
- *  └──────────┴───────────────────────────┘
+ *  ┌──────────────┬──────────────────────┬──────────────────┐
+ *  │  sidebar     │  [Category] [Search] │  Settings panel  │
+ *  │  • Combat    │  ──────────────────  │  (opens on RMB)  │
+ *  │    Move      │  [Mod] [key]  [⚙]   │                  │
+ *  │    Visual    │  [Mod]               │                  │
+ *  │    Player    │  [Mod]               │                  │
+ *  └──────────────┴──────────────────────┴──────────────────┘
  *
- * Modules shown as pill cards in a 2-column grid.
- * Category icons from the categoryicons font.
- * Sliding highlight rect animates between categories.
+ * Sidebar: category list with animated selection highlight.
+ * Module list: single-column cards with name, keybind, settings icon.
+ * Settings panel: opens on RMB on a module card (placeholder for now).
  */
 @OnlyIn(Dist.CLIENT)
 public final class ClickGuiScreen extends Screen {
 
-    /* ── Size ────────────────────────────────────────────────── */
-    private static final float W_FRAC = 0.38f;
-    private static final float H_FRAC = 0.45f;
-    private static final int   MIN_W  = 260;
-    private static final int   MIN_H  = 180;
+    private static final float W_FRAC = 0.52f;
+    private static final float H_FRAC = 0.50f;
+    private static final int   MIN_W  = 380;
+    private static final int   MIN_H  = 220;
 
-    /* ── Layout ──────────────────────────────────────────────── */
-    private static final int HEADER_H  = 32;
-    private static final int SIDEBAR_W = 100;
-    private static final int CAT_H     = 30;
-    private static final int CAT_GAP   = 2;
-    private static final int PAD       = 10;
-    private static final int HIT       = 5;
-    private static final int PANEL_R   = 12;
-    private static final int CAT_R     = 6;
-    private static final int SEARCH_H  = 18;
-    private static final int SEARCH_W  = 100;
-    private static final float ANIM_SPEED = 0.18f;
+    private static final int SIDEBAR_W  = 130;
+    private static final int MODULES_W  = 200;
+    private static final int CAT_H      = 28;
+    private static final int CAT_GAP    = 2;
+    private static final int CAT_PAD    = 10;
+    private static final int TOPBAR_H   = 36;
+    private static final int PAD        = 10;
+    private static final int HIT        = 5;
+    private static final int PANEL_R    = 10;
+    private static final int CAT_R      = 6;
+    private static final int CARD_H     = 32;
+    private static final int CARD_R     = 7;
+    private static final int CARD_GAP   = 4;
+    private static final int SEARCH_H   = 20;
+    private static final int SEARCH_W   = 130;
+    private static final float ANIM_SPD = 0.16f;
 
-    /* module card grid */
-    private static final int CARD_H   = 30;
-    private static final int CARD_R   = 6;  /* moderate rounding */
-    private static final int CARD_GAP = 6;
-    private static final int CARD_PAD = 8;
+    private static final int C_BG           = ColorUtil.rgba( 18,  21,  30, 252);
+    private static final int C_SIDEBAR      = ColorUtil.rgba( 22,  26,  38, 255);
+    private static final int C_TOPBAR       = ColorUtil.rgba( 22,  26,  38, 255);
+    private static final int C_DIV          = ColorUtil.rgba(255, 255, 255,  12);
+    private static final int C_CAT_SLIDE    = ColorUtil.rgba( 70,  90, 150,  60);
+    private static final int C_CAT_TXT      = ColorUtil.rgba(110, 130, 170, 255);
+    private static final int C_CAT_ACT      = ColorUtil.rgba(210, 225, 255, 255);
+    private static final int C_CAT_HOV      = ColorUtil.rgba(160, 180, 220, 255);
+    private static final int C_CARD_BG      = ColorUtil.rgba( 26,  31,  46, 255);
+    private static final int C_CARD_HOV     = ColorUtil.rgba( 33,  40,  58, 255);
+    private static final int C_CARD_ON      = ColorUtil.rgba( 30,  38,  60, 255);
+    private static final int C_CARD_BDR     = ColorUtil.rgba( 50,  65, 105, 160);
+    private static final int C_CARD_ON_BDR  = ColorUtil.rgba( 80, 130, 255, 200);
+    private static final int C_MOD_TXT      = ColorUtil.rgba(185, 200, 225, 255);
+    private static final int C_MOD_ON_TXT   = ColorUtil.rgba(220, 235, 255, 255);
+    private static final int C_MOD_DIM      = ColorUtil.rgba(100, 115, 145, 255);
+    private static final int C_TOPBAR_TXT   = ColorUtil.rgba(160, 175, 210, 255);
+    private static final int C_TOPBAR_ACT   = ColorUtil.rgba(210, 225, 255, 255);
+    private static final int C_SRCH_BG      = ColorUtil.rgba( 28,  34,  50, 255);
+    private static final int C_SRCH_BDR     = ColorUtil.rgba( 50,  65, 105, 140);
+    private static final int C_SRCH_BDR_F   = ColorUtil.rgba( 80, 130, 255, 180);
+    private static final int C_SRCH_TXT     = ColorUtil.rgba(175, 190, 215, 255);
+    private static final int C_SRCH_PH      = ColorUtil.rgba( 75,  90, 125, 255);
+    private static final int C_SETTINGS_BG  = ColorUtil.rgba( 20,  24,  36, 255);
+    private static final int C_SETTINGS_TXT = ColorUtil.rgba(140, 155, 185, 255);
 
-    /* ── Colors ──────────────────────────────────────────────── */
-    private static final int C_BG          = ColorUtil.rgba( 18,  22,  32, 245);
-    private static final int C_HEADER      = ColorUtil.rgba( 22,  27,  40, 255);
-    private static final int C_SIDEBAR     = ColorUtil.rgba( 20,  25,  37, 255);
-    private static final int C_DIV         = ColorUtil.rgba(255, 255, 255,  14);
-    private static final int C_TITLE       = ColorUtil.rgba(255, 255, 255, 255);
-    private static final int C_CAT_TXT     = ColorUtil.rgba(130, 150, 190, 255);
-    private static final int C_CAT_ACT_TXT = ColorUtil.rgba(210, 225, 255, 255);
-    private static final int C_CAT_HOV_TXT = ColorUtil.rgba(175, 195, 230, 255);
-    private static final int C_CAT_SLIDE   = ColorUtil.rgba( 80, 100, 160,  55);
-    private static final int C_CARD_BG     = ColorUtil.rgba( 28,  34,  50, 255);
-    private static final int C_CARD_BDR    = ColorUtil.rgba( 55,  70, 110, 180);
-    private static final int C_CARD_ON_BDR = ColorUtil.rgba( 90, 140, 255, 220);
-    private static final int C_CARD_HOV    = ColorUtil.rgba( 35,  43,  62, 255);
-    private static final int C_MOD_TXT     = ColorUtil.rgba(200, 210, 230, 255);
-    private static final int C_MOD_ON_TXT  = ColorUtil.rgba(220, 235, 255, 255);
-    private static final int C_SRCH_BG     = ColorUtil.rgba( 25,  31,  46, 255);
-    private static final int C_SRCH_BDR    = ColorUtil.rgba( 55,  70, 110, 160);
-    private static final int C_SRCH_BDR_F  = ColorUtil.rgba( 90, 140, 255, 200);
-    private static final int C_SRCH_TXT    = ColorUtil.rgba(175, 185, 205, 255);
-    private static final int C_SRCH_PH     = ColorUtil.rgba( 80,  95, 130, 255);
-
-    /* ── Panel state ─────────────────────────────────────────── */
     private float px, py, pw, ph;
-    private Category active = Category.values()[0];
-    private float animY;
+    private Category active   = Category.values()[0];
+    private Module   selected = null;
+    private float    animY    = 0;
 
-    /* search */
     private String  search        = "";
     private boolean searchFocused = false;
 
-    /* drag */
     private boolean dragging;
     private float   dox, doy;
-
-    /* resize */
     private boolean resizing;
     private boolean resizeL, resizeR, resizeT, resizeB;
     private float   rStartMx, rStartMy, rStartPx, rStartPy, rStartPw, rStartPh;
 
-    public ClickGuiScreen() {
-        super(Component.literal("ClickGui"));
-    }
+    public ClickGuiScreen() { super(Component.literal("ClickGui")); }
 
     @Override
     protected void init() {
         if (pw == 0) {
-            pw = Math.max(MIN_W, this.width  * W_FRAC);
+            pw = Math.max(MIN_W, this.width * W_FRAC);
             ph = Math.max(MIN_H, this.height * H_FRAC);
-            px = (this.width  - pw) / 2f;
+            px = (this.width - pw) / 2f;
             py = (this.height - ph) / 2f;
-            animY = catTargetY(active);
+            animY = catTargetY(active, (int) py, (int) ph);
         }
     }
-
-    /* ── Render ──────────────────────────────────────────────── */
 
     @Override
     public void render(GuiGraphics gfx, int mx, int my, float delta) {
@@ -129,24 +119,66 @@ public final class ClickGuiScreen extends Screen {
         py = Math.max(0, Math.min(py, this.height - ph));
 
         int ipx = (int) px, ipy = (int) py, ipw = (int) pw, iph = (int) ph;
+        int contentX = ipx + SIDEBAR_W;
+        int contentW = ipw - SIDEBAR_W;
+        int bodyY    = ipy + TOPBAR_H;
+        int bodyH    = iph - TOPBAR_H;
 
-        animY += (catTargetY(active) - animY) * ANIM_SPEED;
+        animY += (catTargetY(active, ipy, iph) - animY) * ANIM_SPD;
 
         /* main bg */
         r.drawRect(ipx, ipy, ipw, iph, PANEL_R, C_BG);
 
-        /* header */
-        r.drawRect(ipx, ipy, ipw, HEADER_H + PANEL_R, PANEL_R, C_HEADER);
-        r.drawRect(ipx, ipy + HEADER_H, ipw, PANEL_R, 0, C_HEADER);
-        r.drawText("bold", "APORIA", ipx + PAD, ipy + (HEADER_H - 10) / 2f, 10f, C_TITLE);
+        /* sidebar bg — stops before top-left and bottom-left corners */
+        r.drawRect(ipx, ipy + PANEL_R, SIDEBAR_W, iph - PANEL_R * 2, 0, C_SIDEBAR);
+        r.drawRect(ipx + PANEL_R, ipy + iph - PANEL_R, SIDEBAR_W - PANEL_R, PANEL_R, 0, C_SIDEBAR);
+        r.drawRect(ipx + PANEL_R, ipy, SIDEBAR_W - PANEL_R, PANEL_R, 0, C_SIDEBAR);
 
-        /* search */
+        /* topbar bg — right of sidebar only, top-right corner rounded */
+        r.drawRect(contentX, ipy, contentW, TOPBAR_H + PANEL_R, PANEL_R, C_TOPBAR);
+        r.drawRect(contentX, bodyY, contentW, PANEL_R, 0, C_TOPBAR);
+
+        /* dividers */
+        r.drawRect(contentX, ipy, 1, iph, 0, C_DIV);
+        r.drawRect(contentX, bodyY, contentW, 1, 0, C_DIV);
+
+        /* sidebar: animated highlight + category list */
+        animY += (catTargetY(active, ipy, iph) - animY) * ANIM_SPD;
+        r.drawRect(ipx + 4, animY, SIDEBAR_W - 8, CAT_H, CAT_R, C_CAT_SLIDE);
+        gfx.enableScissor(ipx, ipy, contentX, ipy + iph);
+        renderSidebar(r, ipx, ipy, iph, mx, my);
+        gfx.disableScissor();
+
+        /* topbar: category name + search */
+        renderTopbar(r, gfx, contentX, ipy, contentW);
+
+        /* module list */
+        int modX = contentX + 1;
+        int modW = selected != null ? MODULES_W : contentW - 1;
+        gfx.enableScissor(modX, bodyY + 1, modX + modW, ipy + iph);
+        renderModules(r, modX, bodyY, modW, mx, my);
+        gfx.disableScissor();
+
+        /* settings panel */
+        if (selected != null) {
+            int sx = modX + modW;
+            int sw = contentW - 1 - modW;
+            r.drawRect(sx, bodyY, 1, bodyH, 0, C_DIV);
+            gfx.enableScissor(sx + 1, bodyY + 1, sx + 1 + sw, ipy + iph);
+            renderSettings(r, gfx, sx + 1, bodyY, sw);
+            gfx.disableScissor();
+        }
+    }
+
+    private void renderTopbar(AporiaRenderer r, GuiGraphics gfx, int ipx, int ipy, int ipw) {
+        String catName = capitalize(active.name());
+        r.drawText("bold", catName, ipx + PAD, ipy + (TOPBAR_H - 9) / 2f, 9f, C_TOPBAR_ACT);
+
         int sfx = ipx + ipw - SEARCH_W - PAD;
-        int sfy = ipy + (HEADER_H - SEARCH_H) / 2;
+        int sfy = ipy + (TOPBAR_H - SEARCH_H) / 2;
         int sr  = SEARCH_H / 2;
         r.drawRect(sfx, sfy, SEARCH_W, SEARCH_H, sr, C_SRCH_BG);
-        int bdr = searchFocused ? C_SRCH_BDR_F : C_SRCH_BDR;
-        r.drawStroke(sfx, sfy, SEARCH_W, SEARCH_H, sr, 1f, 1, 0f, bdr);
+        r.drawStroke(sfx, sfy, SEARCH_W, SEARCH_H, sr, 1f, 1, 0f, searchFocused ? C_SRCH_BDR_F : C_SRCH_BDR);
         gfx.enableScissor(sfx + 6, sfy, sfx + SEARCH_W - 6, sfy + SEARCH_H);
         if (search.isEmpty() && !searchFocused) {
             r.drawText("regular", "Search...", sfx + 8, sfy + (SEARCH_H - 7) / 2f, 7f, C_SRCH_PH);
@@ -155,107 +187,78 @@ public final class ClickGuiScreen extends Screen {
             r.drawText("regular", cur, sfx + 8, sfy + (SEARCH_H - 7) / 2f, 7f, C_SRCH_TXT);
         }
         gfx.disableScissor();
-
-        /* divider */
-        r.drawRect(ipx, ipy + HEADER_H, ipw, 1, 0, C_DIV);
-
-        /* sidebar bg */
-        r.drawRect(ipx, ipy + HEADER_H + 1, SIDEBAR_W, iph - HEADER_H - 1, 0, C_SIDEBAR);
-        r.drawRect(ipx, ipy + iph - PANEL_R, SIDEBAR_W, PANEL_R, 0, C_SIDEBAR);
-
-        /* sidebar divider */
-        r.drawRect(ipx + SIDEBAR_W, ipy + HEADER_H + 1, 1, iph - HEADER_H - 1, 0, C_DIV);
-
-        /* sliding highlight */
-        int sidebarTop = ipy + HEADER_H + 1;
-        r.drawRect(ipx + 4, sidebarTop + animY, SIDEBAR_W - 8, CAT_H, CAT_R, C_CAT_SLIDE);
-
-        /* sidebar */
-        gfx.enableScissor(ipx, sidebarTop, ipx + SIDEBAR_W, ipy + iph);
-        renderSidebar(r, ipx, sidebarTop, mx, my);
-        gfx.disableScissor();
-
-        /* module cards */
-        int cx = ipx + SIDEBAR_W + 1;
-        int cy = ipy + HEADER_H + 1;
-        int cw = ipw - SIDEBAR_W - 1;
-        int ch = iph - HEADER_H - 1;
-        gfx.enableScissor(cx, cy, cx + cw, cy + ch);
-        renderCards(r, cx, cy, cw, mx, my);
-        gfx.disableScissor();
     }
 
-    private void renderSidebar(AporiaRenderer r, int sx, int sy, int mx, int my) {
-        int y = sy + 4;
-        for (Category cat : Category.values()) {
+    private void renderSidebar(AporiaRenderer r, int sx, int sy, int sHeight, int mx, int my) {
+        Category[] cats = Category.values();
+        int totalH = cats.length * CAT_H + (cats.length - 1) * CAT_GAP;
+        int startY = sy + (sHeight - totalH) / 2;
+        int y = startY;
+        for (Category cat : cats) {
             boolean act = cat == active;
             boolean hov = !act && mx >= sx && mx < sx + SIDEBAR_W && my >= y && my < y + CAT_H;
-            int col = act ? C_CAT_ACT_TXT : (hov ? C_CAT_HOV_TXT : C_CAT_TXT);
-
-            /* icon from categoryicons font */
+            int col = act ? C_CAT_ACT : (hov ? C_CAT_HOV : C_CAT_TXT);
             String icon = String.valueOf(cat.icon);
-            r.drawText(Fonts.CATICONS, icon, sx + PAD, y + (CAT_H - 11) / 2f, 11f, col);
-
-            /* label */
-            r.drawText("regular", capitalize(cat.name()), sx + PAD + 16, y + (CAT_H - 7) / 2f, 7f, col);
+            r.drawText(Fonts.CATICONS, icon, sx + CAT_PAD, y + (CAT_H - 11) / 2f, 11f, col);
+            r.drawText("regular", capitalize(cat.name()), sx + CAT_PAD + 18, y + (CAT_H - 7) / 2f, 7f, col);
             y += CAT_H + CAT_GAP;
         }
     }
 
-    private void renderCards(AporiaRenderer r, int cx, int cy, int cw, int mx, int my) {
+    private void renderModules(AporiaRenderer r, int cx, int cy, int cw, int mx, int my) {
         List<Module> mods = filteredModules();
-        int cols    = 2;
-        int cardW   = (cw - PAD * (cols + 1)) / cols;
-        int x0      = cx + PAD;
-        int y       = cy + PAD;
-
-        for (int i = 0; i < mods.size(); i++) {
-            Module m   = mods.get(i);
-            int col    = i % cols;
-            int row    = i / cols;
-            int cardX  = x0 + col * (cardW + CARD_GAP);
-            int cardY  = y  + row * (CARD_H + CARD_GAP);
-
+        int y = cy + PAD;
+        for (Module m : mods) {
+            int cardX = cx + PAD;
+            int cardW = cw - PAD * 2;
             boolean on  = m.isEnabled();
-            boolean hov = mx >= cardX && mx < cardX + cardW && my >= cardY && my < cardY + CARD_H;
+            boolean hov = mx >= cardX && mx < cardX + cardW && my >= y && my < y + CARD_H;
+            boolean sel = m == selected;
 
-            int bg  = hov ? C_CARD_HOV : C_CARD_BG;
-            int bdr = on  ? C_CARD_ON_BDR : C_CARD_BDR;
+            int bg  = sel ? C_CARD_ON : (hov ? C_CARD_HOV : C_CARD_BG);
+            int bdr = (on || sel) ? C_CARD_ON_BDR : C_CARD_BDR;
 
-            /* card bg */
-            r.drawRect(cardX, cardY, cardW, CARD_H, CARD_R, bg);
+            r.drawRect(cardX, y, cardW, CARD_H, CARD_R, bg);
+            r.drawStroke(cardX, y, cardW, CARD_H, CARD_R, 1f, 1, 0f, bdr);
 
-            /* corners-only stroke via shader — borderMode=2, fade=0.9 */
-            r.drawStroke(cardX, cardY, cardW, CARD_H, CARD_R, 1.5f, 2, 0.9f, bdr);
-
-            /* module name */
             int txtCol = on ? C_MOD_ON_TXT : C_MOD_TXT;
-            r.drawText("regular", m.name(), cardX + CARD_PAD, cardY + (CARD_H - 7) / 2f, 7f, txtCol);
+            r.drawText("regular", m.name(), cardX + PAD, y + (CARD_H - 7) / 2f, 7f, txtCol);
+
+            String kb = m.keybind() > 0 ? keyName(m.keybind()) : "";
+            if (!kb.isEmpty())
+                r.drawText("regular", kb, cardX + cardW - PAD - r.getTextWidth("regular", kb, 6f), y + (CARD_H - 6) / 2f, 6f, C_MOD_DIM);
+
+            y += CARD_H + CARD_GAP;
         }
     }
 
-    /* ── Mouse ───────────────────────────────────────────────── */
+    private void renderSettings(AporiaRenderer r, GuiGraphics gfx, int sx, int sy, int sw) {
+        if (selected == null) return;
+        r.drawText("bold", selected.name(), sx + PAD, sy + PAD, 8f, C_MOD_ON_TXT);
+        r.drawText("regular", "Right-click to close", sx + PAD, sy + PAD + 14, 6f, C_SETTINGS_TXT);
+    }
+
 
     @Override
     public boolean mouseClicked(MouseButtonEvent e, boolean b) {
         int mx = (int) e.x(), my = (int) e.y();
+        int ipx = (int) px, ipy = (int) py, ipw = (int) pw, iph = (int) ph;
+        int bodyY = ipy + TOPBAR_H;
 
         if (e.button() == 0) {
-            /* search */
-            int sfx = (int)(px + pw) - SEARCH_W - PAD;
-            int sfy = (int) py + (HEADER_H - SEARCH_H) / 2;
+            int sfx = ipx + ipw - SEARCH_W - PAD;
+            int sfy = ipy + (TOPBAR_H - SEARCH_H) / 2;
             if (mx >= sfx && mx < sfx + SEARCH_W && my >= sfy && my < sfy + SEARCH_H) {
                 searchFocused = true; return true;
             }
             searchFocused = false;
 
-            /* resize */
-            boolean el = mx >= (int) px - HIT        && mx < (int) px + HIT;
-            boolean er = mx >= (int)(px + pw) - HIT  && mx < (int)(px + pw) + HIT;
-            boolean et = my >= (int) py - HIT         && my < (int) py + HIT;
-            boolean eb = my >= (int)(py + ph) - HIT   && my < (int)(py + ph) + HIT;
-            boolean inX = mx >= (int) px - HIT && mx <= (int)(px + pw) + HIT;
-            boolean inY = my >= (int) py - HIT && my <= (int)(py + ph) + HIT;
+            boolean el = mx >= ipx - HIT && mx < ipx + HIT;
+            boolean er = mx >= ipx + ipw - HIT && mx < ipx + ipw + HIT;
+            boolean et = my >= ipy - HIT && my < ipy + HIT;
+            boolean eb = my >= ipy + iph - HIT && my < ipy + iph + HIT;
+            boolean inX = mx >= ipx - HIT && mx <= ipx + ipw + HIT;
+            boolean inY = my >= ipy - HIT && my <= ipy + iph + HIT;
             if ((el || er || et || eb) && inX && inY) {
                 resizing = true;
                 resizeL = el; resizeR = er; resizeT = et; resizeB = eb;
@@ -264,38 +267,48 @@ public final class ClickGuiScreen extends Screen {
                 return true;
             }
 
-            /* header drag */
-            if (mx >= (int) px && mx < (int)(px + pw) && my >= (int) py && my < (int)(py + HEADER_H)) {
+            if (mx >= ipx && mx < ipx + ipw && my >= ipy && my < bodyY && mx >= (int)px + SIDEBAR_W) {
                 dragging = true; dox = mx - px; doy = my - py; return true;
             }
 
-            /* sidebar */
-            int sy = (int) py + HEADER_H + 1 + 4;
-            for (Category cat : Category.values()) {
-                if (mx >= (int) px && mx < (int) px + SIDEBAR_W && my >= sy && my < sy + CAT_H) {
-                    active = cat; search = ""; return true;
+            Category[] catArr = Category.values();
+            int totalCH = catArr.length * CAT_H + (catArr.length - 1) * CAT_GAP;
+            int catSY   = ipy + (iph - totalCH) / 2;
+            for (Category cat : catArr) {
+                if (mx >= ipx && mx < ipx + SIDEBAR_W && my >= catSY && my < catSY + CAT_H) {
+                    active = cat; search = ""; selected = null; return true;
                 }
-                sy += CAT_H + CAT_GAP;
+                catSY += CAT_H + CAT_GAP;
             }
 
-            /* card click */
-            int cx   = (int) px + SIDEBAR_W + 1;
-            int cy   = (int) py + HEADER_H + 1;
-            int cw   = (int) pw - SIDEBAR_W - 1;
-            int cols = 2;
-            int cardW = (cw - PAD * (cols + 1)) / cols;
-            int x0   = cx + PAD;
-            int y0   = cy + PAD;
+            int modX = ipx + SIDEBAR_W + 1;
+            int modW = selected != null ? MODULES_W : ipw - SIDEBAR_W - 1;
             List<Module> mods = filteredModules();
-            for (int i = 0; i < mods.size(); i++) {
-                int col   = i % cols;
-                int row   = i / cols;
-                int cardX = x0 + col * (cardW + CARD_GAP);
-                int cardY = y0 + row * (CARD_H + CARD_GAP);
-                if (mx >= cardX && mx < cardX + cardW && my >= cardY && my < cardY + CARD_H) {
-                    mods.get(i).toggle(); return true;
+            int y = bodyY + PAD;
+            for (Module m : mods) {
+                int cardX = modX + PAD;
+                int cardW = modW - PAD * 2;
+                if (mx >= cardX && mx < cardX + cardW && my >= y && my < y + CARD_H) {
+                    m.toggle(); return true;
                 }
+                y += CARD_H + CARD_GAP;
             }
+        }
+
+        if (e.button() == 1) {
+            int modX = (int) px + SIDEBAR_W + 1;
+            int modW = selected != null ? MODULES_W : (int) pw - SIDEBAR_W - 1;
+            List<Module> mods = filteredModules();
+            int y = (int) py + TOPBAR_H + PAD;
+            for (Module m : mods) {
+                int cardX = modX + PAD;
+                int cardW = modW - PAD * 2;
+                if (mx >= cardX && mx < cardX + cardW && my >= y && my < y + CARD_H) {
+                    selected = (selected == m) ? null : m; return true;
+                }
+                y += CARD_H + CARD_GAP;
+            }
+            selected = null;
         }
 
         return super.mouseClicked(e, b);
@@ -322,8 +335,6 @@ public final class ClickGuiScreen extends Screen {
         return super.mouseReleased(e);
     }
 
-    /* ── Keyboard ────────────────────────────────────────────── */
-
     @Override
     public boolean keyPressed(KeyEvent e) {
         if (searchFocused) {
@@ -339,12 +350,12 @@ public final class ClickGuiScreen extends Screen {
         return super.charTyped(e);
     }
 
-    /* ── Helpers ─────────────────────────────────────────────── */
-
-    private float catTargetY(Category cat) {
+    private float catTargetY(Category cat, int panelY, int panelH) {
         Category[] cats = Category.values();
-        for (int i = 0; i < cats.length; i++) if (cats[i] == cat) return 4 + i * (CAT_H + CAT_GAP);
-        return 4;
+        int totalH = cats.length * CAT_H + (cats.length - 1) * CAT_GAP;
+        int startY = panelY + (panelH - totalH) / 2;
+        for (int i = 0; i < cats.length; i++) if (cats[i] == cat) return startY + i * (CAT_H + CAT_GAP);
+        return startY;
     }
 
     private List<Module> filteredModules() {
@@ -359,6 +370,10 @@ public final class ClickGuiScreen extends Screen {
     private static String capitalize(String s) {
         if (s == null || s.isEmpty()) return s;
         return s.charAt(0) + s.substring(1).toLowerCase();
+    }
+
+    private static String keyName(int key) {
+        return net.minecraft.client.KeyMapping.createNameSupplier("key.keyboard." + key).get().getString().toUpperCase();
     }
 
     @Override public boolean isPauseScreen()     { return false; }
