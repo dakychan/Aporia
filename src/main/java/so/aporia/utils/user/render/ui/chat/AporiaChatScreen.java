@@ -127,8 +127,8 @@ public class AporiaChatScreen extends ChatScreen {
             List<WinCfg> claimants = new ArrayList<>();
             for (WinCfg w : wins) {
                 if (!w.showOnlyFilter || w.filterWords.isEmpty()) continue;
-                for (String kw : w.filterWords.split(",")) {
-                    if (matchesKw(full, kw.trim())) { claimants.add(w); break; }
+                for (String kw : splitTokens(w.filterWords)) {
+                    if (matchesKw(full, kw)) { claimants.add(w); break; }
                 }
             }
             for (WinCfg w : wins) {
@@ -156,6 +156,14 @@ public class AporiaChatScreen extends ChatScreen {
             if (kw.isEmpty()) return false;
             String[] v = KeyboardLayout.both(kw.toLowerCase());
             return text.contains(v[0]) || text.contains(v[1]);
+        }
+
+        /** Сплитит filterWords по запятой или пробелу, возвращает токены без пустых. */
+        static String[] splitTokens(String filterWords) {
+            return java.util.Arrays.stream(filterWords.split("[,\\s]+"))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toArray(String[]::new);
         }
 
         private static WinCfg makeWin(String name, int idx) {
