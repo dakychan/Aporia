@@ -4,8 +4,11 @@ import com.mojang.blaze3d.ProjectionType;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -30,6 +33,19 @@ public class AporiaRenderer {
     private RenderPipeline pipeline;
     private CachedOrthoProjectionMatrixBuffer orthoProjection;
 
+    /* Blur pipeline fields */
+    private RenderPipeline blurPipeline;
+    private RenderPipeline blitPipeline;
+    private TextureTarget blurTarget;
+    private GpuBuffer blurUniformBuffer;
+    
+    /* Blur rectangle settings */
+    private float blurRectW = 300f;
+    private float blurRectH = 200f;
+    private float blurRectRadius = 15f;
+    private float blurRectSmoothness = 2f;
+    private float blurRadius = 15f;
+
     public void init() {
         pipeline = RenderPipeline.builder()
             .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/aporia"))
@@ -45,6 +61,32 @@ public class AporiaRenderer {
             .build();
 
         orthoProjection = new CachedOrthoProjectionMatrixBuffer("aporia", -1000f, 1000f, true);
+
+        /* Init blur pipeline */
+        blurPipeline = RenderPipeline.builder()
+            .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/blur"))
+            .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/blur"))
+            .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/blur"))
+            .withSampler("InputTexture")
+            .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLES)
+            .withBlend(BlendFunction.TRANSLUCENT)
+            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+            .withDepthWrite(false)
+            .withCull(false)
+            .build();
+
+        /* Init blit pipeline - uses simple blit shader */
+        blitPipeline = RenderPipeline.builder()
+            .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/blur_blit"))
+            .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/blit"))
+            .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/blit"))
+            .withSampler("InputTexture")
+            .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
+            .withBlend(BlendFunction.TRANSLUCENT)
+            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+            .withDepthWrite(false)
+            .withCull(false)
+            .build();
     }
 
     /** Public drawing API. */
@@ -209,4 +251,69 @@ public class AporiaRenderer {
     }
 
     public void onRenderWorld(Minecraft mc) {}
+
+    /**
+     * Applies blur effect to a rectangular region.
+     * Called from Blur module each frame when enabled.
+     */
+    public void applyBlur(Minecraft mc, float blurRadius) {
+        var mainTarget = mc.getMainRenderTarget();
+        var colorView = mainTarget.getColorTextureView();
+        if (colorView == null || blurPipeline == null) return;
+
+        var device = RenderSystem.getDevice();
+        var encoder = device.createCommandEncoder();
+
+        /* Draw a quad with blur effect in center of screen */
+        var tess = Tesselator.getInstance();
+        var buf = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
+        
+        /* Center quad - NDC coordinates */
+        float size = 0.4f;
+        buf.addVertex(-size, size, 0f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(-size, -size, 0f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(size, -size, 0f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(-size, size, 0f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(size, -size, 0f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(size, size, 0f).setColor(1f, 1f, 1f, 1f);
+
+        var mesh = buf.buildOrThrow();
+        var vertexGpu = device.createBuffer(
+            () -> "aporia:blur_vbo",
+            GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
+            mesh.vertexBuffer()
+        );
+
+        try (var pass = encoder.createRenderPass(() -> "aporia:blur_pass", mainTarget.getColorTextureView(), OptionalInt.empty())) {
+            pass.setPipeline(blurPipeline);
+            pass.bindTexture("InputTexture", colorView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.setVertexBuffer(0, vertexGpu);
+            pass.draw(0, 6);
+        }
+
+        mesh.close();
+        vertexGpu.close();
+    }
+
+    /**
+     * Renders blur effect for the Blur module.
+     * Call this from RenderHudEvent when Blur is enabled.
+     */
+    public void renderBlur(Minecraft mc) {
+        applyBlur(mc, 5f);
+    }
+
+    /**
+     * Cleans up blur resources when module is disabled.
+     */
+    public void cleanupBlur() {
+        if (blurTarget != null) {
+            blurTarget.destroyBuffers();
+            blurTarget = null;
+        }
+        if (blurUniformBuffer != null) {
+            blurUniformBuffer.close();
+            blurUniformBuffer = null;
+        }
+    }
 }

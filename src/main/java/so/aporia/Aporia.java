@@ -4,6 +4,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import so.aporia.module.ModuleManager;
+import so.aporia.module.impl.render.Blur;
 import so.aporia.module.impl.render.Hud;
 import so.aporia.utils.Logger;
 import so.aporia.utils.events.EventBus;
@@ -38,7 +39,8 @@ public class Aporia implements ResourceManagerReloadListener {
         KeybindManager.INSTANCE.toString();
         /* Register all modules once at startup */
         ModuleManager.INSTANCE.registerAll(
-            new Hud()
+            new Hud(),
+            new Blur()
         );
         Logger.success("Aporia initialized");
     }
