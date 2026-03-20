@@ -77,7 +77,7 @@ public class AporiaChatScreen extends ChatScreen {
         public final java.util.ArrayDeque<GuiMessage.Line> lines = new java.util.ArrayDeque<>(100);
         private static final int MAX_STORED = 200;
 
-        WinCfg(String name, int x, int bottomY, int w, int h, boolean draggable) {
+        public WinCfg(String name, int x, int bottomY, int w, int h, boolean draggable) {
             this.name=name; this.x=x; this.bottomY=bottomY; this.w=w; this.h=h; this.draggable=draggable;
         }
 
@@ -99,7 +99,7 @@ public class AporiaChatScreen extends ChatScreen {
     public static final class WinMgr {
         public static final WinMgr I = new WinMgr();
         public final List<WinCfg> wins = new ArrayList<>();
-        int active = 0;
+        public int active = 0;
 
         private WinMgr() { wins.add(makeWin("Main", 0)); }
 
@@ -786,9 +786,13 @@ public class AporiaChatScreen extends ChatScreen {
     private void addWindow() {
         WinMgr.I.add("Window " + (WinMgr.I.wins.size() + 1));
         resolvePosition(WinMgr.I.get(), WinMgr.I.active);
+        trySave();
     }
 
-    private void removeWindow() { WinMgr.I.remove(WinMgr.I.active); }
+    private void removeWindow() {
+        WinMgr.I.remove(WinMgr.I.active);
+        trySave();
+    }
 
     private void startFieldEdit(int field) {
         editingField = field;
@@ -816,6 +820,7 @@ public class AporiaChatScreen extends ChatScreen {
             case 8 -> { try { c.selfColor = (int)(Long.parseLong(v.replace("#",""), 16)) | 0xFF000000; } catch (Exception ignored) {} }
         }
         cancelFieldEdit();
+        trySave();
     }
 
     private void cancelFieldEdit() {
@@ -855,4 +860,18 @@ public class AporiaChatScreen extends ChatScreen {
     @Override public void renderBackground(GuiGraphics gfx, int mx, int my, float d) {}
     @Override public boolean isPauseScreen()     { return false; }
     @Override public boolean isAllowedInPortal() { return true; }
+
+    @Override
+    public void onClose() {
+        trySave();
+        super.onClose();
+    }
+
+    private static void trySave() {
+        try {
+            so.aporia.utils.files.impl.ChatFile.save();
+        } catch (Exception e) {
+            so.aporia.utils.Logger.error("ChatFile save failed: " + e.getMessage());
+        }
+    }
 }

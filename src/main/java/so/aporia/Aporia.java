@@ -5,8 +5,10 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import so.aporia.module.ModuleManager;
 import so.aporia.module.impl.render.Hud;
+import so.aporia.utils.Logger;
 import so.aporia.utils.events.EventBus;
 import so.aporia.utils.events.impl.RenderHudEvent;
+import so.aporia.utils.files.FilesManager;
 import so.aporia.utils.user.input.KeybindManager;
 import so.aporia.utils.user.render.core.AporiaRenderer;
 import so.aporia.utils.user.render.font.FontRenderer;
@@ -24,12 +26,21 @@ public class Aporia implements ResourceManagerReloadListener {
     public static final FontRenderer FONTS = new FontRenderer();
 
     private Aporia() {
+        Logger.info("Starting Aporia...");
+        /* Init filesystem — создаёт ~/.apr и загружает все файлы */
+        try {
+            FilesManager.init();
+            Logger.success("FilesManager initialized");
+        } catch (Exception e) {
+            Logger.error("FilesManager init failed: " + e.getMessage());
+        }
         /* Init keybind manager — registers itself on EventBus */
-        KeybindManager.INSTANCE.toString(); /* force static init */
+        KeybindManager.INSTANCE.toString();
         /* Register all modules once at startup */
         ModuleManager.INSTANCE.registerAll(
             new Hud()
         );
+        Logger.success("Aporia initialized");
     }
 
     /**
