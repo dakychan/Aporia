@@ -19,26 +19,40 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Operating System Manager - полноценное управление системой.
- *
+ * Operating System Manager — полноценное управление системой.
+ * <p>
+ * Operating System Manager — full-featured system management.
+ * <p>
+ * Features:
+ * <ul>
+ *   <li>OS and version detection</li>
+ *   <li>Architecture detection</li>
+ *   <li>Path and directory checks</li>
+ *   <li>User check (root/admin)</li>
+ *   <li>VM/Container detection</li>
+ *   <li>CPU, GPU, RAM, disk info</li>
+ *   <li>Weather and geolocation</li>
+ *   <li>Date/time</li>
+ * </ul>
+ * <p>
  * Возможности:
- * - Определение ОС и версии
- * - Определение архитектуры
- * - Проверка путей и директорий
- * - Проверка пользователя (root/admin)
- * - Определение VM/Container
- * - Информация о CPU, GPU, RAM, диске
- * - Погода и геолокация
- * - Дата/время
+ * <ul>
+ *   <li>Определение ОС и версии</li>
+ *   <li>Определение архитектуры</li>
+ *   <li>Проверка путей и директорий</li>
+ *   <li>Проверка пользователя (root/admin)</li>
+ *   <li>Определение VM/Container</li>
+ *   <li>Информация о CPU, GPU, RAM, диске</li>
+ *   <li>Погода и геолокация</li>
+ *   <li>Дата/время</li>
+ * </ul>
  */
 public class OsManager {
 
-    // ========================================================================
-    // 1. ПОЛУЧЕНИЕ ОС И ВЕРСИИ
-    // ========================================================================
-
     /**
      * Поддерживаемые платформы.
+     * <p>
+     * Supported platforms.
      */
     public enum Platform {
         WINDOWS,
@@ -47,20 +61,38 @@ public class OsManager {
         UNKNOWN
     }
 
-    /** Текущая платформа */
+    /**
+     * Текущая платформа.
+     * <p>
+     * Current platform.
+     */
     public static final Platform platform = detectPlatform();
 
-    /** Полное имя ОС */
+    /**
+     * Полное имя ОС.
+     * <p>
+     * Full OS name.
+     */
     public static final String osName = System.getProperty("os.name");
 
-    /** Версия ОС */
+    /**
+     * Версия ОС.
+     * <p>
+     * OS version.
+     */
     public static final String osVersion = System.getProperty("os.version");
 
-    /** Архитектура ОС */
+    /**
+     * Архитектура ОС.
+     * <p>
+     * OS architecture.
+     */
     public static final String osArch = System.getProperty("os.arch");
 
     /**
      * Получить детальную информацию об ОС.
+     * <p>
+     * Get detailed OS information.
      */
     public static OsDetails getOsDetails() {
         return new OsDetails(
@@ -77,6 +109,8 @@ public class OsManager {
 
     /**
      * Получить версию ядра.
+     * <p>
+     * Get kernel version.
      */
     private static String getKernelVersion() {
         try {
@@ -99,6 +133,8 @@ public class OsManager {
 
     /**
      * Проверить, 64-битная ли система.
+     * <p>
+     * Check if system is 64-bit.
      */
     public static boolean is64Bit() {
         String arch = osArch.toLowerCase(Locale.ROOT);
@@ -108,12 +144,10 @@ public class OsManager {
                arch.contains("aarch64");
     }
 
-    // ========================================================================
-    // 2. ПОЛУЧЕНИЕ АРХИТЕКТУРЫ И ПОНИМАНИЕ СИСТЕМЫ
-    // ========================================================================
-
     /**
      * Тип архитектуры процессора.
+     * <p>
+     * CPU architecture type.
      */
     public enum CpuArch {
         X86,
@@ -125,6 +159,8 @@ public class OsManager {
 
     /**
      * Получить архитектуру процессора.
+     * <p>
+     * Get CPU architecture.
      */
     public static CpuArch getCpuArch() {
         String arch = osArch.toLowerCase(Locale.ROOT);
@@ -143,6 +179,8 @@ public class OsManager {
 
     /**
      * Информация о процессоре.
+     * <p>
+     * CPU information.
      */
     public static class CpuInfo {
         public final String name;
@@ -173,6 +211,8 @@ public class OsManager {
 
     /**
      * Получить информацию о процессоре.
+     * <p>
+     * Get CPU information.
      */
     public static CpuInfo getCpuInfo() {
         int cores = Runtime.getRuntime().availableProcessors();
@@ -186,6 +226,8 @@ public class OsManager {
 
     /**
      * Получить частоту процессора.
+     * <p>
+     * Get CPU frequency.
      */
     private static String getCpuFrequency() {
         try {
@@ -256,11 +298,17 @@ public class OsManager {
         SCRIPTS
     }
 
-    /** Домашняя директория пользователя */
+    /**
+     * Домашняя директория пользователя.
+     * <p>
+     * User home directory.
+     */
     public static final Path userHome = Paths.get(System.getProperty("user.home"));
 
     /**
      * Основная директория для конфигов.
+     * <p>
+     * Main directory for configs.
      */
     public static final Path mainDirectory = createMainDirectory();
 
@@ -278,6 +326,8 @@ public class OsManager {
 
     /**
      * Директория кэша.
+     * <p>
+     * Cache directory.
      */
     public static final Path cacheDirectory = createCacheDirectory();
 
@@ -300,6 +350,8 @@ public class OsManager {
 
     /**
      * Директория данных.
+     * <p>
+     * Data directory.
      */
     public static final Path dataDirectory = createDataDirectory();
 
@@ -322,6 +374,8 @@ public class OsManager {
 
     /**
      * Директория логов.
+     * <p>
+     * Logs directory.
      */
     public static final Path logsDirectory = createLogsDirectory();
 
@@ -339,31 +393,43 @@ public class OsManager {
 
     /**
      * Временная директория.
+     * <p>
+     * Temporary directory.
      */
     public static final Path tempDirectory = cacheDirectory.resolve("temp");
 
     /**
      * Директория резервных копий.
+     * <p>
+     * Backup directory.
      */
     public static final Path backupDirectory = mainDirectory.resolve("backup");
 
     /**
      * Директория модулей.
+     * <p>
+     * Modules directory.
      */
     public static final Path modulesDirectory = mainDirectory.resolve("modules");
 
     /**
      * Директория тем.
+     * <p>
+     * Themes directory.
      */
     public static final Path themesDirectory = mainDirectory.resolve("themes");
 
     /**
      * Директория скриптов.
+     * <p>
+     * Scripts directory.
      */
     public static final Path scriptsDirectory = mainDirectory.resolve("scripts");
 
     /**
      * Получить директорию по типу.
+     * <p>
+     * Get directory by type.
      */
     public static Path getDirectory(DirectoryType type) {
         switch (type) {
@@ -392,6 +458,8 @@ public class OsManager {
 
     /**
      * Получить файл в директории.
+     * <p>
+     * Get file in directory.
      */
     public static Path getFile(DirectoryType type, String fileName) {
         return getDirectory(type).resolve(fileName);
@@ -399,6 +467,8 @@ public class OsManager {
 
     /**
      * Проверить существование пути.
+     * <p>
+     * Check if path exists.
      */
     public static boolean pathExists(Path path) {
         return path.toFile().exists();
@@ -406,6 +476,8 @@ public class OsManager {
 
     /**
      * Проверить, доступна ли директория для записи.
+     * <p>
+     * Check if directory is writable.
      */
     public static boolean isWritable(Path path) {
         try {
@@ -421,6 +493,8 @@ public class OsManager {
 
     /**
      * Создать директорию.
+     * <p>
+     * Create directory.
      */
     public static boolean createDirectory(Path path) {
         try {
@@ -436,6 +510,8 @@ public class OsManager {
 
     /**
      * Создать все необходимые директории.
+     * <p>
+     * Create all necessary directories.
      */
     public static boolean createAllDirectories() {
         try {
@@ -454,21 +530,24 @@ public class OsManager {
         }
     }
 
-    /** ========================================================================
-     * 4. ПРОВЕРКА ПОЛЬЗОВАТЕЛЯ
-     * ========================================================================
-     *
+    /**
      * Имя текущего пользователя.
+     * <p>
+     * Current user name.
      */
     public static final String userName = System.getProperty("user.name");
 
     /**
      * Домашняя директория пользователя.
+     * <p>
+     * User home directory.
      */
     public static final String userDir = System.getProperty("user.dir");
 
     /**
      * Получить информацию о пользователе.
+     * <p>
+     * Get user information.
      */
     public static UserInfo getUserInfo() {
         return new UserInfo(
@@ -483,6 +562,8 @@ public class OsManager {
 
     /**
      * Проверить, запущено ли от root (Linux/Mac).
+     * <p>
+     * Check if running as root (Linux/Mac).
      */
     public static boolean isRoot() {
         try {
@@ -506,6 +587,8 @@ public class OsManager {
 
     /**
      * Проверить, запущено ли от администратора (Windows).
+     * <p>
+     * Check if running as administrator (Windows).
      */
     public static boolean isAdmin() {
         try {
@@ -528,6 +611,8 @@ public class OsManager {
 
     /**
      * Проверить, запущено ли в виртуальной машине.
+     * <p>
+     * Check if running in a virtual machine.
      */
     public static boolean isVirtualMachine() {
         try {
@@ -607,6 +692,8 @@ public class OsManager {
 
     /**
      * Проверить, запущено ли в контейнере (Docker/LXC).
+     * <p>
+     * Check if running in a container (Docker/LXC).
      */
     public static boolean isContainer() {
         try {
@@ -640,12 +727,10 @@ public class OsManager {
         }
     }
 
-    // ========================================================================
-    // 5. ИНФОРМАЦИЯ О ЖЕЛЕЗЕ
-    // ========================================================================
-
     /**
      * Информация об оперативной памяти.
+     * <p>
+     * RAM information.
      */
     public static class RamInfo {
         public final long total;
@@ -676,6 +761,8 @@ public class OsManager {
 
     /**
      * Получить информацию об оперативной памяти.
+     * <p>
+     * Get RAM information.
      */
     public static RamInfo getRamInfo() {
         Runtime runtime = Runtime.getRuntime();

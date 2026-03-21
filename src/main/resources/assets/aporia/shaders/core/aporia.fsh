@@ -1,9 +1,12 @@
 #version 330
 
+uniform sampler2D BlurTextureSampler;
+
 layout(std140) uniform ShapeData {
     vec4 bounds;   /* x, y, w, h */
     vec4 params;   /* radius, smoothing, mode, borderMode */
-    vec4 params2;  /* thickness, fadeAtCorners, unused, unused */
+    vec4 params2;  /* thickness, fadeAtCorners, useBlur, unused */
+    vec4 screen;   /* screenW, screenH, unused, unused */
 };
 
 in vec2 uv;
@@ -22,50 +25,56 @@ float roundedBoxSDF(vec2 p, vec2 center, vec2 halfSize, float r) {
 }
 
 void main() {
-    int  mode        = int(params.z);
-    int  borderMode  = int(params.w);  /* 0=fill, 1=full stroke, 2=corners-only */
+    int   mode       = int(params.z);
+    int   borderMode = int(params.w);
     float radius     = params.x;
     float smoothing  = max(params.y, 0.5);
-    float thickness  = params2.x;      /* stroke thickness in px */
-    float fadeCorner = params2.y;      /* 0..1 — how much alpha fades toward corners */
-    float alpha      = vertColor.a;
+    float thickness  = params2.x;
+    float fadeCorner = params2.y;
+    bool  useBlur    = params2.z > 0.5;
 
+    vec2  center   = bounds.xy + bounds.zw * 0.5;
+    vec2  halfSize = bounds.zw * 0.5;
+
+    /* SDF mask — shape clipping, always 0..1 */
+    float sdfMask = 1.0;
     if (mode == 1) {
-        /* circle */
-        vec2  center = bounds.xy + bounds.zw * 0.5;
-        float r      = bounds.z * 0.5;
-        float d      = circleSDF(fragPos, center, r);
-        alpha *= 1.0 - smoothstep(-smoothing, smoothing, d);
+        float d = circleSDF(fragPos, center, halfSize.x);
+        sdfMask = 1.0 - smoothstep(-smoothing, smoothing, d);
     } else if (mode == 2) {
-        vec2  center   = bounds.xy + bounds.zw * 0.5;
-        vec2  halfSize = bounds.zw * 0.5;
-        float d        = roundedBoxSDF(fragPos, center, halfSize, radius);
-
+        float d = roundedBoxSDF(fragPos, center, halfSize, radius);
         if (borderMode == 0) {
-            /* normal fill */
-            alpha *= 1.0 - smoothstep(-smoothing, smoothing, d);
+            sdfMask = 1.0 - smoothstep(-smoothing, smoothing, d);
         } else {
-            /* stroke = ring between outer and inner SDF */
-            float outer = 1.0 - smoothstep(-smoothing, smoothing, d);
-            float inner = 1.0 - smoothstep(-smoothing, smoothing, d + thickness);
+            float outer  = 1.0 - smoothstep(-smoothing, smoothing, d);
+            float inner  = 1.0 - smoothstep(-smoothing, smoothing, d + thickness);
             float stroke = outer - inner;
-
             if (borderMode == 2) {
-                /* corners-only: fade out the straight edges */
-                /* measure how close we are to a corner arc vs a straight edge */
-                vec2 lp = abs(fragPos - center);
-                /* corner region: both axes are within radius of the corner */
-                vec2 cornerDist = lp - (halfSize - radius);
-                float inCorner = smoothstep(0.0, radius, max(cornerDist.x, 0.0))
-                               * smoothstep(0.0, radius, max(cornerDist.y, 0.0));
-                /* also fade straight edges based on fadeCorner param */
-                float edgeFade = mix(1.0 - fadeCorner, 1.0, inCorner);
-                stroke *= edgeFade;
+                vec2  cornerDist = abs(fragPos - center) - (halfSize - radius);
+                float inCorner   = smoothstep(0.0, radius, max(cornerDist.x, 0.0))
+                                 * smoothstep(0.0, radius, max(cornerDist.y, 0.0));
+                stroke *= mix(1.0 - fadeCorner, 1.0, inCorner);
             }
-
-            alpha *= stroke;
+            sdfMask = stroke;
         }
     }
 
-    fragColor = vec4(vertColor.rgb, alpha);
+    if (useBlur) {
+        /* Sample blurTarget at screen-space UV */
+        vec2 blurUv = gl_FragCoord.xy / screen.xy;
+        /* no y-flip: gl_FragCoord.y=0 is bottom, blurTarget UV.y=0 is also bottom */
+        vec3 blurColor = texture(BlurTextureSampler, blurUv).rgb;
+        /* DEBUG: if blurColor is all black, sampler is not bound — show red */
+        if (blurColor.r + blurColor.g + blurColor.b < 0.01) {
+            fragColor = vec4(1.0, 0.0, 0.0, sdfMask);
+            return;
+        }
+        /* Add white tint on top — vertColor.a is tint strength (small value like 0.07) */
+        blurColor = mix(blurColor, vertColor.rgb, vertColor.a * 0.5);
+        /* sdfMask clips the shape — blur is fully opaque inside */
+        fragColor = vec4(blurColor, sdfMask);
+    } else {
+        /* Normal colored shape — alpha = vertColor.a * sdfMask */
+        fragColor = vec4(vertColor.rgb, vertColor.a * sdfMask);
+    }
 }

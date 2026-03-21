@@ -22,21 +22,9 @@ public final class Easing {
 
     private Easing() {}
 
-    /* ------------------------------------------------------------------ */
-    /* Helpers                                                              */
-    /* ------------------------------------------------------------------ */
-
     private static float clamp(float t) { return Math.max(0f, Math.min(1f, t)); }
 
-    /* ------------------------------------------------------------------ */
-    /* Linear                                                               */
-    /* ------------------------------------------------------------------ */
-
     public static float linear(float t) { return clamp(t); }
-
-    /* ------------------------------------------------------------------ */
-    /* Polynomial — In / Out / InOut                                        */
-    /* ------------------------------------------------------------------ */
 
     public static float quadIn   (float t) { t=clamp(t); return t*t; }
     public static float quadOut  (float t) { t=clamp(t); return 1-(1-t)*(1-t); }
@@ -54,17 +42,9 @@ public final class Easing {
     public static float quintOut  (float t) { t=clamp(t); float u=1-t; return 1-u*u*u*u*u; }
     public static float quintInOut(float t) { t=clamp(t); return t<.5f ? 16*t*t*t*t*t : 1-16*(1-t)*(1-t)*(1-t)*(1-t)*(1-t); }
 
-    /* ------------------------------------------------------------------ */
-    /* Sine                                                                 */
-    /* ------------------------------------------------------------------ */
-
     public static float sineIn   (float t) { t=clamp(t); return 1-(float)Math.cos(t*PI/2); }
     public static float sineOut  (float t) { t=clamp(t); return (float)Math.sin(t*PI/2); }
     public static float sineInOut(float t) { t=clamp(t); return .5f-.5f*(float)Math.cos(t*PI); }
-
-    /* ------------------------------------------------------------------ */
-    /* Exponential                                                          */
-    /* ------------------------------------------------------------------ */
 
     public static float expoIn   (float t) { t=clamp(t); return t==0?0:(float)Math.pow(2,10*t-10); }
     public static float expoOut  (float t) { t=clamp(t); return t==1?1:1-(float)Math.pow(2,-10*t); }
@@ -74,20 +54,12 @@ public final class Easing {
         return t<.5f ? (float)Math.pow(2,20*t-10)/2 : (2-(float)Math.pow(2,-20*t+10))/2;
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Circular                                                             */
-    /* ------------------------------------------------------------------ */
-
     public static float circIn   (float t) { t=clamp(t); return 1-(float)Math.sqrt(1-t*t); }
     public static float circOut  (float t) { t=clamp(t); return (float)Math.sqrt(1-(t-1)*(t-1)); }
     public static float circInOut(float t) {
         t=clamp(t);
         return t<.5f ? (1-(float)Math.sqrt(1-4*t*t))/2 : ((float)Math.sqrt(1-(2*t-2)*(2*t-2))+1)/2;
     }
-
-    /* ------------------------------------------------------------------ */
-    /* Back — overshoots                                                    */
-    /* ------------------------------------------------------------------ */
 
     private static final float C1 = 1.70158f;
     private static final float C2 = C1 * 1.525f;
@@ -101,15 +73,15 @@ public final class Easing {
                      : (4*(t-1)*(t-1)*((C2+1)*(2*t-2)+C2)+2)/2;
     }
 
-    /** Back with custom overshoot amount (default C1 = 1.70158). */
+    /**
+     * Back with custom overshoot amount (default C1 = 1.70158).
+     * <p>
+     * Back с пользовательским значением overshoot.
+     */
     public static float backOut(float t, float overshoot) {
         t=clamp(t); float u=t-1; float c=overshoot+1;
         return 1 + c*u*u*u + overshoot*u*u;
     }
-
-    /* ------------------------------------------------------------------ */
-    /* Elastic — spring oscillation                                         */
-    /* ------------------------------------------------------------------ */
 
     private static final float E1 = TAU / 3f;
     private static final float E2 = TAU / 4.5f;
@@ -132,17 +104,17 @@ public final class Easing {
             :  (float)(Math.pow(2,-20*t+10)*Math.sin((20*t-11.125)*E2))/2+1;
     }
 
-    /** Elastic with custom amplitude and period. */
+    /**
+     * Elastic with custom amplitude and period.
+     * <p>
+     * Elastic с пользовательской амплитудой и периодом.
+     */
     public static float elasticOut(float t, float amplitude, float period) {
         t=clamp(t);
         if(t==0) return 0; if(t==1) return 1;
         float s = (float)(period/(TAU)*Math.asin(1/amplitude));
         return (float)(amplitude*Math.pow(2,-10*t)*Math.sin((t-s)*TAU/period))+1;
     }
-
-    /* ------------------------------------------------------------------ */
-    /* Bounce                                                               */
-    /* ------------------------------------------------------------------ */
 
     public static float bounceOut(float t) {
         t=clamp(t);
@@ -157,27 +129,34 @@ public final class Easing {
         return t<.5f ? (1-bounceOut(1-2*t))/2 : (1+bounceOut(2*t-1))/2;
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Smoothstep family                                                    */
-    /* ------------------------------------------------------------------ */
-
-    /** Ken Perlin's smoothstep — C1 continuous. */
+    /**
+     * Ken Perlin's smoothstep — C1 continuous.
+     * <p>
+     * Ken Perlin smoothstep — C1 непрерывный.
+     */
     public static float smoothstep(float t) { t=clamp(t); return t*t*(3-2*t); }
 
-    /** Smootherstep — C2 continuous (zero 1st and 2nd derivatives at edges). */
+    /**
+     * Smootherstep — C2 continuous (zero 1st and 2nd derivatives at edges).
+     * <p>
+     * Smootherstep — C2 непрерывный (нулевые 1-я и 2-я производные на краях).
+     */
     public static float smootherstep(float t) { t=clamp(t); return t*t*t*(t*(t*6-15)+10); }
 
-    /** Smootheststep — C3 continuous. */
+    /**
+     * Smootheststep — C3 continuous.
+     * <p>
+     * Smootheststep — C3 непрерывный.
+     */
     public static float smootheststep(float t) { t=clamp(t); return t*t*t*t*(t*(t*(t*(-20)+70)-84)+35); }
-
-    /* ------------------------------------------------------------------ */
-    /* Physics-based                                                        */
-    /* ------------------------------------------------------------------ */
 
     /**
      * Critically-damped spring response.
      * {@code t} is normalized time [0,1], {@code stiffness} controls speed (try 6–12).
      * Returns position in [0,1] that approaches 1 asymptotically.
+     * <p>
+     * Критически затухающая пружина.
+     * {@code t} — нормализованное время [0,1], {@code stiffness} контролирует скорость (6–12).
      */
     public static float springCritical(float t, float stiffness) {
         t=clamp(t);
@@ -201,11 +180,13 @@ public final class Easing {
     /**
      * Gravity drop — accelerates like free-fall, then bounces.
      * {@code bounces} = number of bounces (0 = no bounce, just fall).
+     * <p>
+     * Гравитационное падение — ускоряется как свободное падение, затем отскакивает.
+     * {@code bounces} — количество отскоков (0 = без отскока).
      */
     public static float gravity(float t, int bounces) {
         t=clamp(t);
         if(bounces<=0) return t*t;
-        /* Each bounce halves height. */
         float result = 0;
         float h = 1f;
         float tLeft = t;
@@ -262,17 +243,15 @@ public final class Easing {
         return 1f + overshoot * (float)(Math.sin(t * PI) * Math.exp(-t * 4));
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Bezier                                                               */
-    /* ------------------------------------------------------------------ */
-
     /**
      * Cubic bezier easing — equivalent to CSS {@code cubic-bezier(x1,y1,x2,y2)}.
      * Solves for t via Newton's method then evaluates Y.
+     * <p>
+     * Кубический bezier — эквивалент CSS {@code cubic-bezier(x1,y1,x2,y2)}.
+     * Решает t методом Ньютона затем вычисляет Y.
      */
     public static float cubicBezier(float t, float x1, float y1, float x2, float y2) {
         t=clamp(t);
-        /* Solve for parameter u such that bezierX(u) == t */
         float u = t;
         for(int i=0; i<8; i++) {
             float bx = bezierCoord(u, x1, x2) - t;
@@ -290,32 +269,40 @@ public final class Easing {
         return 3*(1-t)*(1-t)*p1 + 6*(1-t)*t*(p2-p1) + 3*t*t*(1-p2);
     }
 
-    /* Preset cubic-bezier curves matching CSS easings */
+    /**
+     * Preset cubic-bezier curves matching CSS easings.
+     * <p>
+     * Предустановленные кубические bezier кривые соответствующие CSS easing.
+     */
     public static float cssEase      (float t) { return cubicBezier(t, 0.25f,0.1f,0.25f,1.0f); }
     public static float cssEaseIn    (float t) { return cubicBezier(t, 0.42f,0f,  1.0f, 1.0f); }
     public static float cssEaseOut   (float t) { return cubicBezier(t, 0f,   0f,  0.58f,1.0f); }
     public static float cssEaseInOut (float t) { return cubicBezier(t, 0.42f,0f,  0.58f,1.0f); }
 
-    /* ------------------------------------------------------------------ */
-    /* Stepped                                                              */
-    /* ------------------------------------------------------------------ */
-
-    /** Quantizes t into {@code steps} discrete steps. */
+    /**
+     * Quantizes t into {@code steps} discrete steps.
+     * <p>
+     * Квантует t в {@code steps} дискретных шагов.
+     */
     public static float stepped(float t, int steps) {
         t=clamp(t);
         return (float)Math.floor(t * steps) / steps;
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Combinators                                                          */
-    /* ------------------------------------------------------------------ */
-
-    /** Mirrors the easing: in→out becomes out→in. */
+    /**
+     * Mirrors the easing: in→out becomes out→in.
+     * <p>
+     * Зеркалит easing: in→out становится out→in.
+     */
     public static float mirror(float t, java.util.function.Function<Float,Float> fn) {
         return t < 0.5f ? fn.apply(t*2)/2 : 1 - fn.apply((1-t)*2)/2;
     }
 
-    /** Applies easing twice (sharpens the curve). */
+    /**
+     * Applies easing twice (sharpens the curve).
+     * <p>
+     * Применяет easing дважды (заостряет кривую).
+     */
     public static float squared(float t, java.util.function.Function<Float,Float> fn) {
         float v = fn.apply(t); return v*v;
     }

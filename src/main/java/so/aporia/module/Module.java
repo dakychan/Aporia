@@ -30,19 +30,11 @@ public abstract class Module {
         this(name, category, -1);
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Lifecycle                                                            */
-    /* ------------------------------------------------------------------ */
-
     /** Called when the module is toggled ON. Register event listeners here. */
     protected void onEnable() {}
 
     /** Called when the module is toggled OFF. Unregister event listeners here. */
     protected void onDisable() {}
-
-    /* ------------------------------------------------------------------ */
-    /* Toggle                                                               */
-    /* ------------------------------------------------------------------ */
 
     public final void enable() {
         if (enabled) return;
@@ -59,10 +51,6 @@ public abstract class Module {
     public final void toggle() {
         if (enabled) disable(); else enable();
     }
-
-    /* ------------------------------------------------------------------ */
-    /* Accessors                                                            */
-    /* ------------------------------------------------------------------ */
 
     public String   name()     { return name; }
     public Category category() { return category; }

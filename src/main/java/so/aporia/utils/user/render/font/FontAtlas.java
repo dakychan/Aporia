@@ -19,6 +19,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Loads and holds glyph data from an MSDF font atlas JSON + texture pair.
+ * <p>
+ * Загружает и хранит данные глифов из MSDF шрифта (JSON + текстура).
  */
 public class FontAtlas {
 
@@ -42,7 +44,11 @@ public class FontAtlas {
         this.textureId = textureId;
     }
 
-    /** Loads the atlas if not already loaded (thread-safe). */
+    /**
+     * Loads the atlas if not already loaded (thread-safe).
+     * <p>
+     * Загружает атлас если ещё не загружен (потокобезопасно).
+     */
     public void ensureLoaded() {
         if (loaded.get()) return;
         synchronized (this) {
@@ -101,7 +107,7 @@ public class FontAtlas {
         if (g.has("unicode"))     unicode = g.get("unicode").getAsInt();
         else if (g.has("char"))   { String s = g.get("char").getAsString(); if (!s.isEmpty()) unicode = s.codePointAt(0); }
         else if (g.has("id"))     unicode = g.get("id").getAsInt();
-        else if (g.has("index"))  unicode = g.get("index").getAsInt() + 0xE000; /* map index → PUA codepoints */
+        else if (g.has("index"))  unicode = g.get("index").getAsInt() + 0xE000;
         if (unicode < 0) return;
 
         float advance = getFloat(g, "advance", 0) * fontSize;
@@ -138,15 +144,80 @@ public class FontAtlas {
         return obj.has(key) ? obj.get(key).getAsFloat() : def;
     }
 
+    /**
+     * Returns glyph for code point.
+     * <p>
+     * Возвращает глиф для кодовой точки.
+     */
     public Glyph getGlyph(int codePoint)    { return glyphs.get(codePoint); }
+
+    /**
+     * Checks if glyph exists.
+     * <p>
+     * Проверяет наличие глифа.
+     */
     public boolean hasGlyph(int codePoint)  { return glyphs.containsKey(codePoint); }
+
+    /**
+     * Returns texture identifier.
+     * <p>
+     * Возвращает идентификатор текстуры.
+     */
     public Identifier getTextureId()        { return textureId; }
+
+    /**
+     * Returns font size.
+     * <p>
+     * Возвращает размер шрифта.
+     */
     public float getFontSize()              { return fontSize; }
+
+    /**
+     * Returns line height.
+     * <p>
+     * Возвращает высоту строки.
+     */
     public float getLineHeight()            { return lineHeight; }
+
+    /**
+     * Returns atlas width.
+     * <p>
+     * Возвращает ширину атласа.
+     */
     public float getAtlasWidth()            { return atlasWidth; }
+
+    /**
+     * Returns atlas height.
+     * <p>
+     * Возвращает высоту атласа.
+     */
     public float getAtlasHeight()           { return atlasHeight; }
+
+    /**
+     * Returns distance range.
+     * <p>
+     * Возвращает диапазон расстояния.
+     */
     public float getDistanceRange()         { return distanceRange; }
+
+    /**
+     * Checks if loaded.
+     * <p>
+     * Проверяет загруженность.
+     */
     public boolean isLoaded()               { return loaded.get(); }
+
+    /**
+     * Returns glyph count.
+     * <p>
+     * Возвращает количество глифов.
+     */
     public int getGlyphCount()              { return glyphs.size(); }
+
+    /**
+     * Returns ascender.
+     * <p>
+     * Возвращает_ascender.
+     */
     public float getAscender()              { return ascender; }
 }

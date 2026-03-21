@@ -15,6 +15,8 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
 import net.minecraft.resources.Identifier;
+import so.aporia.Aporia;
+import so.aporia.utils.user.logger.Logger;
 import so.aporia.utils.user.render.font.Fonts;
 
 import java.nio.ByteBuffer;
@@ -29,105 +31,247 @@ public class AporiaRenderer {
     public static final int MODE_FILL         = 0;
     public static final int MODE_CIRCLE       = 1;
     public static final int MODE_ROUNDED_RECT = 2;
-
     private RenderPipeline pipeline;
     private CachedOrthoProjectionMatrixBuffer orthoProjection;
-
-    /* Blur pipeline fields */
     private RenderPipeline blurPipeline;
     private RenderPipeline blitPipeline;
-    private TextureTarget blurTarget;
-    private GpuBuffer blurUniformBuffer;
-    
-    /* Blur rectangle settings */
-    private float blurRectW = 300f;
-    private float blurRectH = 200f;
-    private float blurRectRadius = 15f;
-    private float blurRectSmoothness = 2f;
-    private float blurRadius = 15f;
+    private TextureTarget  blurTarget;
+    private TextureTarget  blurTempTarget;
+    private int blurTargetW = -1;
+    private int blurTargetH = -1;
+    private boolean blurReady = false;
+    private RenderPipeline postPipeline;
+    private TextureTarget  postTempTarget;
+    private int postTempW = -1, postTempH = -1;
 
     public void init() {
         pipeline = RenderPipeline.builder()
-            .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/aporia"))
-            .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/aporia"))
-            .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/aporia"))
-            .withUniform("Projection", com.mojang.blaze3d.shaders.UniformType.UNIFORM_BUFFER)
-            .withUniform("ShapeData",  com.mojang.blaze3d.shaders.UniformType.UNIFORM_BUFFER)
-            .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.TRIANGLES)
-            .withBlend(BlendFunction.TRANSLUCENT)
-            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-            .withDepthWrite(false)
-            .withCull(false)
-            .build();
+                .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/aporia"))
+                .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/aporia"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/aporia"))
+                .withUniform("Projection", UniformType.UNIFORM_BUFFER)
+                .withUniform("ShapeData",  UniformType.UNIFORM_BUFFER)
+                .withSampler("BlurTextureSampler")
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.TRIANGLES)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false)
+                .build();
 
         orthoProjection = new CachedOrthoProjectionMatrixBuffer("aporia", -1000f, 1000f, true);
 
-        /* Init blur pipeline */
         blurPipeline = RenderPipeline.builder()
-            .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/blur"))
-            .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/blur"))
-            .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/blur"))
-            .withSampler("InputTexture")
-            .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLES)
-            .withBlend(BlendFunction.TRANSLUCENT)
-            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-            .withDepthWrite(false)
-            .withCull(false)
-            .build();
+                .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/blur"))
+                .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/blur"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/blur"))
+                .withSampler("InputTexture")
+                .withUniform("BlurData", UniformType.UNIFORM_BUFFER)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false)
+                .build();
 
-        /* Init blit pipeline - uses simple blit shader */
         blitPipeline = RenderPipeline.builder()
-            .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/blur_blit"))
-            .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/blit"))
-            .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/blit"))
-            .withSampler("InputTexture")
-            .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
-            .withBlend(BlendFunction.TRANSLUCENT)
-            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-            .withDepthWrite(false)
-            .withCull(false)
-            .build();
+                .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/blur_blit"))
+                .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/blit"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/blit"))
+                .withSampler("InputTexture")
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false)
+                .build();
+
+        postPipeline = RenderPipeline.builder()
+                .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/postprocess"))
+                .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/postprocess"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/postprocess"))
+                .withSampler("InputTexture")
+                .withUniform("PostData", UniformType.UNIFORM_BUFFER)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false)
+                .build();
     }
 
     /** Public drawing API. */
 
-    /** Line from (x1,y1) to (x2,y2) with given pixel thickness */
+    /**
+     * Line from (x1,y1) to (x2,y2) with given pixel thickness.
+     * <p>
+     * Линия от (x1,y1) до (x2,y2) с заданной толщиной в пикселях.
+     */
     public void drawLine(float x1, float y1, float x2, float y2, float thickness, int color) {
         float dx = x2 - x1, dy = y2 - y1;
         float len = (float) Math.sqrt(dx * dx + dy * dy);
         if (len == 0) return;
         float nx = -dy / len * thickness * 0.5f;
         float ny =  dx / len * thickness * 0.5f;
-
-        /* Two triangles forming a quad along the line. */
         float[] vx = { x1+nx, x1-nx, x2-nx, x2+nx };
         float[] vy = { y1+ny, y1-ny, y2-ny, y2+ny };
-
-        /* Bounds = line bounding box for SDF (unused in mode 0, but populated for consistency). */
         float bx = Math.min(x1, x2) - thickness;
         float by = Math.min(y1, y2) - thickness;
         float bw = Math.abs(dx) + thickness * 2;
         float bh = Math.abs(dy) + thickness * 2;
-
         draw(new float[][]{
-            {vx[0], vy[0]}, {vx[1], vy[1]}, {vx[2], vy[2]},
-            {vx[0], vy[0]}, {vx[2], vy[2]}, {vx[3], vy[3]}
+                {vx[0], vy[0]}, {vx[1], vy[1]}, {vx[2], vy[2]},
+                {vx[0], vy[0]}, {vx[2], vy[2]}, {vx[3], vy[3]}
         }, color, MODE_FILL, bx, by, bw, bh, 0f);
     }
 
-    /** Filled circle */
+    /**
+     * Horizontal line that fades to transparent at both ends.
+     * <p>
+     * Горизонтальная линия с затуханием к краям.
+     * <ul>
+     *   <li>centerX/centerY — center of the line</li>
+     *   <li>halfLen — half-length</li>
+     *   <li>thickness — height</li>
+     *   <li>progress 0..1 — animated width scale (line grows from center)</li>
+     * </ul>
+     */
+    public void drawFadeHLine(float centerX, float centerY, float halfLen, float thickness, float progress, int color) {
+        float len = halfLen * progress;
+        if (len < 1f) return;
+        int segments = 12;
+        float segW = len / segments;
+        int a = (color >> 24) & 0xFF;
+        for (int i = 0; i < segments; i++) {
+            float t0 = (float) i / segments;
+            float t1 = (float)(i + 1) / segments;
+            float fade0 = 1f - Math.abs(t0 * 2f - 1f);
+            float fade1 = 1f - Math.abs(t1 * 2f - 1f);
+            int a0 = (int)(a * fade0 * fade0);
+            int a1 = (int)(a * fade1 * fade1);
+            int c0 = (a0 << 24) | (color & 0x00FFFFFF);
+            int c1 = (a1 << 24) | (color & 0x00FFFFFF);
+            float lx0 = centerX - (i + 1) * segW;
+            float lx1 = centerX - i * segW;
+            drawLine(lx0, centerY, lx1, centerY, thickness, lerp(c0, c1, 0.5f));
+            float rx0 = centerX + i * segW;
+            float rx1 = centerX + (i + 1) * segW;
+            drawLine(rx0, centerY, rx1, centerY, thickness, lerp(c0, c1, 0.5f));
+        }
+    }
+
+    private static int lerp(int c0, int c1, float t) {
+        int a = (int)(((c0>>24)&0xFF) + (((c1>>24)&0xFF) - ((c0>>24)&0xFF)) * t);
+        int r = (int)(((c0>>16)&0xFF) + (((c1>>16)&0xFF) - ((c0>>16)&0xFF)) * t);
+        int g = (int)(((c0>> 8)&0xFF) + (((c1>> 8)&0xFF) - ((c0>> 8)&0xFF)) * t);
+        int b = (int)(((c0    )&0xFF) + (((c1    )&0xFF) - ((c0    )&0xFF)) * t);
+        return (a<<24)|(r<<16)|(g<<8)|b;
+    }
+
+    /**
+     * Filled circle.
+     * <p>
+     * Заполненный круг.
+     */
     public void drawCircle(float cx, float cy, float radius, int color) {
         float x = cx - radius, y = cy - radius, d = radius * 2;
         drawShape(x, y, d, d, color, MODE_CIRCLE, x, y, d, d, radius, 0, 0f, 0f);
     }
 
-    /** Filled triangle with 3 explicit vertices */
+    /**
+     * Filled triangle with 3 explicit vertices.
+     * <p>
+     * Заполненный треугольник с 3 явными вершинами.
+     */
     public void drawTriangle(float x1, float y1, float x2, float y2, float x3, float y3, int color) {
         float bx = Math.min(x1, Math.min(x2, x3));
         float by = Math.min(y1, Math.min(y2, y3));
         float bw = Math.max(x1, Math.max(x2, x3)) - bx;
         float bh = Math.max(y1, Math.max(y2, y3)) - by;
         draw(new float[][]{{x1,y1},{x2,y2},{x3,y3}}, color, MODE_FILL, bx, by, bw, bh, 0f);
+    }
+
+    private boolean blurLoggedOnce = false;
+    private boolean blurPreparedLoggedOnce = false;
+
+    public void resetDebugFlags() {
+        blurLoggedOnce = false;
+        blurPreparedLoggedOnce = false;
+    }
+
+    /**
+     * Blurred rect — uses aporia pipeline with gl_FragCoord sampling from blurTarget.
+     * SDF rounded corners clip correctly — same shader as drawRect.
+     * <p>
+     * Размытый прямоугольник — использует aporia pipeline с gl_FragCoord из blurTarget.
+     * SDF скруглённые углы корректно обрезаются — тот же шейдер что и drawRect.
+     */
+    public void drawRectBlurred(float x, float y, float w, float h, float radius, int color, float blurStrength) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!blurReady || pipeline == null || blurTarget == null) {
+            if (!blurLoggedOnce) {
+                Logger.info("[drawRectBlurred] FALLBACK — blurReady=" + blurReady + " blurTarget=" + (blurTarget != null ? "ok" : "null"));
+                blurLoggedOnce = true;
+            }
+            drawRect(x, y, w, h, radius, color);
+            return;
+        }
+        if (!blurLoggedOnce) {
+            Logger.info("[drawRectBlurred] BLUR PATH via aporia pipeline + gl_FragCoord");
+            blurLoggedOnce = true;
+        }
+        var mainTarget = mc.getMainRenderTarget();
+        var window     = mc.getWindow();
+        float sw = window.getGuiScaledWidth();
+        float sh = window.getGuiScaledHeight();
+        var colorView  = mainTarget.getColorTextureView();
+        if (colorView == null) return;
+        float ta = ((color >> 24) & 0xFF) / 255f;
+        float tr = ((color >> 16) & 0xFF) / 255f;
+        float tg = ((color >>  8) & 0xFF) / 255f;
+        float tb = ((color      ) & 0xFF) / 255f;
+        var projSlice = orthoProjection.getBuffer(sw, sh);
+        RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC);
+        var tess = Tesselator.getInstance();
+        var buf  = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR);
+        buf.addVertex(x,   y+h, 0f).setUv(0f,0f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x+w, y+h, 0f).setUv(1f,0f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x+w, y,   0f).setUv(1f,1f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x,   y+h, 0f).setUv(0f,0f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x+w, y,   0f).setUv(1f,1f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x,   y,   0f).setUv(0f,1f).setColor(tr,tg,tb,ta);
+        var mesh      = buf.buildOrThrow();
+        var device  = RenderSystem.getDevice();
+        var encoder = device.createCommandEncoder();
+        var vertexGpu = device.createBuffer(() -> "aporia:blur_vbo2",
+        GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, mesh.vertexBuffer());
+        var shapeBuf = device.createBuffer(() -> "aporia:blur_shape2", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 64L);
+        var bb = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder());
+        bb.putFloat(x); bb.putFloat(y); bb.putFloat(w); bb.putFloat(h);
+        bb.putFloat(radius); bb.putFloat(1.0f); bb.putFloat(MODE_ROUNDED_RECT); bb.putFloat(0f);
+        bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(1f); bb.putFloat(0f);
+        bb.putFloat((float) mainTarget.width); bb.putFloat((float) mainTarget.height); bb.putFloat(0f); bb.putFloat(0f);
+        bb.flip();
+        encoder.writeToBuffer(shapeBuf.slice(), bb);
+        var indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES);
+        try (var pass = encoder.createRenderPass(() -> "aporia:blur_rect", colorView, OptionalInt.empty())) {
+            pass.setPipeline(pipeline);
+            RenderSystem.bindDefaultUniforms(pass);
+            pass.setUniform("ShapeData", shapeBuf.slice());
+            pass.bindTexture("BlurTextureSampler", blurTarget.getColorTextureView(),
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.setVertexBuffer(0, vertexGpu);
+            pass.setIndexBuffer(indexBuf.getBuffer(6), indexBuf.type());
+            pass.drawIndexed(0, 0, 6, 0);
+        }
+        mesh.close();
+        vertexGpu.close();
+        shapeBuf.close();
+    }
+
+    /** Overload with default blur strength. */
+    public void drawRectBlurred(float x, float y, float w, float h, float radius, int color) {
+        drawRectBlurred(x, y, w, h, radius, color, 4f);
     }
 
     /** Filled rectangle, optionally rounded */
@@ -145,7 +289,7 @@ public class AporiaRenderer {
     public void drawStroke(float x, float y, float w, float h, float radius,
                            float thickness, int borderMode, float fadeCorner, int color) {
         drawShape(x, y, w, h, color, MODE_ROUNDED_RECT, x, y, w, h, radius,
-                  borderMode, thickness, fadeCorner);
+                borderMode, thickness, fadeCorner);
     }
 
     /** Internal helpers. */
@@ -154,8 +298,8 @@ public class AporiaRenderer {
                            int mode, float bx, float by, float bw, float bh,
                            float radius, int borderMode, float thickness, float fadeCorner) {
         draw(new float[][]{
-            {x,   y+h}, {x+w, y+h}, {x+w, y},
-            {x,   y+h}, {x+w, y  }, {x,   y}
+                {x,   y+h}, {x+w, y+h}, {x+w, y},
+                {x,   y+h}, {x+w, y  }, {x,   y}
         }, color, mode, bx, by, bw, bh, radius, borderMode, thickness, fadeCorner);
     }
 
@@ -191,17 +335,18 @@ public class AporiaRenderer {
         var encoder = device.createCommandEncoder();
 
         var vertexGpu = device.createBuffer(
-            () -> "aporia:vbo",
-            GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
-            mesh.vertexBuffer()
+                () -> "aporia:vbo",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
+                mesh.vertexBuffer()
         );
 
-        /* ShapeData UBO layout: bounds(4) + params(4) + params2(4) = 48 bytes */
-        var shapeBuf = device.createBuffer(() -> "aporia:shape", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 48L);
-        var bb = ByteBuffer.allocateDirect(48).order(ByteOrder.nativeOrder());
-        bb.putFloat(bx); bb.putFloat(by); bb.putFloat(bw); bb.putFloat(bh);       /* bounds  */
-        bb.putFloat(radius); bb.putFloat(1.0f); bb.putFloat(mode); bb.putFloat((float) borderMode); /* params  */
-        bb.putFloat(thickness); bb.putFloat(fadeCorner); bb.putFloat(0f); bb.putFloat(0f);           /* params2 */
+        /* ShapeData UBO: bounds(16) + params(16) + params2(16) + screen(16) = 64 bytes */
+        var shapeBuf = device.createBuffer(() -> "aporia:shape", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 64L);
+        var bb = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder());
+        bb.putFloat(bx); bb.putFloat(by); bb.putFloat(bw); bb.putFloat(bh);
+        bb.putFloat(radius); bb.putFloat(1.0f); bb.putFloat(mode); bb.putFloat((float) borderMode);
+        bb.putFloat(thickness); bb.putFloat(fadeCorner); bb.putFloat(0f); bb.putFloat(0f); // useBlur=0
+        bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); // screen unused for normal draw
         bb.flip();
         encoder.writeToBuffer(shapeBuf.slice(), bb);
 
@@ -215,31 +360,33 @@ public class AporiaRenderer {
             pass.setIndexBuffer(indexBuf.getBuffer(verts.length), indexBuf.type());
             pass.drawIndexed(0, 0, verts.length / 3 * 3, 0);
         }
-
         mesh.close();
         vertexGpu.close();
         shapeBuf.close();
     }
 
-    /** Test render entry point — shapes are commented out until needed. */
+    /** Saturation for the postprocess pass. 0=grayscale, 0.5=normal, 1.0=enhanced. */
+    public float saturation = 0.5f;
 
+    /** Test render entry point — shapes are commented out until needed. */
     public void onRenderHud(Minecraft mc) {
+        if (saturation != 0.5f) applySaturation(mc, saturation);
     }
 
     /** Draws text via the shared {@link so.aporia.utils.user.render.font.FontRenderer}. */
     public void drawText(String font, String text, float x, float y, float size, int color) {
-        so.aporia.Aporia.FONTS.drawText(font, text, x, y, size, color);
+        Aporia.FONTS.drawText(font, text, x, y, size, color);
     }
 
     /** Draws text with an MSDF outline. */
     public void drawTextWithOutline(String font, String text, float x, float y, float size,
                                     int color, float outlineWidth, int outlineColor) {
-        so.aporia.Aporia.FONTS.drawTextWithOutline(font, text, x, y, size, color, outlineWidth, outlineColor);
+        Aporia.FONTS.drawTextWithOutline(font, text, x, y, size, color, outlineWidth, outlineColor);
     }
 
     /** Returns pixel width of text at given size. */
     public float getTextWidth(String font, String text, float size) {
-        return so.aporia.Aporia.FONTS.getTextWidth(font, text, size);
+        return Aporia.FONTS.getTextWidth(font, text, size);
     }
 
     /**
@@ -247,73 +394,166 @@ public class AporiaRenderer {
      * Index maps to PUA codepoint {@code 0xE000 + index}.
      */
     public void drawGlyph(int index, float x, float y, float size, int color) {
-        so.aporia.Aporia.FONTS.drawGlyph(Fonts.FONT, index, x, y, size, color);
+        Aporia.FONTS.drawGlyph(Fonts.FONT, index, x, y, size, color);
     }
 
     public void onRenderWorld(Minecraft mc) {}
 
     /**
-     * Applies blur effect to a rectangular region.
-     * Called from Blur module each frame when enabled.
+     * Ensures blur targets match current framebuffer size. Lazy + resize-aware.
      */
-    public void applyBlur(Minecraft mc, float blurRadius) {
+    private void ensureBlurTarget(Minecraft mc) {
+        var main = mc.getMainRenderTarget();
+        if (main.width == blurTargetW && main.height == blurTargetH) return;
+        if (blurTarget     != null) blurTarget.destroyBuffers();
+        if (blurTempTarget != null) blurTempTarget.destroyBuffers();
+        blurTarget     = new TextureTarget("aporia:blur_final", main.width, main.height, false);
+        blurTempTarget = new TextureTarget("aporia:blur_temp",  main.width, main.height, false);
+        blurTargetW = main.width;
+        blurTargetH = main.height;
+        blurReady   = false;
+    }
+
+    /**
+     * Two-pass separable gaussian: mainTarget → blurTempTarget (H) → blurTarget (V).
+     * For strong blur, runs multiple iterations to avoid sampling artifacts.
+     * @param saturation 0=grayscale, 0.5=normal, 1.0=enhanced colors in the blurred result
+     */
+    public void prepareBlur(Minecraft mc, float strength, float saturation) {
+        if (blurPipeline == null) {
+            Logger.info("[prepareBlur] SKIP — blurPipeline is null");
+            return;
+        }
+        if (!blurPreparedLoggedOnce) {
+            Logger.info("[prepareBlur] called — strength=" + strength + " sat=" + saturation + " blurTarget=" + (blurTarget != null ? "ok" : "null"));
+            blurPreparedLoggedOnce = true;
+        }
+        ensureBlurTarget(mc);
+        blurReady = false;
         var mainTarget = mc.getMainRenderTarget();
-        var colorView = mainTarget.getColorTextureView();
-        if (colorView == null || blurPipeline == null) return;
-
-        var device = RenderSystem.getDevice();
-        var encoder = device.createCommandEncoder();
-
-        /* Draw a quad with blur effect in center of screen */
+        var device     = RenderSystem.getDevice();
+        float fw = mainTarget.width, fh = mainTarget.height;
+        int   iterations   = Math.max(1, (int)(strength / 6f));
+        float passStrength = strength / iterations;
         var tess = Tesselator.getInstance();
-        var buf = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
-        
-        /* Center quad - NDC coordinates */
-        float size = 0.4f;
-        buf.addVertex(-size, size, 0f).setColor(1f, 1f, 1f, 1f);
-        buf.addVertex(-size, -size, 0f).setColor(1f, 1f, 1f, 1f);
-        buf.addVertex(size, -size, 0f).setColor(1f, 1f, 1f, 1f);
-        buf.addVertex(-size, size, 0f).setColor(1f, 1f, 1f, 1f);
-        buf.addVertex(size, -size, 0f).setColor(1f, 1f, 1f, 1f);
-        buf.addVertex(size, size, 0f).setColor(1f, 1f, 1f, 1f);
+        var buf  = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
+        buf.addVertex(-1f,  1f, 0f).setUv(0f, 1f);
+        buf.addVertex(-1f, -1f, 0f).setUv(0f, 0f);
+        buf.addVertex( 1f, -1f, 0f).setUv(1f, 0f);
+        buf.addVertex(-1f,  1f, 0f).setUv(0f, 1f);
+        buf.addVertex( 1f, -1f, 0f).setUv(1f, 0f);
+        buf.addVertex( 1f,  1f, 0f).setUv(1f, 1f);
+        var mesh      = buf.buildOrThrow();
+        var vertexGpu = device.createBuffer(() -> "aporia:blur_vbo",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, mesh.vertexBuffer());
+        var encoder = device.createCommandEncoder();
+        for (int iter = 0; iter < iterations; iter++) {
+            var srcH = (iter == 0) ? mainTarget.getColorTextureView()
+                    : blurTarget.getColorTextureView();
+            float sat = (iter == 0) ? saturation : 0.5f;
+            var hBuf = device.createBuffer(() -> "aporia:blur_h", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 32L);
+            var hBB  = ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder());
+            hBB.putFloat(fw); hBB.putFloat(fh); hBB.putFloat(passStrength); hBB.putFloat(0f);
+            hBB.putFloat(sat); hBB.putFloat(0f); hBB.putFloat(0f); hBB.putFloat(0f);
+            hBB.flip();
+            encoder.writeToBuffer(hBuf.slice(), hBB);
+            var vBuf = device.createBuffer(() -> "aporia:blur_v", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 32L);
+            var vBB  = ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder());
+            vBB.putFloat(fw); vBB.putFloat(fh); vBB.putFloat(passStrength); vBB.putFloat(1f);
+            vBB.putFloat(0.5f); vBB.putFloat(0f); vBB.putFloat(0f); vBB.putFloat(0f);
+            vBB.flip();
+            encoder.writeToBuffer(vBuf.slice(), vBB);
+            try (var pass = encoder.createRenderPass(() -> "aporia:blur_h",
+                    blurTempTarget.getColorTextureView(), OptionalInt.empty())) {
+                pass.setPipeline(blurPipeline);
+                pass.bindTexture("InputTexture", srcH,
+                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+                pass.setUniform("BlurData", hBuf.slice());
+                pass.setVertexBuffer(0, vertexGpu);
+                pass.draw(0, 6);
+            }
+            try (var pass = encoder.createRenderPass(() -> "aporia:blur_v",
+                    blurTarget.getColorTextureView(), OptionalInt.empty())) {
+                pass.setPipeline(blurPipeline);
+                pass.bindTexture("InputTexture", blurTempTarget.getColorTextureView(),
+                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+                pass.setUniform("BlurData", vBuf.slice());
+                pass.setVertexBuffer(0, vertexGpu);
+                pass.draw(0, 6);
+            }
+            hBuf.close();
+            vBuf.close();
+        }
+        mesh.close();
+        vertexGpu.close();
+        blurReady = true;
+        if (!blurPreparedLoggedOnce) {
+            Logger.info("[prepareBlur] DONE — blurReady=true iterations=" + iterations);
+        }
+    }
 
-        var mesh = buf.buildOrThrow();
-        var vertexGpu = device.createBuffer(
-            () -> "aporia:blur_vbo",
-            GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
-            mesh.vertexBuffer()
-        );
+    /** Overload with default saturation (normal). */
+    public void prepareBlur(Minecraft mc, float strength) {
+        prepareBlur(mc, strength, 0.5f);
+    }
 
-        try (var pass = encoder.createRenderPass(() -> "aporia:blur_pass", mainTarget.getColorTextureView(), OptionalInt.empty())) {
-            pass.setPipeline(blurPipeline);
-            pass.bindTexture("InputTexture", colorView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+    /**
+     * Applies saturation grading to the entire framebuffer.
+     * @param saturation 0.0 = grayscale, 0.5 = original colors, 1.0 = enhanced saturation
+     */
+    public void applySaturation(Minecraft mc, float saturation) {
+        if (postPipeline == null) return;
+        var mainTarget = mc.getMainRenderTarget();
+        if (mainTarget.width != postTempW || mainTarget.height != postTempH) {
+            if (postTempTarget != null) postTempTarget.destroyBuffers();
+            postTempTarget = new TextureTarget("aporia:post_temp", mainTarget.width, mainTarget.height, false);
+            postTempW = mainTarget.width;
+            postTempH = mainTarget.height;
+        }
+        var device  = RenderSystem.getDevice();
+        var encoder = device.createCommandEncoder();
+        var tess = Tesselator.getInstance();
+        var buf  = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
+        buf.addVertex(-1f,  1f, 0f).setUv(0f, 1f);
+        buf.addVertex(-1f, -1f, 0f).setUv(0f, 0f);
+        buf.addVertex( 1f, -1f, 0f).setUv(1f, 0f);
+        buf.addVertex(-1f,  1f, 0f).setUv(0f, 1f);
+        buf.addVertex( 1f, -1f, 0f).setUv(1f, 0f);
+        buf.addVertex( 1f,  1f, 0f).setUv(1f, 1f);
+        var mesh      = buf.buildOrThrow();
+        var vertexGpu = device.createBuffer(() -> "aporia:post_vbo",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, mesh.vertexBuffer());
+        var dataBuf = device.createBuffer(() -> "aporia:post_data",
+                GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 16L);
+        var bb = ByteBuffer.allocateDirect(16).order(ByteOrder.nativeOrder());
+        bb.putFloat(saturation); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
+        bb.flip();
+        encoder.writeToBuffer(dataBuf.slice(), bb);
+        try (var pass = encoder.createRenderPass(() -> "aporia:post_pass",
+                postTempTarget.getColorTextureView(), OptionalInt.empty())) {
+            pass.setPipeline(postPipeline);
+            pass.bindTexture("InputTexture", mainTarget.getColorTextureView(),
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.setUniform("PostData", dataBuf.slice());
             pass.setVertexBuffer(0, vertexGpu);
             pass.draw(0, 6);
         }
-
+        try (var pass = encoder.createRenderPass(() -> "aporia:post_blit",
+                mainTarget.getColorTextureView(), OptionalInt.empty())) {
+            pass.setPipeline(blitPipeline);
+            pass.bindTexture("InputTexture", postTempTarget.getColorTextureView(),
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.setVertexBuffer(0, vertexGpu);
+            pass.draw(0, 6);
+        }
         mesh.close();
         vertexGpu.close();
+        dataBuf.close();
     }
 
-    /**
-     * Renders blur effect for the Blur module.
-     * Call this from RenderHudEvent when Blur is enabled.
-     */
-    public void renderBlur(Minecraft mc) {
-        applyBlur(mc, 5f);
-    }
-
-    /**
-     * Cleans up blur resources when module is disabled.
-     */
     public void cleanupBlur() {
-        if (blurTarget != null) {
-            blurTarget.destroyBuffers();
-            blurTarget = null;
-        }
-        if (blurUniformBuffer != null) {
-            blurUniformBuffer.close();
-            blurUniformBuffer = null;
-        }
+        if (blurTarget     != null) { blurTarget.destroyBuffers();     blurTarget     = null; }
+        if (blurTempTarget != null) { blurTempTarget.destroyBuffers(); blurTempTarget = null; }
+        blurTargetW = -1; blurTargetH = -1; blurReady = false;
     }
 }

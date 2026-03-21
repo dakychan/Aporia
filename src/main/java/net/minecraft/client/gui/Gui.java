@@ -205,7 +205,9 @@ public class Gui {
         if (!(this.minecraft.screen instanceof LevelLoadingScreen)) {
             if (!this.minecraft.options.hideGui) {
                 this.renderCameraOverlays(p_282884_, p_342095_);
-                this.renderCrosshair(p_282884_, p_342095_);
+                if (!(this.minecraft.screen instanceof so.aporia.utils.user.render.ui.clickgui.ClickGuiScreen)) {
+                    this.renderCrosshair(p_282884_, p_342095_);
+                }
                 p_282884_.nextStratum();
                 this.renderHotbarAndDecorations(p_282884_, p_342095_);
                 this.renderEffects(p_282884_, p_342095_);
@@ -218,7 +220,9 @@ public class Gui {
                 this.renderScoreboardSidebar(p_282884_, p_342095_);
                 this.renderOverlayMessage(p_282884_, p_342095_);
                 this.renderTitle(p_282884_, p_342095_);
-                this.renderChat(p_282884_, p_342095_);
+                if (!(this.minecraft.screen instanceof so.aporia.utils.user.render.ui.clickgui.ClickGuiScreen)) {
+                    this.renderChat(p_282884_, p_342095_);
+                }
                 this.renderTabList(p_282884_, p_342095_);
                 this.renderSubtitleOverlay(p_282884_, this.minecraft.screen == null || this.minecraft.screen.isInGameUi());
             } else if (this.minecraft.screen != null && this.minecraft.screen.isInGameUi()) {

@@ -23,6 +23,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
+import so.aporia.utils.user.command.CommandManager;
 
 @OnlyIn(Dist.CLIENT)
 public class ChatScreen extends Screen {
@@ -274,7 +275,7 @@ public class ChatScreen extends Screen {
         if (!p_242400_.isEmpty()) {
             if (PanicSystem.INSTANCE.handleChat(p_242400_)) return;
 
-            if (so.aporia.utils.user.command.CommandManager.INSTANCE.handle(p_242400_)) return;
+            if (CommandManager.INSTANCE.handle(p_242400_)) return;
 
             if (p_242161_) {
                 this.minecraft.gui.getChat().addRecentChat(p_242400_);

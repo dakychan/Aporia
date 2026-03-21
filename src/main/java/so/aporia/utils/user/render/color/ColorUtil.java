@@ -16,10 +16,6 @@ package so.aporia.utils.user.render.color;
  */
 public final class ColorUtil {
 
-    /* ------------------------------------------------------------------ */
-    /* Minecraft §-code palette                                             */
-    /* ------------------------------------------------------------------ */
-
     /** ARGB values for Minecraft legacy color codes §0–§f. */
     private static final int[] LEGACY = {
         0xFF000000, 0xFF0000AA, 0xFF00AA00, 0xFF00AAAA,
@@ -30,36 +26,46 @@ public final class ColorUtil {
 
     private ColorUtil() {}
 
-    /* ------------------------------------------------------------------ */
-    /* Construction                                                         */
-    /* ------------------------------------------------------------------ */
-
-    /** Builds an opaque ARGB color from 0–255 components. */
+    /**
+     * Builds an opaque ARGB color from 0–255 components.
+     * <p>
+     * Создаёт непрозрачный ARGB цвет из компонентов 0–255.
+     */
     public static int rgb(int r, int g, int b) {
         return 0xFF000000 | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
     }
 
-    /** Builds an ARGB color from 0–255 components. */
+    /**
+     * Builds an ARGB color from 0–255 components.
+     * <p>
+     * Создаёт ARGB цвет из компонентов 0–255.
+     */
     public static int rgba(int r, int g, int b, int a) {
         return ((a & 0xFF) << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
     }
 
-    /** Builds an ARGB color from 0.0–1.0 float components. */
+    /**
+     * Builds an ARGB color from 0.0–1.0 float components.
+     * <p>
+     * Создаёт ARGB цвет из float компонентов 0.0–1.0.
+     */
     public static int rgbf(float r, float g, float b) {
         return rgb((int)(r * 255), (int)(g * 255), (int)(b * 255));
     }
 
-    /** Builds an ARGB color from 0.0–1.0 float components including alpha. */
+    /**
+     * Builds an ARGB color from 0.0–1.0 float components including alpha.
+     * <p>
+     * Создаёт ARGB цвет из float компонентов 0.0–1.0 включая альфу.
+     */
     public static int rgbaf(float r, float g, float b, float a) {
         return rgba((int)(r * 255), (int)(g * 255), (int)(b * 255), (int)(a * 255));
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Parsing                                                              */
-    /* ------------------------------------------------------------------ */
-
     /**
      * Parses a hex color string.
+     * <p>
+     * Парсит hex строку цвета.
      * Accepts: {@code "#RGB"}, {@code "#RRGGBB"}, {@code "#AARRGGBB"},
      * {@code "RGB"}, {@code "RRGGBB"}, {@code "AARRGGBB"} (no {@code #}).
      * Returns {@code fallback} on parse failure.
@@ -84,43 +90,69 @@ public final class ColorUtil {
         }
     }
 
-    /** Parses a Minecraft {@code §X} color code character. Returns -1 if not a color code. */
+    /**
+     * Parses a Minecraft {@code §X} color code character. Returns -1 if not a color code.
+     * <p>
+     * Парсит символ цветового кода Minecraft {@code §X}. Возвращает -1 если не код цвета.
+     */
     public static int fromLegacyCode(char code) {
         int idx = "0123456789abcdef".indexOf(Character.toLowerCase(code));
         return idx >= 0 ? LEGACY[idx] : -1;
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Component extraction                                                 */
-    /* ------------------------------------------------------------------ */
-
+    /**
+     * Returns alpha component (0-255).
+     * <p>
+     * Возвращает альфа-компонент (0-255).
+     */
     public static int alpha(int argb) { return (argb >> 24) & 0xFF; }
+
+    /**
+     * Returns red component (0-255).
+     * <p>
+     * Возвращает красный компонент (0-255).
+     */
     public static int red  (int argb) { return (argb >> 16) & 0xFF; }
+
+    /**
+     * Returns green component (0-255).
+     * <p>
+     * Возвращает зелёный компонент (0-255).
+     */
     public static int green(int argb) { return (argb >>  8) & 0xFF; }
+
+    /**
+     * Returns blue component (0-255).
+     * <p>
+     * Возвращает синий компонент (0-255).
+     */
     public static int blue (int argb) { return  argb        & 0xFF; }
 
-    /* ------------------------------------------------------------------ */
-    /* Alpha manipulation                                                   */
-    /* ------------------------------------------------------------------ */
-
-    /** Returns the color with alpha replaced. {@code a} is 0–255. */
+    /**
+     * Returns the color with alpha replaced. {@code a} is 0–255.
+     * <p>
+     * Возвращает цвет с заменённой альфой. {@code a} — 0–255.
+     */
     public static int withAlpha(int argb, int a) {
         return (argb & 0x00FFFFFF) | ((a & 0xFF) << 24);
     }
 
-    /** Returns the color with alpha multiplied by {@code factor} (0.0–1.0). */
+    /**
+     * Returns the color with alpha multiplied by {@code factor} (0.0–1.0).
+     * <p>
+     * Возвращает цвет с альфой, умноженной на {@code factor} (0.0–1.0).
+     */
     public static int multiplyAlpha(int argb, float factor) {
         int a = (int)(alpha(argb) * factor);
         return withAlpha(argb, a);
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Gradients                                                            */
-    /* ------------------------------------------------------------------ */
-
     /**
      * Linear interpolation between two ARGB colors.
      * {@code t} is 0.0 (= {@code a}) to 1.0 (= {@code b}).
+     * <p>
+     * Линейная интерполяция между двумя ARGB цветами.
+     * {@code t} — 0.0 (= {@code a}) до 1.0 (= {@code b}).
      */
     public static int lerp(int a, int b, float t) {
         float it = 1f - t;
@@ -134,6 +166,9 @@ public final class ColorUtil {
     /**
      * Returns an array of {@code steps} colors linearly interpolated from {@code start} to {@code end}.
      * Index 0 = start, index steps-1 = end.
+     * <p>
+     * Возвращает массив из {@code steps} цветов, линейно интерполированных от {@code start} до {@code end}.
+     * Индекс 0 = start, индекс steps-1 = end.
      */
     public static int[] gradient(int start, int end, int steps) {
         if (steps <= 1) return new int[]{ start };
@@ -147,6 +182,9 @@ public final class ColorUtil {
     /**
      * Returns a rainbow gradient of {@code steps} colors cycling through full hue range.
      * {@code alpha} is 0–255.
+     * <p>
+     * Возвращает радужный градиент из {@code steps} цветов, проходящих через весь диапазон оттенка.
+     * {@code alpha} — 0–255.
      */
     public static int[] rainbow(int steps, int alpha) {
         int[] out = new int[steps];
@@ -160,17 +198,18 @@ public final class ColorUtil {
     /**
      * Returns a single rainbow color at a given time offset (0.0–1.0).
      * Useful for animating a single element through the hue wheel.
+     * <p>
+     * Возвращает один радужный цвет в данный момент времени (0.0–1.0).
+     * Полезно для анимации отдельного элемента через колесо оттенка.
      */
     public static int rainbowAt(float t, float saturation, float value, int alpha) {
         return withAlpha(fromHSV(t % 1f, saturation, value), alpha);
     }
 
-    /* ------------------------------------------------------------------ */
-    /* HSV conversion                                                       */
-    /* ------------------------------------------------------------------ */
-
     /**
      * Converts HSV (all 0.0–1.0) to opaque ARGB.
+     * <p>
+     * Конвертирует HSV (все 0.0–1.0) в непрозрачный ARGB.
      */
     public static int fromHSV(float h, float s, float v) {
         if (s == 0f) {
@@ -195,6 +234,8 @@ public final class ColorUtil {
 
     /**
      * Converts ARGB to HSV. Returns float[3]: {h, s, v} all 0.0–1.0.
+     * <p>
+     * Конвертирует ARGB в HSV. Возвращает float[3]: {h, s, v} все 0.0–1.0.
      */
     public static float[] toHSV(int argb) {
         float r = red(argb)   / 255f;

@@ -1,8 +1,12 @@
-package so.aporia.utils;
+package so.aporia.utils.user.logger;
 
 /**
  * © 2026 Copyright Aporia.cc 2.0
- *       All Rights Reserved ®
+ * All Rights Reserved ®
+ * <p>
+ * Logging utility with colored console output.
+ * <p>
+ * Утилита логгирования с цветным выводом в консоль.
  */
 public final class Logger {
 

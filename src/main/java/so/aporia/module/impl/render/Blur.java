@@ -3,10 +3,10 @@ package so.aporia.module.impl.render;
 import net.minecraft.client.Minecraft;
 import so.aporia.module.Category;
 import so.aporia.module.Module;
-import so.aporia.utils.Logger;
 import so.aporia.utils.events.EventBus;
 import so.aporia.utils.events.EventHandler;
 import so.aporia.utils.events.impl.RenderHudEvent;
+import so.aporia.utils.user.logger.Logger;
 import so.aporia.utils.user.render.core.AporiaRenderer;
 
 /**
@@ -17,9 +17,8 @@ public final class Blur extends Module {
 
     private static Blur instance;
 
-    /* Blur settings */
     private float blurRadius = 0.5f;
-    private float blurStrength = 1.0f;  // Full strength for visible blur
+    private float blurStrength = 1.0f;
 
     public Blur() {
         super("Blur", Category.VISUAL);
@@ -45,7 +44,6 @@ public final class Blur extends Module {
         if (!isEnabled()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
-        AporiaRenderer.INSTANCE.renderBlur(mc);
     }
 
     private void cleanup() {

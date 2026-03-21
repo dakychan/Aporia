@@ -30,9 +30,17 @@ import java.util.OptionalInt;
 public class FontPipeline {
 
     private static final int MAX_CHARS   = 256;
-    /** Header: screenW, screenH, guiScale, outlineWidth, outlineColor(4), atlasW, atlasH, distRange, fontSize, charCount, pad(3) = 16 floats + 4 ints */
-    private static final int HEADER_SIZE = 16 * 4 + 4 * 4; // 80 bytes
-    /** Per-glyph: x,y,w,h, u0,v0,u1,v1, r,g,b,a, rotation, pivotX, pivotY, scale = 16 floats = 64 bytes */
+
+    /**
+     * Header size: screenW, screenH, guiScale, outlineWidth, outlineColor(4), atlasW, atlasH, distRange, fontSize, charCount, pad(3).
+     * <p>16 floats + 4 ints = 80 bytes.
+     */
+    private static final int HEADER_SIZE = 16 * 4 + 4 * 4;
+
+    /**
+     * Per-glyph data: x,y,w,h, u0,v0,u1,v1, r,g,b,a, rotation, pivotX, pivotY, scale.
+     * <p>16 floats = 64 bytes.
+     */
     private static final int GLYPH_SIZE  = 16 * 4;
     private static final int BUFFER_SIZE = HEADER_SIZE + MAX_CHARS * GLYPH_SIZE;
 
@@ -60,7 +68,10 @@ public class FontPipeline {
     private float currentOutlineWidth;
     private int currentOutlineColor;
 
-    /** Per-glyph data staged for the next flush. */
+    /**
+     * Per-glyph data staged for the next flush.
+     * <p>Данные глифа для следующей отрисовки.
+     */
     private static class CharData {
         final float x, y, width, height;
         final float u0, v0, u1, v1;
@@ -84,12 +95,20 @@ public class FontPipeline {
         initialized = true;
     }
 
-    /** Draws text with no outline and no rotation. */
+    /**
+     * Draws text with no outline and no rotation.
+     * <p>
+     * Рисует текст без обводки и вращения.
+     */
     public void drawText(FontAtlas atlas, String text, float x, float y, float size, int color) {
         drawText(atlas, text, x, y, size, color, 0, 0, 0);
     }
 
-    /** Draws text with optional outline and rotation (degrees). */
+    /**
+     * Draws text with optional outline and rotation (degrees).
+     * <p>
+     * Рисует текст с опциональной обводкой и вращением (в градусах).
+     */
     public void drawText(FontAtlas atlas, String text, float x, float y, float size, int color,
                          float outlineWidth, int outlineColor, float rotation) {
         if (text == null || text.isEmpty()) return;
@@ -114,7 +133,11 @@ public class FontPipeline {
         if (!charBatch.isEmpty()) flush();
     }
 
-    /** Draws text rotated around an explicit pivot point. */
+    /**
+     * Draws text rotated around an explicit pivot point.
+     * <p>
+     * Рисует текст с вращением вокруг явной точки опоры.
+     */
     public void drawTextRotatedAroundPoint(FontAtlas atlas, String text, float x, float y, float size,
                                            int color, float outlineWidth, int outlineColor,
                                            float rotation, float pivotX, float pivotY) {
@@ -136,7 +159,11 @@ public class FontPipeline {
         if (!charBatch.isEmpty()) flush();
     }
 
-    /** Iterates the string, resolves color codes, and stages glyphs into {@link #charBatch}. */
+    /**
+     * Iterates the string, resolves color codes, and stages glyphs into charBatch.
+     * <p>
+     * Итерирует строку, обрабатывает коды цветов и добавляет глифы в charBatch.
+     */
     private void appendGlyphs(FontAtlas atlas, String text, float startX, float startY,
                                float scale, int baseColor, float rotRad, float pivotX, float pivotY) {
         float cursorX = startX, cursorY = startY;
@@ -147,7 +174,6 @@ public class FontPipeline {
             int cp = text.codePointAt(i);
             int cc = Character.charCount(cp);
 
-            /* §-color codes */
             if ((cp == '§' || cp == '&') && i + cc < text.length()) {
                 int next = text.codePointAt(i + cc);
                 if (next == '#' && i + cc + 6 < text.length()) {
@@ -191,7 +217,11 @@ public class FontPipeline {
         }
     }
 
-    /** Submits the current batch to the GPU and clears it. */
+    /**
+     * Submits the current batch to the GPU and clears it.
+     * <p>
+     * Отправляет текущий пакет в GPU и очищает его.
+     */
     public void flush() {
         if (charBatch.isEmpty() || currentAtlas == null) {
             charBatch.clear(); currentAtlas = null; return;
@@ -265,6 +295,11 @@ public class FontPipeline {
         dataBuffer.flip();
     }
 
+    /**
+     * Returns the rendered pixel width of the given string.
+     * <p>
+     * Возвращает ширину строки в пикселях.
+     */
     public float getTextWidth(FontAtlas atlas, String text, float size) {
         atlas.ensureLoaded();
         float scale = size / atlas.getFontSize();
@@ -289,6 +324,11 @@ public class FontPipeline {
         return Math.max(maxWidth, width);
     }
 
+    /**
+     * Returns the line height in pixels for the given font at the given size.
+     * <p>
+     * Возвращает высоту строки в пикселях для данного шрифта и размера.
+     */
     public float getTextHeight(FontAtlas atlas, String text, float size) {
         atlas.ensureLoaded();
         int lines = 1;
@@ -296,14 +336,22 @@ public class FontPipeline {
         return lines * atlas.getLineHeight() * (size / atlas.getFontSize());
     }
 
-    /** Releases all GPU resources. */
+    /**
+     * Releases all GPU resources.
+     * <p>
+     * Освобождает все GPU ресурсы.
+     */
     public void close() {
         if (uniformBuffer != null) { uniformBuffer.close(); uniformBuffer = null; }
         if (dataBuffer    != null) { MemoryUtil.memFree(dataBuffer); dataBuffer = null; }
         initialized = false;
     }
 
-    /** Converts a Minecraft legacy color index (0-15) to ARGB. */
+    /**
+     * Converts a Minecraft legacy color index (0-15) to ARGB.
+     * <p>
+     * Конвертирует индекс цвета Minecraft (0-15) в ARGB.
+     */
     private static int legacyColor(int index) {
         int j = (index >> 3 & 1) * 85;
         int r = (index >> 2 & 1) * 170 + j;

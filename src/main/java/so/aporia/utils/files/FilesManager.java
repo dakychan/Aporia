@@ -3,7 +3,8 @@ package so.aporia.utils.files;
 import aporia.cc.OsManager;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import so.aporia.utils.Logger;
+import so.aporia.utils.files.impl.ChatFile;
+import so.aporia.utils.user.logger.Logger;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -18,24 +19,25 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 /**
- * FilesManager — обёртка для работы с файлами Aporia.
- *
- * Поддерживаемые форматы:
- *   .apr  — архив (zip) с content.dat + time.json
- *   .zip  — стандартный zip
- *   .java — исходники
- *   .lua  — скрипты
- *   .cbm  — CatBoost модели
- *   .cfg  — конфиги
- *
- * Базовая директория:
- *   Windows : ~/.apr  (скрытая через attrib +s +h)
- *   Linux/macOS : ~/.config/apr
+ * Files manager for Aporia.
+ * <p>
+ * Supported file formats:
+ * <ul>
+ *   <li>{@code .apr} — zip archive with content.dat + time.json</li>
+ *   <li>{@code .zip} — standard zip</li>
+ *   <li>{@code .java} — source files</li>
+ *   <li>{@code .lua} — scripts</li>
+ *   <li>{@code .cbm} — CatBoost models</li>
+ *   <li>{@code .cfg} — config files</li>
+ * </ul>
+ * <p>
+ * Base directory:
+ * <ul>
+ *   <li>Windows: {@code ~/.apr} (hidden via attrib +s +h)</li>
+ *   <li>Linux/macOS: {@code ~/.config/apr}</li>
+ * </ul>
  */
 public class FilesManager {
-
-    // ─── Форматы ────────────────────────────────────────────────────────────────
-
     public enum FileType {
         APR, ZIP, JAVA, LUA, CBM, CFG, UNKNOWN;
 
@@ -51,29 +53,37 @@ public class FilesManager {
         }
     }
 
-    // ─── Gson ────────────────────────────────────────────────────────────────────
-
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-
-    // ─── Пути ───────────────────────────────────────────────────────────────────
 
     /**
      * Корневая директория — делегирует OsManager.mainDirectory.
-     * Windows: ~/.apr  |  Linux/macOS: ~/.config/apr
+     * <p>
+     * Root directory — delegates to OsManager.mainDirectory.
+     * <ul>
+     *   <li>Windows: {@code ~/.apr}</li>
+     *   <li>Linux/macOS: {@code ~/.config/apr}</li>
+     * </ul>
      */
     public static final Path ROOT = OsManager.mainDirectory;
 
-    /** config.apr */
+    /**
+     * Файл конфигурации config.apr.
+     * <p>
+     * Configuration file config.apr.
+     */
     public static final Path CONFIG_FILE = ROOT.resolve("config.apr");
 
-    /** accounts.apr */
+    /**
+     * Файл аккаунтов accounts.apr.
+     * <p>
+     * Accounts file accounts.apr.
+     */
     public static final Path ACCOUNTS_FILE = ROOT.resolve("accounts.apr");
 
-    // ─── Инициализация ──────────────────────────────────────────────────────────
-
     /**
-     * Создаёт ROOT директорию, скрывает её на Windows,
-     * затем загружает все impl-файлы.
+     * Создаёт ROOT директорию, скрывает её на Windows, затем загружает все impl-файлы.
+     * <p>
+     * Creates ROOT directory, hides it on Windows, then loads all impl files.
      */
     public static void init() throws IOException {
         if (!Files.exists(ROOT)) {
@@ -83,9 +93,7 @@ public class FilesManager {
                 hideWindowsDirectory(ROOT);
             }
         }
-
-        // загружаем все impl
-        so.aporia.utils.files.impl.ChatFile.load();
+        ChatFile.load();
     }
 
     private static void hideWindowsDirectory(Path path) {
@@ -99,10 +107,10 @@ public class FilesManager {
         }
     }
 
-    // ─── Парсинг путей ──────────────────────────────────────────────────────────
-
     /**
      * Резолвит путь относительно ROOT если он не абсолютный.
+     * <p>
+     * Resolves path relative to ROOT if not absolute.
      */
     public static Path resolve(String pathStr) {
         Path p = Paths.get(pathStr);
@@ -111,6 +119,8 @@ public class FilesManager {
 
     /**
      * Резолвит путь с заменой ~ на home пользователя.
+     * <p>
+     * Resolves path replacing ~ with user home.
      */
     public static Path resolveTilde(String pathStr) {
         if (pathStr.startsWith("~")) {
@@ -119,15 +129,15 @@ public class FilesManager {
         return Paths.get(pathStr);
     }
 
-    // ─── .apr формат ────────────────────────────────────────────────────────────
-
     /**
      * Создаёт .apr файл из произвольного контента (байты).
-     * Внутри zip: content.dat + time.json
+     * Внутри zip: content.dat + time.json.
+     * <p>
+     * Creates .apr file from arbitrary content (bytes).
+     * Inside zip: content.dat + time.json.
      */
     public static void writeApr(Path aprPath, byte[] content) throws IOException {
         ensureParentDirs(aprPath);
-        // читаем старый created ДО того как перезаписываем файл
         String now = OsManager.getCurrentDateTimeIso();
         String created = now;
         if (Files.exists(aprPath)) {
@@ -149,6 +159,8 @@ public class FilesManager {
 
     /**
      * Создаёт .apr файл из строки (UTF-8).
+     * <p>
+     * Creates .apr file from string (UTF-8).
      */
     public static void writeApr(Path aprPath, String content) throws IOException {
         writeApr(aprPath, content.getBytes(StandardCharsets.UTF_8));
@@ -156,6 +168,8 @@ public class FilesManager {
 
     /**
      * Читает content.dat из .apr файла как байты.
+     * <p>
+     * Reads content.dat from .apr file as bytes.
      */
     public static byte[] readAprBytes(Path aprPath) throws IOException {
         try (ZipInputStream zis = new ZipInputStream(new FileInputStream(aprPath.toFile()))) {
@@ -171,6 +185,8 @@ public class FilesManager {
 
     /**
      * Читает content.dat из .apr файла как строку (UTF-8).
+     * <p>
+     * Reads content.dat from .apr file as string (UTF-8).
      */
     public static String readApr(Path aprPath) throws IOException {
         return new String(readAprBytes(aprPath), StandardCharsets.UTF_8);
@@ -178,6 +194,8 @@ public class FilesManager {
 
     /**
      * Читает time.json из .apr файла, возвращает Map с "created" и "modified".
+     * <p>
+     * Reads time.json from .apr file, returns Map with "created" and "modified".
      */
     public static Map<String, String> readAprTimeJson(Path aprPath) throws IOException {
         Map<String, String> result = new HashMap<>();
@@ -186,7 +204,6 @@ public class FilesManager {
             while ((entry = zis.getNextEntry()) != null) {
                 if (entry.getName().equals("time.json")) {
                     String json = new String(zis.readAllBytes(), StandardCharsets.UTF_8);
-                    // простой парсинг без зависимостей
                     result.put("created",  extractJsonValue(json, "created"));
                     result.put("modified", extractJsonValue(json, "modified"));
                     return result;
@@ -200,30 +217,48 @@ public class FilesManager {
         return "{\n  \"created\": \"" + created + "\",\n  \"modified\": \"" + modified + "\"\n}";
     }
 
-    // ─── Общие файловые операции ────────────────────────────────────────────────
-
-    /** Читает любой файл как байты. */
+    /**
+     * Читает любой файл как байты.
+     * <p>
+     * Reads any file as bytes.
+     */
     public static byte[] readBytes(Path path) throws IOException {
         return Files.readAllBytes(path);
     }
 
-    /** Читает любой файл как строку (UTF-8). */
+    /**
+     * Читает любой файл как строку (UTF-8).
+     * <p>
+     * Reads any file as string (UTF-8).
+     */
     public static String readText(Path path) throws IOException {
         return new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
     }
 
-    /** Записывает байты в файл. */
+    /**
+     * Записывает байты в файл.
+     * <p>
+     * Writes bytes to file.
+     */
     public static void writeBytes(Path path, byte[] data) throws IOException {
         ensureParentDirs(path);
         Files.write(path, data);
     }
 
-    /** Записывает строку в файл (UTF-8). */
+    /**
+     * Записывает строку в файл (UTF-8).
+     * <p>
+     * Writes string to file (UTF-8).
+     */
     public static void writeText(Path path, String text) throws IOException {
         writeBytes(path, text.getBytes(StandardCharsets.UTF_8));
     }
 
-    /** Удаляет файл если существует. */
+    /**
+     * Удаляет файл если существует.
+     * <p>
+     * Deletes file if exists.
+     */
     public static boolean delete(Path path) {
         try {
             return Files.deleteIfExists(path);
@@ -232,12 +267,20 @@ public class FilesManager {
         }
     }
 
-    /** Проверяет существование файла. */
+    /**
+     * Проверяет существование файла.
+     * <p>
+     * Checks if file exists.
+     */
     public static boolean exists(Path path) {
         return Files.exists(path);
     }
 
-    /** Возвращает размер файла в байтах, -1 если не существует. */
+    /**
+     * Возвращает размер файла в байтах, -1 если не существует.
+     * <p>
+     * Returns file size in bytes, -1 if not exists.
+     */
     public static long size(Path path) {
         try {
             return Files.size(path);
@@ -246,23 +289,32 @@ public class FilesManager {
         }
     }
 
-    /** Копирует файл. */
+    /**
+     * Копирует файл.
+     * <p>
+     * Copies file.
+     */
     public static void copy(Path src, Path dst) throws IOException {
         ensureParentDirs(dst);
         Files.copy(src, dst, StandardCopyOption.REPLACE_EXISTING);
     }
 
-    /** Перемещает файл. */
+    /**
+     * Перемещает файл.
+     * <p>
+     * Moves file.
+     */
     public static void move(Path src, Path dst) throws IOException {
         ensureParentDirs(dst);
         Files.move(src, dst, StandardCopyOption.REPLACE_EXISTING);
     }
 
-    // ─── .cfg ───────────────────────────────────────────────────────────────────
-
     /**
      * Читает .cfg как Map<String, String>.
      * Формат: key=value, строки с # — комментарии.
+     * <p>
+     * Reads .cfg as Map<String, String>.
+     * Format: key=value, lines starting with # are comments.
      */
     public static Map<String, String> readCfg(Path path) throws IOException {
         Map<String, String> map = new HashMap<>();
@@ -279,6 +331,8 @@ public class FilesManager {
 
     /**
      * Записывает Map<String, String> в .cfg файл.
+     * <p>
+     * Writes Map<String, String> to .cfg file.
      */
     public static void writeCfg(Path path, Map<String, String> data) throws IOException {
         StringBuilder sb = new StringBuilder();
@@ -289,11 +343,12 @@ public class FilesManager {
         writeText(path, sb.toString());
     }
 
-    // ─── Директории ─────────────────────────────────────────────────────────────
-
     /**
      * Список файлов в директории с фильтром по расширению.
      * extension — например ".apr", ".cfg". Если null — все файлы.
+     * <p>
+     * List files in directory filtered by extension.
+     * extension — e.g. ".apr", ".cfg". If null — all files.
      */
     public static List<Path> listFiles(Path dir, String extension) throws IOException {
         try (Stream<Path> stream = Files.list(dir)) {
@@ -304,28 +359,34 @@ public class FilesManager {
         }
     }
 
-    // ─── Append ─────────────────────────────────────────────────────────────────
-
-    /** Дописывает текст в конец файла (UTF-8). */
+    /**
+     * Дописывает текст в конец файла (UTF-8).
+     * <p>
+     * Appends text to end of file (UTF-8).
+     */
     public static void append(Path path, String text) throws IOException {
         ensureParentDirs(path);
         Files.write(path, text.getBytes(StandardCharsets.UTF_8),
             StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
-    // ─── JSON ────────────────────────────────────────────────────────────────────
-
-    /** Сериализует объект в JSON и записывает в файл. */
+    /**
+     * Сериализует объект в JSON и записывает в файл.
+     * <p>
+     * Serializes object to JSON and writes to file.
+     */
     public static void writeJson(Path path, Object obj) throws IOException {
         writeText(path, GSON.toJson(obj));
     }
 
-    /** Читает JSON файл и десериализует в указанный тип. */
+    /**
+     * Читает JSON файл и десериализует в указанный тип.
+     * <p>
+     * Reads JSON file and deserializes to specified type.
+     */
     public static <T> T readJson(Path path, Class<T> type) throws IOException {
         return GSON.fromJson(readText(path), type);
     }
-
-    // ─── Утилиты ────────────────────────────────────────────────────────────────
 
     private static void ensureParentDirs(Path path) throws IOException {
         Path parent = path.getParent();
@@ -334,7 +395,11 @@ public class FilesManager {
         }
     }
 
-    /** Минимальный JSON value extractor без зависимостей. */
+    /**
+     * Минимальный JSON value extractor без зависимостей.
+     * <p>
+     * Minimal JSON value extractor without dependencies.
+     */
     private static String extractJsonValue(String json, String key) {
         String search = "\"" + key + "\"";
         int idx = json.indexOf(search);
@@ -350,6 +415,8 @@ public class FilesManager {
 
     /**
      * Возвращает FileType по пути.
+     * <p>
+     * Returns FileType by path.
      */
     public static FileType getFileType(Path path) {
         return FileType.fromPath(path);

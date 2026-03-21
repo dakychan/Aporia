@@ -2,13 +2,12 @@ package so.aporia.module;
 
 /** Module categories for grouping in the UI. */
 public enum Category {
-    /* icon chars from categoryicons font */
-    COMBAT ('a'),  /* combat */
-    MOVE   ('c'),  /* world/globe -> move */
-    VISUAL ('n'),  /* visual */
-    PLAYER ('g'),  /* person */
-    WORLD  ('v'),  /* world */
-    MISC   ('m');  /* dots */
+    COMBAT ('a'),
+    MOVE   ('c'),
+    VISUAL ('n'),
+    PLAYER ('g'),
+    WORLD  ('v'),
+    MISC   ('m');
 
     /** Glyph character in the {@code caticons} font. */
     public final char icon;

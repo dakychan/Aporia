@@ -13,6 +13,8 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import so.aporia.utils.KeyboardLayout;
+import so.aporia.utils.files.impl.ChatFile;
+import so.aporia.utils.user.logger.Logger;
 import so.aporia.utils.user.render.animation.MessageAnim;
 import so.aporia.utils.user.render.color.ColorUtil;
 import so.aporia.utils.user.render.core.AporiaRenderer;
@@ -877,9 +879,9 @@ public class AporiaChatScreen extends ChatScreen {
 
     private static void trySave() {
         try {
-            so.aporia.utils.files.impl.ChatFile.save();
+            ChatFile.save();
         } catch (Exception e) {
-            so.aporia.utils.Logger.error("ChatFile save failed: " + e.getMessage());
+            Logger.error("ChatFile save failed: " + e.getMessage());
         }
     }
 }

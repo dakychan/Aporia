@@ -9,9 +9,11 @@ import java.util.Map;
 /**
  * Central event bus. Auto-discovers {@link EventHandler}-annotated methods via reflection.
  * <p>
+ * Центральная шина событий. Автоматически находит методы с аннотацией {@link EventHandler}.
+ * <p>
  * Usage:
  * <pre>{@code
- * EventBus.INSTANCE.register(this);          // auto-wires all @EventHandler methods
+ * EventBus.INSTANCE.register(this);
  * EventBus.INSTANCE.post(new MouseScrollEvent(...));
  * }</pre>
  */
@@ -19,7 +21,11 @@ public final class EventBus {
 
     public static final EventBus INSTANCE = new EventBus();
 
-    /** eventClass → list of (instance, method) pairs */
+    /**
+     * eventClass → list of (instance, method) pairs.
+     * <p>
+     * eventClass → список пар (instance, method).
+     */
     private final Map<Class<?>, List<Listener>> listeners = new HashMap<>();
 
     private EventBus() {}
@@ -27,6 +33,9 @@ public final class EventBus {
     /**
      * Scans {@code obj} for {@link EventHandler}-annotated methods and registers them.
      * Each method must have exactly one parameter (the event type).
+     * <p>
+     * Сканирует {@code obj} на наличие методов с аннотацией {@link EventHandler} и регистрирует их.
+     * Каждый метод должен иметь ровно один параметр (тип события).
      */
     public void register(Object obj) {
         for (Method m : obj.getClass().getMethods()) {
@@ -38,12 +47,20 @@ public final class EventBus {
         }
     }
 
-    /** Unregisters all handlers belonging to {@code obj}. */
+    /**
+     * Unregisters all handlers belonging to {@code obj}.
+     * <p>
+     * Отписывает все обработчики принадлежащие {@code obj}.
+     */
     public void unregister(Object obj) {
         listeners.values().forEach(list -> list.removeIf(l -> l.instance == obj));
     }
 
-    /** Posts an event — calls all matching handlers. */
+    /**
+     * Posts an event — calls all matching handlers.
+     * <p>
+     * Отправляет событие — вызывает все подходящие обработчики.
+     */
     public void post(Object event) {
         List<Listener> list = listeners.get(event.getClass());
         if (list == null) return;

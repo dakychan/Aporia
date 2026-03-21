@@ -14,13 +14,23 @@ import java.util.Map;
 
 /**
  * Central registry and dispatcher for all Aporia client-side commands.
+ * <p>
+ * Центральный реестр и диспетчер всех клиентских команд Aporia.
  */
 public class CommandManager {
 
-    /** Singleton instance. */
+    /**
+     * Singleton instance.
+     * <p>
+     * Экземпляр синглтона.
+     */
     public static final CommandManager INSTANCE = new CommandManager();
 
-    /** Current command prefix. Can be changed at runtime via {@code .prefix}. */
+    /**
+     * Current command prefix. Can be changed at runtime via {@code .prefix}.
+     * <p>
+     * Текущий префикс команд. Можно изменить во время выполнения через {@code .prefix}.
+     */
     public static String PREFIX = ".";
 
     private final Map<String, Command> commands = new HashMap<>();
@@ -34,15 +44,19 @@ public class CommandManager {
 
     /**
      * Registers a command by its {@link Command#name()}.
+     * <p>
+     * Регистрирует команду по её {@link Command#name()}.
      *
-     * @param cmd command to register
+     * @param cmd command to register / команда для регистрации
      */
     public void register(Command cmd) {
         commands.put(cmd.name().toLowerCase(), cmd);
     }
 
     /**
-     * @return all registered commands
+     * Returns all registered commands.
+     * <p>
+     * Возвращает все зарегистрированные команды.
      */
     public Collection<Command> getAll() {
         return commands.values();
@@ -53,8 +67,13 @@ public class CommandManager {
      * <p>
      * While {@link PanicSystem} is active, all prefix-matching messages are
      * passed through to the server as normal chat instead of being consumed.
+     * <p>
+     * Пытается обработать сообщение чата как клиентскую команду.
+     * <p>
+     * Пока {@link PanicSystem} активен, все сообщения с префиксом отправляются
+     * на сервер как обычный чат вместо того чтобы быть потреблёнными.
      *
-     * @param message raw chat input
+     * @param message raw chat input / входящее сообщение чата
      * @return {@code true} if the message was consumed and must NOT be sent to the server
      */
     public boolean handle(String message) {
@@ -77,8 +96,11 @@ public class CommandManager {
     /**
      * Displays a client-side only message in chat.
      * Silently suppressed while {@link PanicSystem} is active.
+     * <p>
+     * Показывает сообщение только на клиенте в чате.
+     * Молча подавляется пока {@link PanicSystem} активен.
      *
-     * @param text message text, supports §-color codes
+     * @param text message text, supports §-color codes / текст сообщения, поддерживает §-коды цветов
      */
     public static void chat(String text) {
         if (PanicSystem.INSTANCE.isPanicked()) return;

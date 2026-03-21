@@ -37,6 +37,8 @@ import org.joml.Matrix3x2f;
 import org.joml.Vector2f;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
+import so.aporia.utils.user.command.CommandManager;
+import so.aporia.utils.user.render.ui.chat.AporiaChatScreen;
 
 @OnlyIn(Dist.CLIENT)
 public class ChatComponent {
@@ -203,7 +205,7 @@ public class ChatComponent {
         this.messageDeletionQueue.clear();
         this.trimmedMessages.clear();
         this.allMessages.clear();
-        so.aporia.utils.user.render.ui.chat.AporiaChatScreen.WinMgr.I.wins.forEach(
+        AporiaChatScreen.WinMgr.I.wins.forEach(
             w -> w.clear()
         );
         if (p_93796_) {
@@ -221,7 +223,7 @@ public class ChatComponent {
         this.logChatMessage(guimessage);
         this.addMessageToDisplayQueue(guimessage);
         this.addMessageToQueue(guimessage);
-        so.aporia.utils.user.render.ui.chat.AporiaChatScreen.WinMgr.I.route(guimessage, this.minecraft.font);
+        AporiaChatScreen.WinMgr.I.route(guimessage, this.minecraft.font);
     }
 
     private void logChatMessage(GuiMessage p_328461_) {
@@ -311,7 +313,7 @@ public class ChatComponent {
         for (GuiMessage guimessage : Lists.reverse(this.allMessages)) {
             this.addMessageToDisplayQueue(guimessage);
         }
-        so.aporia.utils.user.render.ui.chat.AporiaChatScreen.WinMgr.I.rebuild(this, this.minecraft.font);
+        AporiaChatScreen.WinMgr.I.rebuild(this, this.minecraft.font);
     }
 
     public ArrayListDeque<String> getRecentChat() {
@@ -327,8 +329,7 @@ public class ChatComponent {
     }
 
     public void addRecentChat(String p_93784_) {
-        // never add aporia commands to arrow-key history
-        if (p_93784_.startsWith(so.aporia.utils.user.command.CommandManager.PREFIX)) return;
+        if (p_93784_.startsWith(CommandManager.PREFIX)) return;
 
         if (!p_93784_.equals(this.recentChat.peekLast())) {
             if (this.recentChat.size() >= 100) {

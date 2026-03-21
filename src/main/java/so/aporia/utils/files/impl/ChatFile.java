@@ -22,8 +22,6 @@ public final class ChatFile {
 
     private ChatFile() {}
 
-    // ─── DTO ────────────────────────────────────────────────────────────────────
-
     /** Сериализуемое представление одного окна. */
     public static final class WinData {
         public String  name          = "Main";
@@ -49,8 +47,6 @@ public final class ChatFile {
         public List<WinData> wins   = new ArrayList<>();
     }
 
-    // ─── Save / Load ─────────────────────────────────────────────────────────────
-
     /** Сохраняет текущее состояние WinMgr в chat.apr. */
     public static void save() throws IOException {
         ChatData data = new ChatData();
@@ -74,7 +70,6 @@ public final class ChatFile {
             d.scrollOffset   = c.scrollOffset;
             data.wins.add(d);
         }
-        // сериализуем в JSON, пакуем в .apr
         String json = toJson(data);
         FilesManager.writeApr(FILE, json);
     }
@@ -85,7 +80,6 @@ public final class ChatFile {
         String json = FilesManager.readApr(FILE);
         ChatData data = fromJson(json);
         if (data == null || data.wins == null || data.wins.isEmpty()) return;
-
         WinMgr.I.wins.clear();
         for (WinData d : data.wins) {
             WinCfg c = new WinCfg(d.name, d.x, d.bottomY, d.w, d.h, d.draggable);
@@ -102,8 +96,6 @@ public final class ChatFile {
         }
         WinMgr.I.active = Math.max(0, Math.min(data.active, WinMgr.I.wins.size() - 1));
     }
-
-    // ─── JSON (через Gson из MC classpath) ───────────────────────────────────────
 
     private static final com.google.gson.Gson GSON =
         new com.google.gson.GsonBuilder().setPrettyPrinting().create();
