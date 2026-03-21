@@ -343,6 +343,11 @@ public class AporiaChatScreen extends ChatScreen {
     private int     editingField = -1;
     private EditBox fieldBox;
     private Handle  dragging = Handle.NONE;
+    
+    // Scrollbar drag state
+    private boolean scrollDragging = false;
+    private double scrollDragStartY = 0;
+    private int scrollDragStartOffset = 0;
 
     private net.minecraft.network.chat.Style hoveredStyle   = null;
     private int                              hoveredLineIdx  = -1;
@@ -497,7 +502,7 @@ public class AporiaChatScreen extends ChatScreen {
         int actualH  = msgCount == 0 ? 0 : Math.min(bh, msgCount * LINE_H + BOX_PAD * 2);
         int actualBy = by + bh - actualH;
         if (actualH > 0) r.drawRect(bx, actualBy, bw, actualH, RADIUS, C_CHAT_BG);
-        gfx.enableScissor(bx, by, bx+bw, by+bh);
+        gfx.enableScissor(bx, actualBy, bx+bw, by+bh);
         if (isActive) renderMessages(gfx, c, by+BOX_PAD, bx+BOX_PAD);
         else          renderMessagesPassive(gfx, c, by+BOX_PAD, bx+BOX_PAD);
         gfx.disableScissor();
@@ -684,6 +689,40 @@ public class AporiaChatScreen extends ChatScreen {
         }
 
         WinCfg c = cfg(); int bx = boxX(), by = boxY(), bw = boxW(), bh = boxH();
+        
+        // Clickable scrollbar
+        if (btn == 0) {
+            int total = c.lines.size();
+            int maxL = c.maxLines();
+            int maxS = Math.max(0, total - maxL);
+            if (maxS > 0) {
+                int barX = bx + bw - 3;
+                int barH = bh - BOX_PAD * 2;
+                int thumbH = Math.max(10, barH * maxL / Math.max(1, total));
+                int thumbY = by + BOX_PAD + (barH - thumbH) * (maxS - c.scrollOffset) / maxS;
+                
+                // Check if click is on scrollbar area
+                if (mx >= barX - 2 && mx <= barX + 4) {
+                    int scrollAreaTop = by + BOX_PAD;
+                    int scrollAreaBottom = scrollAreaTop + barH;
+                    if (my >= scrollAreaTop && my <= scrollAreaBottom) {
+                        // Click on thumb - start dragging
+                        if (my >= thumbY && my <= thumbY + thumbH) {
+                            scrollDragging = true;
+                            scrollDragStartY = my;
+                            scrollDragStartOffset = c.scrollOffset;
+                            return true;
+                        }
+                        // Click on track - jump to position
+                        float relY = (float)(my - scrollAreaTop) / (float) barH;
+                        int targetOffset = (int) (relY * maxS);
+                        c.scrollOffset = Math.max(0, Math.min(targetOffset, maxS));
+                        return true;
+                    }
+                }
+            }
+        }
+        
         Handle h = hitHandle(mx, my, c, bx, by, bw, bh);
         if (h != Handle.NONE && btn == 0) { dragging = h; return true; }
 
@@ -722,12 +761,30 @@ public class AporiaChatScreen extends ChatScreen {
             if (widthChanged) WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font);
             return true;
         }
+        
+        // Handle scrollbar dragging
+        if (scrollDragging && e.button() == 0) {
+            WinCfg c = cfg();
+            int total = c.lines.size();
+            int maxL = c.maxLines();
+            int maxS = Math.max(0, total - maxL);
+            if (maxS > 0) {
+                int bx = boxX(), by = boxY(), bw = boxW(), bh = boxH();
+                int barH = bh - BOX_PAD * 2;
+                float deltaY = (float) ((e.y() - scrollDragStartY) / barH);
+                int newOffset = scrollDragStartOffset + (int)(deltaY * maxS);
+                c.scrollOffset = Math.max(0, Math.min(newOffset, maxS));
+            }
+            return true;
+        }
+        
         return super.mouseDragged(e, dx, dy);
     }
 
     @Override
     public boolean mouseReleased(MouseButtonEvent e) {
         if (dragging != Handle.NONE) { dragging = Handle.NONE; return true; }
+        if (scrollDragging) { scrollDragging = false; return true; }
         return super.mouseReleased(e);
     }
 

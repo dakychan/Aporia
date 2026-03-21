@@ -217,7 +217,9 @@ public class Gui {
             this.renderSleepOverlay(p_282884_, p_342095_);
             if (!this.minecraft.options.hideGui) {
                 this.renderDemoOverlay(p_282884_, p_342095_);
-                this.renderScoreboardSidebar(p_282884_, p_342095_);
+                if (!(this.minecraft.screen instanceof so.aporia.utils.user.render.ui.clickgui.ClickGuiScreen)) {
+                    this.renderScoreboardSidebar(p_282884_, p_342095_);
+                }
                 this.renderOverlayMessage(p_282884_, p_342095_);
                 this.renderTitle(p_282884_, p_342095_);
                 if (!(this.minecraft.screen instanceof so.aporia.utils.user.render.ui.clickgui.ClickGuiScreen)) {

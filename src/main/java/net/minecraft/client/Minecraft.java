@@ -1721,6 +1721,9 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
     public void tick() {
         this.clientTickCount++;
+        
+        so.aporia.utils.events.EventBus.INSTANCE.post(new so.aporia.utils.events.impl.TickEvent());
+        
         if (this.level != null && !this.pause) {
             this.level.tickRateManager().tick();
         }

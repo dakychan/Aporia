@@ -1,5 +1,11 @@
 package so.aporia.module;
 
+import so.aporia.module.impl.misc.AutoConfig;
+import so.aporia.module.impl.misc.ServerHelper;
+import so.aporia.module.impl.misc.TestModule;
+import so.aporia.module.impl.render.Blur;
+import so.aporia.module.impl.render.Hud;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -15,7 +21,15 @@ public final class ModuleManager {
 
     private final List<Module> modules = new ArrayList<>();
 
-    private ModuleManager() {}
+    private ModuleManager() {
+        registerAll(
+            new Hud(),
+            new Blur(),
+            new ServerHelper(),
+            new AutoConfig(),
+            new TestModule()
+        );
+    }
 
     public void register(Module module) {
         modules.add(module);

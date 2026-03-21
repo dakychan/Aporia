@@ -3,6 +3,8 @@ package so.aporia.module.impl.render;
 import net.minecraft.client.Minecraft;
 import so.aporia.module.Category;
 import so.aporia.module.Module;
+import so.aporia.module.ModuleManager;
+import so.aporia.module.impl.misc.ServerHelper;
 import so.aporia.utils.events.EventBus;
 import so.aporia.utils.events.EventHandler;
 import so.aporia.utils.events.impl.RenderHudEvent;
@@ -37,6 +39,7 @@ public final class Hud extends Module {
     @EventHandler
     public void onRenderHud(RenderHudEvent e) {
         Minecraft mc = Minecraft.getInstance();
+
         if (mc.player == null) return;
 
         AporiaRenderer r = AporiaRenderer.INSTANCE;

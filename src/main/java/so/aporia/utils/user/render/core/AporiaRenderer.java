@@ -6,6 +6,7 @@ import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
@@ -14,13 +15,19 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 import so.aporia.Aporia;
 import so.aporia.utils.user.logger.Logger;
 import so.aporia.utils.user.render.font.Fonts;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.OptionalInt;
 
 public class AporiaRenderer {
@@ -43,6 +50,9 @@ public class AporiaRenderer {
     private RenderPipeline postPipeline;
     private TextureTarget  postTempTarget;
     private int postTempW = -1, postTempH = -1;
+
+    private final Map<String, Identifier>      imageIds     = new HashMap<>();
+    private final Map<String, DynamicTexture>  imageTextures = new HashMap<>();
 
     public void init() {
         pipeline = RenderPipeline.builder()
@@ -278,6 +288,32 @@ public class AporiaRenderer {
     public void drawRect(float x, float y, float w, float h, float radius, int color) {
         int mode = radius > 0 ? MODE_ROUNDED_RECT : MODE_FILL;
         drawShape(x, y, w, h, color, mode, x, y, w, h, radius, 0, 0f, 0f);
+    }
+
+    /**
+     * Gradient rectangle — linearly interpolates between c1 and c2.
+     * dir: 0=horizontal (left→right), 1=vertical (top→bottom), 2=radial (center→edge).
+     */
+    public void drawRectGradient(float x, float y, float w, float h, float radius, int c1, int c2, int dir) {
+        int steps = Math.max(2, (int)(dir==1 ? h : w) / 2);
+        for (int i = 0; i < steps; i++) {
+            float t0 = (float) i / steps;
+            float t1 = (float)(i + 1) / steps;
+            int ca = lerp(c1, c2, (t0 + t1) * 0.5f);
+            if (dir == 1) {
+                float sy = y + t0 * h, sh = (t1 - t0) * h;
+                float r0 = (i == 0 && radius > 0) ? radius : 0;
+                float r1 = (i == steps-1 && radius > 0) ? radius : 0;
+                drawRect(x, sy, w, sh, i==0||i==steps-1 ? radius : 0, ca);
+            } else if (dir == 0) {
+                float sx = x + t0 * w, sw = (t1 - t0) * w;
+                drawRect(sx, y, sw, h, i==0||i==steps-1 ? radius : 0, ca);
+            } else {
+                float cx2 = x + w/2f, cy2 = y + h/2f;
+                float r2 = Math.min(w, h) * 0.5f * t1;
+                drawCircle(cx2, cy2, r2, lerp(c2, c1, t0));
+            }
+        }
     }
 
     /**
@@ -549,6 +585,77 @@ public class AporiaRenderer {
         mesh.close();
         vertexGpu.close();
         dataBuf.close();
+    }
+
+    /**
+     * Loads a PNG/JPG from disk and registers it with TextureManager.
+     * Returns the Identifier, or null on failure.
+     */
+    public Identifier loadImage(Path path) {
+        String key = path.toAbsolutePath().toString();
+        if (imageIds.containsKey(key)) return imageIds.get(key);
+        try (FileInputStream fis = new FileInputStream(path.toFile())) {
+            NativeImage img = NativeImage.read(fis);
+            DynamicTexture tex = new DynamicTexture(() -> key, img);
+            String name = path.getFileName().toString()
+                .toLowerCase().replaceAll("[^a-z0-9_.-]", "_");
+            Identifier id = Identifier.fromNamespaceAndPath("aporia", "user_image/" + name + "_" + Math.abs(key.hashCode()));
+            Minecraft.getInstance().getTextureManager().register(id, tex);
+            imageIds.put(key, id);
+            imageTextures.put(key, tex);
+            return id;
+        } catch (IOException e) {
+            Logger.warn("[loadImage] Failed to load: " + path + " — " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Draws a previously loaded image (by Identifier) into screen-space rect [x,y,w,h].
+     * Uses blitPipeline with screen-space POSITION_TEX quad.
+     */
+    public void drawImage(float x, float y, float w, float h, Identifier id) {
+        if (blitPipeline == null || id == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        var tm = mc.getTextureManager();
+        var tex = tm.getTexture(id);
+        if (tex == null) return;
+        var texView = tex.getTextureView();
+        if (texView == null) return;
+        var colorView = mc.getMainRenderTarget().getColorTextureView();
+        if (colorView == null) return;
+
+        float sw = mc.getWindow().getGuiScaledWidth();
+        float sh = mc.getWindow().getGuiScaledHeight();
+        float nx  = x / sw * 2f - 1f;
+        float ny  = 1f - y / sh * 2f;
+        float nx2 = (x + w) / sw * 2f - 1f;
+        float ny2 = 1f - (y + h) / sh * 2f;
+
+        var tess = Tesselator.getInstance();
+        var buf  = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
+        buf.addVertex(nx,  ny2, 0f).setUv(0f, 1f);
+        buf.addVertex(nx,  ny,  0f).setUv(0f, 0f);
+        buf.addVertex(nx2, ny,  0f).setUv(1f, 0f);
+        buf.addVertex(nx,  ny2, 0f).setUv(0f, 1f);
+        buf.addVertex(nx2, ny,  0f).setUv(1f, 0f);
+        buf.addVertex(nx2, ny2, 0f).setUv(1f, 1f);
+        var mesh = buf.buildOrThrow();
+
+        var device  = RenderSystem.getDevice();
+        var encoder = device.createCommandEncoder();
+        var vertexGpu = device.createBuffer(() -> "aporia:img_vbo",
+            GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, mesh.vertexBuffer());
+
+        try (var pass = encoder.createRenderPass(() -> "aporia:img_pass", colorView, OptionalInt.empty())) {
+            pass.setPipeline(blitPipeline);
+            pass.bindTexture("InputTexture", texView,
+                RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.setVertexBuffer(0, vertexGpu);
+            pass.draw(0, 6);
+        }
+        mesh.close();
+        vertexGpu.close();
     }
 
     public void cleanupBlur() {

@@ -4,8 +4,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import so.aporia.module.ModuleManager;
-import so.aporia.module.impl.render.Blur;
-import so.aporia.module.impl.render.Hud;
 import so.aporia.utils.events.EventBus;
 import so.aporia.utils.events.impl.RenderHudEvent;
 import so.aporia.utils.files.FilesManager;
@@ -35,10 +33,7 @@ public class Aporia implements ResourceManagerReloadListener {
             Logger.error("FilesManager init failed: " + e.getMessage());
         }
         KeybindManager.INSTANCE.toString();
-        ModuleManager.INSTANCE.registerAll(
-            new Hud(),
-            new Blur()
-        );
+        ModuleManager.INSTANCE.toString(); // init
         Logger.success("Aporia initialized");
     }
 
