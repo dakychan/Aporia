@@ -149,6 +149,15 @@ public class Connection extends SimpleChannelInboundHandler<Packet<?>> {
             if (packetlistener == null) {
                 throw new IllegalStateException("Received a packet before the packet listener was initialized");
             } else {
+                // Aporia: fire inbound packet event
+                try {
+                    so.aporia.utils.events.EventBus.INSTANCE.post(
+                        new so.aporia.utils.events.impl.PacketEvent(p_129488_, so.aporia.utils.events.impl.PacketEvent.Direction.INBOUND)
+                    );
+                } catch (Exception e) {
+                    System.err.println("[PacketDebug] inbound event error: " + e.getMessage());
+                    e.printStackTrace();
+                }
                 if (packetlistener.shouldHandleMessage(p_129488_)) {
                     try {
                         genericsFtw(p_129488_, packetlistener);
@@ -305,6 +314,15 @@ public class Connection extends SimpleChannelInboundHandler<Packet<?>> {
     }
 
     private void sendPacket(Packet<?> p_129521_, @Nullable ChannelFutureListener p_409913_, boolean p_299777_) {
+        // Aporia: fire outbound packet event
+        try {
+            so.aporia.utils.events.EventBus.INSTANCE.post(
+                new so.aporia.utils.events.impl.PacketEvent(p_129521_, so.aporia.utils.events.impl.PacketEvent.Direction.OUTBOUND)
+            );
+        } catch (Exception e) {
+            System.err.println("[PacketDebug] outbound event error: " + e.getMessage());
+            e.printStackTrace();
+        }
         this.sentPackets++;
         if (this.channel.eventLoop().inEventLoop()) {
             this.doSendPacket(p_129521_, p_409913_, p_299777_);

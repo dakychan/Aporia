@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import so.aporia.utils.user.command.impl.HelpCommand;
 import so.aporia.utils.user.command.impl.InfoCommand;
+import so.aporia.utils.user.command.impl.PacketCommand;
 import so.aporia.utils.user.command.impl.PanicCommand;
 import so.aporia.utils.user.command.impl.PrefixCommand;
 
@@ -40,6 +41,7 @@ public class CommandManager {
         register(new InfoCommand());
         register(new PanicCommand());
         register(new PrefixCommand());
+        register(new PacketCommand());
     }
 
     /**

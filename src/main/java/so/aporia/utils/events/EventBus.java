@@ -63,7 +63,10 @@ public final class EventBus {
      */
     public void post(Object event) {
         List<Listener> list = listeners.get(event.getClass());
-        if (list == null) return;
+        if (list == null) {
+            // Debug: no listeners for this event type
+            return;
+        }
         for (Listener l : list) {
             try { l.method.invoke(l.instance, event); }
             catch (Exception e) { e.printStackTrace(); }
