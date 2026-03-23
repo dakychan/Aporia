@@ -219,16 +219,8 @@ public class AporiaRenderer {
     public void drawRectBlurred(float x, float y, float w, float h, float radius, int color, float blurStrength) {
         Minecraft mc = Minecraft.getInstance();
         if (!blurReady || pipeline == null || blurTarget == null) {
-            if (!blurLoggedOnce) {
-                Logger.info("[drawRectBlurred] FALLBACK — blurReady=" + blurReady + " blurTarget=" + (blurTarget != null ? "ok" : "null"));
-                blurLoggedOnce = true;
-            }
             drawRect(x, y, w, h, radius, color);
             return;
-        }
-        if (!blurLoggedOnce) {
-            Logger.info("[drawRectBlurred] BLUR PATH via aporia pipeline + gl_FragCoord");
-            blurLoggedOnce = true;
         }
         var mainTarget = mc.getMainRenderTarget();
         var window     = mc.getWindow();
@@ -381,8 +373,8 @@ public class AporiaRenderer {
         var bb = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder());
         bb.putFloat(bx); bb.putFloat(by); bb.putFloat(bw); bb.putFloat(bh);
         bb.putFloat(radius); bb.putFloat(1.0f); bb.putFloat(mode); bb.putFloat((float) borderMode);
-        bb.putFloat(thickness); bb.putFloat(fadeCorner); bb.putFloat(0f); bb.putFloat(0f); // useBlur=0
-        bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); // screen unused for normal draw
+        bb.putFloat(thickness); bb.putFloat(fadeCorner); bb.putFloat(0f); bb.putFloat(0f);
+        bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
         bb.flip();
         encoder.writeToBuffer(shapeBuf.slice(), bb);
 
@@ -456,14 +448,6 @@ public class AporiaRenderer {
      * @param saturation 0=grayscale, 0.5=normal, 1.0=enhanced colors in the blurred result
      */
     public void prepareBlur(Minecraft mc, float strength, float saturation) {
-        if (blurPipeline == null) {
-            Logger.info("[prepareBlur] SKIP — blurPipeline is null");
-            return;
-        }
-        if (!blurPreparedLoggedOnce) {
-            Logger.info("[prepareBlur] called — strength=" + strength + " sat=" + saturation + " blurTarget=" + (blurTarget != null ? "ok" : "null"));
-            blurPreparedLoggedOnce = true;
-        }
         ensureBlurTarget(mc);
         blurReady = false;
         var mainTarget = mc.getMainRenderTarget();
@@ -523,9 +507,6 @@ public class AporiaRenderer {
         mesh.close();
         vertexGpu.close();
         blurReady = true;
-        if (!blurPreparedLoggedOnce) {
-            Logger.info("[prepareBlur] DONE — blurReady=true iterations=" + iterations);
-        }
     }
 
     /** Overload with default saturation (normal). */

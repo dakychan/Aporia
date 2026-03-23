@@ -16,7 +16,6 @@ public final class AutoConfig extends Module {
 
     private static final Path CONFIG_PATH = FilesManager.ROOT.resolve("config.apr");
 
-    // GUI state — ClickGuiScreen читает/пишет сюда
     public static float    guiX = -1, guiY = -1, guiW = 0, guiH = 0;
     public static String   guiCategory = null;
 
@@ -41,20 +40,15 @@ public final class AutoConfig extends Module {
 
     public void save() {
         Map<String, String> cfg = new LinkedHashMap<>();
-
-        // GUI
         cfg.put("gui.x", String.valueOf(guiX));
         cfg.put("gui.y", String.valueOf(guiY));
         cfg.put("gui.w", String.valueOf(guiW));
         cfg.put("gui.h", String.valueOf(guiH));
         if (guiCategory != null) cfg.put("gui.category", guiCategory);
-
-        // Modules
         for (Module m : ModuleManager.INSTANCE.getAll()) {
             String p = key(m.name());
             cfg.put(p + ".enabled", String.valueOf(m.isEnabled()));
             cfg.put(p + ".keybind", String.valueOf(m.keybind()));
-
             for (Field f : m.getClass().getDeclaredFields()) {
                 if (!Setting.class.isAssignableFrom(f.getType())) continue;
                 f.setAccessible(true);
@@ -69,7 +63,6 @@ public final class AutoConfig extends Module {
                 } catch (IllegalAccessException ignored) {}
             }
         }
-
         try {
             StringBuilder sb = new StringBuilder("# Aporia config\n");
             for (Map.Entry<String, String> e : cfg.entrySet())
@@ -83,7 +76,6 @@ public final class AutoConfig extends Module {
 
     public void load() {
         if (!FilesManager.exists(CONFIG_PATH)) { Logger.info("No config, using defaults"); return; }
-
         Map<String, String> cfg = new LinkedHashMap<>();
         try {
             String raw = FilesManager.readApr(CONFIG_PATH);
@@ -96,15 +88,11 @@ public final class AutoConfig extends Module {
         } catch (IOException e) {
             Logger.error("Load failed: " + e.getMessage()); return;
         }
-
-        // GUI
         guiX = parseFloat(cfg.get("gui.x"), -1);
         guiY = parseFloat(cfg.get("gui.y"), -1);
         guiW = parseFloat(cfg.get("gui.w"), 0);
         guiH = parseFloat(cfg.get("gui.h"), 0);
         guiCategory = cfg.get("gui.category");
-
-        // Modules
         for (Module m : ModuleManager.INSTANCE.getAll()) {
             String p = key(m.name());
 

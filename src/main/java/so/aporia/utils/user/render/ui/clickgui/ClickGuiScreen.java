@@ -34,27 +34,20 @@ import java.util.stream.Collectors;
  */
 @OnlyIn(Dist.CLIENT)
 public final class ClickGuiScreen extends Screen {
-
-    // ── Widget types ──────────────────────────────────────────────────────────
     public enum WidgetType { MODULE_LIST, SEARCH, ACCOUNT, CLIENT_NAME, RECT, CIRCLE, LINE, TRIANGLE, TEXT, IMAGE, CATEGORY_LIST, BUTTON }
     public enum SettingsMode { INLINE, POPUP }
     public enum GradientDir { NONE, HORIZONTAL, VERTICAL, RADIAL }
-
-    // ── Widget ────────────────────────────────────────────────────────────────
     public static final class Widget {
         public WidgetType   type;
         public float        x, y, w, h;
-        // background
         public boolean      blur         = true;
         public float        blurStrength = 14f;
         public boolean      border       = true;
         public int          bgR=255, bgG=255, bgB=255, bgAlpha=18;
         public int          borderR=255, borderG=255, borderB=255, borderAlpha=30;
         public int          borderRadius = 12;
-        // title
         public boolean      showTitle    = false;
         public String       titleText    = "";
-        // module list
         public SettingsMode settingsMode = SettingsMode.INLINE;
         public String       category     = "";
         public boolean      collapsed    = false;
@@ -65,26 +58,18 @@ public final class ClickGuiScreen extends Screen {
         public float        fontSize     = 9f;
         public int          cardR=255, cardG=255, cardB=255, cardAlpha=12;
         public int          cardOnR=255, cardOnG=255, cardOnB=255, cardOnAlpha=40;
-        // shape (circle/line/triangle)
         public int          shapeR=255, shapeG=255, shapeB=255, shapeAlpha=180;
         public float        lineThickness = 2f;
-        // text widget
         public String       customText   = "Текст";
         public String       fontName     = "regular";
-        // image
         public String       imagePath    = "";
         public String       imageFit     = "fill";
-        // transform
         public float        rotation     = 0f;
         public boolean      locked       = false;
-        // gradient
         public GradientDir  gradientDir  = GradientDir.NONE;
         public int          grad2R=255, grad2G=255, grad2B=255, grad2Alpha=0;
-        // individual corner radius
         public int          radTL=12, radTR=12, radBL=12, radBR=12;
-        // button widget
         public String       buttonAction = "";
-        // text variables support (uses customText with {player} etc.)
         public boolean      textVars     = false;
 
         public Widget(WidgetType t, float x, float y, float w, float h) {
@@ -111,7 +96,6 @@ public final class ClickGuiScreen extends Screen {
         }
     }
 
-    // ── Constants ─────────────────────────────────────────────────────────────
     private static final int   PAD        = 8;
     private static final int   R          = 12;
     private static final int   LINE_H     = 26;
@@ -154,32 +138,23 @@ public final class ClickGuiScreen extends Screen {
     private static final int C_SLD_BG  = ColorUtil.rgba(255,255,255, 14);
     private static final int C_SLD_FG  = ColorUtil.rgba(100,180,255,200);
     private static final int C_SLD_H   = ColorUtil.rgba(100,180,255,255);
-
-    // ── State ─────────────────────────────────────────────────────────────────
     private final List<Widget> widgets = new ArrayList<>();
     private boolean editMode = false;
-
     private Widget dragWidget  = null;
     private float  dragOx, dragOy;
     private Widget resizeWidget = null;
     private boolean resL, resR, resT, resB;
     private float   resStartMx, resStartMy, resStartX, resStartY, resStartW, resStartH;
-
-    // property panel
     private Widget  propWidget   = null;
     private float   propScroll   = 0, propScrollT = 0;
-    // active slider drag: field name + widget
     private String  sliderField  = null;
     private Widget  sliderWidget = null;
     private float   sliderMinV, sliderMaxV;
     private int     sliderX, sliderW;
-
     private Widget  addMenuWidget = null;
     private int     addMenuX, addMenuY;
-
     private Widget  popupWidget  = null;
     private float   popupScroll  = 0, popupScrollT = 0;
-
     private final WeakHashMap<Module, Animator>      modHover    = new WeakHashMap<>();
     private final WeakHashMap<Module, TypeAnim>      modNameAnim = new WeakHashMap<>();
     private final WeakHashMap<Module, Long>          modKeyFlash = new WeakHashMap<>();
@@ -188,7 +163,6 @@ public final class ClickGuiScreen extends Screen {
     private final WeakHashMap<Widget,  Module>       widgetSelected = new WeakHashMap<>();
     private final WeakHashMap<Setting<?>, TypeAnim>  settingAnim  = new WeakHashMap<>();
     private final WeakHashMap<Setting<?>, Long>      boolFlash    = new WeakHashMap<>();
-
     private Module  moduleBinding  = null;
     private Module  settingBindMod = null;
     private Field   settingBindFld = null;
@@ -196,58 +170,37 @@ public final class ClickGuiScreen extends Screen {
     private String  search = "";
     private boolean searchFocused = false;
     private Widget  searchWidget  = null;
-
     private List<Path> imageFiles    = new ArrayList<>();
     private long       imageScanTime = 0;
     private Widget     imagePickWidget = null;
     private int        imagePickX, imagePickY;
-
-    // inline text editing for TEXT widget / title
     private Widget  editTextWidget = null;
     private boolean editTextIsTitle = false;
-
-    // ── Multi-select ──────────────────────────────────────────────────────────
     private final Set<Widget> selection = new LinkedHashSet<>();
     private boolean boxSelecting = false;
     private float   boxX0, boxY0, boxX1, boxY1;
     private final Map<Widget, float[]> multiDragOffsets = new HashMap<>();
-
-    // ── Undo/Redo ─────────────────────────────────────────────────────────────
     private final Deque<List<Widget>> undoStack = new ArrayDeque<>();
     private final Deque<List<Widget>> redoStack = new ArrayDeque<>();
     private static final int MAX_UNDO = 30;
-
-    // ── Grid snap ─────────────────────────────────────────────────────────────
     private boolean gridSnap    = false;
     private int     gridStep    = 10;
     private boolean showGrid    = false;
-
-    // ── Clipboard ─────────────────────────────────────────────────────────────
     private final List<Widget> clipboard = new ArrayList<>();
-
-    // ── Themes ────────────────────────────────────────────────────────────────
     private static final String[] THEME_NAMES = {"Default","Dark Purple","Carbon","Neon","Minimal"};
     private static final int[][] THEME_BG    = {{255,255,255,18},{120,60,200,25},{30,30,30,40},{0,255,180,20},{255,255,255,8}};
     private static final int[][] THEME_BD    = {{255,255,255,30},{180,100,255,60},{200,200,200,30},{0,255,180,80},{255,255,255,15}};
     private static final int[][] THEME_CARD  = {{255,255,255,12},{120,60,200,18},{50,50,50,30},{0,255,180,12},{255,255,255,6}};
-
-    // ── Layouts ───────────────────────────────────────────────────────────────
     private String currentLayout = "default";
     private boolean layoutMenuOpen = false;
     private List<String> savedLayouts = new ArrayList<>();
-
-    // ── Zoom ──────────────────────────────────────────────────────────────────
     private float zoom = 1f;
     private float panX = 0f, panY = 0f;
-
-    // ── Align / Theme cycle state ─────────────────────────────────────────────
     private int alignIdx  = 0;
     private int themeIdx  = 0;
     private static final String[] ALIGN_DIRS = {"left","right","top","bottom","centerH","centerV"};
 
     public ClickGuiScreen() { super(Component.literal("ClickGui")); }
-
-    // ── init / close ──────────────────────────────────────────────────────────
     @Override protected void init() {
         if (widgets.isEmpty()) loadLayout();
         AporiaRenderer.INSTANCE.resetDebugFlags();
@@ -259,8 +212,6 @@ public final class ClickGuiScreen extends Screen {
         if (ac instanceof AutoConfig a && a.getAutoSave().isEnabled()) a.save();
         super.onClose();
     }
-
-    // ── render ────────────────────────────────────────────────────────────────
     @Override
     public void render(GuiGraphics gfx, int mx, int my, float delta) {
         AporiaRenderer r = AporiaRenderer.INSTANCE;
@@ -304,15 +255,11 @@ public final class ClickGuiScreen extends Screen {
         }
         if (w.rotation != 0f) gfx.pose().popMatrix();
     }
-
-    // ── widget: collapsed ─────────────────────────────────────────────────────
     private void renderCollapsed(AporiaRenderer r, Widget w) {
         int ix=(int)w.x, iy=(int)w.y, iw=(int)w.w;
         drawWidgetBg(r, w, ix, iy, iw, TOPBAR_H);
         r.drawText("bold", widgetTitle(w), ix+PAD, iy+(TOPBAR_H-9)/2f, 9f, C_TXT_ON);
     }
-
-    // ── widget: rect ──────────────────────────────────────────────────────────
     private void renderRect(AporiaRenderer r, Widget w) {
         int ix=(int)w.x, iy=(int)w.y, iw=(int)w.w, ih=(int)w.h;
         drawWidgetBg(r, w, ix, iy, iw, ih);
@@ -323,27 +270,19 @@ public final class ClickGuiScreen extends Screen {
             r.drawText("bold", title, ix+PAD, iy+(TOPBAR_H-fs)/2f, fs, C_TXT_ON);
         }
     }
-
-    // ── widget: circle ────────────────────────────────────────────────────────
     private void renderCircle(AporiaRenderer r, Widget w) {
         float cx = w.x + w.w/2f, cy = w.y + w.h/2f;
         float rad = Math.min(w.w, w.h)/2f - 1;
         r.drawCircle(cx, cy, rad, ColorUtil.rgba(w.shapeR, w.shapeG, w.shapeB, w.shapeAlpha));
     }
-
-    // ── widget: line ──────────────────────────────────────────────────────────
     private void renderLine(AporiaRenderer r, Widget w) {
         r.drawLine(w.x, w.y+w.h/2f, w.x+w.w, w.y+w.h/2f,
             w.lineThickness, ColorUtil.rgba(w.shapeR, w.shapeG, w.shapeB, w.shapeAlpha));
     }
-
-    // ── widget: triangle ──────────────────────────────────────────────────────
     private void renderTriangle(AporiaRenderer r, Widget w) {
         r.drawTriangle(w.x+w.w/2f, w.y+2, w.x+w.w-2, w.y+w.h-2, w.x+2, w.y+w.h-2,
             ColorUtil.rgba(w.shapeR, w.shapeG, w.shapeB, w.shapeAlpha));
     }
-
-    // ── widget: text ──────────────────────────────────────────────────────────
     private void renderText(AporiaRenderer r, Widget w) {
         drawWidgetBg(r, w, (int)w.x, (int)w.y, (int)w.w, (int)w.h);
         String raw = (editTextWidget==w&&!editTextIsTitle)
@@ -353,8 +292,6 @@ public final class ClickGuiScreen extends Screen {
         r.drawText(w.fontName.isEmpty()?"regular":w.fontName, raw,
             w.x+PAD, w.y+(w.h-fs)/2f, fs, ColorUtil.rgba(w.shapeR,w.shapeG,w.shapeB,w.shapeAlpha));
     }
-
-    // ── widget: image ─────────────────────────────────────────────────────────
     private void renderImage(AporiaRenderer r, Widget w) {
         int ix=(int)w.x, iy=(int)w.y, iw=(int)w.w, ih=(int)w.h;
         drawWidgetBg(r, w, ix, iy, iw, ih);
@@ -378,8 +315,6 @@ public final class ClickGuiScreen extends Screen {
         }
         r.drawImage(dx, dy, dw, dh, id);
     }
-
-    // ── widget: category list ─────────────────────────────────────────────────
     private void renderCategoryList(AporiaRenderer r, GuiGraphics gfx, Widget w, int mx, int my) {
         int ix=(int)w.x, iy=(int)w.y, iw=(int)w.w, ih=(int)w.h;
         drawWidgetBg(r, w, ix, iy, iw, ih);
@@ -402,8 +337,6 @@ public final class ClickGuiScreen extends Screen {
         }
         gfx.disableScissor();
     }
-
-    // ── widget: button ────────────────────────────────────────────────────────
     private void renderButton(AporiaRenderer r, Widget w, int mx, int my) {
         int ix=(int)w.x, iy=(int)w.y, iw=(int)w.w, ih=(int)w.h;
         boolean hov=mx>=ix&&mx<ix+iw&&my>=iy&&my<iy+ih;
@@ -442,8 +375,6 @@ public final class ClickGuiScreen extends Screen {
         float fs = w.fontSize>0 ? w.fontSize : 13f;
         r.drawText("bold", label, ix+PAD, iy+(ih-fs)/2f, fs, C_TXT_ON);
     }
-
-    // ── widget: account ───────────────────────────────────────────────────────
     private void renderAccount(AporiaRenderer r, Widget w) {
         int ix=(int)w.x, iy=(int)w.y, iw=(int)w.w, ih=(int)w.h;
         drawWidgetBg(r, w, ix, iy, iw, ih);
@@ -451,8 +382,6 @@ public final class ClickGuiScreen extends Screen {
         float fs = w.fontSize>0 ? w.fontSize : 9f;
         r.drawText("regular", name, ix+PAD, iy+(ih-fs)/2f, fs, C_TXT_ON);
     }
-
-    // ── widget: search ────────────────────────────────────────────────────────
     private void renderSearch(AporiaRenderer r, GuiGraphics gfx, Widget w, int mx, int my) {
         int ix=(int)w.x, iy=(int)w.y, iw=(int)w.w, ih=(int)w.h;
         searchWidget = w;
@@ -468,8 +397,6 @@ public final class ClickGuiScreen extends Screen {
         }
         gfx.disableScissor();
     }
-
-    // ── widget: module list ───────────────────────────────────────────────────
     private void renderModuleList(AporiaRenderer r, GuiGraphics gfx, Widget w, int mx, int my) {
         int ix=(int)w.x, iy=(int)w.y, iw=(int)w.w, ih=(int)w.h;
         drawWidgetBg(r, w, ix, iy, iw, ih);
@@ -554,8 +481,6 @@ public final class ClickGuiScreen extends Screen {
             gfx.disableScissor();
         }
     }
-
-    // ── settings panel ────────────────────────────────────────────────────────
     private void renderSettingsPanel(AporiaRenderer r, GuiGraphics gfx,
                                      Module mod, int sx, int sy, int sw, int sh, int mx, int my) {
         if (mod==null) return;
@@ -622,8 +547,6 @@ public final class ClickGuiScreen extends Screen {
         }
         return y+LINE_H+2;
     }
-
-    // ── popup settings window ─────────────────────────────────────────────────
     private void renderPopup(AporiaRenderer r, GuiGraphics gfx, Widget w, int mx, int my) {
         Module mod=widgetSelected.get(w);
         if (mod==null){popupWidget=null;return;}
@@ -654,8 +577,6 @@ public final class ClickGuiScreen extends Screen {
             r.drawRect(px+pw-4,barY,3,barH,2,ColorUtil.rgba(255,255,255,50));
         }
     }
-
-    // ── edit button ───────────────────────────────────────────────────────────
     private void renderEditButton(AporiaRenderer r, int mx, int my) {
         int bx=this.width-EDIT_BTN_S-10, by=this.height-EDIT_BTN_S-10;
         boolean hov=mx>=bx&&mx<bx+EDIT_BTN_S&&my>=by&&my<by+EDIT_BTN_S;
@@ -666,16 +587,12 @@ public final class ClickGuiScreen extends Screen {
         float tw=r.getTextWidth("regular",label,8f);
         r.drawText("regular",label,bx+(EDIT_BTN_S-tw)/2f,by+(EDIT_BTN_S-8)/2f,8f,C_TXT_ON);
     }
-
-    // ── edit overlay ──────────────────────────────────────────────────────────
     private void renderEditOverlay(AporiaRenderer r, GuiGraphics gfx, int mx, int my) {
-        // grid
         if (showGrid) {
             int sw=this.width, sh=this.height;
             for (int gx=0;gx<sw;gx+=gridStep) r.drawLine(gx,0,gx,sh,0.5f,ColorUtil.rgba(255,255,255,12));
             for (int gy=0;gy<sh;gy+=gridStep) r.drawLine(0,gy,sw,gy,0.5f,ColorUtil.rgba(255,255,255,12));
         }
-        // box select
         if (boxSelecting) {
             float bx=Math.min(boxX0,boxX1), by=Math.min(boxY0,boxY1);
             float bw=Math.abs(boxX1-boxX0), bh=Math.abs(boxY1-boxY0);
@@ -730,7 +647,6 @@ public final class ClickGuiScreen extends Screen {
         return (mx>=bx&&mx<bx+btnW)?i:-1;
     }
 
-    // ── property panel ────────────────────────────────────────────────────────
     private static final int PROP_W   = 220;
     private static final int PROP_IH  = 22;
     private static final int PROP_SH  = 18;
@@ -913,7 +829,6 @@ public final class ClickGuiScreen extends Screen {
         return rows;
     }
 
-    // ── prop field accessors ──────────────────────────────────────────────────
     private boolean getPropBool(Widget w, String f) {
         return switch(f) {
             case "blur"      -> w.blur;
@@ -1034,8 +949,6 @@ public final class ClickGuiScreen extends Screen {
             }
         }
     }
-
-    // ── add menu ──────────────────────────────────────────────────────────────
     private static final String[] ADD_LABELS = {"Список модулей","Категории","Поиск","Аккаунт","Имя клиента","Прямоугольник","Круг","Линия","Треугольник","Текст","Кнопка","Изображение"};
     private static final WidgetType[] ADD_TYPES = {WidgetType.MODULE_LIST,WidgetType.CATEGORY_LIST,WidgetType.SEARCH,WidgetType.ACCOUNT,WidgetType.CLIENT_NAME,WidgetType.RECT,WidgetType.CIRCLE,WidgetType.LINE,WidgetType.TRIANGLE,WidgetType.TEXT,WidgetType.BUTTON,WidgetType.IMAGE};
 
@@ -1053,8 +966,6 @@ public final class ClickGuiScreen extends Screen {
             iy+=itemH;
         }
     }
-
-    // ── image picker ──────────────────────────────────────────────────────────
     private void scanImages() {
         long now=System.currentTimeMillis();
         if (now-imageScanTime<3000) return;
@@ -1089,8 +1000,6 @@ public final class ClickGuiScreen extends Screen {
             }
         }
     }
-
-    // ── undo/redo/clipboard/align helpers ────────────────────────────────────
     private void pushUndo() {
         List<Widget> snap = widgets.stream().map(Widget::copy).collect(Collectors.toList());
         undoStack.push(snap);
@@ -1151,7 +1060,6 @@ public final class ClickGuiScreen extends Screen {
     }
     private float snap(float v) { return gridSnap ? Math.round(v/(float)gridStep)*gridStep : v; }
 
-    // ── mouse clicked ─────────────────────────────────────────────────────────
     @Override
     public boolean mouseClicked(MouseButtonEvent e, boolean b) {
         int mx=(int)e.x(), my=(int)e.y();
@@ -1163,7 +1071,6 @@ public final class ClickGuiScreen extends Screen {
         }
 
         if (editMode) {
-            // toolbar
             int tbIdx=toolbarHit(mx,my);
             if (tbIdx>=0) {
                 switch(tbIdx) {
@@ -1268,13 +1175,10 @@ public final class ClickGuiScreen extends Screen {
                         return true;
                     }
                 }
-                // box select start
                 selection.clear(); boxSelecting=true; boxX0=boxX1=mx; boxY0=boxY1=my;
             }
             return true;
         }
-
-        // ── LIVE mode ──
         if (popupWidget!=null) {
             Module mod=widgetSelected.get(popupWidget);
             if (mod!=null) {
@@ -1409,7 +1313,6 @@ public final class ClickGuiScreen extends Screen {
         }
     }
 
-    // ── settings click ────────────────────────────────────────────────────────
     private void handleSettingsClick(Module mod, int cx, int cw, int startY, int mx, int my) {
         int y=startY, re=cx+cw-6;
         for (Field field:mod.getClass().getDeclaredFields()) {
@@ -1432,7 +1335,6 @@ public final class ClickGuiScreen extends Screen {
         }
     }
 
-    // ── drag / release / scroll ───────────────────────────────────────────────
     @Override
     public boolean mouseDragged(MouseButtonEvent e, double dx, double dy) {
         float mx=(float)e.x(), my=(float)e.y();
@@ -1494,7 +1396,6 @@ public final class ClickGuiScreen extends Screen {
         return super.mouseScrolled(mx,my,dx,dy);
     }
 
-    // ── keyboard ──────────────────────────────────────────────────────────────
     @Override
     public boolean keyPressed(KeyEvent e) {
         if (moduleBinding!=null) {
@@ -1536,27 +1437,26 @@ public final class ClickGuiScreen extends Screen {
             if (popupWidget!=null){popupWidget=null;return true;}
             if (editMode){editMode=false;saveLayout();return true;}
         }
-        // edit mode shortcuts
         if (editMode) {
             boolean ctrl=org.lwjgl.glfw.GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(),org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL)==1;
             if (ctrl) {
-                if (e.key()==90){undo();return true;}       // Ctrl+Z
-                if (e.key()==89){redo();return true;}       // Ctrl+Y
-                if (e.key()==67){copySelected();return true;} // Ctrl+C
-                if (e.key()==86){pasteClipboard();return true;} // Ctrl+V
-                if (e.key()==68){duplicateSelected();return true;} // Ctrl+D
-                if (e.key()==65){selection.clear();selection.addAll(widgets);return true;} // Ctrl+A
-                if (e.key()==93) { // Ctrl+] bring to front
+                if (e.key()==90){undo();return true;}
+                if (e.key()==89){redo();return true;}
+                if (e.key()==67){copySelected();return true;}
+                if (e.key()==86){pasteClipboard();return true;}
+                if (e.key()==68){duplicateSelected();return true;}
+                if (e.key()==65){selection.clear();selection.addAll(widgets);return true;}
+                if (e.key()==93) {
                     for (Widget w:selection){widgets.remove(w);widgets.add(w);}
                     saveLayout(); return true;
                 }
-                if (e.key()==91) { // Ctrl+[ send to back
+                if (e.key()==91) {
                     List<Widget> sel=new ArrayList<>(selection);
                     for (int i=sel.size()-1;i>=0;i--){Widget w=sel.get(i);widgets.remove(w);widgets.add(0,w);}
                     saveLayout(); return true;
                 }
             }
-            if (e.key()==261||e.key()==259) { // Delete/Backspace
+            if (e.key()==261||e.key()==259) {
                 if (!selection.isEmpty()){pushUndo();widgets.removeAll(selection);selection.clear();saveLayout();return true;}
             }
         }
@@ -1578,7 +1478,6 @@ public final class ClickGuiScreen extends Screen {
         return super.charTyped(e);
     }
 
-    // ── layout persistence ────────────────────────────────────────────────────
     private void saveLayout() {
         try {
             StringBuilder sb=new StringBuilder("v3\n");
@@ -1680,7 +1579,6 @@ public final class ClickGuiScreen extends Screen {
     private static int   parseInt(String s, int def)   { try{return Integer.parseInt(s.trim());}catch(Exception e){return def;} }
     private static float parseFloat(String s, float def){ try{return Float.parseFloat(s.trim());}catch(Exception e){return def;} }
 
-    // ── helpers ───────────────────────────────────────────────────────────────
     private void drawWidgetBg(AporiaRenderer r, Widget w, int x, int y, int width, int height) {
         int bg=ColorUtil.rgba(w.bgR,w.bgG,w.bgB,w.bgAlpha);
         int br=w.borderRadius;

@@ -21,6 +21,9 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
+import so.aporia.utils.events.EventBus;
+import so.aporia.utils.events.impl.ChatHideEvent;
+import so.aporia.utils.events.impl.ChatMessageEvent;
 
 @OnlyIn(Dist.CLIENT)
 public class ChatListener {
@@ -189,6 +192,18 @@ public class ChatListener {
     }
 
     public void handleSystemMessage(Component p_240522_, boolean p_240642_) {
+        ChatHideEvent hideEvent =
+            new ChatHideEvent(p_240522_);
+        EventBus.INSTANCE.post(hideEvent);
+        
+        if (hideEvent.isCancelled()) {
+            return;
+        }
+
+        EventBus.INSTANCE.post(
+            new ChatMessageEvent(p_240522_)
+        );
+        
         if (!this.minecraft.options.hideMatchedNames().get() || !this.minecraft.isBlocked(this.guessChatUUID(p_240522_))) {
             if (p_240642_) {
                 this.minecraft.gui.setOverlayMessage(p_240522_, false);

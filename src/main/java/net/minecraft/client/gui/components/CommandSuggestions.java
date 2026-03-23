@@ -48,6 +48,7 @@ import net.minecraft.world.phys.Vec2;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
+import so.aporia.utils.user.command.CommandManager;
 
 @OnlyIn(Dist.CLIENT)
 public class CommandSuggestions {
@@ -208,9 +209,7 @@ public class CommandSuggestions {
         if (flag) {
             stringreader.skip();
         }
-
-        // aporia client command suggestions
-        boolean aporiaCmd = s.startsWith(so.aporia.utils.user.command.CommandManager.PREFIX)
+        boolean aporiaCmd = s.startsWith(CommandManager.PREFIX)
             && !PanicSystem.INSTANCE.isPanicked();
         if (aporiaCmd) {
             updateAporiaInfo(s);
@@ -332,16 +331,16 @@ public class CommandSuggestions {
     }
 
     private void updateAporiaInfo(String input) {
-        String prefix = so.aporia.utils.user.command.CommandManager.PREFIX;
+        String prefix = CommandManager.PREFIX;
         String typed = input.substring(prefix.length()).toLowerCase();
         this.commandUsage.clear();
-        so.aporia.utils.user.command.CommandManager.INSTANCE.getAll().stream()
+        CommandManager.INSTANCE.getAll().stream()
             .filter(cmd -> cmd.name().startsWith(typed))
             .sorted((a, b) -> a.name().compareTo(b.name()))
             .forEach(cmd -> this.commandUsage.add(
-                net.minecraft.util.FormattedCharSequence.forward(
+                FormattedCharSequence.forward(
                     prefix + cmd.name() + " - " + cmd.description(),
-                    net.minecraft.network.chat.Style.EMPTY.withColor(net.minecraft.ChatFormatting.GRAY)
+                    Style.EMPTY.withColor(ChatFormatting.GRAY)
                 )
             ));
         if (!this.commandUsage.isEmpty()) {

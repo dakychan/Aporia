@@ -44,7 +44,6 @@ public final class PacketDebug extends Module {
         packetCount = 0;
         String ts = LocalDateTime.now().format(FILE_FMT);
         sessionFile = FilesManager.ROOT.resolve("packets/parse_" + ts + ".log");
-
         try {
             String header = "=== PacketDebug Session: " + ts + " ===\n\n";
             FilesManager.append(sessionFile, header);
@@ -54,7 +53,6 @@ public final class PacketDebug extends Module {
             sessionFile = null;
             return;
         }
-
         EventBus.INSTANCE.register(this);
     }
 
@@ -74,21 +72,16 @@ public final class PacketDebug extends Module {
     @EventHandler
     public void onPacket(PacketEvent event) {
         if (sessionFile == null) return;
-
-        // Фильтр по направлению
         if (event.direction() == PacketEvent.Direction.INBOUND  && !logInbound.isEnabled())  return;
         if (event.direction() == PacketEvent.Direction.OUTBOUND && !logOutbound.isEnabled()) return;
-
         Packet<?> pkt = event.packet();
         String simple = pkt.getClass().getSimpleName();
         String dir = event.direction() == PacketEvent.Direction.INBOUND ? "IN " : "OUT";
         String time = LocalDateTime.now().format(TIME_FMT);
-
         String entry = '[' + time + "] [" + dir + "] " + simple + '\n'
             + "  class: " + pkt.getClass().getName() + '\n'
             + "  data : " + pkt + '\n'
             + "──────────────────────────────────────────\n";
-
         try {
             FilesManager.append(sessionFile, entry);
             packetCount++;

@@ -47,7 +47,7 @@ public final class TypeAnim {
     /** Устанавливает новую целевую строку и запускает анимацию. */
     public void setTarget(String newTarget) {
         if (newTarget.equals(target) && running) return;
-        current = target; // начинаем со старого значения
+        current = target;
         target  = newTarget;
         startMs = System.currentTimeMillis();
         running = true;

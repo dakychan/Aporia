@@ -343,8 +343,7 @@ public class AporiaChatScreen extends ChatScreen {
     private int     editingField = -1;
     private EditBox fieldBox;
     private Handle  dragging = Handle.NONE;
-    
-    // Scrollbar drag state
+
     private boolean scrollDragging = false;
     private double scrollDragStartY = 0;
     private int scrollDragStartOffset = 0;
@@ -687,10 +686,7 @@ public class AporiaChatScreen extends ChatScreen {
                 return true;
             }
         }
-
         WinCfg c = cfg(); int bx = boxX(), by = boxY(), bw = boxW(), bh = boxH();
-        
-        // Clickable scrollbar
         if (btn == 0) {
             int total = c.lines.size();
             int maxL = c.maxLines();
@@ -700,20 +696,16 @@ public class AporiaChatScreen extends ChatScreen {
                 int barH = bh - BOX_PAD * 2;
                 int thumbH = Math.max(10, barH * maxL / Math.max(1, total));
                 int thumbY = by + BOX_PAD + (barH - thumbH) * (maxS - c.scrollOffset) / maxS;
-                
-                // Check if click is on scrollbar area
                 if (mx >= barX - 2 && mx <= barX + 4) {
                     int scrollAreaTop = by + BOX_PAD;
                     int scrollAreaBottom = scrollAreaTop + barH;
                     if (my >= scrollAreaTop && my <= scrollAreaBottom) {
-                        // Click on thumb - start dragging
                         if (my >= thumbY && my <= thumbY + thumbH) {
                             scrollDragging = true;
                             scrollDragStartY = my;
                             scrollDragStartOffset = c.scrollOffset;
                             return true;
                         }
-                        // Click on track - jump to position
                         float relY = (float)(my - scrollAreaTop) / (float) barH;
                         int targetOffset = (int) (relY * maxS);
                         c.scrollOffset = Math.max(0, Math.min(targetOffset, maxS));
@@ -722,10 +714,8 @@ public class AporiaChatScreen extends ChatScreen {
                 }
             }
         }
-        
         Handle h = hitHandle(mx, my, c, bx, by, bw, bh);
         if (h != Handle.NONE && btn == 0) { dragging = h; return true; }
-
         if (btn == 0 && hoveredStyle != null) {
             if (hoveredStyle.getClickEvent() != null) {
                 defaultHandleGameClickEvent(hoveredStyle.getClickEvent(), this.minecraft, this);
@@ -736,7 +726,6 @@ public class AporiaChatScreen extends ChatScreen {
                 return true;
             }
         }
-
         return super.mouseClicked(e, b);
     }
 
@@ -761,8 +750,6 @@ public class AporiaChatScreen extends ChatScreen {
             if (widthChanged) WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font);
             return true;
         }
-        
-        // Handle scrollbar dragging
         if (scrollDragging && e.button() == 0) {
             WinCfg c = cfg();
             int total = c.lines.size();
@@ -777,7 +764,6 @@ public class AporiaChatScreen extends ChatScreen {
             }
             return true;
         }
-        
         return super.mouseDragged(e, dx, dy);
     }
 

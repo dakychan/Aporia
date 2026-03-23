@@ -59,6 +59,8 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
+import so.aporia.utils.events.EventBus;
+import so.aporia.utils.events.impl.KeyInputEvent;
 
 @OnlyIn(Dist.CLIENT)
 public class KeyboardHandler {
@@ -420,14 +422,14 @@ public class KeyboardHandler {
     private void keyPress(long p_90894_, @KeyEvent.Action int p_90895_, KeyEvent p_423534_) {
         Window window = this.minecraft.getWindow();
         if (p_90894_ == window.handle()) {
-            so.aporia.utils.events.EventBus.INSTANCE.post(
-                new so.aporia.utils.events.impl.KeyInputEvent(
+            EventBus.INSTANCE.post(
+                new KeyInputEvent(
                     p_423534_.key(), p_423534_.scancode(), p_423534_.modifiers(),
                     p_90895_ == 0
-                        ? so.aporia.utils.events.impl.KeyInputEvent.Action.RELEASE
+                        ? KeyInputEvent.Action.RELEASE
                         : p_90895_ == 2
-                            ? so.aporia.utils.events.impl.KeyInputEvent.Action.REPEAT
-                            : so.aporia.utils.events.impl.KeyInputEvent.Action.PRESS
+                            ? KeyInputEvent.Action.REPEAT
+                            : KeyInputEvent.Action.PRESS
                 )
             );
             this.minecraft.getFramerateLimitTracker().onInputReceived();

@@ -258,6 +258,10 @@ import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 import org.slf4j.Logger;
+import so.aporia.Aporia;
+import so.aporia.utils.events.EventBus;
+import so.aporia.utils.events.impl.TickEvent;
+import so.aporia.utils.user.render.ui.chat.AporiaChatScreen;
 
 @OnlyIn(Dist.CLIENT)
 public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements WindowEventHandler {
@@ -505,7 +509,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
         this.resourceManager.registerReloadListener(this.textureManager);
         this.shaderManager = new ShaderManager(this.textureManager, this::triggerResourcePackRecovery);
         this.resourceManager.registerReloadListener(this.shaderManager);
-        this.resourceManager.registerReloadListener(so.aporia.Aporia.INSTANCE);
+        this.resourceManager.registerReloadListener(Aporia.INSTANCE);
         SkinTextureDownloader skintexturedownloader = new SkinTextureDownloader(this.proxy, this.textureManager, this);
         this.skinManager = new SkinManager(file1.toPath().resolve("skins"), this.services, skintexturedownloader, this);
         this.levelSource = new LevelStorageSource(path.resolve("saves"), path.resolve("backups"), this.directoryValidator, this.fixerUpper);
@@ -1087,7 +1091,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
                 this.gui.setChatDisabledByPlayerShown(minecraft$chatstatus == Minecraft.ChatStatus.DISABLED_BY_PROFILE);
             }
         } else {
-            this.gui.getChat().openScreen(p_424408_, so.aporia.utils.user.render.ui.chat.AporiaChatScreen::new);
+            this.gui.getChat().openScreen(p_424408_, AporiaChatScreen::new);
         }
     }
 
@@ -1722,7 +1726,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
     public void tick() {
         this.clientTickCount++;
         
-        so.aporia.utils.events.EventBus.INSTANCE.post(new so.aporia.utils.events.impl.TickEvent());
+        EventBus.INSTANCE.post(new TickEvent());
         
         if (this.level != null && !this.pause) {
             this.level.tickRateManager().tick();

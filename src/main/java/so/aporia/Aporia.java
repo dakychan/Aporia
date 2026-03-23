@@ -33,7 +33,7 @@ public class Aporia implements ResourceManagerReloadListener {
             Logger.error("FilesManager init failed: " + e.getMessage());
         }
         KeybindManager.INSTANCE.toString();
-        ModuleManager.INSTANCE.toString(); // init
+        ModuleManager.INSTANCE.toString();
         Logger.success("Aporia initialized");
     }
 

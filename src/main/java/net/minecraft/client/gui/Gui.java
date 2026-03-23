@@ -79,6 +79,8 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jspecify.annotations.Nullable;
+import so.aporia.utils.user.render.ui.chat.HudChatRenderer;
+import so.aporia.utils.user.render.ui.clickgui.ClickGuiScreen;
 
 @OnlyIn(Dist.CLIENT)
 public class Gui {
@@ -205,7 +207,7 @@ public class Gui {
         if (!(this.minecraft.screen instanceof LevelLoadingScreen)) {
             if (!this.minecraft.options.hideGui) {
                 this.renderCameraOverlays(p_282884_, p_342095_);
-                if (!(this.minecraft.screen instanceof so.aporia.utils.user.render.ui.clickgui.ClickGuiScreen)) {
+                if (!(this.minecraft.screen instanceof ClickGuiScreen)) {
                     this.renderCrosshair(p_282884_, p_342095_);
                 }
                 p_282884_.nextStratum();
@@ -217,12 +219,12 @@ public class Gui {
             this.renderSleepOverlay(p_282884_, p_342095_);
             if (!this.minecraft.options.hideGui) {
                 this.renderDemoOverlay(p_282884_, p_342095_);
-                if (!(this.minecraft.screen instanceof so.aporia.utils.user.render.ui.clickgui.ClickGuiScreen)) {
+                if (!(this.minecraft.screen instanceof ClickGuiScreen)) {
                     this.renderScoreboardSidebar(p_282884_, p_342095_);
                 }
                 this.renderOverlayMessage(p_282884_, p_342095_);
                 this.renderTitle(p_282884_, p_342095_);
-                if (!(this.minecraft.screen instanceof so.aporia.utils.user.render.ui.clickgui.ClickGuiScreen)) {
+                if (!(this.minecraft.screen instanceof ClickGuiScreen)) {
                     this.renderChat(p_282884_, p_342095_);
                 }
                 this.renderTabList(p_282884_, p_342095_);
@@ -388,7 +390,7 @@ public class Gui {
 
     private void renderChat(GuiGraphics p_329202_, DeltaTracker p_342328_) {
         if (!this.chat.isChatFocused()) {
-            so.aporia.utils.user.render.ui.chat.HudChatRenderer.render(p_329202_, this.getFont(), this.chat, this.tickCount);
+            HudChatRenderer.render(p_329202_, this.getFont(), this.chat, this.tickCount);
         }
     }
 
