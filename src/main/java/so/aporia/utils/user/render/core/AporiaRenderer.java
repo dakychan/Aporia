@@ -152,6 +152,7 @@ public class AporiaRenderer {
         int segments = 12;
         float segW = len / segments;
         int a = (color >> 24) & 0xFF;
+        float startX = centerX - len;
         for (int i = 0; i < segments; i++) {
             float t0 = (float) i / segments;
             float t1 = (float)(i + 1) / segments;
@@ -161,12 +162,9 @@ public class AporiaRenderer {
             int a1 = (int)(a * fade1 * fade1);
             int c0 = (a0 << 24) | (color & 0x00FFFFFF);
             int c1 = (a1 << 24) | (color & 0x00FFFFFF);
-            float lx0 = centerX - (i + 1) * segW;
-            float lx1 = centerX - i * segW;
-            drawLine(lx0, centerY, lx1, centerY, thickness, lerp(c0, c1, 0.5f));
-            float rx0 = centerX + i * segW;
-            float rx1 = centerX + (i + 1) * segW;
-            drawLine(rx0, centerY, rx1, centerY, thickness, lerp(c0, c1, 0.5f));
+            float x0 = startX + i * segW;
+            float x1 = startX + (i + 1) * segW;
+            drawLine(x0, centerY, x1, centerY, thickness, lerp(c0, c1, 0.5f));
         }
     }
 

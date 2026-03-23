@@ -2,6 +2,7 @@ package so.aporia.module.impl.misc;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
+import net.minecraft.network.chat.Component;
 import so.aporia.module.Category;
 import so.aporia.module.Module;
 import so.aporia.module.settings.BooleanSetting;
@@ -30,7 +31,7 @@ public final class ServerHelper extends Module {
     private final BooleanSetting autoFlyMe = new BooleanSetting("AutoFlyMe", 
         "Автоматически активирует /flyme при падении", true);
     
-    private final BooleanSetting autoExample = new BooleanSetting("AutoExample",
+    private final BooleanSetting mathResolver = new BooleanSetting("MathResolver",
         "Автоматически решает математические капчи", true);
     
     private final BooleanSetting hideFlyMessages = new BooleanSetting("Hide Fly Messages",
@@ -49,6 +50,8 @@ public final class ServerHelper extends Module {
     
     private static final Pattern COMPLEX_MATH = 
         Pattern.compile("Решите\\s*:\\s*([\\d+\\-*/()\\s]+)\\s*кто");
+    
+    private long captchaStartTime = 0;
     
     public ServerHelper() {
         super("ServerHelper", Category.MISC);
@@ -80,18 +83,16 @@ public final class ServerHelper extends Module {
         if (event.packet() instanceof ClientboundSystemChatPacket packet) {
             String text = packet.content().getString();
             
-            if (hideCaptcha.isEnabled() && text.contains("Решите")) {
-                event.cancel();
-            }
-            
             if (hideFlyMessages.isEnabled() && 
                 (text.contains("Вы успешно включили себе флай") ||
                  text.contains("Вы успешно выключили себе флай"))) {
                 event.cancel();
             }
             
-            if (autoExample.isEnabled() && text.contains("Решите")) {
+            if (mathResolver.isEnabled() && text.contains("Решите")) {
+                captchaStartTime = System.currentTimeMillis();
                 solveCaptcha(text);
+                event.cancel();
             }
         }
     }
@@ -124,7 +125,11 @@ public final class ServerHelper extends Module {
         }
 
         if (answer >= 0 && mc.player != null && mc.player.connection != null) {
+            long solveTime = System.currentTimeMillis() - captchaStartTime;
             mc.player.connection.sendChat(String.valueOf(answer));
+            
+            String msg = "§6Aporia.cc §f→ §a%name% решил капчу за §e" + solveTime + "ms§a!";
+            mc.player.displayClientMessage(Component.literal(msg), false);
         }
     }
 
@@ -138,11 +143,6 @@ public final class ServerHelper extends Module {
         if (hideFlyMessages.isEnabled() && 
             (text.contains("Вы успешно включили себе флай") ||
              text.contains("Вы успешно выключили себе флай"))) {
-            event.cancel();
-            return;
-        }
-        
-        if (hideCaptcha.isEnabled() && text.contains("Решите") && text.contains("кто")) {
             event.cancel();
         }
     }
@@ -264,7 +264,7 @@ public final class ServerHelper extends Module {
     }
     
     public BooleanSetting getAutoFlyMe() { return autoFlyMe; }
-    public BooleanSetting getAutoExample() { return autoExample; }
+    public BooleanSetting getMathResolver() { return mathResolver; }
     public BooleanSetting getHideFlyMessages() { return hideFlyMessages; }
     public BooleanSetting getHideCaptcha() { return hideCaptcha; }
 }

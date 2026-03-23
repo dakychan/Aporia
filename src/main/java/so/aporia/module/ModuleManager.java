@@ -1,6 +1,7 @@
 package so.aporia.module;
 
 import so.aporia.module.impl.misc.AutoConfig;
+import so.aporia.module.impl.misc.ClickGui;
 import so.aporia.module.impl.misc.PacketDebug;
 import so.aporia.module.impl.misc.ServerHelper;
 import so.aporia.module.impl.misc.TestModule;
@@ -26,6 +27,7 @@ public final class ModuleManager {
         registerAll(
             new Hud(),
             new Blur(),
+            new ClickGui(),
             new ServerHelper(),
             new AutoConfig(),
             new TestModule(),
