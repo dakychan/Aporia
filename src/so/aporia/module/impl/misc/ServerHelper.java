@@ -51,7 +51,11 @@ public final class ServerHelper extends Module {
     private static final Pattern COMPLEX_MATH = 
         Pattern.compile("Решите\\s*:\\s*([\\d+\\-*/()\\s]+)\\s*кто");
     
+    private static final Pattern CAPTCHA_SOLVED = 
+        Pattern.compile("(\\w+)\\s+первым\\s+решил\\s+пример\\s+и\\s+победил");
+    
     private long captchaStartTime = 0;
+    private boolean captchaSolvedByUs = false;
     
     public ServerHelper() {
         super("ServerHelper", Category.MISC);
@@ -63,7 +67,6 @@ public final class ServerHelper extends Module {
         isFalling = false;
         ticksWithoutGround = 0;
         ticksSinceLastCommand = COMMAND_COOLDOWN;
-        Logger.info("ServerHelper enabled");
     }
 
     @Override
@@ -72,7 +75,6 @@ public final class ServerHelper extends Module {
         isFalling = false;
         ticksWithoutGround = 0;
         ticksSinceLastCommand = 0;
-        Logger.info("ServerHelper disabled");
     }
 
     /**
@@ -91,8 +93,17 @@ public final class ServerHelper extends Module {
             
             if (mathResolver.isEnabled() && text.contains("Решите")) {
                 captchaStartTime = System.currentTimeMillis();
+                captchaSolvedByUs = false;
                 solveCaptcha(text);
                 event.cancel();
+            }
+            
+            if (mathResolver.isEnabled() && captchaSolvedByUs) {
+                Matcher solveMatcher = CAPTCHA_SOLVED.matcher(text);
+                if (solveMatcher.find()) {
+                    event.cancel();
+                    captchaSolvedByUs = false;
+                }
             }
         }
     }
@@ -127,9 +138,11 @@ public final class ServerHelper extends Module {
         if (answer >= 0 && mc.player != null && mc.player.connection != null) {
             long solveTime = System.currentTimeMillis() - captchaStartTime;
             mc.player.connection.sendChat(String.valueOf(answer));
+            captchaSolvedByUs = true;
             
-            String msg = "§6Aporia.cc §f→ §a%name% решил капчу за §e" + solveTime + "ms§a!";
-            mc.player.displayClientMessage(Component.literal(msg), false);
+            String playerName = mc.player.getName().getString();
+            String msg = "§6Aporia.cc §f→ §a" + playerName + " решил капчу за §e" + solveTime + "ms§a!";
+            mc.execute(() -> mc.player.displayClientMessage(Component.literal(msg), false));
         }
     }
 

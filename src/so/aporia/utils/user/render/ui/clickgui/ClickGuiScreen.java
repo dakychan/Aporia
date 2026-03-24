@@ -12,17 +12,12 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import so.aporia.module.Category;
 import so.aporia.module.Module;
 import so.aporia.module.ModuleManager;
-import so.aporia.module.impl.misc.ServerHelper;
-import so.aporia.module.settings.BooleanSetting;
-import so.aporia.module.settings.Setting;
 import so.aporia.utils.user.render.animation.Animator;
 import so.aporia.utils.user.render.animation.Easing;
-import so.aporia.utils.user.render.animation.TypeAnim;
 import so.aporia.utils.user.render.color.ColorUtil;
 import so.aporia.utils.user.render.core.AporiaRenderer;
 import so.aporia.utils.user.render.font.Fonts;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -87,6 +82,12 @@ public final class ClickGuiScreen extends Screen {
     private float   dox, doy;
     
     private SettingsPopup settingsPopup = null;
+    private Animator guiLoadAnim = null;
+    private Animator guiOpenAnim = null;
+    private Animator contentAnim = null;
+    private long guiOpenTime = 0;
+    private boolean loadingShown = false;
+    private boolean guiInitialized = false;
 
     public ClickGuiScreen() { super(Component.literal("ClickGui")); }
 
@@ -97,6 +98,15 @@ public final class ClickGuiScreen extends Screen {
             ph = Math.max(MIN_H, this.height * H_FRAC);
             px = (this.width  - pw) / 2f;
             py = (this.height - ph) / 2f;
+            guiOpenAnim = Animator.slide(600);
+            guiOpenAnim.play();
+            contentAnim = new Animator(800, Easing::sineInOut);
+            contentAnim.play();
+            guiLoadAnim = new Animator(600, Easing::sineInOut);
+            guiLoadAnim.play();
+            guiOpenTime = System.currentTimeMillis();
+            loadingShown = false;
+            guiInitialized = false;
         }
         for (Category c : Category.values())
             hoverAnims.computeIfAbsent(c, k -> new Animator(200, Easing::cubicOut));
@@ -122,34 +132,81 @@ public final class ClickGuiScreen extends Screen {
         float targetSelY = catY(active);
         animSelY += (targetSelY - animSelY) * 0.18f;
 
-        r.drawRectBlurred(ipx, ipy, ipw, iph, PANEL_R, C_PANEL_TINT, 20f);
+        guiOpenAnim.update();
+        float openProg = guiOpenAnim.value();
+        
+        float scale = openProg;
+        int scaledW = (int)(ipw * scale);
+        int scaledH = (int)(iph * scale);
+        int scaledX = ipx + (ipw - scaledW) / 2;
+        int scaledY = ipy + (iph - scaledH) / 2;
 
-        r.drawStroke(ipx,     ipy,     ipw,     iph,     PANEL_R,     1f, 1, 0f, C_GLASS_OUT);
-        r.drawStroke(ipx + 1, ipy + 1, ipw - 2, iph - 2, PANEL_R - 1, 1f, 1, 0f, C_GLASS_IN);
+        r.drawRectBlurred(scaledX, scaledY, scaledW, scaledH, PANEL_R, C_PANEL_TINT, 20f);
+
+        r.drawStroke(scaledX,     scaledY,     scaledW,     scaledH,     PANEL_R,     1f, 1, 0f, C_GLASS_OUT);
+        r.drawStroke(scaledX + 1, scaledY + 1, scaledW - 2, scaledH - 2, PANEL_R - 1, 1f, 1, 0f, C_GLASS_IN);
 
         r.drawRect(cx, ipy, 1, iph, 0, C_DIV);
         r.drawRect(cx, by,  cw, 1,  0, C_DIV);
 
-        gfx.enableScissor(ipx, ipy, cx, ipy + iph);
-        renderSidebar(r, ipx, ipy, iph, mx, my);
-        gfx.disableScissor();
-
-        renderTopbar(r, gfx, cx, ipy, cw);
-
-        int modX = cx + 1;
-        int modW = cw - 1;
-        gfx.enableScissor(modX, by + 1, modX + modW, ipy + iph);
-        renderModules(r, gfx, modX, by, modW, mx, my, by + 1, modX + modW, ipy + iph);
-        gfx.disableScissor();
+        guiLoadAnim.update();
+        float loadProg = guiLoadAnim.value();
         
+        contentAnim.update();
+        float contentAlpha = contentAnim.value();
+        
+        boolean isLoading = contentAlpha < 1f && !loadingShown && !guiInitialized;
+        
+        if (isLoading) {
+            int offsetX = (int)(loadProg * 30f);
+            r.drawText("bold", "Загружаю", ipx + ipw / 2f - 40 + offsetX, ipy + iph / 2f - 20, 12f, C_TXT_ON);
+            renderLoadingDots(r, ipx + ipw / 2f + 20 + offsetX, ipy + iph / 2f - 20);
+            
+            gfx.enableScissor(scaledX, scaledY, scaledX + scaledW, scaledY + scaledH);
+            renderSidebar(r, scaledX, scaledY, scaledH, mx, my, contentAlpha);
+            gfx.disableScissor();
+        } else {
+            if (!guiInitialized) {
+                guiInitialized = true;
+                loadingShown = true;
+            }
+            
+            if (contentAlpha > 0.01f) {
+                gfx.enableScissor(scaledX, scaledY, scaledX + scaledW, scaledY + scaledH);
+                renderSidebar(r, scaledX, scaledY, scaledH, mx, my, contentAlpha);
+                gfx.disableScissor();
+
+                float modAlpha = Math.max(0, (contentAlpha - 0.3f) / 0.7f);
+                if (modAlpha > 0.01f) {
+                    renderTopbar(r, gfx, cx, scaledY, cw, modAlpha);
+
+                    int modX = cx + 1;
+                    int modW = cw - 1;
+                    gfx.enableScissor(modX, by + 1, modX + modW, scaledY + scaledH);
+                    renderModules(r, gfx, modX, by, modW, mx, my, by + 1, modX + modW, scaledY + scaledH, modAlpha);
+                    gfx.disableScissor();
+                }
+            }
+        }
         if (settingsPopup != null) {
             settingsPopup.render(r, gfx, mx, my, this.width, this.height);
         }
     }
+    
+    private void renderLoadingDots(AporiaRenderer r, float x, float y) {
+        long elapsed = System.currentTimeMillis() - guiOpenTime;
+        float cycle = (elapsed % 1500) / 1500f;
+        
+        for (int i = 0; i < 3; i++) {
+            float alpha = 0.3f + 0.7f * Math.max(0, (float)Math.sin((cycle - i * 0.15f) * (float)Math.PI));
+            r.drawText("regular", ".", x + i * 8, y, 10f, ColorUtil.rgba(255, 255, 255, (int)(alpha * 255)));
+        }
+    }
 
-    private void renderSidebar(AporiaRenderer r, int sx, int sy, int sh, int mx, int my) {
+    private void renderSidebar(AporiaRenderer r, int sx, int sy, int sh, int mx, int my, float alpha) {
         Category[] cats = Category.values();
-        for (Category cat : cats) {
+        for (int catIdx = 0; catIdx < cats.length; catIdx++) {
+            Category cat = cats[catIdx];
             int cy   = (int)catY(cat);
             boolean act = cat == active;
             boolean hov = mx >= sx && mx < sx + SIDEBAR_W && my >= cy && my < cy + CAT_H;
@@ -161,56 +218,65 @@ public final class ClickGuiScreen extends Screen {
                 anim.update();
             }
 
+            float staggerDelay = catIdx * 0.18f;
+            float catAlpha = Math.max(0, Math.min(1f, (alpha - staggerDelay) / (1f - staggerDelay)));
+            
+            if (catAlpha < 0.01f) continue;
+            
             int col = act ? C_CAT_ACT : (hov ? C_CAT_HOV : C_CAT_TXT);
+            col = ColorUtil.rgba((col >> 16) & 0xFF, (col >> 8) & 0xFF, col & 0xFF, (int)(((col >> 24) & 0xFF) * catAlpha));
 
             float iconSize = 13f;
             float txtSize  = 9f;
             float startX   = sx + 20f;
+            float offsetX = (1f - catAlpha) * -150f;
 
-            r.drawText(Fonts.CATICONS, String.valueOf(cat.icon), startX, cy + (CAT_H - iconSize) / 2f, iconSize, col);
-            r.drawText("regular", capitalize(cat.name()), startX + iconSize + 6f, cy + (CAT_H - txtSize) / 2f, txtSize, col);
+            r.drawText(Fonts.CATICONS, String.valueOf(cat.icon), startX + offsetX, cy + (CAT_H - iconSize) / 2f, iconSize, col);
+            r.drawText("regular", capitalize(cat.name()), startX + iconSize + 6f + offsetX, cy + (CAT_H - txtSize) / 2f, txtSize, col);
 
             float prog = anim != null ? anim.value() : (act ? 1f : 0f);
-            if (prog > 0.01f) {
+            if (prog > 0.01f && catAlpha > 0.01f) {
                 float lineY   = cy + CAT_H - 2f;
-                float centerX = sx + SIDEBAR_W / 2f;
+                float centerX = sx + SIDEBAR_W / 2f + 25f;
                 float halfLen = SIDEBAR_W / 2f - CAT_PAD;
-                int   lineCol = ColorUtil.rgba(255, 255, 255, (int)(80 * prog));
+                int   lineCol = ColorUtil.rgba(255, 255, 255, (int)(80 * prog * catAlpha));
                 r.drawFadeHLine(centerX, lineY, halfLen, 1.5f, prog, lineCol);
             }
         }
     }
 
-    private void renderTopbar(AporiaRenderer r, GuiGraphics gfx, int tx, int ty, int tw) {
+    private void renderTopbar(AporiaRenderer r, GuiGraphics gfx, int tx, int ty, int tw, float alpha) {
         r.drawText("bold", capitalize(active.name()),
-                tx + PAD, ty + (TOPBAR_H - 11) / 2f, 11f, C_TOPBAR_TXT);
+                tx + PAD, ty + (TOPBAR_H - 11) / 2f, 11f, ColorUtil.rgba(255, 255, 255, (int)(255 * alpha)));
 
         int sfx = tx + tw - SEARCH_W - PAD;
         int sfy = ty + (TOPBAR_H - SEARCH_H) / 2;
         int sr  = SEARCH_H / 2;
-        r.drawRect(sfx, sfy, SEARCH_W, SEARCH_H, sr, C_SRCH_BG);
-        r.drawStroke(sfx, sfy, SEARCH_W, SEARCH_H, sr, 1f, 1, 0f,
-                searchFocused ? C_SRCH_BDR_F : C_SRCH_BDR);
+        int bgCol = ColorUtil.rgba((C_SRCH_BG >> 16) & 0xFF, (C_SRCH_BG >> 8) & 0xFF, C_SRCH_BG & 0xFF, (int)(((C_SRCH_BG >> 24) & 0xFF) * alpha));
+        r.drawRect(sfx, sfy, SEARCH_W, SEARCH_H, sr, bgCol);
+        int bdrCol = ColorUtil.rgba(255, 255, 255, (int)(40 * alpha));
+        r.drawStroke(sfx, sfy, SEARCH_W, SEARCH_H, sr, 1f, 1, 0f, bdrCol);
 
         gfx.enableScissor(sfx + 6, sfy, sfx + SEARCH_W - 6, sfy + SEARCH_H);
         if (search.isEmpty() && !searchFocused) {
-            r.drawText("regular", "Search...", sfx + 8, sfy + (SEARCH_H - 9) / 2f, 9f, C_SRCH_PH);
+            r.drawText("regular", "Search...", sfx + 8, sfy + (SEARCH_H - 9) / 2f, 9f, ColorUtil.rgba(255, 255, 255, (int)(80 * alpha)));
         } else {
             String cur = search + (searchFocused && (System.currentTimeMillis() / 500) % 2 == 0 ? "|" : "");
-            r.drawText("regular", cur, sfx + 8, sfy + (SEARCH_H - 9) / 2f, 9f, C_SRCH_TXT);
+            r.drawText("regular", cur, sfx + 8, sfy + (SEARCH_H - 9) / 2f, 9f, ColorUtil.rgba(255, 255, 255, (int)(220 * alpha)));
         }
         gfx.disableScissor();
     }
 
     private void renderModules(AporiaRenderer r, GuiGraphics gfx, int mx2, int my2, int mw, int hx, int hy,
-                               int scY1, int scX2, int scY2) {
+                               int scY1, int scX2, int scY2, float contentAlpha) {
         List<Module> mods = filtered();
         int cols = 2;
         int colW = (mw - PAD * (cols + 1)) / cols;
         int col  = 0;
         int rowY = my2 + PAD;
 
-        for (Module m : mods) {
+        for (int modIdx = 0; modIdx < mods.size(); modIdx++) {
+            Module m = mods.get(modIdx);
             int cardX = mx2 + PAD + col * (colW + PAD);
             int y     = rowY;
             boolean on  = m.isEnabled();
@@ -223,15 +289,23 @@ public final class ClickGuiScreen extends Screen {
             ha.update();
             float hp = ha.value();
 
-            r.drawRectBlurred(cardX, y, colW, CARD_H, CARD_R,
-                    sel ? C_CARD_ON : (hov ? C_CARD_HOV : C_CARD_TINT), 8f);
+            float staggerDelay = modIdx * 0.05f;
+            float modAlpha = Math.max(0, Math.min(1f, (contentAlpha - staggerDelay) / (1f - staggerDelay)));
+            float offsetY = (1f - modAlpha) * -20f;
 
-            int outlineAlpha = (int)(20 + 50 * hp) + (on ? 60 : 0);
+            int tintAlpha = (int)(12 * modAlpha);
+            int hovAlpha = (int)(28 * modAlpha);
+            int onAlpha = (int)(40 * modAlpha);
+            int cardTint = sel ? ColorUtil.rgba(255, 255, 255, onAlpha) : (hov ? ColorUtil.rgba(255, 255, 255, hovAlpha) : ColorUtil.rgba(255, 255, 255, tintAlpha));
+            
+            r.drawRectBlurred(cardX, (int)(y + offsetY), colW, CARD_H, CARD_R, cardTint, 8f);
+
+            int outlineAlpha = (int)((20 + 50 * hp) * modAlpha) + (on ? (int)(60 * modAlpha) : 0);
             int outlineColor = ColorUtil.rgba(255, 255, 255, outlineAlpha);
-            r.drawStroke(cardX, y, colW, CARD_H, CARD_R, 1f, 1, 0f, outlineColor);
+            r.drawStroke(cardX, (int)(y + offsetY), colW, CARD_H, CARD_R, 1f, 1, 0f, outlineColor);
 
             r.drawText("regular", m.name(),
-                    cardX + PAD, y + (CARD_H - 9) / 2f, 9f, on ? C_TXT_ON : C_TXT);
+                    cardX + PAD, (int)(y + offsetY + (CARD_H - 9) / 2f - 1), 9f, ColorUtil.rgba(255, 255, 255, (int)((on ? 255 : 180) * modAlpha)));
 
             col++;
             if (col >= cols) { col = 0; rowY += CARD_H + CARD_GAP; }
@@ -249,6 +323,9 @@ public final class ClickGuiScreen extends Screen {
             if (consumed) {
                 return true;
             }
+            settingsPopup.close();
+            settingsPopup = null;
+            return true;
         }
 
         if (e.button() == 0) {
@@ -298,8 +375,12 @@ public final class ClickGuiScreen extends Screen {
                 int cardX = cx + PAD + col2 * (colW + PAD);
                 if (mx >= cardX && mx < cardX + colW && my >= y && my < y + CARD_H) {
                     if (settingsPopup != null && settingsPopup.getModule() == m) {
+                        settingsPopup.close();
                         settingsPopup = null;
                     } else {
+                        if (settingsPopup != null) {
+                            settingsPopup.close();
+                        }
                         settingsPopup = new SettingsPopup(m);
                     }
                     return true;
@@ -327,6 +408,16 @@ public final class ClickGuiScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent e) {
+        if (e.key() == 256) {
+            if (settingsPopup != null) {
+                settingsPopup.close();
+                settingsPopup = null;
+                return true;
+            }
+        }
+        if (settingsPopup != null && settingsPopup.keyPressed(e.key())) {
+            return true;
+        }
         if (searchFocused) {
             if (e.key() == 259 && !search.isEmpty()) { search = search.substring(0, search.length() - 1); return true; }
             if (e.key() == 256) { searchFocused = false; return true; }

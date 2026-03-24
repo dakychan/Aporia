@@ -66,13 +66,17 @@ public class AporiaChatScreen extends ChatScreen {
         public String  name;
         public int     x, bottomY, w, h;
         public boolean draggable      = false;
+        
         public boolean searchOnOpen   = false;
         public boolean showOnlyFilter = false;
+        public boolean showOnlyServer = false;
+        public boolean prefixEnabled  = true;
+        
         public String  filterWords    = "";
         public String  msgPrefix      = "";
         public String  msgSuffix      = "";
         public String  prefixTriggers = "";
-        public boolean prefixEnabled  = true;
+        
         public int     selfColor      = 0xFFADD8E6;
         public int     scrollOffset   = 0;
 
@@ -126,6 +130,8 @@ public class AporiaChatScreen extends ChatScreen {
          */
         public void route(GuiMessage msg, net.minecraft.client.gui.Font font) {
             String full = msg.content().getString().toLowerCase();
+            boolean isServerMessage = msg.tag() != null && msg.tag().toString().contains("System");
+            
             List<WinCfg> claimants = new ArrayList<>();
             for (WinCfg w : wins) {
                 if (!w.showOnlyFilter || w.filterWords.isEmpty()) continue;
@@ -138,6 +144,9 @@ public class AporiaChatScreen extends ChatScreen {
                 boolean claimed    = claimants.contains(w);
                 if (isFiltered && !claimed) continue;
                 if (!isFiltered && !claimants.isEmpty()) continue;
+                
+                if (w.showOnlyServer && !isServerMessage) continue;
+                
                 int splitW = Math.max(10, w.w - BOX_PAD*2 - TEXT_PAD);
                 List<net.minecraft.util.FormattedCharSequence> parts = msg.splitLines(font, splitW);
                 for (int i = 0; i < parts.size(); i++) {
@@ -237,9 +246,9 @@ public class AporiaChatScreen extends ChatScreen {
 
     /**
      * Inline settings panel rendered over the active chat window.
-     * Shows 9 editable fields with scrolling support.
+     * Shows 10 editable fields with scrolling support.
      * Fields: Name, Prefix, Prefix enabled, Prefix triggers, Suffix,
-     *         Filter words, Filter only, Search on open, Self color.
+     *         Filter words, Filter only, Search on open, Only server, Self color.
      */
     private static final class EditPanel {
         boolean visible = false;
@@ -249,7 +258,7 @@ public class AporiaChatScreen extends ChatScreen {
         static final int ITEM   = 16;
         static final int PAD    = 6;
         static final int HDR_H  = ITEM + PAD;
-        static final int FIELDS = 9;
+        static final int FIELDS = 10;
 
         private static final int C_BG      = ColorUtil.rgba(10,  10,  24,  250);
         private static final int C_HDR     = ColorUtil.rgba(40,  40,  80,  255);
@@ -283,7 +292,7 @@ public class AporiaChatScreen extends ChatScreen {
             gfx.fill(bx+PAD, contentY, bx+bw-PAD, contentY+1, C_SEP);
             contentY += 1;
             String[] labels = {"Name","Prefix","Prefix enabled","Prefix triggers","Suffix",
-                               "Filter words","Filter only","Search on open","Self color"};
+                               "Filter words","Filter only","Search on open","Only server","Self color"};
             String[] values = {
                 c.name, c.msgPrefix,
                 c.prefixEnabled  ? "§aON" : "§cOFF",
@@ -291,6 +300,7 @@ public class AporiaChatScreen extends ChatScreen {
                 c.msgSuffix, c.filterWords,
                 c.showOnlyFilter ? "§aON" : "§cOFF",
                 c.searchOnOpen   ? "§aON" : "§cOFF",
+                c.showOnlyServer ? "§aON" : "§cOFF",
                 String.format("#%06X", c.selfColor & 0xFFFFFF)
             };
             int rows = visibleRows();
@@ -663,6 +673,7 @@ public class AporiaChatScreen extends ChatScreen {
                 if (f == 2) { cfg().prefixEnabled = !cfg().prefixEnabled; return true; }
                 if (f == 6) { cfg().showOnlyFilter = !cfg().showOnlyFilter; WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font); return true; }
                 if (f == 7) { cfg().searchOnOpen = !cfg().searchOnOpen; return true; }
+                if (f == 8) { cfg().showOnlyServer = !cfg().showOnlyServer; WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font); return true; }
                 startFieldEdit(f);
                 return true;
             }
@@ -856,7 +867,7 @@ public class AporiaChatScreen extends ChatScreen {
             case 3 -> c.prefixTriggers;
             case 4 -> c.msgSuffix;
             case 5 -> c.filterWords;
-            case 8 -> String.format("#%06X", c.selfColor & 0xFFFFFF);
+            case 9 -> String.format("#%06X", c.selfColor & 0xFFFFFF);
             default -> "";
         };
         fieldBox.setValue(cur); fieldBox.setFocused(true); this.setFocused(fieldBox);
@@ -870,7 +881,7 @@ public class AporiaChatScreen extends ChatScreen {
             case 3 -> c.prefixTriggers = v;
             case 4 -> c.msgSuffix = v;
             case 5 -> { c.filterWords = v; WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font); }
-            case 8 -> { try { c.selfColor = (int)(Long.parseLong(v.replace("#",""), 16)) | 0xFF000000; } catch (Exception ignored) {} }
+            case 9 -> { try { c.selfColor = (int)(Long.parseLong(v.replace("#",""), 16)) | 0xFF000000; } catch (Exception ignored) {} }
         }
         cancelFieldEdit();
         trySave();
