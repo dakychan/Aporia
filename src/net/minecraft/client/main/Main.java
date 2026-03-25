@@ -205,6 +205,7 @@ public class Main {
         try {
             Thread.currentThread().setName("Render thread");
             RenderSystem.initRenderThread();
+            so.aporia.utils.assets.AssetManager.downloadAssets();
             minecraft = new Minecraft(gameconfig);
         } catch (SilentInitException silentinitexception) {
             Util.shutdownExecutors();

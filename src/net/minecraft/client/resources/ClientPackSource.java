@@ -67,7 +67,14 @@ public class ClientPackSource extends BuiltInPackSource {
 
     private static VanillaPackResources createVanillaPackSource(Path p_250749_) {
         VanillaPackResourcesBuilder vanillapackresourcesbuilder = new VanillaPackResourcesBuilder().setMetadata(BUILT_IN_METADATA).exposeNamespace("minecraft", "realms", "aporia");
-        return vanillapackresourcesbuilder.applyDevelopmentConfig().pushJarResources().pushClasspathResources(PackType.CLIENT_RESOURCES, net.minecraft.client.resources.ClientPackSource.class).pushAssetPath(PackType.CLIENT_RESOURCES, p_250749_).build(VANILLA_PACK_INFO);
+        vanillapackresourcesbuilder.applyDevelopmentConfig().pushJarResources().pushClasspathResources(PackType.CLIENT_RESOURCES, net.minecraft.client.resources.ClientPackSource.class).pushAssetPath(PackType.CLIENT_RESOURCES, p_250749_);
+        
+        Path assetsDir = so.aporia.utils.files.FilesManager.ROOT.resolve(".assets");
+        if (java.nio.file.Files.exists(assetsDir)) {
+            vanillapackresourcesbuilder.pushAssetPath(PackType.CLIENT_RESOURCES, assetsDir);
+        }
+        
+        return vanillapackresourcesbuilder.build(VANILLA_PACK_INFO);
     }
 
     @Override

@@ -61,8 +61,8 @@ public class FontAtlas {
         try {
             Optional<Resource> res = Minecraft.getInstance().getResourceManager().getResource(jsonId);
             if (res.isEmpty()) {
-                LOGGER.warn("Font JSON not found: {}", jsonId);
-                loaded.set(true);
+                LOGGER.warn("Font JSON not found in ResourceManager: {}, trying AssetManager...", jsonId);
+                loadFromAssetManager();
                 return;
             }
             try (InputStream is = res.get().open();
@@ -73,6 +73,21 @@ public class FontAtlas {
             }
         } catch (Exception e) {
             LOGGER.error("Failed to load font: {}", jsonId, e);
+            loaded.set(true);
+        }
+    }
+    
+    private void loadFromAssetManager() {
+        try {
+            String path = jsonId.getPath().replace("aporia:", "").replace(".json", "") + ".json";
+            java.nio.file.Path assetFile = so.aporia.utils.files.FilesManager.ROOT.resolve(".assets").resolve(path);
+            byte[] data = java.nio.file.Files.readAllBytes(assetFile);
+            String json = new String(data, StandardCharsets.UTF_8);
+            parseJson(JsonParser.parseString(json).getAsJsonObject());
+            loaded.set(true);
+            LOGGER.info("Loaded font from AssetManager: {} ({} glyphs)", jsonId, glyphs.size());
+        } catch (Exception e) {
+            LOGGER.error("Failed to load font from AssetManager: {}", jsonId, e);
             loaded.set(true);
         }
     }
