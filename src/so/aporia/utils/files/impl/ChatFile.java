@@ -32,6 +32,7 @@ public final class ChatFile {
         public boolean draggable     = false;
         public boolean searchOnOpen  = false;
         public boolean showOnlyFilter= false;
+        public boolean showOnlyServer= false;
         public String  filterWords   = "";
         public String  msgPrefix     = "";
         public String  msgSuffix     = "";
@@ -61,6 +62,7 @@ public final class ChatFile {
             d.draggable      = c.draggable;
             d.searchOnOpen   = c.searchOnOpen;
             d.showOnlyFilter = c.showOnlyFilter;
+            d.showOnlyServer = c.showOnlyServer;
             d.filterWords    = c.filterWords;
             d.msgPrefix      = c.msgPrefix;
             d.msgSuffix      = c.msgSuffix;
@@ -85,6 +87,7 @@ public final class ChatFile {
             WinCfg c = new WinCfg(d.name, d.x, d.bottomY, d.w, d.h, d.draggable);
             c.searchOnOpen   = d.searchOnOpen;
             c.showOnlyFilter = d.showOnlyFilter;
+            c.showOnlyServer = d.showOnlyServer;
             c.filterWords    = d.filterWords;
             c.msgPrefix      = d.msgPrefix;
             c.msgSuffix      = d.msgSuffix;

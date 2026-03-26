@@ -1,6 +1,6 @@
 <component name="ArtifactManager">
-  <artifact type="jar" name="Aporia.client:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/Aporia_client_jar</output-path>
+  <artifact type="jar" name="Aporia.mcp:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Aporia_mcp_jar</output-path>
     <root id="archive" name="Aporia.mcp.jar">
       <element id="module-output" name="Aporia.mcp" />
       <element id="extracted-dir" path="$PROJECT_DIR$/libs/jna-platform-5.17.0.jar" path-in-jar="/" />

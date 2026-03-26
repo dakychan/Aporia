@@ -130,8 +130,20 @@ public class AporiaChatScreen extends ChatScreen {
          */
         public void route(GuiMessage msg, net.minecraft.client.gui.Font font) {
             String full = msg.content().getString().toLowerCase();
-            boolean isServerMessage = msg.tag() != null && msg.tag().toString().contains("System");
-            
+            boolean[] hasInteraction = {false};
+            msg.content().visit((style, text) -> {
+                if (style.getClickEvent() != null) {
+                    hasInteraction[0] = true;
+                    return java.util.Optional.of(java.lang.Boolean.TRUE);
+                }
+                return java.util.Optional.empty();
+            }, net.minecraft.network.chat.Style.EMPTY);
+            boolean isServerMessage;
+            if (hasInteraction[0]) {
+                isServerMessage = false;
+            } else {
+                isServerMessage = msg.tag() != null;
+            }
             List<WinCfg> claimants = new ArrayList<>();
             for (WinCfg w : wins) {
                 if (!w.showOnlyFilter || w.filterWords.isEmpty()) continue;
@@ -139,19 +151,27 @@ public class AporiaChatScreen extends ChatScreen {
                     if (matchesKw(full, kw)) { claimants.add(w); break; }
                 }
             }
+            boolean routed = false;
             for (WinCfg w : wins) {
                 boolean isFiltered = w.showOnlyFilter && !w.filterWords.isEmpty();
-                boolean claimed    = claimants.contains(w);
+                boolean claimed = claimants.contains(w);
                 if (isFiltered && !claimed) continue;
                 if (!isFiltered && !claimants.isEmpty()) continue;
-                
-                if (w.showOnlyServer && !isServerMessage) continue;
-                
-                int splitW = Math.max(10, w.w - BOX_PAD*2 - TEXT_PAD);
-                List<net.minecraft.util.FormattedCharSequence> parts = msg.splitLines(font, splitW);
-                for (int i = 0; i < parts.size(); i++) {
-                    w.addLine(new GuiMessage.Line(msg.addedTime(), parts.get(i), msg.tag(), i == parts.size()-1));
+                if (w.showOnlyServer && !isServerMessage) {
+                    continue;
                 }
+                addMsgToWin(w, msg, font);
+                routed = true;
+            }
+            if (!routed && !isServerMessage && !wins.isEmpty()) {
+                addMsgToWin(wins.get(0), msg, font);
+            }
+        }
+        private void addMsgToWin(WinCfg w, GuiMessage msg, net.minecraft.client.gui.Font font) {
+            int splitW = Math.max(10, w.w - BOX_PAD*2 - TEXT_PAD);
+            List<net.minecraft.util.FormattedCharSequence> parts = msg.splitLines(font, splitW);
+            for (int i = 0; i < parts.size(); i++) {
+                w.addLine(new GuiMessage.Line(msg.addedTime(), parts.get(i), msg.tag(), i == parts.size()-1));
             }
         }
 
@@ -227,16 +247,17 @@ public class AporiaChatScreen extends ChatScreen {
         void render(GuiGraphics gfx, net.minecraft.client.gui.Font font, int winCount) {
             if (!visible) return;
             int totalH = menuHeight(winCount);
-            AporiaRenderer.INSTANCE.drawRect(renderX, renderY, W, totalH, 5, C_BG);
+            AporiaRenderer r = AporiaRenderer.INSTANCE;
+            r.drawRect(renderX, renderY, W, totalH, 5, C_BG);
             String[] labels = {"§fEdit", "§aAdd window", "§cDelete window"};
             for (int i = 0; i < 3; i++)
                 gfx.drawString(font, labels[i], renderX+PAD, renderY+PAD+i*ITEM+3, C_ITEM, false);
             if (winCount > 0) {
                 int sy = renderY+PAD+3*ITEM;
-                gfx.fill(renderX+PAD, sy, renderX+W-PAD, sy+1, C_SEP);
+                r.drawRect(renderX+PAD, sy, W-PAD*2, 1, 0, C_SEP);
                 for (int i = 0; i < winCount; i++) {
                     int iy = sy+4+i*ITEM;
-                    if (i == WinMgr.I.active) gfx.fill(renderX+2, iy, renderX+W-2, iy+ITEM, C_HOV);
+                    if (i == WinMgr.I.active) r.drawRect(renderX+2, iy, W-4, ITEM, 0, C_HOV);
                     gfx.drawString(font, WinMgr.I.wins.get(i).name, renderX+PAD, iy+3, C_ITEM, false);
                 }
             }
@@ -283,26 +304,17 @@ public class AporiaChatScreen extends ChatScreen {
         void render(GuiGraphics gfx, net.minecraft.client.gui.Font font, WinCfg c) {
             if (!visible) return;
             AporiaRenderer r = AporiaRenderer.INSTANCE;
-            r.drawRect(bx, by, bw, bh, RADIUS, C_BG);
+            r.drawRectBlurred(bx, by, bw, bh, RADIUS, C_BG, 8f);
             r.drawRect(bx, by, bw, HDR_H, RADIUS, C_HDR);
             gfx.drawString(font, "§fSettings — §7" + c.name, bx+PAD, by+PAD/2+3, C_VAL, false);
             String esc = "§7[Esc]";
             gfx.drawString(font, esc, bx+bw-font.width(esc)-PAD, by+PAD/2+3, C_VAL, false);
             int contentY = by + HDR_H;
-            gfx.fill(bx+PAD, contentY, bx+bw-PAD, contentY+1, C_SEP);
+            r.drawRect(bx+PAD, contentY, bw-PAD*2, 1, 0, C_SEP);
             contentY += 1;
             String[] labels = {"Name","Prefix","Prefix enabled","Prefix triggers","Suffix",
                                "Filter words","Filter only","Search on open","Only server","Self color"};
-            String[] values = {
-                c.name, c.msgPrefix,
-                c.prefixEnabled  ? "§aON" : "§cOFF",
-                c.prefixTriggers.isEmpty() ? "§7(always)" : c.prefixTriggers,
-                c.msgSuffix, c.filterWords,
-                c.showOnlyFilter ? "§aON" : "§cOFF",
-                c.searchOnOpen   ? "§aON" : "§cOFF",
-                c.showOnlyServer ? "§aON" : "§cOFF",
-                String.format("#%06X", c.selfColor & 0xFFFFFF)
-            };
+            int[] toggleFields = {2, 6, 7, 8};
             int rows = visibleRows();
             int maxS = Math.max(0, FIELDS - rows);
             scrollOffset = Math.max(0, Math.min(scrollOffset, maxS));
@@ -310,17 +322,48 @@ public class AporiaChatScreen extends ChatScreen {
             for (int i = 0; i < rows && (i + scrollOffset) < FIELDS; i++) {
                 int fi = i + scrollOffset;
                 int ry = contentY + PAD/2 + i * ITEM;
-                if (fi % 2 == 0) gfx.fill(bx+2, ry, bx+bw-2, ry+ITEM, C_ROW_ALT);
+                if (fi % 2 == 0) r.drawRect(bx+2, ry, bw-4, ITEM, 0, C_ROW_ALT);
                 gfx.drawString(font, "§7" + labels[fi], bx+PAD, ry+4, C_LBL, false);
-                gfx.drawString(font, values[fi], bx+PAD+100, ry+4, C_VAL, false);
+                
+                boolean isToggle = java.util.Arrays.stream(toggleFields).anyMatch(f -> f == fi);
+                if (isToggle) {
+                    boolean enabled = switch(fi) {
+                        case 2 -> c.prefixEnabled;
+                        case 6 -> c.showOnlyFilter;
+                        case 7 -> c.searchOnOpen;
+                        case 8 -> c.showOnlyServer;
+                        default -> false;
+                    };
+                    int toggleW = 22;
+                    int toggleH = 10;
+                    int toggleX = bx + bw - toggleW - PAD - 2;
+                    int toggleY = ry + (ITEM - toggleH) / 2 + 1;
+                    int bgColor = enabled ? ColorUtil.rgba(100, 200, 100, 150) : ColorUtil.rgba(100, 100, 100, 80);
+                    r.drawRect(toggleX, toggleY, toggleW, toggleH, toggleH / 2, bgColor);
+                    int dotSize = 13;
+                    int dotX = enabled ? toggleX + toggleW - dotSize / 2 - 1 : toggleX - dotSize / 2 + 1;
+                    int dotY = toggleY + toggleH / 2 - dotSize / 2 - 1;
+                    r.drawRect(dotX, dotY, dotSize, dotSize, dotSize / 2, ColorUtil.rgba(255, 255, 255, 240));
+                } else {
+                    String value = switch(fi) {
+                        case 0 -> c.name;
+                        case 1 -> c.msgPrefix;
+                        case 3 -> c.prefixTriggers.isEmpty() ? "§7(always)" : c.prefixTriggers;
+                        case 4 -> c.msgSuffix;
+                        case 5 -> c.filterWords;
+                        case 9 -> String.format("#%06X", c.selfColor & 0xFFFFFF);
+                        default -> "";
+                    };
+                    gfx.drawString(font, value, bx+PAD+100, ry+4, C_VAL, false);
+                }
             }
             gfx.disableScissor();
             if (maxS > 0) {
                 int barH   = bh - HDR_H - PAD;
                 int thumbH = Math.max(10, barH * rows / FIELDS);
                 int thumbY = contentY + PAD/2 + (barH - thumbH) * scrollOffset / maxS;
-                gfx.fill(bx+bw-3, contentY+PAD/2, bx+bw-1, contentY+PAD/2+barH, C_SCROLL);
-                gfx.fill(bx+bw-3, thumbY, bx+bw-1, thumbY+thumbH, C_THUMB);
+                r.drawRect(bx+bw-3, contentY+PAD/2, 2, barH, 0, C_SCROLL);
+                r.drawRect(bx+bw-3, thumbY, 2, thumbH, 0, C_THUMB);
             }
         }
 
@@ -364,6 +407,11 @@ public class AporiaChatScreen extends ChatScreen {
     public AporiaChatScreen(String initial, boolean isDraft) { super(initial, isDraft); }
 
     private WinCfg cfg() { return WinMgr.I.get(); }
+
+    private void setScrollOffset(WinCfg c, int newOffset) {
+        int maxS = Math.max(0, c.lines.size() - c.maxLines());
+        c.scrollOffset = Math.max(0, Math.min(newOffset, maxS));
+    }
 
     private int barWidth() {
         String v = this.input != null ? this.input.getValue() : "";
@@ -457,7 +505,7 @@ public class AporiaChatScreen extends ChatScreen {
         this.commandSuggestions.setAllowSuggestions(false);
         this.commandSuggestions.updateCommandInfo();
 
-        if (cfg().searchOnOpen) openSearch();
+        if (cfg().searchOnOpen);
         WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font);
     }
 
@@ -488,11 +536,15 @@ public class AporiaChatScreen extends ChatScreen {
                 mouseX, mouseY);
         }
 
+        if (ctx.visible) {
+            gfx.fill(0, 0, this.width, this.height, ColorUtil.rgba(0, 0, 0, 100));
+            ctx.render(gfx, this.font, WinMgr.I.wins.size());
+        }
+        
         if (edit.visible) {
             edit.render(gfx, this.font, cfg());
             if (editingField >= 0) renderFieldEditor(gfx, r, edit.bx, edit.by, edit.bw);
         }
-        ctx.render(gfx, this.font, WinMgr.I.wins.size());
     }
 
     /**
@@ -518,13 +570,13 @@ public class AporiaChatScreen extends ChatScreen {
         renderScrollBar(gfx, c, bx, by, bw, bh);
         renderResizeHints(gfx, c, bx, by, bw, bh, mouseX, mouseY);
         if (isActive && searchMode) {
-            int sy = by - GAP - INPUT_H;
-            r.drawRect(bx, sy, Math.min(bw, 200), INPUT_H, RADIUS, C_SEARCH_BG);
+            int sy = by - GAP*2 - INPUT_H;
+            r.drawRect(bx, sy, bw, INPUT_H, RADIUS, C_SEARCH_BG);
             if (searchQuery.isEmpty())
                 gfx.drawString(this.font, "§7Search...", bx+TEXT_PAD, sy+(INPUT_H-8)/2, 0xFFFFFFFF, false);
             this.searchBox.setX(bx+TEXT_PAD);
             this.searchBox.setY(sy+(INPUT_H-9)/2);
-            this.searchBox.setWidth(Math.min(bw, 200) - TEXT_PAD*2);
+            this.searchBox.setWidth(bw - TEXT_PAD*2);
             this.searchBox.setVisible(true);
             this.searchBox.render(gfx, 0, 0, 0);
         }
@@ -573,24 +625,26 @@ public class AporiaChatScreen extends ChatScreen {
         int maxL   = c.maxLines();
         int maxS   = Math.max(0, total - maxL);
         if (maxS <= 0) return;
-        int barX   = bx + bw - 3;
+        int barX   = bx + bw - 4;
+        int barY   = by + BOX_PAD;
         int barH   = bh - BOX_PAD * 2;
         int thumbH = Math.max(10, barH * maxL / Math.max(1, total));
-        int thumbY = by + BOX_PAD + (barH - thumbH) * (maxS - c.scrollOffset) / maxS;
-        gfx.fill(barX, by+BOX_PAD, barX+2, by+BOX_PAD+barH, C_SCROLL_BAR);
-        gfx.fill(barX, thumbY,     barX+2, thumbY+thumbH,    C_SCROLL_THUMB);
+        int thumbY = barY + (barH - thumbH) * (maxS - c.scrollOffset) / Math.max(1, maxS);
+        gfx.fill(barX, barY, barX+2, barY+barH, C_SCROLL_BAR);
+        gfx.fill(barX, thumbY, barX+2, thumbY+thumbH, C_SCROLL_THUMB);
     }
 
     private void renderResizeHints(GuiGraphics gfx, WinCfg c, int bx, int by, int bw, int bh, int mx, int my) {
+        AporiaRenderer r = AporiaRenderer.INSTANCE;
         Handle h = hitHandle(mx, my, c, bx, by, bw, bh);
         if (h == Handle.NONE) return;
         switch (h) {
-            case DRAG      -> gfx.fill(bx, by, bx+bw, by+DRAG_GRIP, C_DRAG_HINT);
-            case TOP       -> gfx.fill(bx, by, bx+bw, by+2, C_RESIZE_HINT);
-            case LEFT      -> gfx.fill(bx, by, bx+2, by+bh, C_RESIZE_HINT);
-            case RIGHT     -> gfx.fill(bx+bw-2, by, bx+bw, by+bh, C_RESIZE_HINT);
-            case TOP_LEFT  -> { gfx.fill(bx, by, bx+bw, by+2, C_RESIZE_HINT); gfx.fill(bx, by, bx+2, by+bh, C_RESIZE_HINT); }
-            case TOP_RIGHT -> { gfx.fill(bx, by, bx+bw, by+2, C_RESIZE_HINT); gfx.fill(bx+bw-2, by, bx+bw, by+bh, C_RESIZE_HINT); }
+            case DRAG      -> r.drawRect(bx, by, bw, DRAG_GRIP, 0, C_DRAG_HINT);
+            case TOP       -> r.drawRect(bx, by, bw, 2, 0, C_RESIZE_HINT);
+            case LEFT      -> r.drawRect(bx, by, 2, bh, 0, C_RESIZE_HINT);
+            case RIGHT     -> r.drawRect(bx+bw-2, by, 2, bh, 0, C_RESIZE_HINT);
+            case TOP_LEFT  -> { r.drawRect(bx, by, bw, 2, 0, C_RESIZE_HINT); r.drawRect(bx, by, 2, bh, 0, C_RESIZE_HINT); }
+            case TOP_RIGHT -> { r.drawRect(bx, by, bw, 2, 0, C_RESIZE_HINT); r.drawRect(bx+bw-2, by, 2, bh, 0, C_RESIZE_HINT); }
             default -> {}
         }
     }
@@ -696,6 +750,17 @@ public class AporiaChatScreen extends ChatScreen {
                 ctx.open((int)mx, (int)my, this.width, this.height);
                 return true;
             }
+            for (int i = 0; i < WinMgr.I.wins.size(); i++) {
+                if (i == WinMgr.I.active) continue;
+                WinCfg w = WinMgr.I.wins.get(i);
+                resolvePosition(w, i);
+                int wx = w.x, wy = this.height - w.bottomY - w.h, ww = w.w, wh = w.h;
+                if (mx >= wx && mx <= wx+ww && my >= wy && my <= wy+wh) {
+                    WinMgr.I.active = i;
+                    ctx.open((int)mx, (int)my, this.width, this.height);
+                    return true;
+                }
+            }
         }
         WinCfg c = cfg(); int bx = boxX(), by = boxY(), bw = boxW(), bh = boxH();
         if (btn == 0) {
@@ -703,25 +768,22 @@ public class AporiaChatScreen extends ChatScreen {
             int maxL = c.maxLines();
             int maxS = Math.max(0, total - maxL);
             if (maxS > 0) {
-                int barX = bx + bw - 3;
+                int barX = bx + bw - 4;
+                int barY = by + BOX_PAD;
                 int barH = bh - BOX_PAD * 2;
                 int thumbH = Math.max(10, barH * maxL / Math.max(1, total));
-                int thumbY = by + BOX_PAD + (barH - thumbH) * (maxS - c.scrollOffset) / maxS;
-                if (mx >= barX - 2 && mx <= barX + 4) {
-                    int scrollAreaTop = by + BOX_PAD;
-                    int scrollAreaBottom = scrollAreaTop + barH;
-                    if (my >= scrollAreaTop && my <= scrollAreaBottom) {
-                        if (my >= thumbY && my <= thumbY + thumbH) {
-                            scrollDragging = true;
-                            scrollDragStartY = my;
-                            scrollDragStartOffset = c.scrollOffset;
-                            return true;
-                        }
-                        float relY = (float)(my - scrollAreaTop) / (float) barH;
-                        int targetOffset = (int) (relY * maxS);
-                        c.scrollOffset = Math.max(0, Math.min(targetOffset, maxS));
+                int thumbY = barY + (barH - thumbH) * c.scrollOffset / Math.max(1, maxS);
+                if (mx >= barX - 2 && mx <= barX + 4 && my >= barY && my <= barY + barH) {
+                    if (my >= thumbY && my <= thumbY + thumbH) {
+                        scrollDragging = true;
+                        scrollDragStartY = my;
+                        scrollDragStartOffset = c.scrollOffset;
                         return true;
                     }
+                    float relY = (float)(my - barY) / (float) barH;
+                    int targetOffset = (int) ((1f - relY) * maxS);
+                    setScrollOffset(c, targetOffset);
+                    return true;
                 }
             }
         }
@@ -769,9 +831,9 @@ public class AporiaChatScreen extends ChatScreen {
             if (maxS > 0) {
                 int bx = boxX(), by = boxY(), bw = boxW(), bh = boxH();
                 int barH = bh - BOX_PAD * 2;
-                float deltaY = (float) ((e.y() - scrollDragStartY) / barH);
+                float deltaY = (float) ((scrollDragStartY - e.y()) / barH);
                 int newOffset = scrollDragStartOffset + (int)(deltaY * maxS);
-                c.scrollOffset = Math.max(0, Math.min(newOffset, maxS));
+                setScrollOffset(c, newOffset);
             }
             return true;
         }
@@ -791,9 +853,13 @@ public class AporiaChatScreen extends ChatScreen {
         if (edit.onScroll(mx, my, dy)) return true;
         if (commandSuggestions.mouseScrolled(dy)) return true;
         WinCfg c = cfg();
-        int maxS = Math.max(0, c.lines.size() - c.maxLines());
-        c.scrollOffset = Math.max(0, Math.min(c.scrollOffset + (dy > 0 ? 1 : -1), maxS));
-        return true;
+        int bx = boxX(), by = boxY(), bw = boxW(), bh = boxH();
+        if (mx >= bx && mx <= bx+bw && my >= by && my <= by+bh) {
+            int delta = (dy > 0 ? 1 : -1);
+            setScrollOffset(c, c.scrollOffset + delta);
+            return true;
+        }
+        return false;
     }
 
 
@@ -806,8 +872,8 @@ public class AporiaChatScreen extends ChatScreen {
             return fieldBox.keyPressed(e);
         }
         if (edit.visible) { if (e.key() == 256) edit.close(); return true; }
-        if (e.key() == 70 && (e.modifiers() & 2) != 0) { toggleSearch(); return true; }
-        if (e.key() == 256 && searchMode) { closeSearch(); return true; }
+        if (e.key() == 70 && (e.modifiers() & 2) != 0) { searchMode = !searchMode; return true; }
+        if (searchMode && e.key() == 256) { searchMode = false; return true; }
         if (searchMode) return searchBox.keyPressed(e);
         return super.keyPressed(e);
     }
@@ -815,7 +881,7 @@ public class AporiaChatScreen extends ChatScreen {
     @Override
     public boolean charTyped(CharacterEvent e) {
         if (editingField >= 0) return fieldBox.charTyped(e);
-        if (searchMode)        return searchBox.charTyped(e);
+        if (searchMode) return searchBox.charTyped(e);
         return super.charTyped(e);
     }
 
@@ -836,14 +902,16 @@ public class AporiaChatScreen extends ChatScreen {
         if (addToHistory) this.minecraft.gui.getChat().addRecentChat(msg);
         boolean isCommand = !msg.isEmpty() && msg.charAt(0) == '/';
         if (!isCommand && c.prefixEnabled && !c.msgPrefix.isEmpty()) {
-            if (!c.prefixTriggers.isEmpty() && c.prefixTriggers.indexOf(msg.charAt(0)) >= 0) {
+            if (!c.prefixTriggers.isEmpty() && !msg.isEmpty() && c.prefixTriggers.indexOf(msg.charAt(0)) >= 0) {
                 String rest = msg.length() > 1 ? msg.substring(1) : "";
                 msg = msg.charAt(0) + c.msgPrefix + (rest.isEmpty() ? "" : " " + rest);
-            } else {
+            } else if (!msg.isEmpty()) {
                 msg = c.msgPrefix + " " + msg;
+            } else {
+                msg = c.msgPrefix;
             }
         }
-        if (!c.msgSuffix.isEmpty()) msg = msg + " " + c.msgSuffix;
+        if (!c.msgSuffix.isEmpty() && !msg.isEmpty()) msg = msg + " " + c.msgSuffix;
         super.handleChatInput(msg, false);
     }
 
@@ -889,18 +957,6 @@ public class AporiaChatScreen extends ChatScreen {
 
     private void cancelFieldEdit() {
         editingField = -1; fieldBox.setVisible(false); fieldBox.setFocused(false); this.setFocused(this.input);
-    }
-
-    private void toggleSearch() { searchMode = !searchMode; if (searchMode) openSearch(); else closeSearch(); }
-
-    private void openSearch() {
-        searchMode = true; searchQuery = ""; searchBox.setValue("");
-        searchBox.setFocused(true); this.input.setFocused(false); this.setFocused(searchBox);
-    }
-
-    private void closeSearch() {
-        searchMode = false; searchQuery = ""; searchBox.setVisible(false);
-        searchBox.setFocused(false); this.input.setFocused(true); this.setFocused(this.input);
     }
 
     private static boolean matchesQuery(String text, String query) {
