@@ -44,16 +44,16 @@ public final class ServerHelper extends Module {
     private int ticksWithoutGround = 0;
     private int ticksSinceLastCommand = 0;
     private static final int COMMAND_COOLDOWN = 2;
-    
-    private static final Pattern SIMPLE_MATH = 
-        Pattern.compile("Решите\\s*:\\s*(\\d+)\\s*\\+\\s*(\\d+)");
-    
-    private static final Pattern COMPLEX_MATH = 
-        Pattern.compile("Решите\\s*:\\s*([\\d+\\-*/()\\s]+)\\s*кто");
+
+    private static final Pattern SIMPLE_MATH =
+            Pattern.compile(".*Решите\\s*:?\\s*(\\d+)\\s*\\+\\s*(\\d+).*");
+
+    private static final Pattern COMPLEX_MATH =
+            Pattern.compile(".*Решите\\s*:?\\s*([\\d+\\-*/()\\s]+).*");
     
     private static final Pattern CAPTCHA_SOLVED = 
         Pattern.compile("(\\w+)\\s+первым\\s+решил\\s+пример\\s+и\\s+победил");
-    
+
     private long captchaStartTime = 0;
     private boolean captchaSolvedByUs = false;
     
@@ -90,9 +90,9 @@ public final class ServerHelper extends Module {
                  text.contains("Вы успешно выключили себе флай"))) {
                 event.cancel();
             }
-            
+
             if (mathResolver.isEnabled() && text.contains("Решите")) {
-                captchaStartTime = System.currentTimeMillis();
+                captchaStartTime = System.nanoTime();
                 captchaSolvedByUs = false;
                 solveCaptcha(text);
                 event.cancel();
@@ -113,7 +113,6 @@ public final class ServerHelper extends Module {
      */
     private void solveCaptcha(String text) {
         long answer = -1;
-        
         Matcher simpleMatcher = SIMPLE_MATH.matcher(text);
         if (simpleMatcher.find()) {
             try {
@@ -134,15 +133,19 @@ public final class ServerHelper extends Module {
                 }
             }
         }
-
         if (answer >= 0 && mc.player != null && mc.player.connection != null) {
-            long solveTime = System.currentTimeMillis() - captchaStartTime;
             mc.player.connection.sendChat(String.valueOf(answer));
             captchaSolvedByUs = true;
-            
-            String playerName = mc.player.getName().getString();
-            String msg = "§6Aporia.cc §f→ §a" + playerName + " решил капчу за §e" + solveTime + "ms§a!";
-            mc.execute(() -> mc.player.displayClientMessage(Component.literal(msg), false));
+            long endTime = System.nanoTime();
+            long durationNanos = endTime - captchaStartTime;
+            mc.execute(() -> {
+                if (mc.player == null) return;
+                String playerName = mc.player.getName().getString();
+                double ms = durationNanos / 1_000_000.0;
+                String timeStr = durationNanos + " ns";
+                String msg = "§6Aporia.cc §f→ §a" + playerName + " решил капчу за §e" + timeStr + "§a!";
+                mc.player.displayClientMessage(Component.literal(msg), false);
+            });
         }
     }
 
