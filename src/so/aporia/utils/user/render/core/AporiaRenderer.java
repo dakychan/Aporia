@@ -64,6 +64,7 @@ public class AporiaRenderer {
                 .withUniform("Projection", UniformType.UNIFORM_BUFFER)
                 .withUniform("ShapeData",  UniformType.UNIFORM_BUFFER)
                 .withSampler("BlurTextureSampler")
+                .withSampler("ImageTextureSampler")
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.TRIANGLES)
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
@@ -653,56 +654,92 @@ public class AporiaRenderer {
      * Draw image with optional corner radius
      */
     public void drawImage(float x, float y, float w, float h, Identifier id, float radius) {
-        if (blitPipeline == null || id == null) {
-            return;
-        }
-        
-        Minecraft mc = Minecraft.getInstance();
-        var tm = mc.getTextureManager();
-        var tex = tm.getTexture(id);
-        if (tex == null) {
-            return;
-        }
-        var texView = tex.getTextureView();
-        if (texView == null) {
-            return;
-        }
-        var colorView = mc.getMainRenderTarget().getColorTextureView();
-        if (colorView == null) {
-            return;
-        }
+        if (id == null) return;
 
+        Minecraft mc = Minecraft.getInstance();
+        var tex = mc.getTextureManager().getTexture(id);
+        if (tex == null || tex.getTextureView() == null) return;
+        var colorView = mc.getMainRenderTarget().getColorTextureView();
+        if (colorView == null || pipeline == null) return;
+        if (radius <= 0) {
+            float sw = mc.getWindow().getGuiScaledWidth();
+            float sh = mc.getWindow().getGuiScaledHeight();
+            float nx  = x / sw * 2f - 1f;
+            float ny  = 1f - y / sh * 2f;
+            float nx2 = (x + w) / sw * 2f - 1f;
+            float ny2 = 1f - (y + h) / sh * 2f;
+
+            var tess = Tesselator.getInstance();
+            var buf  = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
+            buf.addVertex(x,   y+h, 0f).setUv(0f, 1f).setColor(1f, 1f, 1f, 1f);
+            buf.addVertex(x+w, y+h, 0f).setUv(1f, 1f).setColor(1f, 1f, 1f, 1f);
+            buf.addVertex(x+w, y,   0f).setUv(1f, 0f).setColor(1f, 1f, 1f, 1f);
+            buf.addVertex(x,   y+h, 0f).setUv(0f, 1f).setColor(1f, 1f, 1f, 1f);
+            buf.addVertex(x+w, y,   0f).setUv(1f, 0f).setColor(1f, 1f, 1f, 1f);
+            buf.addVertex(x,   y,   0f).setUv(0f, 0f).setColor(1f, 1f, 1f, 1f);
+
+            var mesh = buf.buildOrThrow();
+            var device  = RenderSystem.getDevice();
+            var encoder = device.createCommandEncoder();
+            var vertexGpu = device.createBuffer(() -> "aporia:img_vbo",
+                    GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, mesh.vertexBuffer());
+            try (var pass = encoder.createRenderPass(() -> "aporia:img_pass", colorView, OptionalInt.empty())) {
+                pass.setPipeline(blitPipeline);
+                pass.bindTexture("InputTexture", tex.getTextureView(),
+                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+                pass.setVertexBuffer(0, vertexGpu);
+                pass.draw(0, 6);
+            }
+            mesh.close();
+            vertexGpu.close();
+            return;
+        }
         float sw = mc.getWindow().getGuiScaledWidth();
         float sh = mc.getWindow().getGuiScaledHeight();
-        float nx  = x / sw * 2f - 1f;
-        float ny  = 1f - y / sh * 2f;
-        float nx2 = (x + w) / sw * 2f - 1f;
-        float ny2 = 1f - (y + h) / sh * 2f;
+        var projSlice = orthoProjection.getBuffer(sw, sh);
+        RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC);
 
         var tess = Tesselator.getInstance();
-        var buf  = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
-        buf.addVertex(nx,  ny2, 0f).setUv(0f, 1f);
-        buf.addVertex(nx,  ny,  0f).setUv(0f, 0f);
-        buf.addVertex(nx2, ny,  0f).setUv(1f, 0f);
-        buf.addVertex(nx,  ny2, 0f).setUv(0f, 1f);
-        buf.addVertex(nx2, ny,  0f).setUv(1f, 0f);
-        buf.addVertex(nx2, ny2, 0f).setUv(1f, 1f);
+        var buf = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR);
+        buf.addVertex(x,y+h,0f).setUv(0f, 1f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(x+w,y+h, 0f).setUv(1f, 1f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(x+w, y,0f).setUv(1f, 0f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(x,y+h,0f).setUv(0f, 1f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(x+w, y,0f).setUv(1f, 0f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(x,y,0f).setUv(0f, 0f).setColor(1f, 1f, 1f, 1f);
         var mesh = buf.buildOrThrow();
-
-        var device  = RenderSystem.getDevice();
+        var device = RenderSystem.getDevice();
         var encoder = device.createCommandEncoder();
-        var vertexGpu = device.createBuffer(() -> "aporia:img_vbo",
-            GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, mesh.vertexBuffer());
+        var vertexGpu = device.createBuffer(() -> "aporia:img_rounded_vbo",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, mesh.vertexBuffer());
+        var shapeBuf = device.createBuffer(() -> "aporia:img_shape_ubo",
+                GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 64L);
+        var bb = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder());
+        bb.putFloat(x); bb.putFloat(y); bb.putFloat(w); bb.putFloat(h);
+        bb.putFloat(radius); bb.putFloat(1.0f); bb.putFloat(MODE_ROUNDED_RECT); bb.putFloat(0f);
+        bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(1.0f);
+        bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
+        bb.flip();
+        encoder.writeToBuffer(shapeBuf.slice(), bb);
 
-        try (var pass = encoder.createRenderPass(() -> "aporia:img_pass", colorView, OptionalInt.empty())) {
-            pass.setPipeline(blitPipeline);
-            pass.bindTexture("InputTexture", texView,
-                RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+        var indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES);
+        try (var pass = encoder.createRenderPass(() -> "aporia:img_rounded_pass", colorView, OptionalInt.empty())) {
+            pass.setPipeline(pipeline);
+            RenderSystem.bindDefaultUniforms(pass);
+            pass.setUniform("ShapeData", shapeBuf.slice());
+
+            // Bind саму картинку
+            pass.bindTexture("ImageTextureSampler", tex.getTextureView(),
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+
             pass.setVertexBuffer(0, vertexGpu);
-            pass.draw(0, 6);
+            pass.setIndexBuffer(indexBuf.getBuffer(6), indexBuf.type());
+            pass.drawIndexed(0, 0, 6, 0);
         }
+
         mesh.close();
         vertexGpu.close();
+        shapeBuf.close();
     }
 
     public void cleanupBlur() {

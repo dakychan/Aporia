@@ -226,7 +226,7 @@ public final class ClickGuiScreen extends Screen {
             int profileW = SIDEBAR_W - 16;
 
             int divCol = ColorUtil.rgba(255, 255, 255, (int)(16 * alpha));
-            r.drawRect(px, profileY + 2, SIDEBAR_W, 2, 0, divCol);
+            r.drawRect(px, profileY - 1, SIDEBAR_W, 2, 0, divCol);
 
             int avatarX = profileX + 6;
             int avatarY = profileY + 6;
@@ -234,7 +234,7 @@ public final class ClickGuiScreen extends Screen {
             
             var avatarId = discordModule.getAvatarId();
             if (avatarId != null) {
-                r.drawImage(avatarX, avatarY, avatarSize, avatarSize, avatarId, 4);
+                r.drawImage(avatarX, avatarY, avatarSize, avatarSize, avatarId, 5);
             } else {
                 r.drawRect(avatarX, avatarY, avatarSize, avatarSize, 4, ColorUtil.rgba(100, 100, 100, (int)(100 * alpha)));
             }
