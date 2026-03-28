@@ -82,9 +82,14 @@ public class Aura extends ModuleStructure {
             .setValue(true)
             .visible(() -> checkCrit.isValue());
 
+    @Getter
+    private final BooleanSetting testMode = new BooleanSetting("Тест режим",
+            "Только для одиночки — при фокусировке на цели симулирует прыжок (зажатый пробел)")
+            .setValue(false);
+
     public Aura() {
         super("Aura", ModuleCategory.COMBAT);
-        settings(mode, attackrange, lookrange, options, targetType, moveFix, resetSprintMode, checkCrit, smartCrits);
+        settings(mode, attackrange, lookrange, options, targetType, moveFix, resetSprintMode, checkCrit, smartCrits, testMode);
     }
 
     @NonFinal

@@ -41,6 +41,7 @@ public class StrikeManager implements IMinecraft {
 
     private int count = 0;
     private int ticksOnBlock = 0;
+    private boolean jumpedForCrit = false;
 
     void tick() {
         if (mc.player != null && mc.player.isOnGround()) {
@@ -254,6 +255,17 @@ public class StrikeManager implements IMinecraft {
 
         if (!clickScheduler.isCooldownComplete(0)) {
             return;
+        }
+
+        if (Aura.getInstance().getTestMode().isValue() && mc.player.isOnGround()) {
+            if (!jumpedForCrit) {
+                jumpedForCrit = true;
+                mc.player.jump();
+            }
+            return;
+        }
+        if (!mc.player.isOnGround()) {
+            jumpedForCrit = false;
         }
 
         if (!canCritNow()) {
