@@ -1,327 +1,199 @@
-# APORIA
+# Aporia
 
-**Minecraft-клиент нового поколения** — быстро, чисто, незаметно.
+Современный чит-клиент для Minecraft, построенный на Fabric с модульной архитектурой, пользовательским GPU-ускоренным рендерингом и интеграцией Discord.
 
----
+## Обзор
 
-## 🚀 Быстрый старт
+Aporia — это легкий и расширяемый чит-клиент для Minecraft 1.21.1+. Он предоставляет чистую систему модулей, мощные возможности рендеринга и бесшовную интеграцию с Discord Rich Presence. Клиент использует модульный подход, где функции реализованы как переключаемые модули с настраиваемыми параметрами.
+
+## Требования
+
+- **Java**: 26 или выше
+- **Minecraft**: 1.21.11+
+- **Загрузчик**: сосать какой нахуй загрузчик, тока net.minecrat.client.main.Main
+- **Инструмент сборки**: НЕТУ НАХУЙ, javac
+
+## Возможности
+
+### Основная архитектура
+- **Модульная система** - Расширяемый фреймворк модулей с управлением жизненным циклом
+- **Организация по категориям** - Модули сгруппированы по типам (Combat, Render, Misc)
+- **Фреймворк настроек** - Гибкая конфигурация (переключатели, выпадающие списки, текст, горячие клавиши)
+- **Система событий** - Развязанная событийная архитектура
+
+### Рендеринг
+- **GPU-ускорение** - Конвейер рендеринга на основе Blaze3D
+- **Скругленные фигуры** - SDF-основанные скругленные прямоугольники и круги
+- **Эффекты размытия** - Настраиваемое размытие с контролем насыщенности
+- **Поддержка изображений** - Рендеринг PNG с опциональным скруглением углов
+- **Пользовательские шейдеры** - Расширяемая система шейдеров для продвинутых эффектов
+
+### Пользовательский интерфейс
+- **ClickGui** - Современный интерфейс на основе боковой панели
+- **Поиск модулей** - Быстрый поиск функциональности
+- **Профиль Discord** - Отображение имени пользователя, UUID и аватара
+- **Живое отображение активности** - Отображение статуса модулей в реальном времени
+
+### Интеграция Discord
+- **Rich Presence** - Отображение активности на Discord
+- **Отображение аватара** - Аватар пользователя показывается в интерфейсе
+- **Обновления статуса** - Статус сервера/меню в реальном времени
+
+## Начало работы
+
+### Сборка и запуск
 
 ```bash
-# Запуск через IntelliJ IDEA
-# Main class: mcp.client.Start
-# JVM args: -Xmx2G -Djava.library.path=natives
+# Клонирование и подготовка
+git clone <repo>
+cd aporia
+./gradlew build
+
+# Запуск клиента
+./gradlew runClient
 ```
 
----
+### Создание модуля
 
-## 📦 Структура проекта
-
-```
-src/
-├── aporia/cc/           # Системные утилиты (PanicSystem, UserData)
-├── com/mojang/          # Mojang Blaze3D (рендеринг, аудио, OpenGL)
-├── mcp/client/          # Точка входа (Start.java)
-├── net/minecraft/       # Minecraft исходники
-└── so/aporia/           # Ядро клиента
-    ├── module/          # Модули и настройки
-    │   ├── impl/        # Реализации модулей
-    │   │   ├── combat/  # Боевые модули
-    │   │   ├── misc/    # Разное (ClickGui, ServerHelper)
-    │   │   └── render/  # Визуальные (HUD, Blur)
-    │   └── settings/    # Система настроек
-    └── utils/           # Утилиты
-        ├── events/      # Event-система
-        ├── files/       # Работа с файлами
-        └── user/        # UI, ввод, рендер, логгер
-```
-
----
-
-## 🎯 Модули
-
-| Категория | Модули |
-|-----------|--------|
-| **VISUAL** | `HUD`, `Blur`, `ClickGui` |
-| **MISC** | `ServerHelper`, `AutoConfig`, `PacketDebug`, `TestModule` |
-| **COMBAT** | _в разработке_ |
-| **MOVE** | _в разработке_ |
-| **PLAYER** | _в разработке_ |
-| **WORLD** | _в разработке_ |
-
-### Ключевые модули
-
-- **HUD** — FPS, пинг, ник, frame-time
-- **ServerHelper** — AutoFlyMe, MathResolver (авто-капча), скрытие сообщений
-- **ClickGui** — встроенный GUI для управления модулями
-- **Blur** — радиальное размытие фона
-
----
-
-## 🛠 Архитектура
-
-### Event-система
-```java
-@EventHandler
-public void onRenderHud(RenderHudEvent e) {
-    // Обработка события
-}
-
-EventBus.INSTANCE.post(new RenderHudEvent(gfx, partialTick));
-```
-
-### Базовый модуль
 ```java
 public class MyModule extends Module {
+    private BooleanSetting enabled = new BooleanSetting("Enabled", true);
+    
     public MyModule() {
-        super("Name", Category.MISC, GLFW.GLFW_KEY_K);
+        super("My Module", Category.MISC);
     }
     
-    @Override protected void onEnable()  { EventBus.INSTANCE.register(this); }
-    @Override protected void onDisable() { EventBus.INSTANCE.unregister(this); }
+    @Override
+    protected void onEnable() {
+        // Логика модуля
+    }
+    
+    @Override
+    protected void onDisable() {
+        // Очистка
+    }
 }
 ```
 
-### Настройки
-```java
-private final BooleanSetting enabled = new BooleanSetting("Enabled", "Description", true);
-private final BindSetting keybind = new BindSetting("Key", -1);
-private final TextSetting text = new TextSetting("Text", "default");
+## Структура проекта
+
 ```
+src/so/aporia/
+├── Aporia.java                 # Точка входа
+├── module/
+│   ├── Module.java             # Базовый класс модуля
+│   ├── ModuleManager.java      # Реестр модулей
+│   ├── Category.java           # Категории модулей
+│   ├── impl/                   # Реализации модулей
+│   │   ├── combat/
+│   │   ├── render/
+│   │   └── misc/
+│   └── settings/               # Фреймворк настроек
+└── utils/
+    ├── assets/                 # Управление ресурсами
+    ├── events/                 # Система событий
+    ├── files/                  # Файловый ввод-вывод
+    └── user/
+        ├── render/             # Движок рендеринга
+        ├── logger/             # Логирование
+        ├── input/              # Обработка ввода
+        └── command/            # Система команд
+```
+
+## Конфигурация
+
+Aporia хранит конфигурацию в зависящих от платформы директориях:
+
+- **Windows**: `%USERPROFILE%\.apr`
+- **Linux**: `~/.config/apr`
+- **macOS**: `~/.config/apr`
+
+Файлы конфигурации используют формат `.apr` (ZIP-архив с метаданными).
+
+## Зависимости
+
+- **Minecraft**: 1.21.11
+- **Discord IPC**: Для интеграции Rich Presence
+- **Gson**: Сериализация JSON
+- **Blaze3D**: Бэкенд рендеринга
+
+## Разработка
+
+### Добавление нового модуля
+
+1. Создайте класс в `src/so/aporia/module/impl/<category>/`
+2. Расширьте базовый класс `Module`
+3. Реализуйте `onEnable()` и `onDisable()`
+4. Добавьте настройки при необходимости
+5. Модуль автоматически регистрируется через ModuleManager
+
+### Пользовательский рендеринг
+
+Используйте `AporiaRenderer.INSTANCE` для рендеринга:
+
+```java
+AporiaRenderer r = AporiaRenderer.INSTANCE;
+
+// Рисование фигур
+r.drawRect(x, y, w, h, radius, color);
+r.drawCircle(cx, cy, radius, color);
+r.drawLine(x1, y1, x2, y2, thickness, color);
+
+// Рисование текста
+r.drawText("bold", "Hello", x, y, size, color);
+
+// Рисование изображений
+r.drawImage(x, y, w, h, identifier, radius);
+```
+
+### Система событий
+
+Подпишитесь на события используя `@EventHandler`:
+
+```java
+@EventHandler
+public void onRender(RenderEvent event) {
+    // Обработка события рендеринга
+}
+```
+
+## Производительность
+
+- GPU-ускоренный рендеринг для плавных 60+ FPS
+- Эффективное управление жизненным циклом модулей
+- Кэширование загруженных ресурсов
+- Оптимизированная диспетчеризация событий
+
+## Решение проблем
+
+### Клиент не запускается
+- Убедитесь, что установлена Java 21+
+- Проверьте версию Minecraft 1.21.1+
+- Убедитесь, что установлен загрузчик Fabric
+
+### Модули не загружаются
+- Проверьте, что класс модуля расширяет `Module`
+- Убедитесь, что реализованы `onEnable()` и `onDisable()`
+- Проверьте логи в `~/.apr/logs/`
+
+### Проблемы с рендерингом
+- Обновите драйверы GPU
+- Проверьте файлы шейдеров в `aporia/shaders/`
+- Убедитесь в совместимости с Blaze3D
+
+## Лицензия
+
+Собственность - Aporia Cheat Client
+
+## Поддержка
+
+По вопросам и проблемам обратитесь к документации проекта или создайте issue.
 
 ---
 
-## 🎨 Рендеринг
+**Версия**: 0.5-dev  
+**Minecraft**: 1.21.11  
+**Java**: 26+  
+**Статус**: Активная разработка
 
-### AporiaRenderer — кастомный 2D-рендерер на OpenGL
-
-**Шейдерная система:**
-- `aporia.vsh/fsh` — универсальный шейдер для примитивов
-- `blur.vsh/fsh` — двухпроходное гауссово размытие
-- `postprocess.vsh/fsh` — постобработка (saturation grading)
-
-**Примитивы:**
-```java
-// Прямоугольник (в т.ч. скруглённый)
-drawRect(x, y, w, h, radius, color)
-
-// Размытый прямоугольник
-drawRectBlurred(x, y, w, h, radius, color, blurStrength)
-
-// Круг, треугольник, линия
-drawCircle(cx, cy, radius, color)
-drawTriangle(x1, y1, x2, y2, x3, y3, color)
-drawLine(x1, y1, x2, y2, thickness, color)
-
-// Градиенты
-drawRectGradient(x, y, w, h, radius, c1, c2, dir) // dir: 0=horiz, 1=vert, 2=radial
-
-// Обводка
-drawStroke(x, y, w, h, radius, thickness, borderMode, fadeCorner, color)
-```
-
-**Blur-система:**
-```java
-// Подготовка (вызывается перед отрисовкой размытых элементов)
-prepareBlur(mc, strength, saturation)
-
-// Отрисовка с размытием
-drawRectBlurred(x, y, w, h, radius, color)
-```
-
-### FontRenderer — MSDF шрифты
-
-**Регистрация шрифтов:**
-```java
-Fonts.register(renderer);
-// Загружает: regular, bold, icons, caticons, font
-```
-
-**API:**
-```java
-// Базовый текст
-drawText("regular", "Hello", x, y, size, color)
-
-// С обводкой (MSDF)
-drawTextWithOutline("regular", "Text", x, y, size, color, outlineWidth, outlineColor)
-
-// По центру
-drawCenteredText("bold", "Title", x, y, size, color)
-
-// Иконки из PUA-диапазона
-drawGlyph(Fonts.FONT, index, x, y, size, color)
-```
-
-### ColorUtil — работа с цветом
-
-```java
-// Создание
-int c = ColorUtil.rgba(80, 200, 200, 255);
-int c = ColorUtil.fromHex("#50C8C8", 0xFFFFFFFF);
-int c = ColorUtil.fromLegacyCode('c'); // §c
-
-// Компоненты
-int a = ColorUtil.alpha(c);
-int r = ColorUtil.red(c);
-
-// Интерполяция
-int mid = ColorUtil.lerp(c1, c2, 0.5f);
-int[] gradient = ColorUtil.gradient(start, end, steps);
-int[] rainbow = ColorUtil.rainbow(steps, alpha);
-
-// HSV
-float[] hsv = ColorUtil.toHSV(c);
-int c = ColorUtil.fromHSV(h, s, v);
-```
-
-### Easing — функции анимации
-
-```java
-// Полиномиальные
-Easing.quadIn(t), Easing.cubicOut(t), Easing.quartInOut(t)
-
-// Тригонометрические
-Easing.sineInOut(t), Easing.circOut(t)
-
-// Экспоненциальные
-Easing.expoIn(t), Easing.expoOut(t)
-
-// Эластичные
-Easing.elasticOut(t), Easing.backOut(t, overshoot)
-
-// Пружинные
-Easing.springCritical(t, stiffness)
-Easing.springUnderdamped(t, damping, frequency)
-
-// Специальные
-Easing.smoothstep(t), Easing.smootherstep(t)
-Easing.cubicBezier(t, x1, y1, x2, y2)
-Easing.cssEaseInOut(t)
-```
-
-### Анимационная система
-
-```java
-// SpringSimulator — физическая пружина
-SpringSimulator spring = new SpringSimulator(stiffness, damping);
-spring.update(dt, target);
-float value = spring.getValue();
-
-// TypeAnim — печатная машинка
-TypeAnim anim = new TypeAnim("Hello World", speed);
-anim.render(x, y, size, color);
-
-// MessageAnim — анимация сообщений
-MessageAnim msg = new MessageAnim(text, duration);
-msg.render(gfx);
-```
-
----
-
-## 🔐 Panic Mode
-
-Экстренное скрытие клиента:
-1. Активация — через `PanicSystem.INSTANCE.panic()`
-2. Восстановление — ввести свой ник в чат
-3. Все сообщения чата очищаются
-
----
-
-## 📚 Зависимости
-
-### Графика и ввод
-| Библиотека | Версия | Назначение |
-|------------|--------|------------|
-| **LWJGL** | 3.3.3 | OpenGL, GLFW, ввод |
-| **JNA** | 5.17.0 | Native access |
-| **oshi-core** | 6.9.0 | Системная информация |
-
-### Утилиты
-| Библиотека | Версия | Назначение |
-|------------|--------|------------|
-| **Guava** | 33.5.0 | Коллекции, кэш |
-| **Gson** | 2.13.2 | JSON |
-| **fastutil** | 8.5.18 | Примитивные коллекции |
-
-### Сеть
-| Библиотека | Версия | Назначение |
-|------------|--------|------------|
-| **Netty** | 4.2.7.Final | Асинхронный I/O |
-| **commons-codec** | 1.19.0 | Кодирование |
-| **commons-io** | 2.20.0 | Ввод-вывод |
-
-### Логирование
-| Библиотека | Версия | Назначение |
-|------------|--------|------------|
-| **Log4j** | 2.25.2 | Логирование |
-| **slf4j** | 2.0.17 | Logging facade |
-
-### ML / Анализ
-| Библиотека | Версия | Назначение |
-|------------|--------|------------|
-| **catboost-common** | 1.2.10 | ML-модели (аномалии, паттерны) |
-
-### Прочее
-- **ASM 9.2** — байткод манипуляции
-- **authlib-7.0.61** — аутентификация
-- **brigadier-1.3.10** — командный движок
-- **kotlin-stdlib-1.8.20** — Kotlin runtime
-
----
-
-## ⚙️ Конфигурация
-
-```
-run/
-└── aporia/
-    ├── config/     # Конфиги модулей
-    └── logs/       # Логи клиента
-```
-
----
-
-## 🧠 Для разработчиков
-
-### Добавить модуль
-1. Создать класс в `so/aporia/module/impl/<category>/`
-2. Расширить `Module`
-3. Зарегистрировать в `ModuleManager.registerAll()`
-
-### Собрать проект
-```bash
-# Через IDEA: Build → Build Artifacts → Aporia.mcp:jar
-# Или: gradle build (если есть build.gradle)
-```
-
----
-
-## 📋 Планы
-
-> // потому что лень
-
----
-
-## ⚖️ Лицензия
-
-**© 2026 Aporia.cc. Все права защищены.**
-
-Кратко:
-- ✅ Использование **только в личных целях**
-- ✅ Изучение кода в **образовательных целях**
-- ✅ Модификация для **личного использования**
-
-- ❌ Копирование, распространение, публикация кода
-- ❌ Использование для создания **взломов, читов, вредоносного ПО**
-- ❌ Коммерческое использование без письменного разрешения
-- ❌ Выдача кода за свой
-- ❌ Обход защит и лицензионных ограничений
-
-📄 Полная версия лицензии: [LICENSE](LICENSE) (100 разделов, ~500 строк)
-
-**Нарушение этой лицензии влечёт юридическую ответственность.**
-
----
-
-<p align="center">
-<b>fully by protect3ed</b><br>
-<b>APORIA.CC ALL RIGHTS RESERVED © 2026</b>
-</p>
+[English version](README_EN.md)

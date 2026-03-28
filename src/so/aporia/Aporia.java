@@ -34,7 +34,20 @@ public class Aporia implements ResourceManagerReloadListener {
         }
         KeybindManager.INSTANCE.toString();
         ModuleManager.INSTANCE.toString();
+        initializeDiscordRPC();
+        
         Logger.success("Aporia initialized");
+    }
+
+    private void initializeDiscordRPC() {
+        try {
+            var discordRPC = ModuleManager.INSTANCE.get("Discord RPC");
+            if (discordRPC != null) {
+                discordRPC.enable();
+            }
+        } catch (Exception e) {
+            Logger.error("Discord RPC initialization failed: " + e.getMessage());
+        }
     }
 
     /**

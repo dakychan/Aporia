@@ -16,6 +16,9 @@ import so.aporia.utils.KeyboardLayout;
 import so.aporia.utils.files.impl.ChatFile;
 import so.aporia.utils.user.logger.Logger;
 import so.aporia.utils.user.render.animation.MessageAnim;
+import so.aporia.utils.user.render.animation.TypeAnim;
+import so.aporia.utils.user.render.animation.Animator;
+import so.aporia.utils.user.render.animation.Easing;
 import so.aporia.utils.user.render.color.ColorUtil;
 import so.aporia.utils.user.render.core.AporiaRenderer;
 import so.aporia.utils.events.EventBus;
@@ -47,15 +50,16 @@ public class AporiaChatScreen extends ChatScreen {
     private static final int RESIZE_HIT  = 6;
     private static final int DRAG_GRIP   = 8;
 
-    private static final int C_INPUT_BG     = ColorUtil.rgba(16,  16,  32,  200);
-    private static final int C_CHAT_BG      = ColorUtil.rgba(0,   0,   0,   150);
-    private static final int C_HINT         = ColorUtil.rgba(120, 120, 120, 255);
-    private static final int C_SEARCH_BG    = ColorUtil.rgba(20,  20,  50,  210);
-    private static final int C_SEARCH_HL    = ColorUtil.rgba(255, 200, 50,  180);
-    private static final int C_SCROLL_BAR   = ColorUtil.rgba(255, 255, 255,  60);
-    private static final int C_SCROLL_THUMB = ColorUtil.rgba(255, 255, 255, 140);
-    private static final int C_RESIZE_HINT  = ColorUtil.rgba(255, 255, 255,  30);
-    private static final int C_DRAG_HINT    = ColorUtil.rgba(255, 255, 255,  15);
+    private static final int C_INPUT_BG     = ColorUtil.rgba(16,  16,  32,  180);
+    private static final int C_CHAT_BG      = ColorUtil.rgba(0,   0,   0,   120);
+    private static final int C_HINT         = ColorUtil.rgba(120, 120, 120, 200);
+    private static final int C_SEARCH_BG    = ColorUtil.rgba(20,  20,  50,  180);
+    private static final int C_SEARCH_HL    = ColorUtil.rgba(255, 200, 50,  150);
+    private static final int C_SCROLL_BAR   = ColorUtil.rgba(255, 255, 255,  40);
+    private static final int C_SCROLL_THUMB = ColorUtil.rgba(255, 255, 255, 100);
+    private static final int C_RESIZE_HINT  = ColorUtil.rgba(255, 255, 255,  20);
+    private static final int C_DRAG_HINT    = ColorUtil.rgba(255, 255, 255,  10);
+    private static final int C_UNDERLINE    = ColorUtil.rgba(100, 200, 200, 200);
 
 
     /**
@@ -82,9 +86,15 @@ public class AporiaChatScreen extends ChatScreen {
 
         public final java.util.ArrayDeque<GuiMessage.Line> lines = new java.util.ArrayDeque<>(100);
         private static final int MAX_STORED = 200;
+        
+        // Анимация для названия окна
+        public final TypeAnim nameAnim = new TypeAnim(40, 100);
+        // Анимация переключения окна
+        public final Animator switchAnim = new Animator(300, Easing::cubicOut);
 
         public WinCfg(String name, int x, int bottomY, int w, int h, boolean draggable) {
             this.name=name; this.x=x; this.bottomY=bottomY; this.w=w; this.h=h; this.draggable=draggable;
+            this.nameAnim.snap(name);
         }
 
         int maxLines() { return Math.max(1, (h - BOX_PAD*2) / LINE_H); }
@@ -251,14 +261,14 @@ public class AporiaChatScreen extends ChatScreen {
             r.drawRect(renderX, renderY, W, totalH, 5, C_BG);
             String[] labels = {"§fEdit", "§aAdd window", "§cDelete window"};
             for (int i = 0; i < 3; i++)
-                gfx.drawString(font, labels[i], renderX+PAD, renderY+PAD+i*ITEM+3, C_ITEM, false);
+                r.drawText("regular", labels[i], renderX+PAD, renderY+PAD+i*ITEM+3, 9f, C_ITEM);
             if (winCount > 0) {
                 int sy = renderY+PAD+3*ITEM;
                 r.drawRect(renderX+PAD, sy, W-PAD*2, 1, 0, C_SEP);
                 for (int i = 0; i < winCount; i++) {
                     int iy = sy+4+i*ITEM;
                     if (i == WinMgr.I.active) r.drawRect(renderX+2, iy, W-4, ITEM, 0, C_HOV);
-                    gfx.drawString(font, WinMgr.I.wins.get(i).name, renderX+PAD, iy+3, C_ITEM, false);
+                    r.drawText("regular", WinMgr.I.wins.get(i).name, renderX+PAD, iy+3, 9f, C_ITEM);
                 }
             }
         }
@@ -275,22 +285,28 @@ public class AporiaChatScreen extends ChatScreen {
         boolean visible = false;
         int bx, by, bw, bh;
         int scrollOffset = 0;
+        int selectedField = -1;
+        Animator underlineAnim = new Animator(250, Easing::cubicOut);
+        
+        // Анимации для булен
+        final java.util.Map<Integer, Animator> boolAnims = new java.util.HashMap<>();
 
         static final int ITEM   = 16;
         static final int PAD    = 6;
         static final int HDR_H  = ITEM + PAD;
         static final int FIELDS = 10;
 
-        private static final int C_BG      = ColorUtil.rgba(10,  10,  24,  250);
-        private static final int C_HDR     = ColorUtil.rgba(40,  40,  80,  255);
-        private static final int C_LBL     = ColorUtil.rgba(150, 150, 200, 255);
-        private static final int C_VAL     = ColorUtil.rgba(255, 255, 255, 255);
-        private static final int C_ROW_ALT = ColorUtil.rgba(255, 255, 255,   8);
-        private static final int C_SEP     = ColorUtil.rgba(255, 255, 255,  25);
-        private static final int C_SCROLL  = ColorUtil.rgba(255, 255, 255,  40);
-        private static final int C_THUMB   = ColorUtil.rgba(255, 255, 255, 120);
+        private static final int C_BG      = ColorUtil.rgba(10,  10,  24,  220);
+        private static final int C_HDR     = ColorUtil.rgba(40,  40,  80,  240);
+        private static final int C_LBL     = ColorUtil.rgba(150, 150, 200, 220);
+        private static final int C_VAL     = ColorUtil.rgba(255, 255, 255, 240);
+        private static final int C_ROW_ALT = ColorUtil.rgba(255, 255, 255,   6);
+        private static final int C_SEP     = ColorUtil.rgba(255, 255, 255,  20);
+        private static final int C_SCROLL  = ColorUtil.rgba(255, 255, 255,  30);
+        private static final int C_THUMB   = ColorUtil.rgba(255, 255, 255, 100);
+        private static final int C_UNDERLINE = ColorUtil.rgba(100, 200, 200, 180);
 
-        void open()  { visible = true; scrollOffset = 0; }
+        void open()  { visible = true; scrollOffset = 0; selectedField = -1; }
         void close() { visible = false; }
         void setBox(int x, int y, int w, int h) { bx=x; by=y; bw=w; bh=h; }
 
@@ -304,11 +320,11 @@ public class AporiaChatScreen extends ChatScreen {
         void render(GuiGraphics gfx, net.minecraft.client.gui.Font font, WinCfg c) {
             if (!visible) return;
             AporiaRenderer r = AporiaRenderer.INSTANCE;
-            r.drawRectBlurred(bx, by, bw, bh, RADIUS, C_BG, 8f);
+            r.drawRect(bx, by, bw, bh, RADIUS, C_BG);
             r.drawRect(bx, by, bw, HDR_H, RADIUS, C_HDR);
-            gfx.drawString(font, "§fSettings — §7" + c.name, bx+PAD, by+PAD/2+3, C_VAL, false);
+            r.drawText("bold", "§fSettings — §7" + c.nameAnim.update(), bx+PAD, by+PAD/2+3, 11f, C_VAL);
             String esc = "§7[Esc]";
-            gfx.drawString(font, esc, bx+bw-font.width(esc)-PAD, by+PAD/2+3, C_VAL, false);
+            r.drawText("regular", esc, bx+bw-r.getTextWidth("regular", esc, 9f)-PAD, by+PAD/2+3, 9f, C_VAL);
             int contentY = by + HDR_H;
             r.drawRect(bx+PAD, contentY, bw-PAD*2, 1, 0, C_SEP);
             contentY += 1;
@@ -323,7 +339,7 @@ public class AporiaChatScreen extends ChatScreen {
                 int fi = i + scrollOffset;
                 int ry = contentY + PAD/2 + i * ITEM;
                 if (fi % 2 == 0) r.drawRect(bx+2, ry, bw-4, ITEM, 0, C_ROW_ALT);
-                gfx.drawString(font, "§7" + labels[fi], bx+PAD, ry+4, C_LBL, false);
+                r.drawText("regular", "§7" + labels[fi], bx+PAD, ry+4, 9f, C_LBL);
                 
                 boolean isToggle = java.util.Arrays.stream(toggleFields).anyMatch(f -> f == fi);
                 if (isToggle) {
@@ -334,15 +350,23 @@ public class AporiaChatScreen extends ChatScreen {
                         case 8 -> c.showOnlyServer;
                         default -> false;
                     };
+                    
+                    // Анимация булена
+                    Animator anim = boolAnims.computeIfAbsent(fi, k -> new Animator(400, Easing::elasticOut));
+                    if (enabled && anim.value() < 0.99f) anim.play();
+                    if (!enabled && anim.value() > 0.01f) anim.reverse();
+                    anim.update();
+                    float animProg = anim.value();
+                    
                     int toggleW = 22;
                     int toggleH = 10;
                     int toggleX = bx + bw - toggleW - PAD - 2;
                     int toggleY = ry + (ITEM - toggleH) / 2 + 1;
                     int bgColor = enabled ? ColorUtil.rgba(100, 200, 100, 150) : ColorUtil.rgba(100, 100, 100, 80);
                     r.drawRect(toggleX, toggleY, toggleW, toggleH, toggleH / 2, bgColor);
-                    int dotSize = 13;
-                    int dotX = enabled ? toggleX + toggleW - dotSize / 2 - 1 : toggleX - dotSize / 2 + 1;
-                    int dotY = toggleY + toggleH / 2 - dotSize / 2 - 1;
+                    int dotSize = 8;
+                    int dotX = (int)(toggleX + 2 + (toggleW - dotSize - 4) * animProg);
+                    int dotY = toggleY + (toggleH - dotSize) / 2;
                     r.drawRect(dotX, dotY, dotSize, dotSize, dotSize / 2, ColorUtil.rgba(255, 255, 255, 240));
                 } else {
                     String value = switch(fi) {
@@ -354,7 +378,17 @@ public class AporiaChatScreen extends ChatScreen {
                         case 9 -> String.format("#%06X", c.selfColor & 0xFFFFFF);
                         default -> "";
                     };
-                    gfx.drawString(font, value, bx+PAD+100, ry+4, C_VAL, false);
+                    r.drawText("regular", value, bx+PAD+100, ry+4, 9f, C_VAL);
+                }
+                
+                // Underline для выбранного поля с fade на концах
+                if (fi == selectedField) {
+                    underlineAnim.play();
+                    underlineAnim.update();
+                    float prog = underlineAnim.value();
+                    float centerX = bx + bw / 2f;
+                    float halfLen = (bw - PAD*2 - 4) / 2f;
+                    r.drawFadeHLine(centerX, ry+ITEM-2, halfLen * prog, 2f, prog, C_UNDERLINE);
                 }
             }
             gfx.disableScissor();
@@ -525,7 +559,7 @@ public class AporiaChatScreen extends ChatScreen {
         this.input.render(gfx, mouseX, mouseY, delta);
         gfx.disableScissor();
         if (this.input.getValue().isEmpty() && !searchMode)
-            gfx.drawString(this.font, "Message...", bx+TEXT_PAD, iy+(INPUT_H-8)/2, C_HINT, false);
+            r.drawText("regular", "Message...", bx+TEXT_PAD, iy+(INPUT_H-8)/2f, 9f, C_HINT);
 
         this.commandSuggestions.render(gfx, mouseX, mouseY);
 
@@ -559,16 +593,21 @@ public class AporiaChatScreen extends ChatScreen {
             renderResizeHints(gfx, c, bx, by, bw, bh, mouseX, mouseY);
             return;
         }
+        
         int msgCount = Math.min(c.lines.size(), c.maxLines());
         int actualH  = msgCount == 0 ? 0 : Math.min(bh, msgCount * LINE_H + BOX_PAD * 2);
         int actualBy = by + bh - actualH;
+        
         if (actualH > 0) r.drawRect(bx, actualBy, bw, actualH, RADIUS, C_CHAT_BG);
+        
         gfx.enableScissor(bx, actualBy, bx+bw, by+bh);
         if (isActive) renderMessages(gfx, c, by+BOX_PAD, bx+BOX_PAD);
         else          renderMessagesPassive(gfx, c, by+BOX_PAD, bx+BOX_PAD);
         gfx.disableScissor();
+        
         renderScrollBar(gfx, c, bx, by, bw, bh);
         renderResizeHints(gfx, c, bx, by, bw, bh, mouseX, mouseY);
+        
         if (isActive && searchMode) {
             int sy = by - GAP*2 - INPUT_H;
             r.drawRect(bx, sy, bw, INPUT_H, RADIUS, C_SEARCH_BG);
@@ -602,6 +641,8 @@ public class AporiaChatScreen extends ChatScreen {
             int tx = textX + (int) anim.slideX();
             if (doSearch && matchesQuery(plainText(line.content()), searchQuery))
                 AporiaRenderer.INSTANCE.drawRect(c.x+1, lineY-1, c.w-2, LINE_H, 2, C_SEARCH_HL);
+            
+            // Используем vanilla шрифт для обычного чата
             gfx.drawString(this.font, line.content(), tx, lineY,
                 ColorUtil.rgba(255, 255, 255, (int)(255 * anim.alpha())), false);
             i++;
@@ -630,8 +671,8 @@ public class AporiaChatScreen extends ChatScreen {
         int barH   = bh - BOX_PAD * 2;
         int thumbH = Math.max(10, barH * maxL / Math.max(1, total));
         int thumbY = barY + (barH - thumbH) * (maxS - c.scrollOffset) / Math.max(1, maxS);
-        gfx.fill(barX, barY, barX+2, barY+barH, C_SCROLL_BAR);
-        gfx.fill(barX, thumbY, barX+2, thumbY+thumbH, C_SCROLL_THUMB);
+        AporiaRenderer.INSTANCE.drawRect(barX, barY, 2, barH, 0, C_SCROLL_BAR);
+        AporiaRenderer.INSTANCE.drawRect(barX, thumbY, 2, thumbH, 0, C_SCROLL_THUMB);
     }
 
     private void renderResizeHints(GuiGraphics gfx, WinCfg c, int bx, int by, int bw, int bh, int mx, int my) {
@@ -654,9 +695,9 @@ public class AporiaChatScreen extends ChatScreen {
         int fi     = editingField - edit.scrollOffset;
         if (fi < 0 || fi >= rows) return;
         int fieldY = by + EditPanel.HDR_H + 1 + EditPanel.PAD/2 + fi * EditPanel.ITEM;
-        int ex     = bx + EditPanel.PAD + 100;
-        int ew     = bw - EditPanel.PAD*2 - 100;
-        r.drawRect(ex-2, fieldY+1, ew+4, EditPanel.ITEM-2, 3, ColorUtil.rgba(30, 30, 70, 240));
+        int ex     = bx + EditPanel.PAD + 100 - 10;
+        int ew     = bw - EditPanel.PAD*2 - 100 + 10;
+        r.drawRect(ex-2, fieldY+1, ew+4, EditPanel.ITEM-2, 3, ColorUtil.rgba(30, 30, 70, 200));
         this.fieldBox.setX(ex); this.fieldBox.setY(fieldY+4);
         this.fieldBox.setWidth(ew);
         this.fieldBox.setVisible(true);
@@ -724,6 +765,7 @@ public class AporiaChatScreen extends ChatScreen {
         if (edit.visible) {
             int f = edit.fieldAt(mx, my);
             if (f >= 0) {
+                edit.selectedField = f;
                 if (f == 2) { cfg().prefixEnabled = !cfg().prefixEnabled; return true; }
                 if (f == 6) { cfg().showOnlyFilter = !cfg().showOnlyFilter; WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font); return true; }
                 if (f == 7) { cfg().searchOnOpen = !cfg().searchOnOpen; return true; }

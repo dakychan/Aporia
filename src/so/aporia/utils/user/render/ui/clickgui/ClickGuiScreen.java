@@ -88,6 +88,9 @@ public final class ClickGuiScreen extends Screen {
     private long guiOpenTime = 0;
     private boolean loadingShown = false;
     private boolean guiInitialized = false;
+    
+    private long lastBlurInvalidateTime = 0;
+    private static final long BLUR_INVALIDATE_THROTTLE_MS = 100;
 
     public ClickGuiScreen() { super(Component.literal("ClickGui")); }
 
@@ -107,6 +110,7 @@ public final class ClickGuiScreen extends Screen {
             guiOpenTime = System.currentTimeMillis();
             loadingShown = false;
             guiInitialized = false;
+            AporiaRenderer.INSTANCE.invalidateBlurCache();
         }
         for (Category c : Category.values())
             hoverAnims.computeIfAbsent(c, k -> new Animator(200, Easing::cubicOut));
@@ -117,8 +121,7 @@ public final class ClickGuiScreen extends Screen {
     @Override
     public void render(GuiGraphics gfx, int mx, int my, float delta) {
         AporiaRenderer r = AporiaRenderer.INSTANCE;
-
-        r.prepareBlur(Minecraft.getInstance(), 30f, 0.75f);
+        r.prepareFrameBlur(Minecraft.getInstance(), 30f, 0.75f);
 
         px = Math.max(0, Math.min(px, this.width  - pw));
         py = Math.max(0, Math.min(py, this.height - ph));
@@ -142,7 +145,6 @@ public final class ClickGuiScreen extends Screen {
         int scaledY = ipy + (iph - scaledH) / 2;
 
         r.drawRectBlurred(scaledX, scaledY, scaledW, scaledH, PANEL_R, C_PANEL_TINT, 20f);
-
         r.drawStroke(scaledX,     scaledY,     scaledW,     scaledH,     PANEL_R,     1f, 1, 0f, C_GLASS_OUT);
         r.drawStroke(scaledX + 1, scaledY + 1, scaledW - 2, scaledH - 2, PANEL_R - 1, 1f, 1, 0f, C_GLASS_IN);
 
@@ -174,6 +176,7 @@ public final class ClickGuiScreen extends Screen {
             if (contentAlpha > 0.01f) {
                 gfx.enableScissor(scaledX, scaledY, scaledX + scaledW, scaledY + scaledH);
                 renderSidebar(r, scaledX, scaledY, scaledH, mx, my, contentAlpha);
+                renderProfile(r, gfx, ipx, ipy, ipw, iph, contentAlpha);
                 gfx.disableScissor();
 
                 float modAlpha = Math.max(0, (contentAlpha - 0.3f) / 0.7f);
@@ -192,7 +195,7 @@ public final class ClickGuiScreen extends Screen {
             settingsPopup.render(r, gfx, mx, my, this.width, this.height);
         }
     }
-    
+
     private void renderLoadingDots(AporiaRenderer r, float x, float y) {
         long elapsed = System.currentTimeMillis() - guiOpenTime;
         float cycle = (elapsed % 1500) / 1500f;
@@ -200,6 +203,51 @@ public final class ClickGuiScreen extends Screen {
         for (int i = 0; i < 3; i++) {
             float alpha = 0.3f + 0.7f * Math.max(0, (float)Math.sin((cycle - i * 0.15f) * (float)Math.PI));
             r.drawText("regular", ".", x + i * 8, y, 10f, ColorUtil.rgba(255, 255, 255, (int)(alpha * 255)));
+        }
+    }
+
+    private void renderProfile(AporiaRenderer r, GuiGraphics gfx, int px, int py, int pw, int ph, float alpha) {
+        if (alpha < 0.01f) return;
+
+        try {
+            var discordRPC = ModuleManager.INSTANCE.get("Discord RPC");
+            if (discordRPC == null || !discordRPC.isEnabled()) return;
+
+            var discordModule = (so.aporia.module.impl.misc.DiscordRPCModule) discordRPC;
+            
+            discordModule.loadAvatarOnRenderThread();
+            
+            var discordUser = discordModule.getDiscordUser();
+            if (discordUser == null) return;
+
+            int profileH = 50;
+            int profileX = px + 8;
+            int profileY = py + ph - profileH - 18 + 15 + 2 + 3 + 2;
+            int profileW = SIDEBAR_W - 16;
+
+            int divCol = ColorUtil.rgba(255, 255, 255, (int)(16 * alpha));
+            r.drawRect(px, profileY + 2, SIDEBAR_W, 2, 0, divCol);
+
+            int avatarX = profileX + 6;
+            int avatarY = profileY + 6;
+            int avatarSize = 32;
+            
+            var avatarId = discordModule.getAvatarId();
+            if (avatarId != null) {
+                r.drawImage(avatarX, avatarY, avatarSize, avatarSize, avatarId, 4);
+            } else {
+                r.drawRect(avatarX, avatarY, avatarSize, avatarSize, 4, ColorUtil.rgba(100, 100, 100, (int)(100 * alpha)));
+            }
+
+            String username = discordUser.username();
+            int textX = avatarX + avatarSize + 8;
+            int textY = profileY + 8;
+            r.drawText("bold", username, textX, textY, 9f, ColorUtil.rgba(255, 255, 255, (int)(255 * alpha)));
+
+            String uuid = aporia.cc.UserData.getUserUUID(username);
+            r.drawText("regular", uuid, textX, textY + 14, 7f, ColorUtil.rgba(255, 255, 255, (int)(140 * alpha)));
+
+        } catch (Exception e) {
         }
     }
 
@@ -325,6 +373,7 @@ public final class ClickGuiScreen extends Screen {
             }
             settingsPopup.close();
             settingsPopup = null;
+            invalidateBlurThrottled();
             return true;
         }
 
@@ -345,7 +394,9 @@ public final class ClickGuiScreen extends Screen {
             for (Category cat : Category.values()) {
                 int cy = (int)catY(cat);
                 if (mx >= ipx && mx < ipx + SIDEBAR_W && my >= cy && my < cy + CAT_H) {
-                    active = cat; search = ""; selected = null; return true;
+                    active = cat; search = ""; selected = null;
+                    invalidateBlurThrottled();
+                    return true;
                 }
             }
 
@@ -357,7 +408,9 @@ public final class ClickGuiScreen extends Screen {
             for (Module m : filtered()) {
                 int cardX = modX + PAD + col2 * (colW + PAD);
                 if (mx >= cardX && mx < cardX + colW && my >= rowY && my < rowY + CARD_H) {
-                    m.toggle(); return true;
+                    m.toggle(); 
+                    invalidateBlurThrottled();
+                    return true;
                 }
                 col2++;
                 if (col2 >= cols) { col2 = 0; rowY += CARD_H + CARD_GAP; }
@@ -377,11 +430,13 @@ public final class ClickGuiScreen extends Screen {
                     if (settingsPopup != null && settingsPopup.getModule() == m) {
                         settingsPopup.close();
                         settingsPopup = null;
+                        invalidateBlurThrottled();
                     } else {
                         if (settingsPopup != null) {
                             settingsPopup.close();
                         }
                         settingsPopup = new SettingsPopup(m);
+                        invalidateBlurThrottled();
                     }
                     return true;
                 }
@@ -412,6 +467,7 @@ public final class ClickGuiScreen extends Screen {
             if (settingsPopup != null) {
                 settingsPopup.close();
                 settingsPopup = null;
+                AporiaRenderer.INSTANCE.invalidateBlurCache();
                 return true;
             }
         }
@@ -434,21 +490,47 @@ public final class ClickGuiScreen extends Screen {
     /** Y position of a category row in screen coords */
     private float catY(Category cat) {
         Category[] cats = Category.values();
-        int CAT_GAP = 2;
+        int CAT_GAP = 0;
         int totalH = cats.length * CAT_H + (cats.length - 1) * CAT_GAP;
-        int startY = (int)py + ((int)ph - totalH) / 2;
+        
+        var discordRPC = ModuleManager.INSTANCE.get("Discord RPC");
+        int offset = (discordRPC != null && discordRPC.isEnabled()) ? -20 : 3;
+        
+        int startY = (int)py + ((int)ph - totalH) / 2 + offset;
         for (int i = 0; i < cats.length; i++)
             if (cats[i] == cat) return startY + i * (CAT_H + CAT_GAP);
         return startY;
     }
 
+    private List<Module> filteredCache = null;
+    private String lastSearchQuery = "";
+    private Category lastActiveCategory = null;
+    
     private List<Module> filtered() {
         List<Module> base = ModuleManager.INSTANCE.getByCategory(active);
-        if (search.isEmpty()) return base;
-        List<Module> out = new ArrayList<>();
-        String q = search.toLowerCase();
-        for (Module m : base) if (m.name().toLowerCase().contains(q)) out.add(m);
-        return out;
+        
+        if (active != lastActiveCategory || !search.equals(lastSearchQuery)) {
+            lastActiveCategory = active;
+            lastSearchQuery = search;
+            
+            if (search.isEmpty()) {
+                filteredCache = base;
+            } else {
+                filteredCache = new ArrayList<>();
+                String q = search.toLowerCase();
+                for (Module m : base) if (m.name().toLowerCase().contains(q)) filteredCache.add(m);
+            }
+        }
+        
+        return filteredCache != null ? filteredCache : base;
+    }
+
+    private void invalidateBlurThrottled() {
+        long now = System.currentTimeMillis();
+        if (now - lastBlurInvalidateTime >= BLUR_INVALIDATE_THROTTLE_MS) {
+            AporiaRenderer.INSTANCE.invalidateBlurCache();
+            lastBlurInvalidateTime = now;
+        }
     }
 
     private static String capitalize(String s) {
@@ -464,4 +546,10 @@ public final class ClickGuiScreen extends Screen {
     @Override public boolean isPauseScreen()     { return false; }
     @Override public boolean isAllowedInPortal() { return true; }
     @Override public void renderBackground(GuiGraphics gfx, int mx, int my, float d) {}
+
+    @Override
+    public void onClose() {
+        AporiaRenderer.INSTANCE.invalidateBlurCache();
+        super.onClose();
+    }
 }

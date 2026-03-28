@@ -31,10 +31,7 @@ import java.util.Map;
 import java.util.OptionalInt;
 
 public class AporiaRenderer {
-
     public static final AporiaRenderer INSTANCE = new AporiaRenderer();
-
-    /** Mode constants — must match values in {@code aporia.fsh}. */
     public static final int MODE_FILL         = 0;
     public static final int MODE_CIRCLE       = 1;
     public static final int MODE_ROUNDED_RECT = 2;
@@ -50,9 +47,14 @@ public class AporiaRenderer {
     private RenderPipeline postPipeline;
     private TextureTarget  postTempTarget;
     private int postTempW = -1, postTempH = -1;
-
     private final Map<String, Identifier>      imageIds     = new HashMap<>();
     private final Map<String, DynamicTexture>  imageTextures = new HashMap<>();
+    private float cachedBlurStrength = -1f;
+    private float cachedBlurSaturation = -1f;
+    private GpuBuffer cachedRectVertexBuffer;
+    private GpuBuffer cachedRectShapeBuffer;
+    private static final long RECT_VERTEX_BUFFER_SIZE = 256L;
+    private static final long RECT_SHAPE_BUFFER_SIZE = 64L;
 
     public void init() {
         pipeline = RenderPipeline.builder()
@@ -108,6 +110,11 @@ public class AporiaRenderer {
                 .withDepthWrite(false)
                 .withCull(false)
                 .build();
+        var device = RenderSystem.getDevice();
+        cachedRectVertexBuffer = device.createBuffer(() -> "aporia:rect_vbo_cached",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, RECT_VERTEX_BUFFER_SIZE);
+        cachedRectShapeBuffer = device.createBuffer(() -> "aporia:rect_shape_cached",
+                GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, RECT_SHAPE_BUFFER_SIZE);
     }
 
     /** Public drawing API. */
@@ -149,22 +156,33 @@ public class AporiaRenderer {
     public void drawFadeHLine(float centerX, float centerY, float halfLen, float thickness, float progress, int color) {
         float len = halfLen * progress;
         if (len < 1f) return;
-        int segments = 12;
-        float segW = len / segments;
-        int a = (color >> 24) & 0xFF;
+        
         float startX = centerX - len;
+        float endX = centerX + len;
+        
+        // Рисуем линию с затуханием на концах через alpha gradient
+        int segments = 20;
+        float segW = len * 2f / segments;
+        int a = (color >> 24) & 0xFF;
+        
         for (int i = 0; i < segments; i++) {
-            float t0 = (float) i / segments;
-            float t1 = (float)(i + 1) / segments;
-            float fade0 = 1f - Math.abs(t0 * 2f - 1f);
-            float fade1 = 1f - Math.abs(t1 * 2f - 1f);
-            int a0 = (int)(a * fade0 * fade0);
-            int a1 = (int)(a * fade1 * fade1);
-            int c0 = (a0 << 24) | (color & 0x00FFFFFF);
-            int c1 = (a1 << 24) | (color & 0x00FFFFFF);
             float x0 = startX + i * segW;
             float x1 = startX + (i + 1) * segW;
-            drawLine(x0, centerY, x1, centerY, thickness, lerp(c0, c1, 0.5f));
+            
+            // Вычисляем затухание от центра к концам
+            float t0 = Math.abs(x0 - centerX) / len;
+            float t1 = Math.abs(x1 - centerX) / len;
+            
+            // Квадратичное затухание
+            float fade0 = (1f - t0 * t0);
+            float fade1 = (1f - t1 * t1);
+            
+            int a0 = (int)(a * fade0);
+            int a1 = (int)(a * fade1);
+            int c0 = (a0 << 24) | (color & 0x00FFFFFF);
+            int c1 = (a1 << 24) | (color & 0x00FFFFFF);
+            
+            drawLine(x0, centerY, x1, centerY, thickness, c0);
         }
     }
 
@@ -210,9 +228,11 @@ public class AporiaRenderer {
     /**
      * Blurred rect — uses aporia pipeline with gl_FragCoord sampling from blurTarget.
      * SDF rounded corners clip correctly — same shader as drawRect.
+     * Uses retained-mode buffers for maximum performance.
      * <p>
      * Размытый прямоугольник — использует aporia pipeline с gl_FragCoord из blurTarget.
      * SDF скруглённые углы корректно обрезаются — тот же шейдер что и drawRect.
+     * Использует переиспользуемые буферы для максимальной производительности.
      */
     public void drawRectBlurred(float x, float y, float w, float h, float radius, int color, float blurStrength) {
         Minecraft mc = Minecraft.getInstance();
@@ -229,7 +249,7 @@ public class AporiaRenderer {
         float ta = ((color >> 24) & 0xFF) / 255f;
         float tr = ((color >> 16) & 0xFF) / 255f;
         float tg = ((color >>  8) & 0xFF) / 255f;
-        float tb = ((color      ) & 0xFF) / 255f;
+        float tb = ((color ) & 0xFF) / 255f;
         var projSlice = orthoProjection.getBuffer(sw, sh);
         RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC);
         var tess = Tesselator.getInstance();
@@ -240,33 +260,29 @@ public class AporiaRenderer {
         buf.addVertex(x,   y+h, 0f).setUv(0f,0f).setColor(tr,tg,tb,ta);
         buf.addVertex(x+w, y,   0f).setUv(1f,1f).setColor(tr,tg,tb,ta);
         buf.addVertex(x,   y,   0f).setUv(0f,1f).setColor(tr,tg,tb,ta);
-        var mesh      = buf.buildOrThrow();
+        var mesh = buf.buildOrThrow();
         var device  = RenderSystem.getDevice();
         var encoder = device.createCommandEncoder();
-        var vertexGpu = device.createBuffer(() -> "aporia:blur_vbo2",
-        GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, mesh.vertexBuffer());
-        var shapeBuf = device.createBuffer(() -> "aporia:blur_shape2", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 64L);
-        var bb = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder());
-        bb.putFloat(x); bb.putFloat(y); bb.putFloat(w); bb.putFloat(h);
-        bb.putFloat(radius); bb.putFloat(1.0f); bb.putFloat(MODE_ROUNDED_RECT); bb.putFloat(0f);
-        bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(1f); bb.putFloat(0f);
-        bb.putFloat((float) mainTarget.width); bb.putFloat((float) mainTarget.height); bb.putFloat(0f); bb.putFloat(0f);
-        bb.flip();
-        encoder.writeToBuffer(shapeBuf.slice(), bb);
+        encoder.writeToBuffer(cachedRectVertexBuffer.slice(), mesh.vertexBuffer());
+        var shapeBB = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder());
+        shapeBB.putFloat(x); shapeBB.putFloat(y); shapeBB.putFloat(w); shapeBB.putFloat(h);
+        shapeBB.putFloat(radius); shapeBB.putFloat(1.0f); shapeBB.putFloat(MODE_ROUNDED_RECT); shapeBB.putFloat(0f);
+        shapeBB.putFloat(0f); shapeBB.putFloat(0f); shapeBB.putFloat(1f); shapeBB.putFloat(0f);
+        shapeBB.putFloat((float) mainTarget.width); shapeBB.putFloat((float) mainTarget.height); shapeBB.putFloat(0f); shapeBB.putFloat(0f);
+        shapeBB.flip();
+        encoder.writeToBuffer(cachedRectShapeBuffer.slice(), shapeBB);
         var indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES);
         try (var pass = encoder.createRenderPass(() -> "aporia:blur_rect", colorView, OptionalInt.empty())) {
             pass.setPipeline(pipeline);
             RenderSystem.bindDefaultUniforms(pass);
-            pass.setUniform("ShapeData", shapeBuf.slice());
+            pass.setUniform("ShapeData", cachedRectShapeBuffer.slice());
             pass.bindTexture("BlurTextureSampler", blurTarget.getColorTextureView(),
                     RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
-            pass.setVertexBuffer(0, vertexGpu);
+            pass.setVertexBuffer(0, cachedRectVertexBuffer);
             pass.setIndexBuffer(indexBuf.getBuffer(6), indexBuf.type());
             pass.drawIndexed(0, 0, 6, 0);
         }
         mesh.close();
-        vertexGpu.close();
-        shapeBuf.close();
     }
 
     /** Overload with default blur strength. */
@@ -341,32 +357,25 @@ public class AporiaRenderer {
         var window    = mc.getWindow();
         var colorView = mc.getMainRenderTarget().getColorTextureView();
         if (colorView == null || pipeline == null) return;
-
         float a = ((color >> 24) & 0xFF) / 255f;
         float r = ((color >> 16) & 0xFF) / 255f;
         float g = ((color >>  8) & 0xFF) / 255f;
         float b = ((color      ) & 0xFF) / 255f;
-
         var projSlice = orthoProjection.getBuffer(window.getGuiScaledWidth(), window.getGuiScaledHeight());
         RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC);
-
         var tess = Tesselator.getInstance();
         var buf  = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR);
         for (float[] v : verts) {
             buf.addVertex(v[0], v[1], 0f).setUv(0f, 0f).setColor(r, g, b, a);
         }
         var mesh = buf.buildOrThrow();
-
         var device  = RenderSystem.getDevice();
         var encoder = device.createCommandEncoder();
-
         var vertexGpu = device.createBuffer(
                 () -> "aporia:vbo",
                 GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
                 mesh.vertexBuffer()
         );
-
-        /* ShapeData UBO: bounds(16) + params(16) + params2(16) + screen(16) = 64 bytes */
         var shapeBuf = device.createBuffer(() -> "aporia:shape", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 64L);
         var bb = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder());
         bb.putFloat(bx); bb.putFloat(by); bb.putFloat(bw); bb.putFloat(bh);
@@ -375,9 +384,7 @@ public class AporiaRenderer {
         bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
         bb.flip();
         encoder.writeToBuffer(shapeBuf.slice(), bb);
-
         var indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES);
-
         try (var pass = encoder.createRenderPass(() -> "aporia:draw", colorView, OptionalInt.empty())) {
             pass.setPipeline(pipeline);
             RenderSystem.bindDefaultUniforms(pass);
@@ -397,6 +404,30 @@ public class AporiaRenderer {
     /** Test render entry point — shapes are commented out until needed. */
     public void onRenderHud(Minecraft mc) {
         if (saturation != 0.5f) applySaturation(mc, saturation);
+    }
+
+    /**
+     * Call this ONCE per frame before rendering any blurred elements.
+     * This prepares the blur texture that will be reused by all drawRectBlurred calls.
+     */
+    public void prepareFrameBlur(Minecraft mc, float strength, float saturation) {
+        // Only prepare if parameters changed or blur not ready
+        if (blurReady && cachedBlurStrength == strength && cachedBlurSaturation == saturation) {
+            return;
+        }
+        prepareBlur(mc, strength, saturation);
+        cachedBlurStrength = strength;
+        cachedBlurSaturation = saturation;
+    }
+
+    /**
+     * Invalidate blur cache — forces blur to be recalculated on next prepareFrameBlur call.
+     * Call this when GUI state changes (open/close, category change, settings open, etc).
+     */
+    public void invalidateBlurCache() {
+        cachedBlurStrength = -1f;
+        cachedBlurSaturation = -1f;
+        blurReady = false;
     }
 
     /** Draws text via the shared {@link so.aporia.utils.user.render.font.FontRenderer}. */
@@ -572,7 +603,9 @@ public class AporiaRenderer {
      */
     public Identifier loadImage(Path path) {
         String key = path.toAbsolutePath().toString();
-        if (imageIds.containsKey(key)) return imageIds.get(key);
+        if (imageIds.containsKey(key)) {
+            return imageIds.get(key);
+        }
         try (FileInputStream fis = new FileInputStream(path.toFile())) {
             NativeImage img = NativeImage.read(fis);
             DynamicTexture tex = new DynamicTexture(() -> key, img);
@@ -589,20 +622,55 @@ public class AporiaRenderer {
         }
     }
 
+    public Identifier loadImage(java.io.InputStream stream) {
+        String key = "discord_avatar_" + System.currentTimeMillis();
+        if (imageIds.containsKey(key)) {
+            return imageIds.get(key);
+        }
+        try {
+            NativeImage img = NativeImage.read(stream);
+            DynamicTexture tex = new DynamicTexture(() -> key, img);
+            Identifier id = Identifier.fromNamespaceAndPath("aporia", "user_image/discord_avatar_" + Math.abs(key.hashCode()));
+            Minecraft.getInstance().getTextureManager().register(id, tex);
+            imageIds.put(key, id);
+            imageTextures.put(key, tex);
+            return id;
+        } catch (IOException e) {
+            Logger.warn("[loadImage] Failed to load from stream: " + e.getMessage());
+            return null;
+        }
+    }
+
     /**
      * Draws a previously loaded image (by Identifier) into screen-space rect [x,y,w,h].
      * Uses blitPipeline with screen-space POSITION_TEX quad.
      */
     public void drawImage(float x, float y, float w, float h, Identifier id) {
-        if (blitPipeline == null || id == null) return;
+        drawImage(x, y, w, h, id, 0);
+    }
+
+    /**
+     * Draw image with optional corner radius
+     */
+    public void drawImage(float x, float y, float w, float h, Identifier id, float radius) {
+        if (blitPipeline == null || id == null) {
+            return;
+        }
+        
         Minecraft mc = Minecraft.getInstance();
         var tm = mc.getTextureManager();
         var tex = tm.getTexture(id);
-        if (tex == null) return;
+        if (tex == null) {
+            return;
+        }
         var texView = tex.getTextureView();
-        if (texView == null) return;
+        if (texView == null) {
+            return;
+        }
         var colorView = mc.getMainRenderTarget().getColorTextureView();
-        if (colorView == null) return;
+        if (colorView == null) {
+            return;
+        }
 
         float sw = mc.getWindow().getGuiScaledWidth();
         float sh = mc.getWindow().getGuiScaledHeight();
@@ -640,6 +708,8 @@ public class AporiaRenderer {
     public void cleanupBlur() {
         if (blurTarget     != null) { blurTarget.destroyBuffers();     blurTarget     = null; }
         if (blurTempTarget != null) { blurTempTarget.destroyBuffers(); blurTempTarget = null; }
+        if (cachedRectVertexBuffer != null) { cachedRectVertexBuffer.close(); cachedRectVertexBuffer = null; }
+        if (cachedRectShapeBuffer != null) { cachedRectShapeBuffer.close(); cachedRectShapeBuffer = null; }
         blurTargetW = -1; blurTargetH = -1; blurReady = false;
     }
 }
