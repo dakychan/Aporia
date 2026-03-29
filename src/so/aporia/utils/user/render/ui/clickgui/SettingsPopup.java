@@ -5,6 +5,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import so.aporia.module.Module;
 import so.aporia.module.settings.BooleanSetting;
 import so.aporia.module.settings.BindSetting;
+import so.aporia.module.settings.ButtonSetting;
+import so.aporia.module.settings.MultiSelectSetting;
 import so.aporia.module.settings.SelectSetting;
 import so.aporia.module.settings.Setting;
 import so.aporia.module.settings.TextSetting;
@@ -107,8 +109,8 @@ public class SettingsPopup {
                     if (idx < settingCount - 1) {
                         int divY = y + LINE_H;
                         float centerX = cx + cw / 2f + 25f;
-                        float halfLen = cw / 2.5f;
-                        r.drawFadeHLine(centerX, divY, halfLen, 1.5f, 1f, C_DIVIDER);
+                        float halfLen = cw / 3.5f;
+                        r.drawFadeHLine(centerX, divY, halfLen, 1.0f, 0.6f, C_DIVIDER);
                     }
                     
                     y += LINE_H;
@@ -163,14 +165,52 @@ public class SettingsPopup {
             r.drawRect(animDotX, dotY, dotSize, dotSize, dotSize / 2, ColorUtil.rgba(255, 255, 255, 240));
         } else if (s instanceof SelectSetting ss) {
             r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, C_TXT);
-            r.drawText("regular", ss.get(), cx + cw - 40, y + (LINE_H - 9) / 2f - 1, 8f, ColorUtil.rgba(255, 255, 255, 150));
+            
+            int valueW = 60;
+            int valueH = 14;
+            int valueX = cx + cw - valueW - 8;
+            int valueY = y + (LINE_H - valueH) / 2;
+            r.drawRect(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(40, 40, 60, 120));
+            r.drawText("regular", ss.get(), valueX + 6, valueY + (valueH - 8) / 2, 8f, ColorUtil.rgba(255, 255, 255, 200));
         } else if (s instanceof TextSetting ts) {
             r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, C_TXT);
-            r.drawText("regular", ts.get(), cx + cw - 40, y + (LINE_H - 9) / 2f - 1, 8f, ColorUtil.rgba(255, 255, 255, 150));
+            
+            int inputW = 70;
+            int inputH = 14;
+            int inputX = cx + cw - inputW - 8;
+            int inputY = y + (LINE_H - inputH) / 2;
+            r.drawRectBlurred(inputX, inputY, inputW, inputH, 4, ColorUtil.rgba(30, 30, 50, 150), 15f);
+            String text = ts.get().isEmpty() ? "..." : ts.get();
+            r.drawText("regular", text, inputX + 6, inputY + (inputH - 8) / 2, 8f, ColorUtil.rgba(255, 255, 255, ts.get().isEmpty() ? 100 : 200));
         } else if (s instanceof BindSetting bs2) {
             r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, C_TXT);
+            
+            int keyW = 50;
+            int keyH = 14;
+            int keyX = cx + cw - keyW - 8;
+            int keyY = y + (LINE_H - keyH) / 2;
+            r.drawRect(keyX, keyY, keyW, keyH, 4, ColorUtil.rgba(50, 50, 70, 120));
             String keyName = bs2.isBound() ? keyName(bs2.getKey()) : "None";
-            r.drawText("regular", keyName, cx + cw - 40, y + (LINE_H - 9) / 2f - 1, 8f, ColorUtil.rgba(255, 255, 255, 150));
+            r.drawText("regular", keyName, keyX + 6, keyY + (keyH - 8) / 2, 8f, ColorUtil.rgba(255, 255, 255, 200));
+        } else if (s instanceof ButtonSetting btn) {
+            int btnW = cw - 16;
+            int btnH = 18;
+            int btnX = cx + 8;
+            int btnY = y + (LINE_H - btnH) / 2;
+            r.drawRect(btnX, btnY, btnW, btnH, 5, ColorUtil.rgba(60, 120, 200, 150));
+            r.drawText("regular", s.name(), btnX + btnW / 2 - r.getTextWidth("regular", s.name(), 9f) / 2, btnY + (btnH - 9) / 2, 9f, C_TXT);
+        } else if (s instanceof MultiSelectSetting mss) {
+            r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, C_TXT);
+            
+            int valueW = 70;
+            int valueH = 14;
+            int valueX = cx + cw - valueW - 8;
+            int valueY = y + (LINE_H - valueH) / 2;
+            r.drawRect(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(40, 40, 60, 120));
+            
+            String selected = String.join(", ", mss.get());
+            if (selected.isEmpty()) selected = "None";
+            r.drawText("regular", selected, valueX + 6, valueY + (valueH - 8) / 2, 7f, ColorUtil.rgba(255, 255, 255, 150));
         } else {
             r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, C_TXT);
         }
@@ -180,7 +220,7 @@ public class SettingsPopup {
         return net.minecraft.client.KeyMapping.createNameSupplier("key.keyboard." + key).get().getString().toUpperCase();
     }
     
-    public boolean mouseClicked(int mx, int my, int screenW, int screenH) {
+    public boolean mouseClicked(int mx, int my, int screenW, int screenH, int button) {
         int contentH = settingCount * LINE_H + (settingCount > 0 ? (settingCount - 1) : 0) * 2;
         int popupH = POPUP_H_BASE + contentH;
         popupH = Math.min(popupH, MAX_POPUP_H);
@@ -224,6 +264,13 @@ public class SettingsPopup {
                             String want = bs.isEnabled() ? "Включено!" : "Выключено!";
                             ta.setTarget(want);
                         }
+                    } else if (s instanceof SelectSetting ss) {
+                        if (button == 0) {
+                            int idx = ss.getSelectedIndex();
+                            ss.setSelectedIndex((idx + 1) % ss.getOptions().size());
+                        }
+                    } else if (s instanceof ButtonSetting btn) {
+                        btn.click();
                     } else if (s instanceof BindSetting bs2) {
                         bindingField = f;
                         bindingModule = module;

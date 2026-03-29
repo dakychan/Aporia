@@ -9,24 +9,10 @@ import so.aporia.utils.events.EventHandler;
 import so.aporia.utils.events.impl.KeyInputEvent;
 import so.aporia.utils.user.render.ui.clickgui.ClickGuiScreen;
 
-/**
- * Handles global keybinds for modules and GUI.
- * Keys only fire when no vanilla screen is open — prevents laptop keys
- * from triggering modules while typing in chat/inventory/etc.
- * <p>
- * Обрабатывает глобальные клавиши для модулей и GUI.
- * Клавиши работают только когда нет открытого vanilla экрана.
- */
 public final class KeybindManager {
 
     public static final KeybindManager INSTANCE = new KeybindManager();
-
-    /**
-     * GLFW key code for tilde/grave (~) — opens ClickGui.
-     * <p>
-     * Код клавиши GLFW для тильды (~) — открывает ClickGui.
-     */
-    public static final int KEY_CLICK_GUI = 96;
+    public static final int KEY_CLICK_GUI = KeyCodeMap.getScancode("GRAVE");
 
     private KeybindManager() {
         EventBus.INSTANCE.register(this);
@@ -39,7 +25,7 @@ public final class KeybindManager {
         Minecraft mc = Minecraft.getInstance();
         Screen screen = mc.screen;
 
-        if (e.key() == KEY_CLICK_GUI) {
+        if (e.scancode() == KEY_CLICK_GUI) {
             if (screen instanceof ClickGuiScreen) {
                 mc.execute(() -> mc.setScreen(null));
             } else if (screen == null) {
@@ -50,7 +36,7 @@ public final class KeybindManager {
 
         if (screen == null) {
             for (Module m : ModuleManager.INSTANCE.getAll()) {
-                if (m.keybind() != -1 && m.keybind() == e.key()) {
+                if (m.keybind() != -1 && m.keybind() == e.scancode()) {
                     m.toggle();
                 }
             }

@@ -38,6 +38,8 @@ public class AporiaRenderer {
     private RenderPipeline pipeline;
     private CachedOrthoProjectionMatrixBuffer orthoProjection;
     private RenderPipeline blurPipeline;
+    private RenderPipeline kawaseDownPipeline;
+    private RenderPipeline kawaseUpPipeline;
     private RenderPipeline blitPipeline;
     private TextureTarget  blurTarget;
     private TextureTarget  blurTempTarget;
@@ -51,6 +53,8 @@ public class AporiaRenderer {
     private final Map<String, DynamicTexture>  imageTextures = new HashMap<>();
     private float cachedBlurStrength = -1f;
     private float cachedBlurSaturation = -1f;
+    private int blurFrameCounter = 0;
+    private static final int BLUR_UPDATE_INTERVAL = 3;
     private GpuBuffer cachedRectVertexBuffer;
     private GpuBuffer cachedRectShapeBuffer;
     private static final long RECT_VERTEX_BUFFER_SIZE = 256L;
@@ -80,6 +84,32 @@ public class AporiaRenderer {
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/blur"))
                 .withSampler("InputTexture")
                 .withUniform("BlurData", UniformType.UNIFORM_BUFFER)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false)
+                .build();
+
+        kawaseDownPipeline = RenderPipeline.builder()
+                .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/kawase_down"))
+                .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/kawase_down"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/kawase_down"))
+                .withSampler("InputTexture")
+                .withUniform("KawaseData", UniformType.UNIFORM_BUFFER)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false)
+                .build();
+
+        kawaseUpPipeline = RenderPipeline.builder()
+                .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/kawase_up"))
+                .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/kawase_up"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/kawase_up"))
+                .withSampler("InputTexture")
+                .withUniform("KawaseData", UniformType.UNIFORM_BUFFER)
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
@@ -412,13 +442,13 @@ public class AporiaRenderer {
      * This prepares the blur texture that will be reused by all drawRectBlurred calls.
      */
     public void prepareFrameBlur(Minecraft mc, float strength, float saturation) {
-        // Only prepare if parameters changed or blur not ready
-        if (blurReady && cachedBlurStrength == strength && cachedBlurSaturation == saturation) {
-            return;
+        blurFrameCounter++;
+        if (blurFrameCounter >= BLUR_UPDATE_INTERVAL) {
+            blurFrameCounter = 0;
+            prepareBlur(mc, strength, saturation);
+            cachedBlurStrength = strength;
+            cachedBlurSaturation = saturation;
         }
-        prepareBlur(mc, strength, saturation);
-        cachedBlurStrength = strength;
-        cachedBlurSaturation = saturation;
     }
 
     /**
@@ -728,7 +758,6 @@ public class AporiaRenderer {
             RenderSystem.bindDefaultUniforms(pass);
             pass.setUniform("ShapeData", shapeBuf.slice());
 
-            // Bind саму картинку
             pass.bindTexture("ImageTextureSampler", tex.getTextureView(),
                     RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
 

@@ -352,9 +352,7 @@ public class AporiaChatScreen extends ChatScreen {
                     };
                     
                     // Анимация булена
-                    Animator anim = boolAnims.computeIfAbsent(fi, k -> new Animator(400, Easing::elasticOut));
-                    if (enabled && anim.value() < 0.99f) anim.play();
-                    if (!enabled && anim.value() > 0.01f) anim.reverse();
+                    Animator anim = boolAnims.computeIfAbsent(fi, k -> new Animator(500, Easing::elasticOut));
                     anim.update();
                     float animProg = anim.value();
                     
@@ -364,10 +362,11 @@ public class AporiaChatScreen extends ChatScreen {
                     int toggleY = ry + (ITEM - toggleH) / 2 + 1;
                     int bgColor = enabled ? ColorUtil.rgba(100, 200, 100, 150) : ColorUtil.rgba(100, 100, 100, 80);
                     r.drawRect(toggleX, toggleY, toggleW, toggleH, toggleH / 2, bgColor);
-                    int dotSize = 8;
-                    int dotX = (int)(toggleX + 2 + (toggleW - dotSize - 4) * animProg);
-                    int dotY = toggleY + (toggleH - dotSize) / 2;
-                    r.drawRect(dotX, dotY, dotSize, dotSize, dotSize / 2, ColorUtil.rgba(255, 255, 255, 240));
+                    int dotSize = 13;
+                    int dotX = enabled ? toggleX + toggleW - dotSize / 2 - 1 : toggleX - dotSize / 2 + 1;
+                    int dotY = toggleY + toggleH / 2 - dotSize / 2;
+                    int animDotX = (int)(dotX + (animProg - 0.5f) * 4f);
+                    r.drawRect(animDotX, dotY, dotSize, dotSize, dotSize / 2, ColorUtil.rgba(255, 255, 255, 240));
                 } else {
                     String value = switch(fi) {
                         case 0 -> c.name;
@@ -766,10 +765,44 @@ public class AporiaChatScreen extends ChatScreen {
             int f = edit.fieldAt(mx, my);
             if (f >= 0) {
                 edit.selectedField = f;
-                if (f == 2) { cfg().prefixEnabled = !cfg().prefixEnabled; return true; }
-                if (f == 6) { cfg().showOnlyFilter = !cfg().showOnlyFilter; WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font); return true; }
-                if (f == 7) { cfg().searchOnOpen = !cfg().searchOnOpen; return true; }
-                if (f == 8) { cfg().showOnlyServer = !cfg().showOnlyServer; WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font); return true; }
+                if (f == 2) { 
+                    cfg().prefixEnabled = !cfg().prefixEnabled;
+                    Animator anim = edit.boolAnims.get(f);
+                    if (anim != null) {
+                        anim.reset();
+                        anim.play();
+                    }
+                    return true; 
+                }
+                if (f == 6) { 
+                    cfg().showOnlyFilter = !cfg().showOnlyFilter; 
+                    Animator anim = edit.boolAnims.get(f);
+                    if (anim != null) {
+                        anim.reset();
+                        anim.play();
+                    }
+                    WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font); 
+                    return true; 
+                }
+                if (f == 7) { 
+                    cfg().searchOnOpen = !cfg().searchOnOpen;
+                    Animator anim = edit.boolAnims.get(f);
+                    if (anim != null) {
+                        anim.reset();
+                        anim.play();
+                    }
+                    return true; 
+                }
+                if (f == 8) { 
+                    cfg().showOnlyServer = !cfg().showOnlyServer;
+                    Animator anim = edit.boolAnims.get(f);
+                    if (anim != null) {
+                        anim.reset();
+                        anim.play();
+                    }
+                    WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font); 
+                    return true; 
+                }
                 startFieldEdit(f);
                 return true;
             }

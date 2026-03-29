@@ -286,9 +286,9 @@ public final class ClickGuiScreen extends Screen {
             if (prog > 0.01f && catAlpha > 0.01f) {
                 float lineY   = cy + CAT_H - 2f;
                 float centerX = sx + SIDEBAR_W / 2f + 25f;
-                float halfLen = SIDEBAR_W / 2f - CAT_PAD;
-                int   lineCol = ColorUtil.rgba(255, 255, 255, (int)(80 * prog * catAlpha));
-                r.drawFadeHLine(centerX, lineY, halfLen, 1.5f, prog, lineCol);
+                float halfLen = SIDEBAR_W / 2.5f - CAT_PAD;
+                int   lineCol = ColorUtil.rgba(255, 255, 255, (int)(60 * prog * catAlpha));
+                r.drawFadeHLine(centerX, lineY, halfLen, 1.0f, prog * 0.7f, lineCol);
             }
         }
     }
@@ -367,7 +367,7 @@ public final class ClickGuiScreen extends Screen {
         int bodyY = ipy + TOPBAR_H;
 
         if (settingsPopup != null) {
-            boolean consumed = settingsPopup.mouseClicked(mx, my, this.width, this.height);
+            boolean consumed = settingsPopup.mouseClicked(mx, my, this.width, this.height, e.button());
             if (consumed) {
                 return true;
             }
