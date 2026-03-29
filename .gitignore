@@ -2,3 +2,6 @@ run/
 out/
 .qwen/
 gha-creds-*.json
+.kiro/
+.vscode/
+aporia/
