@@ -16,7 +16,11 @@ public class WinConnection extends Connection {
 
     public WinConnection(String name, Consumer<S2CPacket> callback) throws IOException {
         super(callback);
-        this.raf = new RandomAccessFile(name, "rw");
+        try {
+            this.raf = new RandomAccessFile(name, "rw");
+        } catch (java.io.FileNotFoundException e) {
+            throw new IOException("Discord IPC pipe not found: " + name);
+        }
 
         Thread thread = new Thread(this::run);
         thread.setName("Discord IPC - Read thread");
@@ -28,7 +32,7 @@ public class WinConnection extends Connection {
         try {
             raf.write(buffer.array());
         } catch (IOException e) {
-            e.printStackTrace();
+            // Silently ignore write errors
         }
     }
 
@@ -65,7 +69,7 @@ public class WinConnection extends Connection {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                // Silently ignore
             }
         }
 
@@ -77,7 +81,7 @@ public class WinConnection extends Connection {
         try {
             raf.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            // Silently ignore close errors
         }
     }
 }

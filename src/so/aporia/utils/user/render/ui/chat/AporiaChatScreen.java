@@ -25,6 +25,8 @@ import so.aporia.utils.events.EventBus;
 import so.aporia.utils.events.impl.KeyInputEvent;
 import so.aporia.utils.events.impl.MouseClickEvent;
 import so.aporia.utils.events.impl.MouseScrollEvent;
+import aporia.cc.PanicSystem;
+import so.aporia.utils.user.command.CommandManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -119,7 +121,7 @@ public class AporiaChatScreen extends ChatScreen {
 
         private WinMgr() { wins.add(makeWin("Main", 0)); }
 
-        WinCfg get() { return wins.get(active); }
+        public WinCfg get() { return wins.get(active); }
 
         void add(String name) {
             int idx = wins.size();
@@ -177,13 +179,17 @@ public class AporiaChatScreen extends ChatScreen {
                 addMsgToWin(wins.get(0), msg, font);
             }
         }
-        private void addMsgToWin(WinCfg w, GuiMessage msg, net.minecraft.client.gui.Font font) {
-            int splitW = Math.max(10, w.w - BOX_PAD*2 - TEXT_PAD);
-            List<net.minecraft.util.FormattedCharSequence> parts = msg.splitLines(font, splitW);
-            for (int i = 0; i < parts.size(); i++) {
-                w.addLine(new GuiMessage.Line(msg.addedTime(), parts.get(i), msg.tag(), i == parts.size()-1));
-            }
-        }
+         private void addMsgToWin(WinCfg w, GuiMessage msg, net.minecraft.client.gui.Font font) {
+             Component content = msg.content();
+             
+             int splitW = Math.max(10, w.w - BOX_PAD*2 - TEXT_PAD);
+             GuiMessage modifiedMsg = new GuiMessage(msg.addedTime(), content, msg.signature(), msg.tag());
+             List<net.minecraft.util.FormattedCharSequence> parts = modifiedMsg.splitLines(font, splitW);
+             
+             for (int i = 0; i < parts.size(); i++) {
+                 w.addLine(new GuiMessage.Line(msg.addedTime(), parts.get(i), msg.tag(), i == parts.size()-1));
+             }
+         }
 
         /** Clears all windows and rebuilds their line stores from the full chat history. */
         public void rebuild(net.minecraft.client.gui.components.ChatComponent chat,
@@ -971,24 +977,40 @@ public class AporiaChatScreen extends ChatScreen {
      * </ul>
      * Raw text is saved to history before decoration.
      */
-    @Override
-    public void handleChatInput(String msg, boolean addToHistory) {
-        WinCfg c = cfg();
-        if (addToHistory) this.minecraft.gui.getChat().addRecentChat(msg);
-        boolean isCommand = !msg.isEmpty() && msg.charAt(0) == '/';
-        if (!isCommand && c.prefixEnabled && !c.msgPrefix.isEmpty()) {
-            if (!c.prefixTriggers.isEmpty() && !msg.isEmpty() && c.prefixTriggers.indexOf(msg.charAt(0)) >= 0) {
-                String rest = msg.length() > 1 ? msg.substring(1) : "";
-                msg = msg.charAt(0) + c.msgPrefix + (rest.isEmpty() ? "" : " " + rest);
-            } else if (!msg.isEmpty()) {
-                msg = c.msgPrefix + " " + msg;
-            } else {
-                msg = c.msgPrefix;
-            }
-        }
-        if (!c.msgSuffix.isEmpty() && !msg.isEmpty()) msg = msg + " " + c.msgSuffix;
-        super.handleChatInput(msg, false);
-    }
+     @Override
+     public void handleChatInput(String msg, boolean addToHistory) {
+         msg = this.normalizeChatMessage(msg);
+         if (msg.isEmpty()) return;
+         
+         WinCfg c = cfg();
+         if (addToHistory) this.minecraft.gui.getChat().addRecentChat(msg);
+         
+         String msgToSend = msg;
+         boolean isCommand = !msg.isEmpty() && msg.charAt(0) == '/';
+         
+         if (!isCommand && c.prefixEnabled && !c.msgPrefix.isEmpty()) {
+             if (!c.prefixTriggers.isEmpty() && !msg.isEmpty() && c.prefixTriggers.indexOf(msg.charAt(0)) >= 0) {
+                 String rest = msg.length() > 1 ? msg.substring(1) : "";
+                 msgToSend = msg.charAt(0) + c.msgPrefix + (rest.isEmpty() ? "" : " " + rest);
+             } 
+             else if (!msg.isEmpty()) {
+                 msgToSend = c.msgPrefix + " " + msg;
+             } 
+             else {
+                 msgToSend = c.msgPrefix;
+             }
+             
+             if (!c.msgSuffix.isEmpty() && !msg.isEmpty()) {
+                 msgToSend = msgToSend + " " + c.msgSuffix;
+             }
+         }
+         
+         if (isCommand) {
+             this.minecraft.player.connection.sendCommand(msgToSend.substring(1));
+         } else {
+             this.minecraft.player.connection.sendChat(msgToSend);
+         }
+     }
 
     private void addWindow() {
         WinMgr.I.add("Window " + (WinMgr.I.wins.size() + 1));

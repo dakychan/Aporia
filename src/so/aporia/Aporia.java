@@ -34,6 +34,7 @@ public class Aporia implements ResourceManagerReloadListener {
         }
         KeybindManager.INSTANCE.toString();
         ModuleManager.INSTANCE.toString();
+        
         initializeDiscordRPC();
         
         Logger.success("Aporia initialized");

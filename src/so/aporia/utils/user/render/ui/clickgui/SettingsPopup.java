@@ -16,6 +16,8 @@ import so.aporia.utils.user.render.color.ColorUtil;
 import so.aporia.utils.user.render.core.AporiaRenderer;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -45,10 +47,14 @@ public class SettingsPopup {
     private final Map<Object, TypeAnim> settingAnims = new WeakHashMap<>();
     private final Map<Object, Long> boolFlashTime = new WeakHashMap<>();
     private final Map<Object, Animator> boolToggleAnims = new WeakHashMap<>();
+    private final Map<Object, Animator> selectAnims = new WeakHashMap<>();
+    private final Map<Object, Animator> multiSelectAnims = new WeakHashMap<>();
     private static final long BOOL_FLASH_COOLDOWN = 1000;
     
     private Animator popupAnim = null;
     private long popupOpenTime = 0;
+    private GuiGraphics currentGfx = null;
+    private int textScrollOffset = 0;
     
     public SettingsPopup(Module module) {
         this.module = module;
@@ -70,6 +76,7 @@ public class SettingsPopup {
     public void render(AporiaRenderer r, GuiGraphics gfx, int mx, int my, int screenW, int screenH) {
         if (module == null) return;
         
+        currentGfx = gfx;
         popupAnim.update();
         float animProg = popupAnim.value();
         
@@ -116,6 +123,10 @@ public class SettingsPopup {
                     y += LINE_H;
                     idx++;
                 } catch (IllegalAccessException ignored) {}
+            }
+            
+            if (optionsMenu != null) {
+                optionsMenu.render(r, optionsMenuX, optionsMenuY);
             }
         } else {
             int cx = px + POPUP_W / 2;
@@ -164,14 +175,31 @@ public class SettingsPopup {
             int animDotX = (int)(dotX + (toggleProg - 0.5f) * 4f);
             r.drawRect(animDotX, dotY, dotSize, dotSize, dotSize / 2, ColorUtil.rgba(255, 255, 255, 240));
         } else if (s instanceof SelectSetting ss) {
+            TypeAnim ta = settingAnims.computeIfAbsent(s, k -> {
+                TypeAnim a = new TypeAnim(110, 170);
+                a.snap(ss.get());
+                return a;
+            });
+            
+            Animator selectAnim = selectAnims.computeIfAbsent(s, k -> new Animator(400, so.aporia.utils.user.render.animation.Easing::cubicOut));
+            
+            String displayText = ta.update();
+            if (!ta.isRunning() && !displayText.equals(ss.get())) {
+                ta.setTarget(ss.get());
+            }
+            
             r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, C_TXT);
             
             int valueW = 60;
             int valueH = 14;
             int valueX = cx + cw - valueW - 8;
             int valueY = y + (LINE_H - valueH) / 2;
-            r.drawRect(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(40, 40, 60, 120));
-            r.drawText("regular", ss.get(), valueX + 6, valueY + (valueH - 8) / 2, 8f, ColorUtil.rgba(255, 255, 255, 200));
+            
+            selectAnim.update();
+            float selectProg = selectAnim.value();
+            int bgAlpha = (int)(120 + selectProg * 80);
+            r.drawRectBlurred(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(30, 30, 50, bgAlpha), 15f);
+            r.drawText("regular", displayText, valueX + 6, valueY + (valueH - 9) / 2f + 1, 8f, ColorUtil.rgba(255, 255, 255, 200));
         } else if (s instanceof TextSetting ts) {
             r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, C_TXT);
             
@@ -179,9 +207,51 @@ public class SettingsPopup {
             int inputH = 14;
             int inputX = cx + cw - inputW - 8;
             int inputY = y + (LINE_H - inputH) / 2;
-            r.drawRectBlurred(inputX, inputY, inputW, inputH, 4, ColorUtil.rgba(30, 30, 50, 150), 15f);
+            
+            boolean isFocused = textEditingField != null && textEditingModule != null;
+            try {
+                if (isFocused) {
+                    textEditingField.setAccessible(true);
+                    TextSetting checkTs = (TextSetting) textEditingField.get(textEditingModule);
+                    isFocused = checkTs == ts;
+                }
+            } catch (IllegalAccessException ignored) {}
+            
+            int bgColor = isFocused ? ColorUtil.rgba(40, 60, 100, 180) : ColorUtil.rgba(30, 30, 50, 150);
+            r.drawRectBlurred(inputX, inputY, inputW, inputH, 4, bgColor, 15f);
+            
             String text = ts.get().isEmpty() ? "..." : ts.get();
-            r.drawText("regular", text, inputX + 6, inputY + (inputH - 8) / 2, 8f, ColorUtil.rgba(255, 255, 255, ts.get().isEmpty() ? 100 : 200));
+            int textColor = isFocused ? ColorUtil.rgba(255, 255, 255, 255) : ColorUtil.rgba(255, 255, 255, ts.get().isEmpty() ? 100 : 200);
+            
+            int textX = inputX + 6;
+            int textY = (int)(inputY + (inputH - 9) / 2f + 1);
+            
+            if (isFocused) {
+                int textWidth = (int) r.getTextWidth("regular", text, 8f);
+                int maxWidth = inputW - 12;
+                
+                if (textWidth > maxWidth) {
+                    textScrollOffset = Math.max(0, textWidth - maxWidth);
+                } else {
+                    textScrollOffset = 0;
+                }
+                
+                if (currentGfx != null) {
+                    currentGfx.enableScissor(inputX + 2, inputY, inputX + inputW - 2, inputY + inputH);
+                }
+                r.drawText("regular", text, textX - textScrollOffset, textY, 8f, textColor);
+                if (currentGfx != null) {
+                    currentGfx.disableScissor();
+                }
+            } else {
+                if (currentGfx != null) {
+                    currentGfx.enableScissor(inputX + 2, inputY, inputX + inputW - 2, inputY + inputH);
+                }
+                r.drawText("regular", text, textX, textY, 8f, textColor);
+                if (currentGfx != null) {
+                    currentGfx.disableScissor();
+                }
+            }
         } else if (s instanceof BindSetting bs2) {
             r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, C_TXT);
             
@@ -189,38 +259,107 @@ public class SettingsPopup {
             int keyH = 14;
             int keyX = cx + cw - keyW - 8;
             int keyY = y + (LINE_H - keyH) / 2;
-            r.drawRect(keyX, keyY, keyW, keyH, 4, ColorUtil.rgba(50, 50, 70, 120));
+            
+            boolean isBound = bindingField != null && bindingModule != null;
+            try {
+                if (isBound) {
+                    bindingField.setAccessible(true);
+                    BindSetting checkBs = (BindSetting) bindingField.get(bindingModule);
+                    isBound = checkBs == bs2;
+                }
+            } catch (IllegalAccessException ignored) {}
+            
+            int bgColor = isBound ? ColorUtil.rgba(40, 60, 100, 180) : ColorUtil.rgba(30, 30, 50, 150);
+            r.drawRectBlurred(keyX, keyY, keyW, keyH, 4, bgColor, 15f);
             String keyName = bs2.isBound() ? keyName(bs2.getKey()) : "None";
-            r.drawText("regular", keyName, keyX + 6, keyY + (keyH - 8) / 2, 8f, ColorUtil.rgba(255, 255, 255, 200));
+            
+            int keyWidth = (int) r.getTextWidth("regular", keyName, 8f);
+            int maxWidth = keyW - 12;
+            int keyScrollOffset = 0;
+            
+            if (keyWidth > maxWidth) {
+                keyScrollOffset = Math.max(0, keyWidth - maxWidth);
+            }
+            
+            if (currentGfx != null) {
+                currentGfx.enableScissor(keyX + 2, keyY, keyX + keyW - 2, keyY + keyH);
+            }
+            r.drawText("regular", keyName, keyX + 6 - keyScrollOffset, keyY + (keyH - 9) / 2f + 1, 8f, ColorUtil.rgba(255, 255, 255, 200));
+            if (currentGfx != null) {
+                currentGfx.disableScissor();
+            }
         } else if (s instanceof ButtonSetting btn) {
             int btnW = cw - 16;
             int btnH = 18;
             int btnX = cx + 8;
             int btnY = y + (LINE_H - btnH) / 2;
             r.drawRect(btnX, btnY, btnW, btnH, 5, ColorUtil.rgba(60, 120, 200, 150));
-            r.drawText("regular", s.name(), btnX + btnW / 2 - r.getTextWidth("regular", s.name(), 9f) / 2, btnY + (btnH - 9) / 2, 9f, C_TXT);
+            r.drawText("regular", s.name(), btnX + btnW / 2 - r.getTextWidth("regular", s.name(), 9f) / 2, btnY + (btnH - 9) / 2f + 1, 9f, C_TXT);
         } else if (s instanceof MultiSelectSetting mss) {
+            TypeAnim ta = settingAnims.computeIfAbsent(s, k -> {
+                TypeAnim a = new TypeAnim(110, 170);
+                a.snap(String.join(", ", mss.getSelected()));
+                return a;
+            });
+            
+            Animator multiAnim = multiSelectAnims.computeIfAbsent(s, k -> new Animator(400, so.aporia.utils.user.render.animation.Easing::cubicOut));
+            
+            String displayText = ta.update();
+            String current = String.join(", ", mss.getSelected());
+            if (!ta.isRunning() && !displayText.equals(current)) {
+                ta.setTarget(current);
+            }
+            
             r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, C_TXT);
             
             int valueW = 70;
             int valueH = 14;
             int valueX = cx + cw - valueW - 8;
             int valueY = y + (LINE_H - valueH) / 2;
-            r.drawRect(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(40, 40, 60, 120));
             
-            String selected = String.join(", ", mss.get());
-            if (selected.isEmpty()) selected = "None";
-            r.drawText("regular", selected, valueX + 6, valueY + (valueH - 8) / 2, 7f, ColorUtil.rgba(255, 255, 255, 150));
+            multiAnim.update();
+            float multiProg = multiAnim.value();
+            int bgAlpha = (int)(120 + multiProg * 80);
+            r.drawRectBlurred(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(30, 30, 50, bgAlpha), 15f);
+            
+            String selected = displayText.isEmpty() ? "None" : displayText;
+            r.drawText("regular", selected, valueX + 6, valueY + (valueH - 9) / 2f + 1, 7f, ColorUtil.rgba(255, 255, 255, 200));
         } else {
             r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, C_TXT);
         }
     }
     
     private static String keyName(int key) {
-        return net.minecraft.client.KeyMapping.createNameSupplier("key.keyboard." + key).get().getString().toUpperCase();
+        return so.aporia.utils.user.input.KeyCodeMap.getName(key);
     }
     
     public boolean mouseClicked(int mx, int my, int screenW, int screenH, int button) {
+        if (optionsMenu != null) {
+            if (optionsMenu.setting instanceof SelectSetting ss) {
+                if (optionsMenu.mouseClicked(mx, my, ss)) {
+                    optionsMenu = null;
+                    Animator anim = selectAnims.get(ss);
+                    if (anim != null) {
+                        anim.reset();
+                        anim.play();
+                    }
+                    return true;
+                }
+            } else if (optionsMenu.setting instanceof MultiSelectSetting mss) {
+                if (optionsMenu.mouseClicked(mx, my, mss)) {
+                    optionsMenu = null;
+                    Animator anim = multiSelectAnims.get(mss);
+                    if (anim != null) {
+                        anim.reset();
+                        anim.play();
+                    }
+                    return true;
+                }
+            }
+            optionsMenu = null;
+            return true;
+        }
+        
         int contentH = settingCount * LINE_H + (settingCount > 0 ? (settingCount - 1) : 0) * 2;
         int popupH = POPUP_H_BASE + contentH;
         popupH = Math.min(popupH, MAX_POPUP_H);
@@ -268,9 +407,41 @@ public class SettingsPopup {
                         if (button == 0) {
                             int idx = ss.getSelectedIndex();
                             ss.setSelectedIndex((idx + 1) % ss.getOptions().size());
+                            Animator anim = selectAnims.get(s);
+                            if (anim != null) {
+                                anim.reset();
+                                anim.play();
+                            }
+                        } else if (button == 1) {
+                            optionsMenu = new OptionsMenu(this, ss, ss.getOptions());
+                            optionsMenuX = mx;
+                            optionsMenuY = my;
+                        }
+                    } else if (s instanceof MultiSelectSetting mss) {
+                        if (button == 0) {
+                            List<String> opts = mss.getOptions();
+                            if (!opts.isEmpty()) {
+                                List<String> current = mss.getSelected();
+                                String currentVal = current.isEmpty() ? opts.get(0) : current.get(0);
+                                int idx = opts.indexOf(currentVal);
+                                String next = opts.get((idx + 1) % opts.size());
+                                mss.setSelected(java.util.Arrays.asList(next));
+                                Animator anim = multiSelectAnims.get(s);
+                                if (anim != null) {
+                                    anim.reset();
+                                    anim.play();
+                                }
+                            }
+                        } else if (button == 1) {
+                            optionsMenu = new OptionsMenu(this, mss, mss.getOptions());
+                            optionsMenuX = mx;
+                            optionsMenuY = my;
                         }
                     } else if (s instanceof ButtonSetting btn) {
                         btn.click();
+                    } else if (s instanceof TextSetting ts) {
+                        textEditingField = f;
+                        textEditingModule = module;
                     } else if (s instanceof BindSetting bs2) {
                         bindingField = f;
                         bindingModule = module;
@@ -292,20 +463,86 @@ public class SettingsPopup {
         module = null;
         bindingField = null;
         bindingModule = null;
+        textEditingField = null;
+        textEditingModule = null;
     }
     
     private Field bindingField = null;
     private Module bindingModule = null;
+    private Field textEditingField = null;
+    private Module textEditingModule = null;
+    private OptionsMenu optionsMenu = null;
+    private int optionsMenuX = 0;
+    private int optionsMenuY = 0;
     
-    public boolean keyPressed(int key) {
+    public boolean keyPressed(int scancode) {
+        if (scancode == 1) {
+            if (textEditingField != null && textEditingModule != null) {
+                textEditingField = null;
+                textEditingModule = null;
+                return true;
+            }
+            if (bindingField != null && bindingModule != null) {
+                bindingField = null;
+                bindingModule = null;
+                return true;
+            }
+            return false;
+        }
+        
+        if (textEditingField != null && textEditingModule != null) {
+            if (scancode == 14) {
+                try {
+                    textEditingField.setAccessible(true);
+                    TextSetting ts = (TextSetting) textEditingField.get(textEditingModule);
+                    ts.backspace();
+                    return true;
+                } catch (IllegalAccessException ignored) {}
+            } else {
+                String keyName = so.aporia.utils.user.input.KeyCodeMap.getName(scancode);
+                if (keyName.length() == 1 && keyName.matches("[A-Z0-9]")) {
+                    try {
+                        textEditingField.setAccessible(true);
+                        TextSetting ts = (TextSetting) textEditingField.get(textEditingModule);
+                        char c = keyName.charAt(0);
+                        
+                        boolean shiftPressed = org.lwjgl.glfw.GLFW.glfwGetKey(org.lwjgl.glfw.GLFW.glfwGetCurrentContext(), 340) == org.lwjgl.glfw.GLFW.GLFW_PRESS ||
+                                             org.lwjgl.glfw.GLFW.glfwGetKey(org.lwjgl.glfw.GLFW.glfwGetCurrentContext(), 344) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+                        
+                        if (c >= 'A' && c <= 'Z') {
+                            if (!shiftPressed) {
+                                c = (char)(c + 32);
+                            }
+                        }
+                        
+                        ts.appendChar(c);
+                        return true;
+                    } catch (IllegalAccessException ignored) {}
+                }
+            }
+        }
         if (bindingField != null && bindingModule != null) {
             try {
                 bindingField.setAccessible(true);
                 BindSetting bs = (BindSetting) bindingField.get(bindingModule);
-                bs.setKey(key);
+                bs.setKey(scancode);
                 bindingField = null;
                 bindingModule = null;
                 return true;
+            } catch (IllegalAccessException ignored) {}
+        }
+        return false;
+    }
+    
+    public boolean charTyped(char c, int modifiers) {
+        if (textEditingField != null && textEditingModule != null) {
+            try {
+                textEditingField.setAccessible(true);
+                TextSetting ts = (TextSetting) textEditingField.get(textEditingModule);
+                if (c >= 32 && c < 127) {
+                    ts.appendChar(c);
+                    return true;
+                }
             } catch (IllegalAccessException ignored) {}
         }
         return false;
@@ -317,5 +554,65 @@ public class SettingsPopup {
     
     public boolean isAnimationFinished() {
         return popupAnim != null && !popupAnim.isPlaying();
+    }
+    
+    private static class OptionsMenu {
+        private Object setting;
+        private List<String> options;
+        private SettingsPopup popup;
+        
+        OptionsMenu(SettingsPopup popup, Object setting, List<String> options) {
+            this.popup = popup;
+            this.setting = setting;
+            this.options = new ArrayList<>(options);
+        }
+        
+        void render(AporiaRenderer r, int x, int y) {
+            int itemH = 16;
+            int menuW = 80;
+            int menuH = options.size() * itemH + 4;
+            
+            r.drawRectBlurred(x, y, menuW, menuH, 4, ColorUtil.rgba(20, 22, 35, 200), 8f);
+            r.drawStroke(x, y, menuW, menuH, 4, 1f, 1, 0f, ColorUtil.rgba(255, 255, 255, 40));
+            
+            for (int i = 0; i < options.size(); i++) {
+                int itemY = y + 2 + i * itemH;
+                r.drawText("regular", options.get(i), x + 6, itemY + (itemH - 8) / 2, 8f, ColorUtil.rgba(255, 255, 255, 200));
+            }
+        }
+        
+        boolean mouseClicked(int mx, int my, SelectSetting ss) {
+            int itemH = 16;
+            int menuW = 80;
+            int menuH = options.size() * itemH + 4;
+            
+            if (mx < popup.optionsMenuX || mx >= popup.optionsMenuX + menuW || my < popup.optionsMenuY || my >= popup.optionsMenuY + menuH) {
+                return false;
+            }
+            
+            int idx = (my - popup.optionsMenuY - 2) / itemH;
+            if (idx >= 0 && idx < options.size()) {
+                ss.setSelectedIndex(idx);
+                return true;
+            }
+            return false;
+        }
+        
+        boolean mouseClicked(int mx, int my, MultiSelectSetting mss) {
+            int itemH = 16;
+            int menuW = 80;
+            int menuH = options.size() * itemH + 4;
+            
+            if (mx < popup.optionsMenuX || mx >= popup.optionsMenuX + menuW || my < popup.optionsMenuY || my >= popup.optionsMenuY + menuH) {
+                return false;
+            }
+            
+            int idx = (my - popup.optionsMenuY - 2) / itemH;
+            if (idx >= 0 && idx < options.size()) {
+                mss.setSelected(java.util.Arrays.asList(options.get(idx)));
+                return true;
+            }
+            return false;
+        }
     }
 }

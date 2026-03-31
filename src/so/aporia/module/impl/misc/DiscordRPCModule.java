@@ -38,7 +38,6 @@ public final class DiscordRPCModule extends Module {
 
             ipc.start(APP_ID);
         } catch (Exception e) {
-            Logger.error("Discord RPC init failed: " + e.getMessage());
             ipc = null;
         }
     }

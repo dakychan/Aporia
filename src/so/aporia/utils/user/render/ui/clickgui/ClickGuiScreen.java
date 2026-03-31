@@ -471,7 +471,7 @@ public final class ClickGuiScreen extends Screen {
                 return true;
             }
         }
-        if (settingsPopup != null && settingsPopup.keyPressed(e.key())) {
+        if (settingsPopup != null && settingsPopup.keyPressed(e.scancode())) {
             return true;
         }
         if (searchFocused) {
@@ -483,7 +483,11 @@ public final class ClickGuiScreen extends Screen {
 
     @Override
     public boolean charTyped(CharacterEvent e) {
-        if (searchFocused) { search += (char)e.codepoint(); return true; }
+        char c = (char)e.codepoint();
+        if (settingsPopup != null && settingsPopup.charTyped(c, 0)) {
+            return true;
+        }
+        if (searchFocused) { search += c; return true; }
         return super.charTyped(e);
     }
 

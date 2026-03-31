@@ -32,4 +32,11 @@ public class MultiSelectSetting extends Setting<Set<String>> {
         if (value.contains(option)) value.remove(option);
         else value.add(option);
     }
+    
+    public List<String> getSelected() { return new ArrayList<>(value); }
+    
+    public void setSelected(List<String> selected) {
+        value.clear();
+        value.addAll(selected);
+    }
 }
