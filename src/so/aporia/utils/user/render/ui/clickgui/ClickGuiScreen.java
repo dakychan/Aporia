@@ -551,8 +551,17 @@ public final class ClickGuiScreen extends Screen {
     @Override public boolean isAllowedInPortal() { return true; }
     @Override public void renderBackground(GuiGraphics gfx, int mx, int my, float d) {}
 
+    public int getActiveCategory() {
+        return active.ordinal();
+    }
+
     @Override
     public void onClose() {
+        try {
+            so.aporia.utils.files.impl.ConfigFile.save(this);
+        } catch (Exception e) {
+            so.aporia.utils.user.logger.Logger.error("Config save failed: " + e.getMessage());
+        }
         AporiaRenderer.INSTANCE.invalidateBlurCache();
         super.onClose();
     }

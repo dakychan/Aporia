@@ -53,7 +53,7 @@ public class FilesManager {
         }
     }
 
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     /**
      * Корневая директория — делегирует OsManager.mainDirectory.

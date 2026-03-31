@@ -7,6 +7,7 @@ import so.aporia.module.ModuleManager;
 import so.aporia.utils.events.EventBus;
 import so.aporia.utils.events.impl.RenderHudEvent;
 import so.aporia.utils.files.FilesManager;
+import so.aporia.utils.files.impl.ConfigFile;
 import so.aporia.utils.user.input.KeybindManager;
 import so.aporia.utils.user.logger.Logger;
 import so.aporia.utils.user.render.core.AporiaRenderer;
@@ -34,6 +35,13 @@ public class Aporia implements ResourceManagerReloadListener {
         }
         KeybindManager.INSTANCE.toString();
         ModuleManager.INSTANCE.toString();
+        
+        try {
+            ConfigFile.load();
+            Logger.success("Config loaded");
+        } catch (Exception e) {
+            Logger.error("Config load failed: " + e.getMessage());
+        }
         
         initializeDiscordRPC();
         
