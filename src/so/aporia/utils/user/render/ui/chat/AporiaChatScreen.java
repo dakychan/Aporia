@@ -432,6 +432,7 @@ public class AporiaChatScreen extends ChatScreen {
     private EditBox searchBox;
     private final CtxMenu   ctx  = new CtxMenu();
     private final EditPanel edit = new EditPanel();
+    private final ConfigMenu configMenu = new ConfigMenu();
     private int     editingField = -1;
     private EditBox fieldBox;
     private Handle  dragging = Handle.NONE;
@@ -446,6 +447,15 @@ public class AporiaChatScreen extends ChatScreen {
     public AporiaChatScreen(String initial, boolean isDraft) { super(initial, isDraft); }
 
     private WinCfg cfg() { return WinMgr.I.get(); }
+
+    public static void openConfigMenu() {
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        if (mc.screen instanceof AporiaChatScreen screen) {
+            int x = 350;
+            int y = 300;
+            screen.configMenu.open(x, y, mc.getWindow().getWidth(), mc.getWindow().getHeight());
+        }
+    }
 
     private void setScrollOffset(WinCfg c, int newOffset) {
         int maxS = Math.max(0, c.lines.size() - c.maxLines());
@@ -578,6 +588,10 @@ public class AporiaChatScreen extends ChatScreen {
         if (ctx.visible) {
             gfx.fill(0, 0, this.width, this.height, ColorUtil.rgba(0, 0, 0, 100));
             ctx.render(gfx, this.font, WinMgr.I.wins.size());
+        }
+        
+        if (configMenu.isVisible()) {
+            configMenu.render(gfx, this.font);
         }
         
         if (edit.visible) {
@@ -816,6 +830,10 @@ public class AporiaChatScreen extends ChatScreen {
             return true;
         }
 
+        if (configMenu.isVisible()) {
+            if (configMenu.onClick(mx, my)) return true;
+        }
+
         if (ctx.visible) {
             int item = ctx.itemAt(mx, my, WinMgr.I.wins.size());
             if (item == 0) { ctx.close(); edit.open(); return true; }
@@ -981,6 +999,9 @@ public class AporiaChatScreen extends ChatScreen {
      public void handleChatInput(String msg, boolean addToHistory) {
          msg = this.normalizeChatMessage(msg);
          if (msg.isEmpty()) return;
+         
+         // Handle Aporia commands (e.g., .help, .prefix)
+         if (CommandManager.INSTANCE.handle(msg)) return;
          
          WinCfg c = cfg();
          if (addToHistory) this.minecraft.gui.getChat().addRecentChat(msg);
