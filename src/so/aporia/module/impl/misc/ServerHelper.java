@@ -110,6 +110,8 @@ public final class ServerHelper extends Module {
 
     /**
      * Решает капчу из текста пакета.
+     * aka
+     * лучий парсер на районе
      */
     private void solveCaptcha(String text) {
         long answer = -1;

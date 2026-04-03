@@ -330,6 +330,54 @@ public class SettingsPopup {
     }
     
     public boolean mouseClicked(int mx, int my, int screenW, int screenH, int button) {
+        // Обрабатываем колесико отдельно для BindSetting
+        if (button == 2) {
+            int contentH = settingCount * LINE_H + (settingCount > 0 ? (settingCount - 1) : 0) * 2;
+            int popupH = POPUP_H_BASE + contentH;
+            popupH = Math.min(popupH, MAX_POPUP_H);
+            
+            int px = (screenW - POPUP_W) / 2;
+            int py = (screenH - popupH) / 2;
+            
+            px = Math.max(0, Math.min(px, screenW - POPUP_W));
+            py = Math.max(0, Math.min(py, screenH - popupH));
+            
+            float scale = popupAnim.value();
+            int scaledW = (int)(POPUP_W * scale);
+            int scaledH = (int)(popupH * scale);
+            int scaledX = px + (POPUP_W - scaledW) / 2;
+            int scaledY = py + (popupH - scaledH) / 2;
+            
+            if (mx >= scaledX && mx < scaledX + scaledW && my >= scaledY && my < scaledY + scaledH) {
+                int cx = scaledX + PAD;
+                int cw = scaledW - PAD * 2;
+                int y = scaledY + PAD;
+                
+                for (Field f : module.getClass().getDeclaredFields()) {
+                    if (!Setting.class.isAssignableFrom(f.getType())) continue;
+                    f.setAccessible(true);
+                    try {
+                        Setting<?> s = (Setting<?>) f.get(module);
+                        if (mx >= cx && mx < cx + cw && my >= y && my < y + LINE_H) {
+                            if (s instanceof BindSetting bs2) {
+                                bs2.setKey(2);  // 2 = MOUSE3 (колесико)
+                                so.aporia.utils.files.impl.ConfigFile.markModuleModified(module);
+                                return true;
+                            }
+                            return false;
+                        }
+                        y += LINE_H;
+                    } catch (IllegalAccessException ignored) {}
+                }
+            }
+            return false;
+        }
+
+        // Игнорируем другие кнопки кроме ЛКМ и ПКМ
+        if (button > 1) {
+            return false;
+        }
+
         if (optionsMenu != null) {
             if (optionsMenu.setting instanceof SelectSetting ss) {
                 if (optionsMenu.mouseClicked(mx, my, ss)) {
@@ -452,6 +500,7 @@ public class SettingsPopup {
             } catch (IllegalAccessException ignored) {}
         }
         
+        // Если клик был внутри попапа, закрываем его (но не для колесика)
         return true;
     }
     

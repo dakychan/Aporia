@@ -58,7 +58,7 @@ public class AporiaRenderer {
     private GpuBuffer cachedRectVertexBuffer;
     private GpuBuffer cachedRectShapeBuffer;
     private static final long RECT_VERTEX_BUFFER_SIZE = 256L;
-    private static final long RECT_SHAPE_BUFFER_SIZE = 64L;
+    private static final long RECT_SHAPE_BUFFER_SIZE = 128L;
 
     public void init() {
         pipeline = RenderPipeline.builder()
@@ -318,13 +318,71 @@ public class AporiaRenderer {
 
     /** Overload with default blur strength. */
     public void drawRectBlurred(float x, float y, float w, float h, float radius, int color) {
-        drawRectBlurred(x, y, w, h, radius, color, 4f);
+        drawRectBlurred(x, y, w, h, radius, color, 4f, 15); // 15 = all corners
+    }
+
+    /** Blurred rect with corner mask */
+    public void drawRectBlurred(float x, float y, float w, float h, float radius, int color, float blurStrength, int cornerMask) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!blurReady || pipeline == null || blurTarget == null) {
+            drawRect(x, y, w, h, radius, color, cornerMask);
+            return;
+        }
+        var mainTarget = mc.getMainRenderTarget();
+        var window     = mc.getWindow();
+        float sw = window.getGuiScaledWidth();
+        float sh = window.getGuiScaledHeight();
+        var colorView  = mainTarget.getColorTextureView();
+        if (colorView == null) return;
+        float ta = ((color >> 24) & 0xFF) / 255f;
+        float tr = ((color >> 16) & 0xFF) / 255f;
+        float tg = ((color >>  8) & 0xFF) / 255f;
+        float tb = ((color ) & 0xFF) / 255f;
+        var projSlice = orthoProjection.getBuffer(sw, sh);
+        RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC);
+        var tess = Tesselator.getInstance();
+        var buf  = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR);
+        buf.addVertex(x,   y+h, 0f).setUv(0f,0f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x+w, y+h, 0f).setUv(1f,0f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x+w, y,   0f).setUv(1f,1f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x,   y+h, 0f).setUv(0f,0f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x+w, y,   0f).setUv(1f,1f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x,   y,   0f).setUv(0f,1f).setColor(tr,tg,tb,ta);
+        var mesh = buf.buildOrThrow();
+        var device  = RenderSystem.getDevice();
+        var encoder = device.createCommandEncoder();
+        encoder.writeToBuffer(cachedRectVertexBuffer.slice(), mesh.vertexBuffer());
+        var shapeBB = ByteBuffer.allocateDirect(128).order(ByteOrder.nativeOrder());
+        shapeBB.putFloat(x); shapeBB.putFloat(y); shapeBB.putFloat(w); shapeBB.putFloat(h);
+        shapeBB.putFloat(radius); shapeBB.putFloat(1.0f); shapeBB.putFloat(MODE_ROUNDED_RECT); shapeBB.putFloat(0f);
+        shapeBB.putFloat(0f); shapeBB.putFloat(0f); shapeBB.putFloat(1f); shapeBB.putFloat((float) cornerMask);
+        shapeBB.putFloat(0f); shapeBB.putFloat(0f); shapeBB.putFloat(0f); shapeBB.putFloat(0f);
+        shapeBB.putFloat((float) mainTarget.width); shapeBB.putFloat((float) mainTarget.height); shapeBB.putFloat(0f); shapeBB.putFloat(0f);
+        shapeBB.flip();
+        encoder.writeToBuffer(cachedRectShapeBuffer.slice(), shapeBB);
+        var indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES);
+        try (var pass = encoder.createRenderPass(() -> "aporia:blur_rect", colorView, OptionalInt.empty())) {
+            pass.setPipeline(pipeline);
+            RenderSystem.bindDefaultUniforms(pass);
+            pass.setUniform("ShapeData", cachedRectShapeBuffer.slice());
+            pass.bindTexture("BlurTextureSampler", blurTarget.getColorTextureView(),
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.setVertexBuffer(0, cachedRectVertexBuffer);
+            pass.setIndexBuffer(indexBuf.getBuffer(6), indexBuf.type());
+            pass.drawIndexed(0, 0, 6, 0);
+        }
+        mesh.close();
     }
 
     /** Filled rectangle, optionally rounded */
     public void drawRect(float x, float y, float w, float h, float radius, int color) {
+        drawRect(x, y, w, h, radius, color, 15); // 15 = 0b1111 = all corners
+    }
+
+    /** Filled rectangle with corner mask (bit 0=top-left, 1=top-right, 2=bottom-right, 3=bottom-left) */
+    public void drawRect(float x, float y, float w, float h, float radius, int color, int cornerMask) {
         int mode = radius > 0 ? MODE_ROUNDED_RECT : MODE_FILL;
-        drawShape(x, y, w, h, color, mode, x, y, w, h, radius, 0, 0f, 0f);
+        drawShape(x, y, w, h, color, mode, x, y, w, h, radius, 0, 0f, 0f, cornerMask);
     }
 
     /**
@@ -370,20 +428,32 @@ public class AporiaRenderer {
     private void drawShape(float x, float y, float w, float h, int color,
                            int mode, float bx, float by, float bw, float bh,
                            float radius, int borderMode, float thickness, float fadeCorner) {
+        drawShape(x, y, w, h, color, mode, bx, by, bw, bh, radius, borderMode, thickness, fadeCorner, 15);
+    }
+
+    private void drawShape(float x, float y, float w, float h, int color,
+                           int mode, float bx, float by, float bw, float bh,
+                           float radius, int borderMode, float thickness, float fadeCorner, int cornerMask) {
         draw(new float[][]{
                 {x,   y+h}, {x+w, y+h}, {x+w, y},
                 {x,   y+h}, {x+w, y  }, {x,   y}
-        }, color, mode, bx, by, bw, bh, radius, borderMode, thickness, fadeCorner);
+        }, color, mode, bx, by, bw, bh, radius, borderMode, thickness, fadeCorner, cornerMask);
     }
 
     private void draw(float[][] verts, int color, int mode,
                       float bx, float by, float bw, float bh, float radius) {
-        draw(verts, color, mode, bx, by, bw, bh, radius, 0, 0f, 0f);
+        draw(verts, color, mode, bx, by, bw, bh, radius, 0, 0f, 0f, 15);
     }
 
     private void draw(float[][] verts, int color, int mode,
                       float bx, float by, float bw, float bh, float radius,
                       int borderMode, float thickness, float fadeCorner) {
+        draw(verts, color, mode, bx, by, bw, bh, radius, borderMode, thickness, fadeCorner, 15);
+    }
+
+    private void draw(float[][] verts, int color, int mode,
+                      float bx, float by, float bw, float bh, float radius,
+                      int borderMode, float thickness, float fadeCorner, int cornerMask) {
         Minecraft mc = Minecraft.getInstance();
         var window    = mc.getWindow();
         var colorView = mc.getMainRenderTarget().getColorTextureView();
@@ -408,10 +478,10 @@ public class AporiaRenderer {
                 mesh.vertexBuffer()
         );
         var shapeBuf = device.createBuffer(() -> "aporia:shape", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 64L);
-        var bb = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder());
+        var bb = ByteBuffer.allocateDirect(128).order(ByteOrder.nativeOrder());
         bb.putFloat(bx); bb.putFloat(by); bb.putFloat(bw); bb.putFloat(bh);
         bb.putFloat(radius); bb.putFloat(1.0f); bb.putFloat(mode); bb.putFloat((float) borderMode);
-        bb.putFloat(thickness); bb.putFloat(fadeCorner); bb.putFloat(0f); bb.putFloat(0f);
+        bb.putFloat(thickness); bb.putFloat(fadeCorner); bb.putFloat(0f); bb.putFloat((float) cornerMask);
         bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
         bb.flip();
         encoder.writeToBuffer(shapeBuf.slice(), bb);
@@ -743,11 +813,12 @@ public class AporiaRenderer {
         var vertexGpu = device.createBuffer(() -> "aporia:img_rounded_vbo",
                 GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, mesh.vertexBuffer());
         var shapeBuf = device.createBuffer(() -> "aporia:img_shape_ubo",
-                GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 64L);
-        var bb = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder());
+                GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 128L);
+        var bb = ByteBuffer.allocateDirect(128).order(ByteOrder.nativeOrder());
         bb.putFloat(x); bb.putFloat(y); bb.putFloat(w); bb.putFloat(h);
         bb.putFloat(radius); bb.putFloat(1.0f); bb.putFloat(MODE_ROUNDED_RECT); bb.putFloat(0f);
-        bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(1.0f);
+        bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(15f);
+        bb.putFloat(1.0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
         bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
         bb.flip();
         encoder.writeToBuffer(shapeBuf.slice(), bb);

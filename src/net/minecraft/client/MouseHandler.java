@@ -97,6 +97,15 @@ public class MouseHandler {
                     double d1 = this.getScaledYPos(window);
                     Screen screen = this.minecraft.screen;
                     MouseButtonEvent mousebuttonevent = new MouseButtonEvent(d0, d1, mousebuttoninfo);
+                    
+                    // Post MouseClickEvent to EventBus
+                    so.aporia.utils.events.EventBus.INSTANCE.post(
+                        new so.aporia.utils.events.impl.MouseClickEvent(
+                            d0, d1, mousebuttoninfo.button(),
+                            flag ? so.aporia.utils.events.impl.MouseClickEvent.Action.PRESS : so.aporia.utils.events.impl.MouseClickEvent.Action.RELEASE
+                        )
+                    );
+                    
                     if (flag) {
                         screen.afterMouseAction();
 

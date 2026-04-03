@@ -444,7 +444,13 @@ public class AporiaChatScreen extends ChatScreen {
     private net.minecraft.network.chat.Style hoveredStyle   = null;
     private int                              hoveredLineIdx  = -1;
 
-    public AporiaChatScreen(String initial, boolean isDraft) { super(initial, isDraft); }
+    public AporiaChatScreen(String initial, boolean isDraft) { 
+        // Если initial содержит только одну букву (например "T" от нажатия клавиши), очищаем его
+        if (initial != null && initial.length() == 1 && Character.isLetter(initial.charAt(0))) {
+            initial = "";
+        }
+        super(initial, isDraft); 
+    }
 
     private WinCfg cfg() { return WinMgr.I.get(); }
 
@@ -951,6 +957,8 @@ public class AporiaChatScreen extends ChatScreen {
         EventBus.INSTANCE.post(new MouseScrollEvent(mx, my, dx, dy));
         if (edit.onScroll(mx, my, dy)) return true;
         if (commandSuggestions.mouseScrolled(dy)) return true;
+
+        // Проверяем скролл для активного окна
         WinCfg c = cfg();
         int bx = boxX(), by = boxY(), bw = boxW(), bh = boxH();
         if (mx >= bx && mx <= bx+bw && my >= by && my <= by+bh) {
@@ -958,6 +966,20 @@ public class AporiaChatScreen extends ChatScreen {
             setScrollOffset(c, c.scrollOffset + delta);
             return true;
         }
+
+        // Проверяем скролл для неактивных окон
+        for (int i = 0; i < WinMgr.I.wins.size(); i++) {
+            if (i == WinMgr.I.active) continue;
+            WinCfg w = WinMgr.I.wins.get(i);
+            resolvePosition(w, i);
+            int wx = w.x, wy = this.height - w.bottomY - w.h, ww = w.w, wh = w.h;
+            if (mx >= wx && mx <= wx+ww && my >= wy && my <= wy+wh) {
+                int delta = (dy > 0 ? 1 : -1);
+                setScrollOffset(w, w.scrollOffset + delta);
+                return true;
+            }
+        }
+
         return false;
     }
 

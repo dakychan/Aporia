@@ -7,6 +7,7 @@ import so.aporia.module.ModuleManager;
 import so.aporia.utils.events.EventBus;
 import so.aporia.utils.events.EventHandler;
 import so.aporia.utils.events.impl.KeyInputEvent;
+import so.aporia.utils.events.impl.MouseClickEvent;
 import so.aporia.utils.user.render.ui.clickgui.ClickGuiScreen;
 
 public final class KeybindManager {
@@ -37,6 +38,22 @@ public final class KeybindManager {
         if (screen == null) {
             for (Module m : ModuleManager.INSTANCE.getAll()) {
                 if (m.keybind() != -1 && m.keybind() == e.scancode()) {
+                    m.toggle();
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onMouseClick(MouseClickEvent e) {
+        if (e.action() != MouseClickEvent.Action.PRESS) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        Screen screen = mc.screen;
+
+        if (screen == null) {
+            for (Module m : ModuleManager.INSTANCE.getAll()) {
+                if (m.keybind() != -1 && m.keybind() == e.button()) {
                     m.toggle();
                 }
             }
