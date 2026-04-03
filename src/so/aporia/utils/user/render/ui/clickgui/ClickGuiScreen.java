@@ -58,7 +58,6 @@ public final class ClickGuiScreen extends Screen {
     @Override
     public void render(GuiGraphics gfx, int mx, int my, float delta) {
         AporiaRenderer r = AporiaRenderer.INSTANCE;
-        r.prepareFrameBlur(Minecraft.getInstance(), 30f, 0.75f);
 
         px = Math.max(0, Math.min(px, this.width  - pw));
         py = Math.max(0, Math.min(py, this.height - ph));
@@ -74,16 +73,23 @@ public final class ClickGuiScreen extends Screen {
         int scaledX = ipx + (ipw - scaledW) / 2;
         int scaledY = ipy + (iph - scaledH) / 2;
 
-        r.drawRect(scaledX, scaledY, scaledW, scaledH, 16, ColorUtil.rgba(30, 30, 35, 255));
-
         // Topbar background with rounded top corners and animation
         int topbarH = 28;
+        int secondTopbarH = 28;
         int scaledTopbarW = (int)(ipw * scale);
         int scaledTopbarX = ipx + (ipw - scaledTopbarW) / 2;
         int scaledTopbarY = ipy + (iph - scaledH) / 2;
+
+        // Draw main rect
+        r.drawRect(scaledX, scaledY, scaledW, scaledH, 16, ColorUtil.rgba(30, 30, 35, 255));
+
         // cornerMask: bit 0=top-left, 1=top-right, 2=bottom-right, 3=bottom-left
         // For top corners only: 0b0011 = 3
         r.drawRect(scaledTopbarX, scaledTopbarY, scaledTopbarW, topbarH, 16, ColorUtil.rgba(20, 20, 25, 255), 3);
+
+        // Second topbar (content header) with lighter color - same width scale as first, but full height
+        int secondTopbarY = scaledTopbarY + topbarH;
+        r.drawRect(scaledTopbarX, secondTopbarY, scaledTopbarW, secondTopbarH, 0, ColorUtil.rgba(50, 50, 55, 255));
 
         if (!profileImageTried) {
             profileImageTried = true;
@@ -123,7 +129,7 @@ public final class ClickGuiScreen extends Screen {
         r.drawRect(tasksPanelX, tasksPanelY, tasksPanelW, tasksPanelH, 3, ColorUtil.rgba(40, 40, 45, 255));
 
         String tasksText = LocaleManager.getInstance().get("gui.tasks");
-        r.drawText("regular", tasksText, (float)tasksPanelX + 2, (float)tasksPanelY + (tasksPanelH - 9) / 2f, 9f, ColorUtil.rgba(255, 255, 255, 200));
+        r.drawText("bold", tasksText, (float)tasksPanelX + 2, (float)tasksPanelY + (tasksPanelH - 9) / 2f, 9f, ColorUtil.rgba(255, 255, 255, 200));
 
         Identifier avatarImg = profileImageId != null ? profileImageId : UNKNOWN_USER_RL;
         int avatarW = 33;
@@ -137,9 +143,9 @@ public final class ClickGuiScreen extends Screen {
         r.drawRect(statsPanelX, statsPanelY, statsPanelW, statsPanelH, 3, ColorUtil.rgba(40, 40, 45, 255));
 
         String statsText = LocaleManager.getInstance().get("gui.stats");
-        float statsTextWidth = r.getTextWidth("regular", statsText, 9f);
-        float statsTextX = statsPanelX + (statsPanelW - statsTextWidth) / 2f + 6;
-        r.drawText("regular", statsText, statsTextX, (float)statsPanelY + (tasksPanelH - 9) / 2f, 9f, ColorUtil.rgba(255, 255, 255, 200));
+        float statsTextWidth = r.getTextWidth("bold", statsText, 9f);
+        float statsTextX = statsPanelX + (statsPanelW - statsTextWidth) / 2f + 8;
+        r.drawText("bold", statsText, statsTextX, (float)statsPanelY + (tasksPanelH - 9) / 2f, 9f, ColorUtil.rgba(255, 255, 255, 200));
 
         Identifier statsIconId = Identifier.fromNamespaceAndPath("aporia", "texture/statsistic.png");
         int statsIconW = 14;
@@ -153,13 +159,51 @@ public final class ClickGuiScreen extends Screen {
         r.drawRect(configPanelX, configPanelY, configPanelW, configPanelH, 3, ColorUtil.rgba(40, 40, 45, 255));
 
         String configText = LocaleManager.getInstance().get("gui.config");
-        float configTextWidth = r.getTextWidth("regular", configText, 9f);
+        float configTextWidth = r.getTextWidth("bold", configText, 9f);
         float configTextX = configPanelX + (configPanelW - configTextWidth) / 2f + 5;
-        r.drawText("regular", configText, configTextX, (float)configPanelY + (configPanelH - 9) / 2f, 9f, ColorUtil.rgba(255, 255, 255, 200));
+        r.drawText("bold", configText, configTextX, (float)configPanelY + (configPanelH - 9) / 2f, 9f, ColorUtil.rgba(255, 255, 255, 200));
 
         Identifier configIconId = Identifier.fromNamespaceAndPath("aporia", "texture/config.png");
         int configIconW = 14;
         r.drawImage(configPanelX + 2, configPanelY + 3, configIconW, configPanelH - 6, configIconId, 2);
+
+        // Documentation panel on the right of second topbar
+        int documPanelW = 90;
+        int documPanelH = 20;
+        int documPanelX = scaledTopbarX + scaledTopbarW - documPanelW - 8;
+        int documPanelY = secondTopbarY + 4;
+
+        r.drawRect(documPanelX, documPanelY, documPanelW, documPanelH, 3, ColorUtil.rgba(40, 40, 45, 255));
+
+        Identifier documIconId = Identifier.fromNamespaceAndPath("aporia", "texture/docum.png");
+        int documIconW = 14;
+        r.drawImage(documPanelX + 2, documPanelY + 3, documIconW, documPanelH - 6, documIconId, 2);
+
+        String documText = LocaleManager.getInstance().get("gui.docum");
+        float documTextWidth = r.getTextWidth("bold", documText, 9f);
+        float documTextX = documPanelX + (documPanelW - documTextWidth) / 2f + 5;
+        r.drawText("bold", documText, documTextX, (float)documPanelY + (documPanelH - 9) / 2f, 9f, ColorUtil.rgba(255, 255, 255, 200));
+
+        // Language selector - show current language flag
+        int langIconSize = 16;
+        int langPanelW = 24;
+        int langPanelH = 20;
+        int langPanelX = documPanelX - langPanelW - 8;
+        int langPanelY = secondTopbarY + 4;
+
+        r.drawRect(langPanelX, langPanelY, langPanelW, langPanelH, 3, ColorUtil.rgba(40, 40, 45, 255));
+
+        String currentLang = LocaleManager.getInstance().getCurrentLang();
+        String flagTexture = switch (currentLang) {
+            case "ru_RU" -> "texture/russia.png";
+            case "ch_CH" -> "texture/china.png";
+            default -> "texture/usa.png";
+        };
+
+        Identifier flagIconId = Identifier.fromNamespaceAndPath("aporia", flagTexture);
+        int flagX = langPanelX + (langPanelW - langIconSize) / 2;
+        int flagY = langPanelY + (langPanelH - langIconSize) / 2;
+        r.drawImage(flagX, flagY, langIconSize, langIconSize, flagIconId, 2);
     }
 
     public int getActiveCategory() {
