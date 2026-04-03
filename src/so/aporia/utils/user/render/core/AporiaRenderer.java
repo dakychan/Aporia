@@ -59,6 +59,7 @@ public class AporiaRenderer {
     private GpuBuffer cachedRectShapeBuffer;
     private static final long RECT_VERTEX_BUFFER_SIZE = 256L;
     private static final long RECT_SHAPE_BUFFER_SIZE = 128L;
+    private RenderDispatcher dispatcher = new RenderDispatcher();
 
     public void init() {
         pipeline = RenderPipeline.builder()
