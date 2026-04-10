@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025-2026 BEVoid Project
+ * Distributed under the BEVoid Software License Agreement v1.0
+ * See LICENSE and COPYRIGHT files in the project root for full text.
+ */
+
 package so.aporia.utils;
 
 /**

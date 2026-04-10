@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025-2026 BEVoid Project
+ * Distributed under the BEVoid Software License Agreement v1.0
+ * See LICENSE and COPYRIGHT files in the project root for full text.
+ */
+
 package so.aporia.utils.user.render.ui.clickgui;
 
 import net.minecraft.client.Minecraft;
@@ -96,7 +102,7 @@ public class SettingsPopup {
         int scaledX = px + (POPUP_W - scaledW) / 2;
         int scaledY = py + (popupH - scaledH) / 2;
         
-        r.drawRectBlurred(scaledX, scaledY, scaledW, scaledH, R, C_BG, 8f);
+        // r.drawRectBlurred(scaledX, scaledY, scaledW, scaledH, R, C_BG, 8f);
         r.drawStroke(scaledX, scaledY, scaledW, scaledH, R, 1f, 1, 0f, C_BORDER_OUT);
         r.drawStroke(scaledX + 1, scaledY + 1, scaledW - 2, scaledH - 2, R - 1, 1f, 1, 0f, C_BORDER_IN);
         
@@ -198,7 +204,7 @@ public class SettingsPopup {
             selectAnim.update();
             float selectProg = selectAnim.value();
             int bgAlpha = (int)(120 + selectProg * 80);
-            r.drawRectBlurred(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(30, 30, 50, bgAlpha), 15f);
+            // r.drawRectBlurred(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(30, 30, 50, bgAlpha), 15f);
             r.drawText("regular", displayText, valueX + 6, valueY + (valueH - 9) / 2f + 1, 8f, ColorUtil.rgba(255, 255, 255, 200));
         } else if (s instanceof TextSetting ts) {
             r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, C_TXT);
@@ -218,7 +224,7 @@ public class SettingsPopup {
             } catch (IllegalAccessException ignored) {}
             
             int bgColor = isFocused ? ColorUtil.rgba(40, 60, 100, 180) : ColorUtil.rgba(30, 30, 50, 150);
-            r.drawRectBlurred(inputX, inputY, inputW, inputH, 4, bgColor, 15f);
+            // r.drawRectBlurred(inputX, inputY, inputW, inputH, 4, bgColor, 15f);
             
             String text = ts.get().isEmpty() ? "..." : ts.get();
             int textColor = isFocused ? ColorUtil.rgba(255, 255, 255, 255) : ColorUtil.rgba(255, 255, 255, ts.get().isEmpty() ? 100 : 200);
@@ -266,7 +272,7 @@ public class SettingsPopup {
             } catch (IllegalAccessException ignored) {}
             
             int bgColor = isBound ? ColorUtil.rgba(40, 60, 100, 180) : ColorUtil.rgba(30, 30, 50, 150);
-            r.drawRectBlurred(keyX, keyY, keyW, keyH, 4, bgColor, 15f);
+            // r.drawRectBlurred(keyX, keyY, keyW, keyH, 4, bgColor, 15f);
             String keyName = bs2.isBound() ? keyName(bs2.getKey()) : "None";
             
             int keyWidth = (int) r.getTextWidth("regular", keyName, 8f);
@@ -316,7 +322,7 @@ public class SettingsPopup {
             multiAnim.update();
             float multiProg = multiAnim.value();
             int bgAlpha = (int)(120 + multiProg * 80);
-            r.drawRectBlurred(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(30, 30, 50, bgAlpha), 15f);
+            // r.drawRectBlurred(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(30, 30, 50, bgAlpha), 15f);
             
             String selected = displayText.isEmpty() ? "None" : displayText;
             r.drawText("regular", selected, valueX + 6, valueY + (valueH - 9) / 2f + 1, 7f, ColorUtil.rgba(255, 255, 255, 200));
@@ -361,7 +367,7 @@ public class SettingsPopup {
                         if (mx >= cx && mx < cx + cw && my >= y && my < y + LINE_H) {
                             if (s instanceof BindSetting bs2) {
                                 bs2.setKey(2);  // 2 = MOUSE3 (колесико)
-                                so.aporia.utils.files.impl.ConfigFile.markModuleModified(module);
+                                // so.aporia.utils.files.impl.ConfigFile.markModuleModified(module);
                                 return true;
                             }
                             return false;
@@ -436,7 +442,7 @@ public class SettingsPopup {
                 if (mx >= cx && mx < cx + cw && my >= y && my < y + LINE_H) {
                     if (s instanceof BooleanSetting bs) {
                         bs.toggle();
-                        so.aporia.utils.files.impl.ConfigFile.markModuleModified(module);
+                        // so.aporia.utils.files.impl.ConfigFile.markModuleModified(module);
                         boolFlashTime.put(s, System.currentTimeMillis());
                         Animator toggleAnim = boolToggleAnims.get(s);
                         if (toggleAnim != null) {
@@ -452,7 +458,7 @@ public class SettingsPopup {
                         if (button == 0) {
                             int idx = ss.getSelectedIndex();
                             ss.setSelectedIndex((idx + 1) % ss.getOptions().size());
-                            so.aporia.utils.files.impl.ConfigFile.markModuleModified(module);
+                            // so.aporia.utils.files.impl.ConfigFile.markModuleModified(module);
                             Animator anim = selectAnims.get(s);
                             if (anim != null) {
                                 anim.reset();
@@ -472,7 +478,7 @@ public class SettingsPopup {
                                 int idx = opts.indexOf(currentVal);
                                 String next = opts.get((idx + 1) % opts.size());
                                 mss.setSelected(java.util.Arrays.asList(next));
-                                so.aporia.utils.files.impl.ConfigFile.markModuleModified(module);
+                                // so.aporia.utils.files.impl.ConfigFile.markModuleModified(module);
                                 Animator anim = multiSelectAnims.get(s);
                                 if (anim != null) {
                                     anim.reset();
@@ -486,7 +492,7 @@ public class SettingsPopup {
                         }
                     } else if (s instanceof ButtonSetting btn) {
                         btn.click();
-                        so.aporia.utils.files.impl.ConfigFile.markModuleModified(module);
+                        // so.aporia.utils.files.impl.ConfigFile.markModuleModified(module);
                     } else if (s instanceof TextSetting ts) {
                         textEditingField = f;
                         textEditingModule = module;
@@ -545,7 +551,7 @@ public class SettingsPopup {
                     textEditingField.setAccessible(true);
                     TextSetting ts = (TextSetting) textEditingField.get(textEditingModule);
                     ts.backspace();
-                    so.aporia.utils.files.impl.ConfigFile.markModuleModified(textEditingModule);
+                    // so.aporia.utils.files.impl.ConfigFile.markModuleModified(textEditingModule);
                     return true;
                 } catch (IllegalAccessException ignored) {}
             } else {
@@ -566,7 +572,7 @@ public class SettingsPopup {
                         }
                         
                         ts.appendChar(c);
-                        so.aporia.utils.files.impl.ConfigFile.markModuleModified(textEditingModule);
+                        // so.aporia.utils.files.impl.ConfigFile.markModuleModified(textEditingModule);
                         return true;
                     } catch (IllegalAccessException ignored) {}
                 }
@@ -577,7 +583,7 @@ public class SettingsPopup {
                 bindingField.setAccessible(true);
                 BindSetting bs = (BindSetting) bindingField.get(bindingModule);
                 bs.setKey(scancode);
-                so.aporia.utils.files.impl.ConfigFile.markModuleModified(bindingModule);
+                // so.aporia.utils.files.impl.ConfigFile.markModuleModified(bindingModule);
                 bindingField = null;
                 bindingModule = null;
                 return true;
@@ -593,7 +599,7 @@ public class SettingsPopup {
                 TextSetting ts = (TextSetting) textEditingField.get(textEditingModule);
                 if (c >= 32 && c < 127) {
                     ts.appendChar(c);
-                    so.aporia.utils.files.impl.ConfigFile.markModuleModified(textEditingModule);
+                    // so.aporia.utils.files.impl.ConfigFile.markModuleModified(textEditingModule);
                     return true;
                 }
             } catch (IllegalAccessException ignored) {}
@@ -625,7 +631,7 @@ public class SettingsPopup {
             int menuW = 80;
             int menuH = options.size() * itemH + 4;
             
-            r.drawRectBlurred(x, y, menuW, menuH, 4, ColorUtil.rgba(20, 22, 35, 200), 8f);
+            // r.drawRectBlurred(x, y, menuW, menuH, 4, ColorUtil.rgba(20, 22, 35, 200), 8f);
             r.drawStroke(x, y, menuW, menuH, 4, 1f, 1, 0f, ColorUtil.rgba(255, 255, 255, 40));
             
             for (int i = 0; i < options.size(); i++) {
@@ -646,7 +652,7 @@ public class SettingsPopup {
             int idx = (my - popup.optionsMenuY - 2) / itemH;
             if (idx >= 0 && idx < options.size()) {
                 ss.setSelectedIndex(idx);
-                so.aporia.utils.files.impl.ConfigFile.markModuleModified(popup.module);
+                // so.aporia.utils.files.impl.ConfigFile.markModuleModified(popup.module);
                 return true;
             }
             return false;
@@ -664,7 +670,7 @@ public class SettingsPopup {
             int idx = (my - popup.optionsMenuY - 2) / itemH;
             if (idx >= 0 && idx < options.size()) {
                 mss.setSelected(java.util.Arrays.asList(options.get(idx)));
-                so.aporia.utils.files.impl.ConfigFile.markModuleModified(popup.module);
+                // so.aporia.utils.files.impl.ConfigFile.markModuleModified(popup.module);
                 return true;
             }
             return false;

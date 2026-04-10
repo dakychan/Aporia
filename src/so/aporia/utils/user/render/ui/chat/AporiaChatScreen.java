@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025-2026 BEVoid Project
+ * Distributed under the BEVoid Software License Agreement v1.0
+ * See LICENSE and COPYRIGHT files in the project root for full text.
+ */
+
 package so.aporia.utils.user.render.ui.chat;
 
 import net.minecraft.client.GuiMessage;
@@ -432,7 +438,6 @@ public class AporiaChatScreen extends ChatScreen {
     private EditBox searchBox;
     private final CtxMenu   ctx  = new CtxMenu();
     private final EditPanel edit = new EditPanel();
-    private final ConfigMenu configMenu = new ConfigMenu();
     private int     editingField = -1;
     private EditBox fieldBox;
     private Handle  dragging = Handle.NONE;
@@ -459,7 +464,6 @@ public class AporiaChatScreen extends ChatScreen {
         if (mc.screen instanceof AporiaChatScreen screen) {
             int x = 350;
             int y = 300;
-            screen.configMenu.open(x, y, mc.getWindow().getWidth(), mc.getWindow().getHeight());
         }
     }
 
@@ -594,10 +598,6 @@ public class AporiaChatScreen extends ChatScreen {
         if (ctx.visible) {
             gfx.fill(0, 0, this.width, this.height, ColorUtil.rgba(0, 0, 0, 100));
             ctx.render(gfx, this.font, WinMgr.I.wins.size());
-        }
-        
-        if (configMenu.isVisible()) {
-            configMenu.render(gfx, this.font);
         }
         
         if (edit.visible) {
@@ -834,10 +834,6 @@ public class AporiaChatScreen extends ChatScreen {
             }
             edit.close();
             return true;
-        }
-
-        if (configMenu.isVisible()) {
-            if (configMenu.onClick(mx, my)) return true;
         }
 
         if (ctx.visible) {

@@ -1,10 +1,14 @@
+/*
+ * Copyright (c) 2025-2026 BEVoid Project
+ * Distributed under the BEVoid Software License Agreement v1.0
+ * See LICENSE and COPYRIGHT files in the project root for full text.
+ */
+
 package so.aporia.utils.user.command;
 
 import aporia.cc.PanicSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import so.aporia.utils.user.command.impl.BindCommand;
-import so.aporia.utils.user.command.impl.ConfigCommand;
 import so.aporia.utils.user.command.impl.HelpCommand;
 import so.aporia.utils.user.command.impl.InfoCommand;
 import so.aporia.utils.user.command.impl.PacketCommand;
@@ -44,8 +48,6 @@ public class CommandManager {
         register(new PanicCommand());
         register(new PrefixCommand());
         register(new PacketCommand());
-        register(new BindCommand());
-        register(new ConfigCommand());
     }
 
     /**

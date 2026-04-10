@@ -1,0 +1,598 @@
+================================================================================
+COPYRIGHT NOTICE AND ATTRIBUTION
+BEVOID PROJECT
+================================================================================
+
+BEVoid Project
+Copyright (c) 2025-2026 BEVoid Project
+
+This document contains the complete copyright notice, attribution guidelines,
+intellectual property declarations, and usage policies for the BEVoid Project.
+
+This is an original document created specifically for the BEVoid Project.
+It is not derived from, based on, or adapted from any template, license, or
+copyright notice of any other project or organization.
+
+================================================================================
+PART I: FUNDAMENTAL DECLARATIONS
+================================================================================
+
+1. ORIGIN AND OWNERSHIP
+
+The BEVoid Project ("the Project") is an original software creation developed
+independently by its Contributors. The Project is not a fork, derivative, or
+adaptation of any pre-existing software project.
+
+All intellectual property in the Project — including source code, object code,
+algorithms, architectures, designs, documentation, trademarks, and creative
+works — is owned by the BEVoid Project collectively, with each individual
+contributor retaining ownership of their specific contributions.
+
+2. INDEPENDENT CREATION
+
+The BEVoid Project was created through original, independent effort. The
+Contributors did not copy, adapt, or derive the Project's core design,
+architecture, or implementation from any other project. Any similarities to
+other projects are coincidental or arise from the use of common programming
+patterns, standards, or conventions.
+
+3. YEAR OF CREATION
+
+The Project was initiated and first developed during the period 2025-2026.
+All copyrights in the Project date from this period.
+
+================================================================================
+PART II: COPYRIGHT HOLDER INFORMATION
+================================================================================
+
+4. PRIMARY COPYRIGHT HOLDERS
+
+The copyright in the BEVoid Project is held by:
+
+  BEVoid Project
+  (collectively, all individuals and entities who have contributed to the Project)
+
+The collective copyright notice for the entire Project is:
+
+  Copyright (c) 2025-2026 BEVoid Project
+
+5. INDIVIDUAL CONTRIBUTOR RIGHTS
+
+Each contributor to the Project:
+
+  a) Retains copyright ownership in their individual contributions
+  b) Grants the Project the permissions set forth in the License Agreement
+  c) May use their own contributions in other projects without restriction
+  d) May not assert copyright claims against users acting under the License
+  e) Remains free to license their contributions elsewhere under different terms
+
+6. JOINT WORKS
+
+Certain portions of the Project may constitute joint works of authorship, where
+multiple Contributors have collaboratively created code that cannot be cleanly
+separated into individual contributions. In such cases:
+
+  a) All contributing authors share ownership of the joint portions
+  b) Any joint owner may exercise the rights granted by the License
+  c) Joint owners agree not to assert claims against each other or the Project
+  d) Joint owners may use the joint portions in their own projects
+
+================================================================================
+PART III: THE BEVOID SOFTWARE LICENSE AGREEMENT
+================================================================================
+
+7. LICENSE IDENTITY
+
+The BEVoid Project is distributed under the BEVoid Software License Agreement,
+Version 1.0 (April 2026). This is a proprietary license agreement created
+specifically for the BEVoid Project.
+
+The full text of the License Agreement is contained in the LICENSE file in
+the Project's root directory.
+
+8. LICENSE PHILOSOPHY
+
+The BEVoid Software License is built on the following principles:
+
+  CONTROL: The Project retains strict control over its distribution and use.
+  RESTRICTION: Commercial use, distribution, and malicious use are prohibited.
+  EDUCATION: Personal and educational use is permitted and encouraged.
+  PROTECTION: Contributors are protected from liability and warranty claims.
+  INDEPENDENCE: The License is original and independent, not derived from any
+                other license or template.
+
+9. KEY PERMISSIONS
+
+Under the License Agreement, You may:
+
+  - Install and use one copy of the Software on a single device
+  - Make one backup copy for archival purposes
+  - View and study the source code for educational purposes
+  - Create modifications strictly for personal use
+
+10. KEY CONDITIONS
+
+To exercise these permissions, You must:
+
+  - Use the Software only for Authorized Purposes (personal, educational)
+  - Not distribute the Software or any Derivative Work
+  - Not use the Software for any Commercial Use
+  - Not use the Software for any Malicious Use
+  - Preserve all copyright notices and proprietary markings
+  - Comply with all terms and conditions of the License Agreement
+
+11. NO WARRANTY
+
+The Software is provided without any warranty or guarantee. The Project makes
+no promises about quality, reliability, security, or fitness for any purpose.
+You use the Software entirely at your own risk.
+
+12. NO LIABILITY
+
+The Project is not liable for any damages, losses, or consequences arising
+from your use of the Software. You bear full responsibility for all outcomes.
+
+================================================================================
+PART IV: WHAT YOU CANNOT DO
+================================================================================
+
+13. THINGS EXPRESSLY PROHIBITED
+
+The following actions are not permitted under the License Agreement:
+
+  a) DISTRIBUTE: You may not distribute the Software or any Derivative Work,
+     whether in source code or object code form, by any means.
+
+  b) COMMERCIALIZE: You may not use the Software for any commercial purpose,
+     including sale, licensing, advertising revenue, or paid services.
+
+  c) HARM: You may not use the Software to create malware, conduct unauthorized
+     access, perform phishing attacks, or circumvent security measures.
+
+  d) COMPETE: You may not reverse engineer the Software for the purpose of
+     creating competing products or services.
+
+  e) REMOVE NOTICES: You may not remove, obscure, or alter any copyright,
+     trademark, or attribution notices in the Software.
+
+  f) CIRCUMVENT: You may not circumvent any technical measures implemented
+     in the Software to control access, use, or copying.
+
+  g) AUTOMATE: You may not use automated means to access, scrape, or harvest
+     data from the Software without explicit authorization.
+
+  h) IMPERSONATE: You may not impersonate the Project or misrepresent your
+     relationship with the Project.
+
+  i) HARM REPUTATION: You may not use the Software in any manner that could
+     damage, discredit, or harm the reputation of the Project.
+
+  j) FORK: You may not create or maintain a fork of the Software for public
+     or private distribution.
+
+14. TRADEMARK RESTRICTIONS
+
+The following names and marks are reserved by the BEVoid Project:
+
+  - "BEVoid"
+  - "BEVoid Project"
+  - Any logos, icons, or visual branding associated with the Project
+
+You may not register, claim ownership of, or use these marks in a way that
+could confuse users about the origin or official status of the Software.
+
+================================================================================
+PART V: CONTRIBUTION POLICY
+================================================================================
+
+15. CONTRIBUTING TO THE PROJECT
+
+When You contribute to the BEVoid Project (by submitting code, documentation,
+bug reports, design suggestions, or any other material), You agree to the
+following:
+
+  a) OWNERSHIP: You retain ownership of Your contribution. You do not transfer
+     copyright to the Project or any other entity.
+
+  b) LICENSE: Your contribution is subject to the terms of the License
+     Agreement. You grant the Project the right to use, modify, and
+     distribute Your contribution as part of the Software.
+
+  c) ORIGINALITY: You represent that Your contribution is Your original work
+     or that You have the right to contribute it. You have not copied or
+     misappropriated anyone else's work.
+
+  d) AUTHORITY: You have the legal right to contribute the material. If Your
+     contribution was created during employment, You have obtained any
+     necessary permissions from Your employer.
+
+  e) NO REVERSAL: Once Your contribution is merged into the Project, You may
+     not demand its removal. The contribution becomes part of the Project
+     and is governed by the License Agreement in perpetuity.
+
+  f) FEEDBACK OWNERSHIP: Any feedback, suggestions, or improvements You
+     provide become the exclusive property of the Project without
+     compensation to You.
+
+16. WHAT CONSTITUTES A CONTRIBUTION
+
+Contributions include but are not limited to:
+
+  - Source code changes (features, bug fixes, refactoring)
+  - Documentation updates and additions
+  - Design proposals and architectural suggestions
+  - Test cases and testing infrastructure
+  - Build scripts and tooling
+  - Translations and localization
+  - Bug reports and issue descriptions
+  - Code reviews and feedback
+  - Community support and mentoring
+
+17. CONTRIBUTOR RECOGNITION
+
+Contributors to the BEVoid Project are recognized through:
+
+  - Git commit history (the primary record of contributions)
+  - Contributor lists in project documentation
+  - Release notes for significant contributions
+  - Project website or repository README (if maintained)
+  - Acknowledgments in project communications
+
+================================================================================
+PART VI: DERIVATIVE WORKS AND FORKS
+================================================================================
+
+18. CREATING DERIVATIVE WORKS
+
+You may create derivative works based on the BEVoid Project strictly for
+personal use only. A derivative work includes any software that:
+
+  - Incorporates code from the Project
+  - Is based on the Project's architecture or design
+  - Extends, adapts, or modifies the Project
+  - Links to or imports the Project's code
+
+19. OBLIGATIONS FOR DERIVATIVE WORKS
+
+Any Derivative Work you create:
+
+  a) Is subject to the License Agreement
+  b) May not be Distributed to any third party
+  c) May not be used for Commercial Use
+  d) Must include prominent notice stating it is based on BEVoid
+  e) Must include a copy of the License Agreement
+
+You retain no independent rights in Derivative Works beyond those granted
+in the License Agreement.
+
+20. FORKING THE PROJECT
+
+You are prohibited from creating or maintaining a fork of the Software for
+public or private distribution. The License Agreement expressly forbids
+forking for distribution purposes.
+
+================================================================================
+PART VII: SECURITY AND RESPONSIBLE DISCLOSURE
+================================================================================
+
+21. SECURITY EXPECTATIONS
+
+The BEVoid Project has not undergone formal security auditing. The Software
+may contain vulnerabilities. Users should:
+
+  - Conduct their own security assessments
+  - Not assume the Software is secure for any purpose
+  - Implement additional security measures as needed
+  - Monitor for security updates and advisories
+
+22. REPORTING VULNERABILITIES
+
+If You discover a security vulnerability in the BEVoid Project:
+
+  DO:
+  - Report it privately to the Project maintainers
+  - Provide sufficient detail to understand and reproduce the issue
+  - Allow reasonable time for the maintainers to develop a fix
+  - Follow up to confirm the fix addresses the issue
+
+  DO NOT:
+  - Publicly disclose the vulnerability before a fix is available
+  - Exploit the vulnerability for personal gain or harm
+  - Report the vulnerability in public issue trackers or forums
+  - Share details with third parties without maintainer consent
+
+23. DISCLOSURE TIMELINE
+
+The Project aims to follow this timeline for vulnerability response:
+
+  - Acknowledge receipt: Within 48 hours
+  - Assess severity: Within 7 days
+  - Develop and test fix: Within 30-90 days (depending on severity)
+  - Publish fix and advisory: As soon as practicable
+  - Public disclosure: After fix is available and users have had time to update
+
+24. ACKNOWLEDGMENT
+
+Security researchers who report vulnerabilities responsibly will be
+acknowledged in the Project's security advisories (unless they prefer to
+remain anonymous).
+
+================================================================================
+PART VIII: GOVERNANCE AND DECISION-MAKING
+================================================================================
+
+25. PROJECT GOVERNANCE
+
+The BEVoid Project is governed by its Contributors through a structured
+governance model:
+
+  a) PROJECT OWNERS: Individuals with ultimate authority over the Project.
+     They make final decisions on direction, licensing, and major changes.
+
+  b) MAINTAINERS: Individuals with write access to the repository. They
+     review and merge contributions, manage releases, and guide development.
+
+  c) CONTRIBUTORS: Anyone who has submitted contributions to the Project.
+     They participate in discussions, propose changes, and review work.
+
+  d) USERS: Anyone who uses the Software. They report issues, request
+     features, and provide feedback. Users may become Contributors by
+     submitting work.
+
+26. HOW DECISIONS ARE MADE
+
+Decisions about the Project's direction, features, and policies are made
+through:
+
+  a) Proposal: Changes are proposed through issues or pull requests.
+  b) Discussion: Contributors discuss the proposal and provide feedback.
+  c) Review: Maintainers review the proposal for technical merit and
+     alignment with Project goals.
+  d) Decision: Project Owners make the final decision, informed by
+     community input.
+
+27. CODE OF CONDUCT
+
+All participants in the BEVoid Project community are expected to:
+
+  - Treat others with respect and dignity
+  - Use inclusive and welcoming language
+  - Be constructive and helpful in feedback
+  - Focus on ideas and code, not personalities
+  - Accept criticism gracefully and learn from mistakes
+  - Support and mentor newer contributors
+
+Unacceptable behavior includes harassment, discrimination, threats, abuse,
+and any other conduct that undermines the community's well-being.
+
+Reports of unacceptable behavior should be directed to the Project maintainers,
+who will investigate and respond appropriately.
+
+================================================================================
+PART IX: DATA, PRIVACY, AND TRANSPARENCY
+================================================================================
+
+28. DATA COLLECTION
+
+The BEVoid Project itself does not collect, store, or transmit personal data
+beyond what is inherently part of the software development process:
+
+  - Git commit metadata (name, email, timestamp)
+  - Issue and pull request discussions
+  - Project communication (comments, reviews, discussions)
+
+All such data is publicly visible through the Project's repository.
+
+29. PRIVACY CONSIDERATIONS
+
+Contributors and users should be aware that:
+
+  - Their Git commit information is publicly visible
+  - Their contributions and discussions are publicly visible
+  - Their GitHub (or other platform) profile information may be visible
+
+If You prefer privacy, consider:
+
+  - Using a separate email address for Git commits
+  - Configuring Git to use a noreply email address
+  - Reviewing Your public profile settings
+  - Limiting personal information in public discussions
+
+30. THIRD-PARTY SERVICES
+
+The Project may use third-party services for development and collaboration
+(e.g., GitHub, CI/CD platforms, package registries). These services have
+their own privacy policies and terms of service. The Project is not responsible
+for the data practices of these services.
+
+================================================================================
+PART X: COMPLIANCE AND LEGAL CONSIDERATIONS
+================================================================================
+
+31. YOUR COMPLIANCE RESPONSIBILITIES
+
+You are responsible for ensuring that your use of the BEVoid Project complies
+with all applicable laws and regulations in your jurisdiction, including but
+not limited to:
+
+  - Export control laws and trade sanctions
+  - Data protection and privacy regulations
+  - Intellectual property laws
+  - Industry-specific regulations
+  - Criminal laws and regulations
+
+If You are unsure about the legal implications of your use, consult qualified
+legal counsel.
+
+32. EXPORT CONTROL
+
+The Software may be subject to export control restrictions in various
+jurisdictions. You must not export, re-export, or transfer the Software in
+violation of applicable export control laws.
+
+33. NO LEGAL ADVICE
+
+Nothing in the BEVoid Project's documentation, communications, or code
+constitutes legal advice. The Project maintainers are software developers,
+not attorneys. If You have legal questions, consult a qualified attorney.
+
+================================================================================
+PART XI: PROJECT SUSTAINABILITY
+================================================================================
+
+34. SUSTAINABILITY PRINCIPLES
+
+The BEVoid Project is committed to long-term sustainability:
+
+  a) Technical: The Project should be well-designed, well-tested, and
+     well-documented to ensure its continued relevance and usability.
+
+  b) Community: The Project should maintain a controlled, respectful
+     environment that encourages quality contributions.
+
+  c) Governance: The Project should avoid dependency on any single
+     individual and develop a broad base of active Contributors.
+
+35. INDEPENDENCE
+
+The BEVoid Project is independent and not controlled by, affiliated with, or
+sponsored by any corporation, government, or other organization. The Project's
+direction and priorities are determined by its Project Owners, not by
+external entities.
+
+================================================================================
+PART XII: CHANGES TO THIS DOCUMENT
+================================================================================
+
+36. AMENDMENT RIGHTS
+
+The BEVoid Project reserves the right to amend, update, or revise this
+COPYRIGHT notice at any time. Amendments will:
+
+  a) Be discussed with the community before adoption
+  b) Be documented in the Project's version history
+  c) Apply only to future distributions of the Software
+  d) Not affect the terms under which prior versions were distributed
+
+37. VERSION TRACKING
+
+Changes to this document are tracked in the Project's version control history.
+Each significant change should be noted in the amendment history below.
+
+38. AMENDMENT HISTORY
+
+  Version  | Date        | Description
+  ---------|-------------|---------------------------------------------
+  1.0      | 2025        | Initial copyright notice created
+  1.1      | 2026        | Updated copyright year to 2025-2026;
+           |             | completely rewritten as an original,
+           |             | independent document; aligned with the
+           |             | BEVoid Software License Agreement v1.0;
+           |             | expanded governance, security, and
+           |             | compliance sections
+
+================================================================================
+PART XIII: ACKNOWLEDGMENT AND ACCEPTANCE
+================================================================================
+
+39. WHAT ACCEPTANCE MEANS
+
+By using, copying, modifying, or distributing the BEVoid Project or any
+portion of it, You acknowledge and agree that:
+
+  a) You have read and understood this COPYRIGHT notice and the License
+     Agreement.
+  b) You agree to be bound by the terms of the License Agreement.
+  c) You understand that the Software is provided without warranty.
+  d) You understand that the Project is not liable for any damages.
+  e) You will not distribute the Software or any Derivative Work.
+  f) You will not use the Software for Commercial Use or Malicious Use.
+  g) You will comply with applicable laws and regulations.
+  h) You bear full responsibility for your use of the Software.
+
+40. IF YOU DO NOT AGREE
+
+If You do not agree to these terms, You must not use, copy, modify, or
+distribute the Software. You should delete all copies of the Software in
+Your possession and refrain from further use.
+
+================================================================================
+PART XIV: CONTACT AND COMMUNICATION
+================================================================================
+
+41. GETTING IN TOUCH
+
+For questions, feedback, or inquiries about the BEVoid Project:
+
+  - Repository: https://github.com/bevoid/bevoid
+  - Issues: Open an issue in the repository
+  - Discussions: Use the repository's discussion features (if available)
+
+42. LEGAL INQUIRIES
+
+For legal questions regarding this COPYRIGHT notice, the License Agreement,
+or intellectual property matters:
+
+  - Open an issue marked with a legal/privacy label (if supported)
+  - Contact maintainers through the repository
+  - Consult your own legal counsel for advice specific to your situation
+
+The Project maintainers are developers, not attorneys. They can provide
+information about the Project's licensing but cannot offer legal advice.
+
+================================================================================
+PART XV: FINAL PROVISIONS
+================================================================================
+
+43. ENTIRE STATEMENT
+
+This COPYRIGHT notice, together with the BEVoid Software License Agreement,
+constitutes the complete statement of copyright, attribution, and
+intellectual property terms for the BEVoid Project.
+
+44. NO EXTERNAL DEPENDENCIES
+
+This document is self-contained. It does not incorporate by reference any
+external license, standard, guideline, or document. Understanding your rights
+and obligations requires reading only this document and the License Agreement.
+
+45. INTERPRETATION
+
+In case of any ambiguity, inconsistency, or apparent conflict between
+provisions of this COPYRIGHT notice and the License Agreement:
+
+  a) The License Agreement governs the permissions, conditions, and
+     restrictions for using, modifying, and distributing the Software.
+  b) This COPYRIGHT notice provides background information, guidance, and
+     context but does not modify the terms of the License Agreement.
+  c) If a provision in this COPYRIGHT notice appears to conflict with the
+     License Agreement, the License Agreement prevails.
+
+46. SEVERABILITY
+
+If any provision of this COPYRIGHT notice is found to be invalid or
+unenforceable, the remaining provisions continue in full force and effect.
+
+47. NO WAIVER
+
+The failure to enforce any provision of this COPYRIGHT notice does not
+constitute a waiver of that provision or the right to enforce it in the
+future.
+
+================================================================================
+END OF COPYRIGHT NOTICE
+
+This COPYRIGHT notice is an original creation of the BEVoid Project.
+It is not derived from, based on, or adapted from any template or document
+of any other project or organization.
+
+Project:    BEVoid Project
+Copyright:  Copyright (c) 2025-2026 BEVoid Project
+License:    BEVoid Software License Agreement Version 1.0 (April 2026)
+Version:    1.1
+Updated:    2026
+
+For the most current version of this document, visit:
+https://github.com/bevoid/bevoid
+
+================================================================================

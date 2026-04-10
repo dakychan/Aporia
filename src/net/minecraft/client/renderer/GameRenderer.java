@@ -518,10 +518,13 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
             profilerfiller.push("guiExtraction");
             GuiGraphics guigraphics = new GuiGraphics(this.minecraft, this.guiRenderState, i, j);
             if (this.minecraft.player != null) {
-                Aporia.INSTANCE.render(guigraphics, p_343467_.getGameTimeDeltaTicks());
             }
             if (flag && p_109096_ && this.minecraft.level != null) {
                 this.minecraft.gui.render(guigraphics, p_343467_);
+            }
+            // Aporia render после GUI чтобы pipeline был активен
+            if (this.minecraft.player != null) {
+                Aporia.INSTANCE.render(guigraphics, p_343467_.getGameTimeDeltaTicks());
             }
 
             if (this.minecraft.getOverlay() != null) {

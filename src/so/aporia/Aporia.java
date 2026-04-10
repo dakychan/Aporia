@@ -1,5 +1,12 @@
+/*
+ * Copyright (c) 2025-2026 BEVoid Project
+ * Distributed under the BEVoid Software License Agreement v1.0
+ * See LICENSE and COPYRIGHT files in the project root for full text.
+ */
+
 package so.aporia;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
@@ -7,8 +14,8 @@ import so.aporia.module.ModuleManager;
 import so.aporia.utils.events.EventBus;
 import so.aporia.utils.events.impl.RenderHudEvent;
 import so.aporia.utils.files.FilesManager;
-import so.aporia.utils.files.impl.ConfigFile;
 import so.aporia.utils.user.input.KeybindManager;
+import so.aporia.utils.user.locale.LocaleManager;
 import so.aporia.utils.user.logger.Logger;
 import so.aporia.utils.user.render.core.AporiaRenderer;
 import so.aporia.utils.user.render.font.FontRenderer;
@@ -35,14 +42,8 @@ public class Aporia implements ResourceManagerReloadListener {
         }
         KeybindManager.INSTANCE.toString();
         ModuleManager.INSTANCE.toString();
-        
-        try {
-            ConfigFile.load();
-            Logger.success("Config loaded");
-        } catch (Exception e) {
-            Logger.error("Config load failed: " + e.getMessage());
-        }
-        
+        LocaleManager.INSTANCE.init();
+
         initializeDiscordRPC();
         
         Logger.success("Aporia initialized");
