@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2025-2026 BEVoid Project
- * Distributed under the BEVoid Software License Agreement v1.0
+ * Copyright (c) 2025-2026 Aporia.cc Project
+ * Distributed under the Aporia.cc Software License Agreement v1.0
  * See LICENSE and COPYRIGHT files in the project root for full text.
  */
 
@@ -23,6 +23,8 @@ import so.aporia.utils.user.render.animation.Animator;
 import so.aporia.utils.user.render.color.ColorUtil;
 import so.aporia.utils.user.render.core.AporiaRenderer;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * Main ClickGui screen for rendering the GUI interface.
  * Handles topbar rendering with buttons (Config, Stats, Tasks),
@@ -30,6 +32,7 @@ import so.aporia.utils.user.render.core.AporiaRenderer;
  *
  * Все вычисления кэшируются — минимум аллокаций в render().
  */
+//TODO: replace renderer to imgui
 @OnlyIn(Dist.CLIENT)
 public final class ClickGuiScreen extends Screen {
     float px, py, pw, ph;
@@ -66,6 +69,10 @@ public final class ClickGuiScreen extends Screen {
     private static final int BUTTON_COLOR      = 0xFF111113;
     private static final int TEXT_COLOR        = 0x96969696; // RGBA: 150,150,150,150
     private static final int UUID_TEXT_COLOR   = 0x96969664; // RGBA: 150,150,150,100
+
+    private static boolean avatarLoadAttempted = false;
+    private static boolean avatarLoadComplete = false;
+    private static Identifier cachedAvatarId = null;
 
     public ClickGuiScreen() {
         super(Component.literal("ClickGui"));
@@ -132,6 +139,7 @@ public final class ClickGuiScreen extends Screen {
     @Override
     public void render(GuiGraphics gfx, int mx, int my, float delta) {
         AporiaRenderer r = AporiaRenderer.INSTANCE;
+        Minecraft mc = Minecraft.getInstance();
 
         px = Math.max(0, Math.min(px, this.width  - pw));
         py = Math.max(0, Math.min(py, this.height - ph));
@@ -157,9 +165,7 @@ public final class ClickGuiScreen extends Screen {
         r.drawRect(scaledX, scaledY, scaledW, scaledH, 4, MAIN_BG_COLOR);
         r.drawRect(scaledTopbarX, scaledTopbarY, scaledTopbarW, topbarH, 4, TOPBAR_BG_COLOR, 3);
 
-        // Загрузка аватара — один раз
-        if (!profileImageTried) {
-            profileImageTried = true;
+        if (!avatarLoadComplete && !avatarLoadAttempted) {
             tryLoadAvatar(r);
         }
 
@@ -206,38 +212,45 @@ public final class ClickGuiScreen extends Screen {
     }
 
     private void tryLoadAvatar(AporiaRenderer r) {
-        try {
-            Module discordRPC = ModuleManager.INSTANCE.get("Discord RPC");
-            if (discordRPC != null && discordRPC.isEnabled()) {
-                var discordModule = (so.aporia.module.impl.misc.DiscordRPCModule) discordRPC;
-                discordModule.loadAvatarOnRenderThread();
-                Identifier avatarId = discordModule.getAvatarId();
-                if (avatarId != null) {
-                    profileImageId = avatarId;
-                    return;
-                }
-            }
-        } catch (Exception ignored) {}
+        if (avatarLoadComplete) return;
+        if (avatarLoadAttempted) return;
 
-        if (profileImageId == null) {
+        avatarLoadAttempted = true;
+
+        CompletableFuture.runAsync(() -> {
             try {
-                java.nio.file.Path imagesDir = FilesManager.ROOT.resolve("images");
-                java.nio.file.Files.createDirectories(imagesDir);
-                for (String ext : new String[]{"png", "jpg", "jpeg"}) {
-                    java.nio.file.Path p = imagesDir.resolve("profile." + ext);
-                    if (java.nio.file.Files.exists(p)) {
-                        if (ext.equals("png")) {
-                            profileImageId = r.loadImage(p);
-                        } else {
-                            java.nio.file.Path pngPath = imagesDir.resolve("profile_converted.png");
-                            convertJpgToPng(p, pngPath);
-                            profileImageId = r.loadImage(pngPath);
-                        }
-                        break;
+                Module discordRPC = ModuleManager.INSTANCE.get("Discord RPC");
+                if (discordRPC != null && discordRPC.isEnabled()) {
+                    var discordModule = (so.aporia.module.impl.misc.DiscordRPCModule) discordRPC;
+                    discordModule.loadAvatarOnRenderThread();
+                    Identifier avatarId = discordModule.getAvatarId();
+                    if (avatarId != null) {
+                        Minecraft.getInstance().execute(() -> {
+                            profileImageId = avatarId;
+                            avatarLoadComplete = true;
+                        });
+                        return;
                     }
                 }
             } catch (Exception ignored) {}
-        }
+            try {
+                java.nio.file.Path imagesDir = FilesManager.ROOT.resolve("images");
+                java.nio.file.Files.createDirectories(imagesDir);
+                java.nio.file.Path pngPath = imagesDir.resolve("profile.png");
+
+                if (java.nio.file.Files.exists(pngPath)) {
+                    Minecraft.getInstance().execute(() -> {
+                        profileImageId = r.loadImage(pngPath);
+                        avatarLoadComplete = true;
+                    });
+                    return;
+                }
+            } catch (Exception ignored) {}
+            Minecraft.getInstance().execute(() -> {
+                profileImageId = UNKNOWN_USER_RL;
+                avatarLoadComplete = true;
+            });
+        });
     }
 
     private void renderTopBarButtons(AporiaRenderer r, int topbarX, int topbarY, int topbarW, int topbarH) {
@@ -300,7 +313,7 @@ public final class ClickGuiScreen extends Screen {
         int profileX = sidebarX + 6;
         int avatarSize = 48;
 
-        Identifier avatarImg = profileImageId != null ? profileImageId : UNKNOWN_USER_RL;
+        Identifier avatarImg = (profileImageId != null) ? profileImageId : UNKNOWN_USER_RL;
         r.drawImage(profileX, profileY, avatarSize, avatarSize, avatarImg, 2);
 
         aporia.cc.UserData.UserDataClass userData = aporia.cc.UserData.getUserData();

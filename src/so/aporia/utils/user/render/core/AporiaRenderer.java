@@ -27,7 +27,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
-
 /**
  * Основной OpenGL-рендерер Aporia.
  *
@@ -117,12 +116,12 @@ public class AporiaRenderer {
      */
     public void init() {
         shaderProgram = createShaderProgram(
-            loadShaderFromResources("aporia:shaders/core/aporia.vsh"),
-            loadShaderFromResources("aporia:shaders/core/aporia.fsh")
+                loadShaderFromResources("aporia:shaders/core/aporia.vsh"),
+                loadShaderFromResources("aporia:shaders/core/aporia.fsh")
         );
         blitShaderProgram = createShaderProgram(
-            loadShaderFromResources("aporia:shaders/core/blit.vsh"),
-            loadShaderFromResources("aporia:shaders/core/blit.fsh")
+                loadShaderFromResources("aporia:shaders/core/blit.vsh"),
+                loadShaderFromResources("aporia:shaders/core/blit.fsh")
         );
 
         // Кэшируем uniform locations — один раз, не каждый кадр
@@ -447,8 +446,8 @@ public class AporiaRenderer {
             if (colorTex != null) {
                 GlDevice glDevice = (GlDevice) RenderSystem.getDevice();
                 cachedMcFBO = ((GlTexture) colorTex).getFbo(
-                    glDevice.directStateAccess(),
-                    depthTex != null ? (GlTexture) depthTex : null
+                        glDevice.directStateAccess(),
+                        depthTex != null ? (GlTexture) depthTex : null
                 );
                 cachedScreenW = screenW;
                 cachedScreenH = screenH;
@@ -518,8 +517,8 @@ public class AporiaRenderer {
             if (colorTex != null) {
                 GlDevice glDevice = (GlDevice) RenderSystem.getDevice();
                 cachedMcFBO = ((GlTexture) colorTex).getFbo(
-                    glDevice.directStateAccess(),
-                    depthTex != null ? (GlTexture) depthTex : null
+                        glDevice.directStateAccess(),
+                        depthTex != null ? (GlTexture) depthTex : null
                 );
             }
             cachedFbW = fbW;
@@ -622,7 +621,7 @@ public class AporiaRenderer {
             NativeImage img = NativeImage.read(fis);
             DynamicTexture tex = new DynamicTexture(() -> key, img);
             String name = path.getFileName().toString()
-                .toLowerCase().replaceAll("[^a-z0-9_.-]", "_");
+                    .toLowerCase().replaceAll("[^a-z0-9_.-]", "_");
             Identifier id = Identifier.fromNamespaceAndPath("aporia", "user_image/" + name + "_" + Math.abs(key.hashCode()));
             Minecraft.getInstance().getTextureManager().register(id, tex);
             imageIds.put(key, id);
@@ -683,10 +682,10 @@ public class AporiaRenderer {
         int fbH = mc.getWindow().getHeight();
 
         float[] vertices = {
-            x,     y + h, 0f,  0f, 1f,
-            x + w, y + h, 0f,  1f, 1f,
-            x + w, y,     0f,  1f, 0f,
-            x,     y,     0f,  0f, 0f
+                x,     y + h, 0f,  0f, 1f,
+                x + w, y + h, 0f,  1f, 1f,
+                x + w, y,     0f,  1f, 0f,
+                x,     y,     0f,  0f, 0f
         };
         short[] indices = {0, 1, 2, 0, 2, 3};
 
@@ -704,8 +703,8 @@ public class AporiaRenderer {
         if (colorTex != null) {
             GlDevice glDevice = (GlDevice) RenderSystem.getDevice();
             int mcFBO = ((GlTexture) colorTex).getFbo(
-                glDevice.directStateAccess(),
-                depthTex != null ? (GlTexture) depthTex : null
+                    glDevice.directStateAccess(),
+                    depthTex != null ? (GlTexture) depthTex : null
             );
             GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, mcFBO);
             GL11.glViewport(0, 0, fbW, fbH);
