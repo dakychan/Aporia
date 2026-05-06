@@ -472,13 +472,12 @@ public class AporiaRenderer {
         GL20.glEnableVertexAttribArray(1);
         GL20.glVertexAttribPointer(2, 4, GL15.GL_FLOAT, false, 36, 20);
         GL20.glEnableVertexAttribArray(2);
-
         GL20.glUseProgram(shaderProgram);
         if (locScreenSize >= 0) GL20.glUniform2f(locScreenSize, screenW, screenH);
         if (locBounds >= 0) GL20.glUniform4f(locBounds, bx, by, bw, bh);
-        if (locParams >= 0) GL20.glUniform4f(locParams, radius, 1.0f, mode, borderMode);
-        if (locParams2 >= 0) GL20.glUniform4f(locParams2, thickness, fadeCorner, 0f, cornerMask);
-        if (locScreen >= 0) GL20.glUniform4f(locScreen, screenW, screenH, 0f, 0f);
+        if (locParams >= 0) GL20.glUniform4f(locParams, radius, 1.0f, (float)mode, (float)borderMode);
+        if (locParams2 >= 0) GL20.glUniform4f(locParams2, thickness, fadeCorner, 0f, 0.0f);
+        if (locScreen >= 0) GL20.glUniform4f(locScreen, fbW, fbH, 0f, 0f);
 
         GL11.glEnable(GL11.GL_BLEND);
         GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA,
@@ -739,7 +738,7 @@ public class AporiaRenderer {
             GL20.glUniform4f(locBounds, x, y, w, h);
             GL20.glUniform4f(locParams, radius, 1.0f, MODE_ROUNDED_RECT, 0);
             GL20.glUniform4f(locParams2, 0f, 0f, 0f, 16f);
-            GL20.glUniform4f(locScreen, screenW, screenH, 0f, 0f);
+            GL20.glUniform4f(locScreen, fbW, fbH, 0f, 0f);
             GL20.glUniform1i(locImageTex, 0);
         }
 

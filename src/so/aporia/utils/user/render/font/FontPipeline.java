@@ -52,7 +52,7 @@ public class FontPipeline {
 
     private static final float FIXED_GUI_SCALE = 2.0f;
 
-    private static final RenderPipeline PIPELINE = RenderPipeline.builder()
+    /* private static final RenderPipeline PIPELINE = RenderPipeline.builder()
         .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/msdf"))
         .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/msdf"))
         .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/msdf"))
@@ -63,7 +63,7 @@ public class FontPipeline {
         .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
         .withDepthWrite(false)
         .withCull(false)
-        .build();
+        .build(); */
 
     private GpuBuffer uniformBuffer;
     private ByteBuffer dataBuffer;
@@ -229,43 +229,6 @@ public class FontPipeline {
      * Отправляет текущий пакет в GPU и очищает его.
      */
     public void flush() {
-        if (charBatch.isEmpty() || currentAtlas == null) {
-            charBatch.clear(); currentAtlas = null; return;
-        }
-
-        Minecraft mc = Minecraft.getInstance();
-        AbstractTexture texture = mc.getTextureManager().getTexture(currentAtlas.getTextureId());
-        if (texture == null) {
-            charBatch.clear(); currentAtlas = null; return;
-        }
-
-        prepareUniformData(currentAtlas, currentOutlineWidth, currentOutlineColor);
-
-        int size = dataBuffer.remaining();
-        if (uniformBuffer == null || uniformBuffer.size() < size) {
-            if (uniformBuffer != null) uniformBuffer.close();
-            uniformBuffer = RenderSystem.getDevice().createBuffer(
-                () -> "aporia:font_uniform",
-                GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, size);
-        }
-
-        var encoder = RenderSystem.getDevice().createCommandEncoder();
-        encoder.writeToBuffer(uniformBuffer.slice(), dataBuffer);
-
-        GpuSampler sampler = RenderSystem.getSamplerCache().getSampler(
-            com.mojang.blaze3d.textures.AddressMode.CLAMP_TO_EDGE,
-            com.mojang.blaze3d.textures.AddressMode.CLAMP_TO_EDGE,
-            FilterMode.LINEAR, FilterMode.LINEAR, false);
-
-        var colorView = mc.getMainRenderTarget().getColorTextureView();
-
-        try (var pass = encoder.createRenderPass(() -> "aporia:font_pass", colorView, OptionalInt.empty())) {
-            pass.setPipeline(PIPELINE);
-            pass.bindTexture("Sampler0", texture.getTextureView(), sampler);
-            pass.setUniform("FontData", uniformBuffer.slice());
-            pass.draw(0, charBatch.size() * 6);
-        }
-
         charBatch.clear();
         currentAtlas = null;
     }

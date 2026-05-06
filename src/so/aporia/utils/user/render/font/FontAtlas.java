@@ -82,16 +82,18 @@ public class FontAtlas {
             loaded.set(true);
         }
     }
-    
+
     private void loadFromAssetManager() {
         try {
-            String path = jsonId.getPath().replace("aporia:", "").replace(".json", "") + ".json";
-            java.nio.file.Path assetFile = so.aporia.utils.files.FilesManager.ROOT.resolve(".assets").resolve(path);
-            byte[] data = java.nio.file.Files.readAllBytes(assetFile);
-            String json = new String(data, StandardCharsets.UTF_8);
-            parseJson(JsonParser.parseString(json).getAsJsonObject());
-            loaded.set(true);
-            LOGGER.info("Loaded font from AssetManager: {} ({} glyphs)", jsonId, glyphs.size());
+            String json = so.aporia.utils.assets.AssetManager.getResourceString(jsonId);
+
+            if (json != null) {
+                parseJson(JsonParser.parseString(json).getAsJsonObject());
+                loaded.set(true);
+                LOGGER.info("Loaded font from AssetManager: {} ({} glyphs)", jsonId, glyphs.size());
+            } else {
+                throw new Exception("AssetManager returned null (file not found)");
+            }
         } catch (Exception e) {
             LOGGER.error("Failed to load font from AssetManager: {}", jsonId, e);
             loaded.set(true);

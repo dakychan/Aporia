@@ -7,6 +7,7 @@
 package so.aporia.utils.assets;
 
 import aporia.cc.OsManager;
+import net.minecraft.resources.Identifier;
 import so.aporia.utils.files.FilesManager;
 import so.aporia.utils.user.logger.Logger;
 
@@ -113,6 +114,47 @@ public final class AssetManager {
                     Logger.warn("Failed to delete: " + path);
                 }
             });
+    }
+    /**
+     * Универсальный метод получения файла из папки .assets по Identifier.
+     * Например: aporia:fonts/font.json -> .assets/aporia/fonts/font.json
+     */
+    public static Path getResourcePath(Identifier id) {
+        // Если неймспейс не aporia, или путь начинается со слеша - кидаем нулл
+        if (!id.getNamespace().equals("aporia") || id.getPath().startsWith("/")) {
+            return null;
+        }
+        return FilesManager.ROOT.resolve(ASSETS_DIR).resolve(id.getNamespace()).resolve(id.getPath());
+    }
+
+    /**
+     * Читает файл из .assets в строку (для JSON и шейдеров)
+     */
+    public static String getResourceString(Identifier id) {
+        Path path = getResourcePath(id);
+        if (path != null && Files.exists(path)) {
+            try {
+                return Files.readString(path);
+            } catch (IOException e) {
+                Logger.error("Failed to read asset: " + id + " - " + e.getMessage());
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Читает файл из .assets в байты (для картинок и текстур)
+     */
+    public static byte[] getResourceBytes(Identifier id) {
+        Path path = getResourcePath(id);
+        if (path != null && Files.exists(path)) {
+            try {
+                return Files.readAllBytes(path);
+            } catch (IOException e) {
+                Logger.error("Failed to read asset bytes: " + id + " - " + e.getMessage());
+            }
+        }
+        return null;
     }
 }
 

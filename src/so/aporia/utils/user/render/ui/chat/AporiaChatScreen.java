@@ -616,7 +616,6 @@ public class AporiaChatScreen extends ChatScreen {
         if (isActive) edit.setBox(bx, by, bw, bh);
         if (isActive && edit.visible) {
             renderResizeHints(gfx, c, bx, by, bw, bh, mouseX, mouseY);
-            return;
         }
         
         int msgCount = Math.min(c.lines.size(), c.maxLines());
