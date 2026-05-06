@@ -196,24 +196,12 @@ public class Requests {
             
             // Read response body
             String responseBody;
-            try {
-                InputStream inputStream = connection.getInputStream();
-                if ("gzip".equalsIgnoreCase(connection.getContentEncoding())) {
-                    inputStream = new GZIPInputStream(inputStream);
-                }
-                try (inputStream) {
-                    responseBody = readStream(inputStream);
-                }
-            } catch (IOException e) {
-                // Try error stream
-                InputStream errorStream = connection.getErrorStream();
-                if (errorStream != null) {
-                    try (errorStream) {
-                        responseBody = readStream(errorStream);
-                    }
-                } else {
-                    responseBody = "";
-                }
+            final InputStream rawStream = connection.getInputStream();
+            final InputStream inputStream = "gzip".equalsIgnoreCase(connection.getContentEncoding())
+                    ? new GZIPInputStream(rawStream)
+                    : rawStream;
+            try (inputStream) {
+                responseBody = readStream(inputStream);
             }
             
             // Log request
