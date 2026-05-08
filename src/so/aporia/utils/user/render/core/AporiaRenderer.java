@@ -10,6 +10,7 @@ import com.mojang.blaze3d.opengl.GlDevice;
 import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.GpuTexture;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
@@ -22,7 +23,9 @@ import so.aporia.utils.user.render.font.Fonts;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -57,6 +60,7 @@ public class AporiaRenderer {
     public static final int MODE_FILL         = 0;
     public static final int MODE_CIRCLE       = 1;
     public static final int MODE_ROUNDED_RECT = 2;
+    private final Map<String, Integer> loadedTextures = new HashMap<>();
 
     /**
      * Извлекает OpenGL ID текстуры из объекта Minecraft DynamicTexture.
@@ -83,8 +87,14 @@ public class AporiaRenderer {
     private int locParams2 = -1;
     private int locScreen = -1;
     private int locBlurTex = -1;
-    private int locImageTex = -1;
     private int locInputTex = -1;
+    private int locBlitScreenSize = -1;
+    private int msdfShaderProgram;
+    private int locMsdfSampler0 = -1;
+    private int locMsdfScreenData = -1;
+    private int locMsdfOutlineColor = -1;
+    private int locMsdfAtlasData = -1;
+    private int msdfVAO, msdfVBO;
 
     // Reusable VAO/VBO/EBO для рисования
     private int drawVAO, drawVBO, drawEBO;
@@ -123,6 +133,10 @@ public class AporiaRenderer {
                 loadShaderFromResources("aporia:shaders/core/blit.vsh"),
                 loadShaderFromResources("aporia:shaders/core/blit.fsh")
         );
+        msdfShaderProgram = createShaderProgram(
+                loadShaderFromResources("aporia:shaders/core/msdf.vsh"),
+                loadShaderFromResources("aporia:shaders/core/msdf.fsh")
+        );
 
         // Кэшируем uniform locations — один раз, не каждый кадр
         locScreenSize = GL20.glGetUniformLocation(shaderProgram, "screenSize");
@@ -131,8 +145,14 @@ public class AporiaRenderer {
         locParams2    = GL20.glGetUniformLocation(shaderProgram, "params2");
         locScreen     = GL20.glGetUniformLocation(shaderProgram, "screen");
         locBlurTex    = GL20.glGetUniformLocation(shaderProgram, "BlurTextureSampler");
-        locImageTex   = GL20.glGetUniformLocation(shaderProgram, "ImageTextureSampler");
+
         locInputTex   = GL20.glGetUniformLocation(blitShaderProgram, "InputTexture");
+        locBlitScreenSize = GL20.glGetUniformLocation(blitShaderProgram, "screenSize");
+
+        locMsdfSampler0 = GL20.glGetUniformLocation(msdfShaderProgram, "Sampler0");
+        locMsdfScreenData = GL20.glGetUniformLocation(msdfShaderProgram, "ScreenData");
+        locMsdfOutlineColor = GL20.glGetUniformLocation(msdfShaderProgram, "OutlineColor");
+        locMsdfAtlasData = GL20.glGetUniformLocation(msdfShaderProgram, "AtlasData");
 
         // Reusable VAO/VBO/EBO — один на все draw вызовы
         drawVAO = GL30.glGenVertexArrays();
@@ -143,6 +163,10 @@ public class AporiaRenderer {
         imageVAO = GL30.glGenVertexArrays();
         imageVBO = GL15.glGenBuffers();
         imageEBO = GL15.glGenBuffers();
+
+        // MSDF vao
+        msdfVAO = GL30.glGenVertexArrays();
+        msdfVBO = GL15.glGenBuffers();
 
         cachedScreenW = -1;
         cachedScreenH = -1;
@@ -608,21 +632,49 @@ public class AporiaRenderer {
     // =========================================================================
 
     /**
+     * Извлекает OpenGL ID текстуры из объекта Minecraft DynamicTexture.
+     */
+    private static int getGlTextureId(DynamicTexture texture) {
+        try {
+            // В новых версиях AbstractTexture хранит GpuTexture
+            GpuTexture gpuTexture = texture.getTexture();
+            if (gpuTexture instanceof GlTexture glTexture) {
+                return glTexture.glId(); // Тот самый метод из исходника!
+            }
+        } catch (Exception e) {
+            Logger.error("Failed to get GL texture id: " + e.getMessage());
+        }
+        return -1;
+    }
+
+    /**
+     * *
+     * Проверяет, загружена ли текстура
+     */
+    public boolean isTextureLoaded(Identifier id) {
+        return loadedTextures.containsKey(id.toString());
+    }
+
+    /**
      * Загружает изображение из файла и регистрирует как текстуру.
      * Loads image from file and registers as texture.
      */
+    public Identifier loadImage(InputStream stream) {
+        try {
+            NativeImage img = NativeImage.read(stream);
+            return registerNativeImage(img, "stream_" + System.nanoTime());
+        } catch (IOException e) {
+            Logger.error("[loadImage] " + e.getMessage());
+            return null;
+        }
+    }
+
     public Identifier loadImage(Path path) {
         String key = path.toAbsolutePath().toString();
-        if (imageIds.containsKey(key)) {
-            return imageIds.get(key);
-        }
+        if (imageIds.containsKey(key)) return imageIds.get(key);
         try (FileInputStream fis = new FileInputStream(path.toFile())) {
             NativeImage img = NativeImage.read(fis);
-            DynamicTexture tex = new DynamicTexture(() -> key, img);
-            String name = path.getFileName().toString()
-                    .toLowerCase().replaceAll("[^a-z0-9_.-]", "_");
-            Identifier id = Identifier.fromNamespaceAndPath("aporia", "user_image/" + name + "_" + Math.abs(key.hashCode()));
-            Minecraft.getInstance().getTextureManager().register(id, tex);
+            Identifier id = registerNativeImage(img, path.getFileName().toString());
             imageIds.put(key, id);
             return id;
         } catch (IOException e) {
@@ -631,22 +683,27 @@ public class AporiaRenderer {
         }
     }
 
-    public Identifier loadImage(java.io.InputStream stream) {
-        String key = "discord_avatar_" + System.currentTimeMillis();
-        if (imageIds.containsKey(key)) {
-            return imageIds.get(key);
-        }
-        try {
-            NativeImage img = NativeImage.read(stream);
-            DynamicTexture tex = new DynamicTexture(() -> key, img);
-            Identifier id = Identifier.fromNamespaceAndPath("aporia", "user_image/discord_avatar_" + Math.abs(key.hashCode()));
-            Minecraft.getInstance().getTextureManager().register(id, tex);
-            imageIds.put(key, id);
-            return id;
-        } catch (IOException e) {
-            Logger.warn("[loadImage] Failed to load from stream: " + e.getMessage());
+    private Identifier registerNativeImage(NativeImage img, String name) {
+        // DynamicTexture сама создаст GlTexture через RenderSystem.getDevice()
+        // и корректно загрузит пиксели через CommandEncoder!
+        DynamicTexture dynamicTexture = new DynamicTexture(() -> "aporia_image", img);
+
+        // Достаем сырой GL ID из обертки
+        int glId = getGlTextureId(dynamicTexture);
+        if (glId == -1) {
+            Logger.error("[loadImage] Failed to get GL texture ID from DynamicTexture!");
+            dynamicTexture.close();
             return null;
         }
+
+        String safeName = name.toLowerCase().replaceAll("[^a-z0-9_.-]", "_");
+        Identifier id = Identifier.fromNamespaceAndPath("aporia", "user_image/" + safeName + "_" + Math.abs(name.hashCode()));
+
+        loadedTextures.put(id.toString(), glId);
+
+        Logger.info("[loadImage] OK glId=" + glId + " size=" + img.getWidth() + "x" + img.getHeight());
+        // НЕ ВЫЗЫВАЕМ img.close()! DynamicTexture теперь владеет NativeImage.
+        return id;
     }
 
     // =========================================================================
@@ -657,106 +714,226 @@ public class AporiaRenderer {
      * Рисует изображение.
      * Draws an image.
      */
+    /** Рисует изображение целиком. */
     public void drawImage(float x, float y, float w, float h, Identifier id) {
         drawImage(x, y, w, h, id, 0);
     }
 
-    /**
-     * Рисует изображение с опциональными скруглёнными углами.
-     * Draws an image with optional rounded corners.
-     */
+    /** Рисует изображение с радиусом. */
     public void drawImage(float x, float y, float w, float h, Identifier id, float radius) {
+        drawImage(x, y, w, h, id, radius, 0f, 1f, 1f, 0f);
+    }
+
+    /** Основной метод — вся логика здесь. */
+    public void drawImage(float x, float y, float w, float h, Identifier id, float radius,
+                          float u0, float v0, float u1, float v1) {
         if (id == null) return;
+        Integer glId = loadedTextures.get(id.toString());
+        if (glId == null || glId == 0) return;
+
+        // Сохраняем состояние
+        int prevProg    = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+        int prevVAO     = GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING);
+        int prevTex     = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+        int prevActive  = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
+        int prevBlend   = GL11.glGetInteger(GL11.GL_BLEND);
+        int prevDrawFBO = GL30.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int[] prevViewport = new int[4];
+        GL11.glGetIntegerv(GL11.GL_VIEWPORT, prevViewport);
 
         Minecraft mc = Minecraft.getInstance();
-        var tex = mc.getTextureManager().getTexture(id);
-        if (tex == null || tex.getTextureView() == null) return;
-
-        int glTextureId = getGlTextureId(tex.getTextureView());
-        if (glTextureId == -1) return;
-
-        int screenW = mc.getWindow().getGuiScaledWidth();
-        int screenH = mc.getWindow().getGuiScaledHeight();
         int fbW = mc.getWindow().getWidth();
         int fbH = mc.getWindow().getHeight();
+        int sw = mc.getWindow().getGuiScaledWidth();
+        int sh = mc.getWindow().getGuiScaledHeight();
 
-        float[] vertices = {
-                x,     y + h, 0f,  0f, 1f,
-                x + w, y + h, 0f,  1f, 1f,
-                x + w, y,     0f,  1f, 0f,
-                x,     y,     0f,  0f, 0f
-        };
-        short[] indices = {0, 1, 2, 0, 2, 3};
-
-        // Сохраняем
-        int[] prevVP = new int[4];
-        GL11.glGetIntegerv(GL11.GL_VIEWPORT, prevVP);
-        int prevFBO = GL30.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
-        int prevProg = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
-        int prevVAO = GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING);
-
-        // FBO
-        var mainTarget = mc.getMainRenderTarget();
-        var colorTex = mainTarget.getColorTexture();
-        var depthTex = mainTarget.getDepthTexture();
-        if (colorTex != null) {
-            GlDevice glDevice = (GlDevice) RenderSystem.getDevice();
-            int mcFBO = ((GlTexture) colorTex).getFbo(
-                    glDevice.directStateAccess(),
-                    depthTex != null ? (GlTexture) depthTex : null
-            );
-            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, mcFBO);
-            GL11.glViewport(0, 0, fbW, fbH);
+        if (cachedMcFBO == -1 || cachedFbW != fbW || cachedFbH != fbH) {
+            var mainTarget = mc.getMainRenderTarget();
+            var colorTex = mainTarget.getColorTexture();
+            var depthTex = mainTarget.getDepthTexture();
+            if (colorTex != null) {
+                GlDevice glDevice = (GlDevice) RenderSystem.getDevice();
+                cachedMcFBO = ((GlTexture) colorTex).getFbo(
+                        glDevice.directStateAccess(),
+                        depthTex != null ? (GlTexture) depthTex : null
+                );
+                cachedFbW = fbW;
+                cachedFbH = fbH;
+            }
         }
 
-        // Upload в reusable VBO
-        ByteBuffer vb = MemoryUtil.memAlloc(vertices.length * 4);
-        vb.asFloatBuffer().put(vertices).flip();
-        ByteBuffer ib = MemoryUtil.memAlloc(indices.length * 2);
-        ib.asShortBuffer().put(indices).flip();
+        if (cachedMcFBO != -1) {
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, cachedMcFBO);
+            GL11.glViewport(0, 0, cachedFbW, cachedFbH);
+        }
+
+        float[] v = {
+                x,     y,     0f,  u0, v1,
+                x + w, y,     0f,  u1, v1,
+                x + w, y + h, 0f,  u1, v0,
+                x,     y + h, 0f,  u0, v0
+        };
+        short[] idx = {0, 2, 1, 0, 3, 2};
+
+        ByteBuffer vb = MemoryUtil.memAlloc(v.length * 4);
+        vb.asFloatBuffer().put(v).flip();
+        ByteBuffer ib = MemoryUtil.memAlloc(idx.length * 2);
+        ib.asShortBuffer().put(idx).flip();
 
         GL30.glBindVertexArray(imageVAO);
         GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, imageVBO);
         GL15.glBufferData(GL15.GL_ARRAY_BUFFER, vb, GL15.GL_DYNAMIC_DRAW);
         GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, imageEBO);
         GL15.glBufferData(GL15.GL_ELEMENT_ARRAY_BUFFER, ib, GL15.GL_DYNAMIC_DRAW);
+
         GL20.glVertexAttribPointer(0, 3, GL15.GL_FLOAT, false, 20, 0);
         GL20.glEnableVertexAttribArray(0);
         GL20.glVertexAttribPointer(1, 2, GL15.GL_FLOAT, false, 20, 12);
         GL20.glEnableVertexAttribArray(1);
+        GL20.glDisableVertexAttribArray(2);
 
         MemoryUtil.memFree(vb);
         MemoryUtil.memFree(ib);
 
-        // Выбор шейдера
-        if (radius <= 0) {
-            GL20.glUseProgram(blitShaderProgram);
-            GL20.glUniform1i(locInputTex, 0);
-        } else {
-            GL20.glUseProgram(shaderProgram);
-            GL20.glUniform2f(locScreenSize, screenW, screenH);
-            GL20.glUniform4f(locBounds, x, y, w, h);
-            GL20.glUniform4f(locParams, radius, 1.0f, MODE_ROUNDED_RECT, 0);
-            GL20.glUniform4f(locParams2, 0f, 0f, 0f, 16f);
-            GL20.glUniform4f(locScreen, fbW, fbH, 0f, 0f);
-            GL20.glUniform1i(locImageTex, 0);
-        }
-
         GL11.glEnable(GL11.GL_BLEND);
         GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA,
                 GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        GL11.glDisable(GL11.GL_DEPTH_TEST);
-        GL11.glDisable(GL11.GL_CULL_FACE);
+
+        GL20.glUseProgram(blitShaderProgram);
+
+        if (locBlitScreenSize >= 0) GL20.glUniform2f(locBlitScreenSize, sw, sh);
+        if (locInputTex >= 0) GL20.glUniform1i(locInputTex, 0);
+
         GL13.glActiveTexture(GL13.GL_TEXTURE0);
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, glTextureId);
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, glId);
+
+        GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        GL11.glDisable(GL11.GL_CULL_FACE);
+        GL11.glDisable(GL11.GL_DEPTH_TEST);
 
         GL11.glDrawElements(GL11.GL_TRIANGLES, 6, GL11.GL_UNSIGNED_SHORT, 0);
 
         // Восстанавливаем
-        GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevFBO);
-        GL11.glViewport(prevVP[0], prevVP[1], prevVP[2], prevVP[3]);
+        GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDrawFBO);
+        GL11.glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+        GL13.glActiveTexture(prevActive);
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, prevTex);
         GL30.glBindVertexArray(prevVAO);
         GL20.glUseProgram(prevProg);
+        if (prevBlend == 0) GL11.glDisable(GL11.GL_BLEND);
+    }
+
+    public void drawMsdfGlyph(Identifier texId, float x, float y, float w, float h,
+                              float u0, float v0, float u1, float v1,
+                              int color, float outlineWidth, int outlineColor,
+                              float pxRange, float atlasWidth, float atlasHeight) {
+        Integer glId = loadedTextures.get(texId.toString());
+        if (glId == null || glId == 0) return;
+
+        int prevProg = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+        int prevVAO = GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING);
+        int prevTex = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+        int prevBlend = GL11.glGetInteger(GL11.GL_BLEND);
+        int prevDrawFBO = GL30.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int[] prevViewport = new int[4];
+        GL11.glGetIntegerv(GL11.GL_VIEWPORT, prevViewport);
+
+        Minecraft mc = Minecraft.getInstance();
+        int fbW = mc.getWindow().getWidth();
+        int fbH = mc.getWindow().getHeight();
+        int sw = mc.getWindow().getGuiScaledWidth();
+        int sh = mc.getWindow().getGuiScaledHeight();
+
+        if (cachedMcFBO == -1 || cachedFbW != fbW || cachedFbH != fbH) {
+            var mainTarget = mc.getMainRenderTarget();
+            var colorTex = mainTarget.getColorTexture();
+            var depthTex = mainTarget.getDepthTexture();
+            if (colorTex != null) {
+                GlDevice glDevice = (GlDevice) RenderSystem.getDevice();
+                cachedMcFBO = ((GlTexture) colorTex).getFbo(
+                        glDevice.directStateAccess(),
+                        depthTex != null ? (GlTexture) depthTex : null
+                );
+                cachedFbW = fbW;
+                cachedFbH = fbH;
+            }
+        }
+        if (cachedMcFBO != -1) {
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, cachedMcFBO);
+            GL11.glViewport(0, 0, cachedFbW, cachedFbH);
+        }
+
+        float cr = ((color >> 16) & 0xFF) / 255f;
+        float cg = ((color >> 8) & 0xFF) / 255f;
+        float cb = (color & 0xFF) / 255f;
+        float ca = ((color >> 24) & 0xFF) / 255f;
+
+        float oR = ((outlineColor >> 16) & 0xFF) / 255f;
+        float oG = ((outlineColor >> 8) & 0xFF) / 255f;
+        float oB = (outlineColor & 0xFF) / 255f;
+        float oA = ((outlineColor >> 24) & 0xFF) / 255f;
+
+        float[] v = {
+                x,     y,     0f,  u0, v0,  cr, cg, cb, ca,  outlineWidth, oR, oG, oB, oA,  pxRange, atlasWidth, atlasHeight,
+                x+w,   y,     0f,  u1, v0,  cr, cg, cb, ca,  outlineWidth, oR, oG, oB, oA,  pxRange, atlasWidth, atlasHeight,
+                x+w,   y+h,   0f,  u1, v1,  cr, cg, cb, ca,  outlineWidth, oR, oG, oB, oA,  pxRange, atlasWidth, atlasHeight,
+
+                x,     y,     0f,  u0, v0,  cr, cg, cb, ca,  outlineWidth, oR, oG, oB, oA,  pxRange, atlasWidth, atlasHeight,
+                x+w,   y+h,   0f,  u1, v1,  cr, cg, cb, ca,  outlineWidth, oR, oG, oB, oA,  pxRange, atlasWidth, atlasHeight,
+                x,     y+h,   0f,  u0, v1,  cr, cg, cb, ca,  outlineWidth, oR, oG, oB, oA,  pxRange, atlasWidth, atlasHeight,
+        };
+
+        ByteBuffer vb = MemoryUtil.memAlloc(v.length * 4);
+        vb.asFloatBuffer().put(v).flip();
+
+        GL30.glBindVertexArray(msdfVAO);
+        GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, msdfVBO);
+        GL15.glBufferData(GL15.GL_ARRAY_BUFFER, vb, GL15.GL_DYNAMIC_DRAW);
+
+        int stride = 17 * 4; // 17 floats
+        GL20.glVertexAttribPointer(0, 3, GL15.GL_FLOAT, false, stride, 0);  // pos
+        GL20.glEnableVertexAttribArray(0);
+        GL20.glVertexAttribPointer(1, 2, GL15.GL_FLOAT, false, stride, 12); // uv
+        GL20.glEnableVertexAttribArray(1);
+        GL20.glVertexAttribPointer(2, 4, GL15.GL_FLOAT, false, stride, 20); // color
+        GL20.glEnableVertexAttribArray(2);
+        GL20.glVertexAttribPointer(3, 1, GL15.GL_FLOAT, false, stride, 36); // outlineWidth
+        GL20.glEnableVertexAttribArray(3);
+        GL20.glVertexAttribPointer(4, 4, GL15.GL_FLOAT, false, stride, 40); // outlineColor
+        GL20.glEnableVertexAttribArray(4);
+        GL20.glVertexAttribPointer(5, 1, GL15.GL_FLOAT, false, stride, 56); // pxRange
+        GL20.glEnableVertexAttribArray(5);
+        GL20.glVertexAttribPointer(6, 2, GL15.GL_FLOAT, false, stride, 60); // atlasSize
+        GL20.glEnableVertexAttribArray(6);
+
+        MemoryUtil.memFree(vb);
+
+        GL11.glEnable(GL11.GL_BLEND);
+        GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA,
+                GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
+
+        GL20.glUseProgram(msdfShaderProgram);
+
+        if (locMsdfSampler0 >= 0) GL20.glUniform1i(locMsdfSampler0, 0);
+        if (locMsdfScreenData >= 0) GL20.glUniform4f(locMsdfScreenData, sw, sh, mc.getWindow().getGuiScale(), 0);
+        if (locMsdfOutlineColor >= 0) GL20.glUniform4f(locMsdfOutlineColor, oR, oG, oB, oA);
+        if (locMsdfAtlasData >= 0) GL20.glUniform4f(locMsdfAtlasData, atlasWidth, atlasHeight, pxRange, 0);
+
+        GL13.glActiveTexture(GL13.GL_TEXTURE0);
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, glId);
+
+        GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        GL11.glDisable(GL11.GL_CULL_FACE);
+        GL11.glDisable(GL11.GL_DEPTH_TEST);
+
+        GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, 6);
+
+        GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDrawFBO);
+        GL11.glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+        GL20.glUseProgram(prevProg);
+        GL30.glBindVertexArray(prevVAO);
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, prevTex);
+        if (prevBlend == 0) GL11.glDisable(GL11.GL_BLEND);
     }
 
     // =========================================================================

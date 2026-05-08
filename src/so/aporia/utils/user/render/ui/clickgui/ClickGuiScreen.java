@@ -233,12 +233,7 @@ public final class ClickGuiScreen extends Screen {
             int avatarSize = 32;
 
             var avatarId = discordModule.getAvatarId();
-            if (avatarId != null) {
                 r.drawImage(avatarX, avatarY, avatarSize, avatarSize, avatarId, 5);
-            } else {
-                r.drawRect(avatarX, avatarY, avatarSize, avatarSize, 4, ColorUtil.rgba(100, 100, 100, (int)(100 * alpha)));
-            }
-
             String username = discordUser.username();
             int textX = avatarX + avatarSize + 8;
             int textY = profileY + 8;
