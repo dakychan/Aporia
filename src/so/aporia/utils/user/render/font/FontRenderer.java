@@ -7,10 +7,11 @@
 package so.aporia.utils.user.render.font;
 
 import net.minecraft.resources.Identifier;
+import org.slf4j.Logger;
 import so.aporia.utils.user.render.core.AporiaRenderer;
 import so.aporia.utils.assets.AssetManager;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -53,24 +54,20 @@ public class FontRenderer {
         Identifier texId = atlas.getTextureId();
 
         if (AporiaRenderer.INSTANCE.isTextureLoaded(texId)) {
-            LOGGER.info("Texture already loaded: {}", texId);
             return;
         }
 
         try {
             Path path = AssetManager.getResourcePath(texId);
-            LOGGER.info("Loading texture: {} from {}", texId, path);
 
             if (path != null && Files.exists(path)) {
-                try (InputStream stream = Files.newInputStream(path)) {
-                    AporiaRenderer.INSTANCE.loadImage(stream);
-                    LOGGER.info("Loaded atlas texture: {}", texId);
-                }
+                // ИСПОЛЬЗУЕМ НОВЫЙ БЕЗОПАСНЫЙ МЕТОД!
+                AporiaRenderer.INSTANCE.loadAtlasTexture(texId, path);
             } else {
-                LOGGER.warn("Atlas texture not found: {} (path: {})", texId, path);
+                so.aporia.utils.user.logger.Logger.warn("Atlas texture not found: {} (path: {})");
             }
         } catch (Exception e) {
-            LOGGER.error("Failed to load atlas texture: {}", texId, e);
+            so.aporia.utils.user.logger.Logger.error("Failed to load atlas texture: {}");
         }
     }
 
