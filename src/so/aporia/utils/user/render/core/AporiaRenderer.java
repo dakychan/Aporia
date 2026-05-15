@@ -1,23 +1,23 @@
-/*
- * Copyright (c) 2025-2026 BEVoid Project
- * Distributed under the BEVoid Software License Agreement v1.0
- * See LICENSE and COPYRIGHT files in the project root for full text.
- */
-
 package so.aporia.utils.user.render.core;
 
-import com.mojang.blaze3d.opengl.GlDevice;
-import com.mojang.blaze3d.opengl.GlTexture;
+import com.mojang.blaze3d.ProjectionType;
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.GpuTexture;
+import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
-import org.lwjgl.opengl.*;
-import org.lwjgl.system.MemoryUtil;
 import so.aporia.Aporia;
-import so.aporia.utils.files.FilesManager;
 import so.aporia.utils.user.logger.Logger;
 import so.aporia.utils.user.render.font.Fonts;
 
@@ -25,699 +25,768 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
+import java.nio.ByteOrder;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.OptionalInt;
 
-/**
- * Основной OpenGL-рендерер Aporia.
- * Оптимизировано: отсутствуют аллокации каждый кадр, переиспользуемые буферы,
- * стейт OpenGL меняется только 1 раз за кадр (в onRenderHud/postRenderHud).
- */
 public class AporiaRenderer {
     public static final AporiaRenderer INSTANCE = new AporiaRenderer();
     public static final int MODE_FILL         = 0;
     public static final int MODE_CIRCLE       = 1;
     public static final int MODE_ROUNDED_RECT = 2;
-    private final Map<String, Integer> loadedTextures = new HashMap<>();
-    private final Map<String, DynamicTexture> atlasDynamicTextures = new HashMap<>();
 
-    private int shaderProgram;
-    private int blitShaderProgram;
-    private final Map<String, Identifier> imageIds = new HashMap<>();
+    private RenderPipeline pipeline;
+    private CachedOrthoProjectionMatrixBuffer orthoProjection;
+    private RenderPipeline kawaseDownPipeline;
+    private RenderPipeline kawaseUpPipeline;
+    private RenderPipeline blitPipeline;
+    private RenderPipeline postPipeline;
 
-    // Cached uniform locations
-    private int locScreenSize = -1, locBounds = -1, locParams = -1, locParams2 = -1, locScreen = -1, locBlurTex = -1;
-    private int locInputTex = -1, locBlitScreenSize = -1;
-    private int msdfShaderProgram;
-    private int locMsdfSampler0 = -1, locMsdfScreenData = -1, locMsdfOutlineColor = -1, locMsdfAtlasData = -1;
+    // Блюр-текстуры
+    private TextureTarget kawaseDownTarget;  // half-res для downscale
+    private TextureTarget blurTarget;        // full-res финальный блюр
+    private TextureTarget blurTempTarget;    // full-res для апскейл-пинг-понга
+    private int blurTargetW = -1, blurTargetH = -1;
+    private boolean blurReady = false;
 
-    // Reusable VAO/VBO/EBO
-    private int drawVAO, drawVBO, drawEBO;
-    private int imageVAO, imageVBO, imageEBO;
-    private int msdfVAO, msdfVBO, msdfEBO;
+    // Пост-обработка сатурации
+    private TextureTarget postTempTarget;
+    private int postTempW = -1, postTempH = -1;
 
-    private int cachedScreenW = -1, cachedScreenH = -1;
-    private int cachedMcFBO = -1, cachedFbW = -1, cachedFbH = -1;
-    private boolean fboBound = false;
+    private final Map<String, Identifier>      imageIds     = new HashMap<>();
+    private final Map<String, DynamicTexture>  imageTextures = new HashMap<>();
 
-    // State save для onRenderHud
-    private int[] savedViewport = new int[4];
-    private int savedDrawFBO = 0, savedProgram = 0;
-    private boolean savedBlend = false, savedDepth = false, savedCull = false;
+    // Кэшированные буферы для всей 2D-геометрии (позиция + UV + цвет)
+    private GpuBuffer cachedVertexBuffer;    // общий VBO (до 6 вершин)
+    private GpuBuffer cachedShapeBuffer;     // UBO 128 байт для ShapeData
+    private GpuBuffer cachedBlitVertexBuffer; // VBO для блита (POSITION_TEX)
+    private GpuBuffer blurQuadVbo;  // VBO для полноэкранного квада
+    private GpuBuffer blurUbo;      // UBO для KawaseData (32 байта)
 
-    // Pre-allocated buffers для фигур
-    private float[] vertexDataCache = new float[54];
-    private short[] indicesCache = new short[6];
-    private ByteBuffer vertexByteBuffer = MemoryUtil.memAlloc(54 * 4);
-    private ByteBuffer indexByteBuffer = MemoryUtil.memAlloc(6 * 2);
-
-    // Pre-allocated buffers для Image (4 вершины)
-    private float[] imageVertexCache = new float[4 * 5]; // 4 verts * (pos3 + uv2)
-    private short[] imageIndexCache = {0, 2, 1, 0, 3, 2};
-    private ByteBuffer imageVertexByteBuffer = MemoryUtil.memAlloc(4 * 5 * 4);
-    private ByteBuffer imageIndexByteBuffer = MemoryUtil.memAlloc(6 * 2);
-
-    // Pre-allocated buffers для MSDF (4 вершины)
-    private float[] msdfVertexCache = new float[4 * 17]; // 4 verts * 17 floats
-    private short[] msdfIndexCache = {0, 2, 1, 0, 3, 2};
-    private ByteBuffer msdfVertexByteBuffer = MemoryUtil.memAlloc(4 * 17 * 4);
-    private ByteBuffer msdfIndexByteBuffer = MemoryUtil.memAlloc(6 * 2);
-
-    // msdf
-    // MSDF Batch Rendering
-    private static final int MAX_MSDF_CHARS = 128; // Лимит символов на один батч (16KB UBO limit!)
-    private static final int UBO_SIZE = MAX_MSDF_CHARS * 4 * 16 + 16 + 16 + 16 + 16; // chars + screenData + outlineColor + atlasData + charCount
-    private int msdfUBO;
-
-    // Буфер для накопления символов
-    private ByteBuffer msdfBatchBuffer = MemoryUtil.memAlloc(UBO_SIZE);
-    private int currentBatchCount = 0;
-    private float currentOutlineWidth = 0f;
-    private int currentOutlineColor = 0;
-    private float currentPxRange = 0f;
-    private float currentAtlasWidth = 0f;
-    private float currentAtlasHeight = 0f;
-    private Identifier currentAtlasId = null;
+    private float cachedBlurStrength = -1f;
+    private float cachedBlurSaturation = -1f;
+    private int blurFrameCounter = 0;
+    private static final int BLUR_UPDATE_INTERVAL = 3;
 
     public void init() {
-        shaderProgram = createShaderProgram(
-                loadShaderFromResources("aporia:shaders/core/aporia.vsh"),
-                loadShaderFromResources("aporia:shaders/core/aporia.fsh")
-        );
-        blitShaderProgram = createShaderProgram(
-                loadShaderFromResources("aporia:shaders/core/blit.vsh"),
-                loadShaderFromResources("aporia:shaders/core/blit.fsh")
-        );
-        msdfShaderProgram = createShaderProgram(
-                loadShaderFromResources("aporia:shaders/core/msdf.vsh"),
-                loadShaderFromResources("aporia:shaders/core/msdf.fsh")
-        );
+        pipeline = RenderPipeline.builder()
+                .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/aporia"))
+                .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/aporia"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/aporia"))
+                .withUniform("Projection", UniformType.UNIFORM_BUFFER)
+                .withUniform("ShapeData",  UniformType.UNIFORM_BUFFER)
+                .withSampler("BlurTextureSampler")
+                .withSampler("ImageTextureSampler")
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.TRIANGLES)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false)
+                .build();
 
-        locScreenSize = GL20.glGetUniformLocation(shaderProgram, "screenSize");
-        locBounds     = GL20.glGetUniformLocation(shaderProgram, "bounds");
-        locParams     = GL20.glGetUniformLocation(shaderProgram, "params");
-        locParams2    = GL20.glGetUniformLocation(shaderProgram, "params2");
-        locScreen     = GL20.glGetUniformLocation(shaderProgram, "screen");
-        locBlurTex    = GL20.glGetUniformLocation(shaderProgram, "BlurTextureSampler");
+        orthoProjection = new CachedOrthoProjectionMatrixBuffer("aporia", -1000f, 1000f, true);
 
-        locInputTex   = GL20.glGetUniformLocation(blitShaderProgram, "InputTexture");
-        locBlitScreenSize = GL20.glGetUniformLocation(blitShaderProgram, "screenSize");
+        kawaseDownPipeline = RenderPipeline.builder()
+                .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/kawase_down"))
+                .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/kawase_down"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/kawase_down"))
+                .withSampler("InputTexture")
+                .withUniform("KawaseData", UniformType.UNIFORM_BUFFER)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false)
+                .build();
 
-        locMsdfSampler0 = GL20.glGetUniformLocation(msdfShaderProgram, "Sampler0");
-        locMsdfScreenData = GL20.glGetUniformLocation(msdfShaderProgram, "ScreenData");
-        locMsdfOutlineColor = GL20.glGetUniformLocation(msdfShaderProgram, "OutlineColor");
-        locMsdfAtlasData = GL20.glGetUniformLocation(msdfShaderProgram, "AtlasData");
+        kawaseUpPipeline = RenderPipeline.builder()
+                .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/kawase_up"))
+                .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/kawase_up"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/kawase_up"))
+                .withSampler("InputTexture")
+                .withUniform("KawaseData", UniformType.UNIFORM_BUFFER)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false)
+                .build();
 
-        drawVAO = GL30.glGenVertexArrays(); drawVBO = GL15.glGenBuffers(); drawEBO = GL15.glGenBuffers();
-        imageVAO = GL30.glGenVertexArrays(); imageVBO = GL15.glGenBuffers(); imageEBO = GL15.glGenBuffers();
-        msdfVAO = GL30.glGenVertexArrays();
-        msdfVBO = GL15.glGenBuffers();
-        GL30.glBindVertexArray(msdfVAO);
-        GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, msdfVBO);
-        GL15.glBufferData(GL15.GL_ARRAY_BUFFER, 4L, GL15.GL_STATIC_DRAW);
-        GL20.glVertexAttribPointer(0, 1, GL15.GL_FLOAT, false, 0, 0);
-        GL20.glEnableVertexAttribArray(0);
-        GL30.glBindVertexArray(0);
+        blitPipeline = RenderPipeline.builder()
+                .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/blur_blit"))
+                .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/blit"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/blit"))
+                .withSampler("InputTexture")
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false)
+                .build();
 
-        // Предзаливаем индексные буферы (они никогда не меняются для квада)
-        imageIndexByteBuffer.clear().limit(12);
-        imageIndexByteBuffer.asShortBuffer().put(imageIndexCache).flip();
-        GL30.glBindVertexArray(imageVAO);
-        GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, imageEBO);
-        GL15.glBufferData(GL15.GL_ELEMENT_ARRAY_BUFFER, imageIndexByteBuffer, GL15.GL_STATIC_DRAW);
+        postPipeline = RenderPipeline.builder()
+                .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/postprocess"))
+                .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/postprocess"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/postprocess"))
+                .withSampler("InputTexture")
+                .withUniform("PostData", UniformType.UNIFORM_BUFFER)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false)
+                .build();
 
-        msdfIndexByteBuffer.clear().limit(12);
-        msdfIndexByteBuffer.asShortBuffer().put(msdfIndexCache).flip();
-        GL30.glBindVertexArray(msdfVAO);
-        GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, msdfEBO);
-        GL15.glBufferData(GL15.GL_ELEMENT_ARRAY_BUFFER, msdfIndexByteBuffer, GL15.GL_STATIC_DRAW);
+        var device = RenderSystem.getDevice();
+        // Кэшированные буферы: VBO на 6 вершин (позиция, uv, цвет) — 6 * 36 = 216 байт, округлим до 256
+        cachedVertexBuffer = device.createBuffer(() -> "aporia:cached_vbo",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, 256L);
+        // UBO для ShapeData — 128 байт
+        cachedShapeBuffer = device.createBuffer(() -> "aporia:cached_shape",
+                GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 128L);
+        // VBO для блита (POSITION_TEX) — 6 вершин * 20 байт = 120, округляем до 128
+        cachedBlitVertexBuffer = device.createBuffer(() -> "aporia:cached_blit_vbo",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, 128L);
 
-        GL30.glBindVertexArray(0);
-        cachedScreenW = -1;
-        cachedScreenH = -1;
+        // Один квад на все блюр-проходы
+        var tess = Tesselator.getInstance();
+        var buf = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
+        buf.addVertex(-1f,  1f, 0f).setUv(0f, 1f);
+        buf.addVertex(-1f, -1f, 0f).setUv(0f, 0f);
+        buf.addVertex( 1f, -1f, 0f).setUv(1f, 0f);
+        buf.addVertex(-1f,  1f, 0f).setUv(0f, 1f);
+        buf.addVertex( 1f, -1f, 0f).setUv(1f, 0f);
+        buf.addVertex( 1f,  1f, 0f).setUv(1f, 1f);
+        var quadMesh = buf.buildOrThrow();
+        blurQuadVbo = device.createBuffer(() -> "aporia:blur_quad",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, quadMesh.vertexBuffer());
+        quadMesh.close();
 
-        // UBO (Uniform Buffer Object)
-        int UBO_SIZE = 64 + (MAX_MSDF_CHARS * 4 * 16); // 64 байта хедер + 128 * 64 байта символы = 8256 байт
-        msdfUBO = GL30.glGenBuffers();
-        GL15.glBindBuffer(GL31.GL_UNIFORM_BUFFER, msdfUBO);
-        GL15.glBufferData(GL31.GL_UNIFORM_BUFFER, UBO_SIZE, GL15.GL_DYNAMIC_DRAW);
-        GL30.glBindBufferBase(GL31.GL_UNIFORM_BUFFER, 0, msdfUBO);
-        GL15.glBindBuffer(GL31.GL_UNIFORM_BUFFER, 0);
-
-        // Привязываем блок из шейдера к точке 0
-        int blockIndex = GL31.glGetUniformBlockIndex(msdfShaderProgram, "FontData");
-        if (blockIndex != -1) {
-            GL31.glUniformBlockBinding(msdfShaderProgram, blockIndex, 0);
-            Logger.info("MSDF FontData block bound to binding 0");
-        }
+// Один UBO под KawaseData (32 байта хватит на всё)
+        blurUbo = device.createBuffer(() -> "aporia:blur_ubo",
+                GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 32L);
     }
 
-    private int createShaderProgram(String vertexSource, String fragmentSource) {
-        int vertexShader = compileShader(GL20.GL_VERTEX_SHADER, vertexSource);
-        int fragmentShader = compileShader(GL20.GL_FRAGMENT_SHADER, fragmentSource);
-        int program = GL20.glCreateProgram();
-        GL20.glAttachShader(program, vertexShader);
-        GL20.glAttachShader(program, fragmentShader);
-        GL20.glLinkProgram(program);
-        if (GL20.glGetProgrami(program, GL20.GL_LINK_STATUS) == 0) {
-            String log = GL20.glGetProgramInfoLog(program, 4096);
-            Logger.error("Shader program link failed: " + log);
-            throw new RuntimeException("Shader program link failed: " + log);
-        }
-        Logger.success("Shader program linked OK, ID=" + program);
-        GL20.glDeleteShader(vertexShader);
-        GL20.glDeleteShader(fragmentShader);
-        return program;
-    }
-
-    private int compileShader(int type, String source) {
-        int shader = GL20.glCreateShader(type);
-        GL20.glShaderSource(shader, source);
-        GL20.glCompileShader(shader);
-        if (GL20.glGetShaderi(shader, GL20.GL_COMPILE_STATUS) == 0) {
-            String log = GL20.glGetShaderInfoLog(shader, 1024);
-            throw new RuntimeException("Shader compilation failed: " + log);
-        }
-        return shader;
-    }
-
-    private String loadShaderFromResources(String path) {
-        try {
-            String relPath = path.replace("aporia:", "aporia/");
-            Path shaderPath = FilesManager.ROOT.resolve(".assets").resolve(relPath);
-            if (Files.exists(shaderPath)) return Files.readString(shaderPath);
-            Logger.error("Shader not found: " + shaderPath);
-            return "";
-        } catch (Exception e) {
-            Logger.error("Failed to load shader: " + path + " - " + e.getMessage());
-            return "";
-        }
-    }
-
-    // =========================================================================
-    //  Shape drawing methods
-    // =========================================================================
+    /* ===========================
+       Public drawing API
+       =========================== */
 
     public void drawLine(float x1, float y1, float x2, float y2, float thickness, int color) {
         float dx = x2 - x1, dy = y2 - y1;
         float len = (float) Math.sqrt(dx * dx + dy * dy);
         if (len == 0) return;
-        float nx = -dy / len * thickness * 0.5f, ny = dx / len * thickness * 0.5f;
-        float[] vx = { x1+nx, x1-nx, x2-nx, x2+nx }, vy = { y1+ny, y1-ny, y2-ny, y2+ny };
-        draw(new float[][]{{vx[0], vy[0]}, {vx[1], vy[1]}, {vx[2], vy[2]}, {vx[0], vy[0]}, {vx[2], vy[2]}, {vx[3], vy[3]}},
-                color, MODE_FILL, Math.min(x1, x2) - thickness, Math.min(y1, y2) - thickness, Math.abs(dx) + thickness * 2, Math.abs(dy) + thickness * 2, 0f);
+        float nx = -dy / len * thickness * 0.5f;
+        float ny =  dx / len * thickness * 0.5f;
+        float[] vx = { x1+nx, x1-nx, x2-nx, x2+nx };
+        float[] vy = { y1+ny, y1-ny, y2-ny, y2+ny };
+        float bx = Math.min(x1, x2) - thickness;
+        float by = Math.min(y1, y2) - thickness;
+        float bw = Math.abs(dx) + thickness * 2;
+        float bh = Math.abs(dy) + thickness * 2;
+        draw(new float[][]{
+                {vx[0], vy[0]}, {vx[1], vy[1]}, {vx[2], vy[2]},
+                {vx[0], vy[0]}, {vx[2], vy[2]}, {vx[3], vy[3]}
+        }, color, MODE_FILL, bx, by, bw, bh, 0f);
     }
 
     public void drawFadeHLine(float centerX, float centerY, float halfLen, float thickness, float progress, int color) {
         float len = halfLen * progress;
         if (len < 1f) return;
-        int segments = 20; float segW = len * 2f / segments; int a = (color >> 24) & 0xFF;
+        float startX = centerX - len;
+        float endX = centerX + len;
+        int segments = 20;
+        float segW = len * 2f / segments;
+        int a = (color >> 24) & 0xFF;
         for (int i = 0; i < segments; i++) {
-            float x0 = centerX - len + i * segW, x1 = x0 + segW;
-            int a0 = (int)(a * (1f - (Math.abs(x0 - centerX) / len) * (Math.abs(x0 - centerX) / len)));
-            drawLine(x0, centerY, x1, centerY, thickness, (a0 << 24) | (color & 0x00FFFFFF));
+            float x0 = startX + i * segW;
+            float x1 = startX + (i + 1) * segW;
+            float t0 = Math.abs(x0 - centerX) / len;
+            float t1 = Math.abs(x1 - centerX) / len;
+            float fade0 = (1f - t0 * t0);
+            float fade1 = (1f - t1 * t1);
+            int a0 = (int)(a * fade0);
+            int a1 = (int)(a * fade1);
+            int c0 = (a0 << 24) | (color & 0x00FFFFFF);
+            int c1 = (a1 << 24) | (color & 0x00FFFFFF);
+            drawLine(x0, centerY, x1, centerY, thickness, c0);
         }
     }
 
     private static int lerp(int c0, int c1, float t) {
-        return (((int)(((c0>>24)&0xFF) + (((c1>>24)&0xFF) - ((c0>>24)&0xFF)) * t)) << 24) |
-                (((int)(((c0>>16)&0xFF) + (((c1>>16)&0xFF) - ((c0>>16)&0xFF)) * t)) << 16) |
-                (((int)(((c0>> 8)&0xFF) + (((c1>> 8)&0xFF) - ((c0>> 8)&0xFF)) * t)) << 8)  |
-                ((int)(((c0    )&0xFF) + (((c1    )&0xFF) - ((c0    )&0xFF)) * t));
+        int a = (int)(((c0>>24)&0xFF) + (((c1>>24)&0xFF) - ((c0>>24)&0xFF)) * t);
+        int r = (int)(((c0>>16)&0xFF) + (((c1>>16)&0xFF) - ((c0>>16)&0xFF)) * t);
+        int g = (int)(((c0>> 8)&0xFF) + (((c1>> 8)&0xFF) - ((c0>> 8)&0xFF)) * t);
+        int b = (int)(((c0    )&0xFF) + (((c1    )&0xFF) - ((c0    )&0xFF)) * t);
+        return (a<<24)|(r<<16)|(g<<8)|b;
     }
 
-    public void drawCircle(float cx, float cy, float radius, int color) { float d = radius * 2; drawShape(cx - radius, cy - radius, d, d, color, MODE_CIRCLE, cx - radius, cy - radius, d, d, radius, 0, 0f, 0f); }
-    public void drawTriangle(float x1, float y1, float x2, float y2, float x3, float y3, int color) { float bx = Math.min(x1, Math.min(x2, x3)), by = Math.min(y1, Math.min(y2, y3)); draw(new float[][]{{x1,y1},{x2,y2},{x3,y3}}, color, MODE_FILL, bx, by, Math.max(x1, Math.max(x2, x3)) - bx, Math.max(y1, Math.max(y2, y3)) - by, 0f); }
-    public void resetDebugFlags() {}
-    public void drawRectBlurred(float x, float y, float w, float h, float radius, int color) { drawRect(x, y, w, h, radius, color, 15); }
-    public void drawRectBlurred(float x, float y, float w, float h, float radius, int color, float blurStrength, int cornerMask) { drawRect(x, y, w, h, radius, color, cornerMask); }
-    public void drawRect(float x, float y, float w, float h, float radius, int color) { drawRect(x, y, w, h, radius, color, 15); }
-    public void drawRect(float x, float y, float w, float h, float radius, int color, int cornerMask) { drawShape(x, y, w, h, color, radius > 0 ? MODE_ROUNDED_RECT : MODE_FILL, x, y, w, h, radius, 0, 0f, 0f, cornerMask); }
+    public void drawCircle(float cx, float cy, float radius, int color) {
+        float d = radius * 2;
+        drawShape(cx - radius, cy - radius, d, d, color, MODE_CIRCLE,
+                cx - radius, cy - radius, d, d, radius, 0, 0f, 0f);
+    }
+
+    public void drawTriangle(float x1, float y1, float x2, float y2, float x3, float y3, int color) {
+        float bx = Math.min(x1, Math.min(x2, x3));
+        float by = Math.min(y1, Math.min(y2, y3));
+        float bw = Math.max(x1, Math.max(x2, x3)) - bx;
+        float bh = Math.max(y1, Math.max(y2, y3)) - by;
+        draw(new float[][]{{x1,y1},{x2,y2},{x3,y3}}, color, MODE_FILL, bx, by, bw, bh, 0f);
+    }
+
+    public void drawRectBlurred(float x, float y, float w, float h, float radius, int color, float blurStrength) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!blurReady || pipeline == null || blurTarget == null) {
+            drawRect(x, y, w, h, radius, color);
+            return;
+        }
+        var mainTarget = mc.getMainRenderTarget();
+        var window     = mc.getWindow();
+        float sw = window.getGuiScaledWidth();
+        float sh = window.getGuiScaledHeight();
+        var colorView  = mainTarget.getColorTextureView();
+        if (colorView == null) return;
+        float ta = ((color >> 24) & 0xFF) / 255f;
+        float tr = ((color >> 16) & 0xFF) / 255f;
+        float tg = ((color >>  8) & 0xFF) / 255f;
+        float tb = ((color ) & 0xFF) / 255f;
+        var projSlice = orthoProjection.getBuffer(sw, sh);
+        RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC);
+        var tess = Tesselator.getInstance();
+        var buf  = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR);
+        buf.addVertex(x,   y+h, 0f).setUv(0f,0f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x+w, y+h, 0f).setUv(1f,0f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x+w, y,   0f).setUv(1f,1f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x,   y+h, 0f).setUv(0f,0f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x+w, y,   0f).setUv(1f,1f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x,   y,   0f).setUv(0f,1f).setColor(tr,tg,tb,ta);
+        var mesh = buf.buildOrThrow();
+        var device  = RenderSystem.getDevice();
+        var encoder = device.createCommandEncoder();
+        encoder.writeToBuffer(cachedVertexBuffer.slice(), mesh.vertexBuffer());
+        mesh.close();
+        var shapeBB = ByteBuffer.allocateDirect(128).order(ByteOrder.nativeOrder());
+        shapeBB.putFloat(x); shapeBB.putFloat(y); shapeBB.putFloat(w); shapeBB.putFloat(h);
+        shapeBB.putFloat(radius); shapeBB.putFloat(1.0f); shapeBB.putFloat(MODE_ROUNDED_RECT); shapeBB.putFloat(0f);
+        shapeBB.putFloat(0f); shapeBB.putFloat(0f); shapeBB.putFloat(1f); shapeBB.putFloat(0f);
+        shapeBB.putFloat((float) mainTarget.width); shapeBB.putFloat((float) mainTarget.height); shapeBB.putFloat(0f); shapeBB.putFloat(0f);
+        shapeBB.flip();
+        encoder.writeToBuffer(cachedShapeBuffer.slice(), shapeBB);
+        var indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES);
+        try (var pass = encoder.createRenderPass(() -> "aporia:blur_rect", colorView, OptionalInt.empty())) {
+            pass.setPipeline(pipeline);
+            RenderSystem.bindDefaultUniforms(pass);
+            pass.setUniform("ShapeData", cachedShapeBuffer.slice());
+            pass.bindTexture("BlurTextureSampler", blurTarget.getColorTextureView(),
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.setVertexBuffer(0, cachedVertexBuffer);
+            pass.setIndexBuffer(indexBuf.getBuffer(6), indexBuf.type());
+            pass.drawIndexed(0, 0, 6, 0);
+        }
+    }
+
+    public void drawRectBlurred(float x, float y, float w, float h, float radius, int color) {
+        drawRectBlurred(x, y, w, h, radius, color, 4f, 15);
+    }
+
+    public void drawRectBlurred(float x, float y, float w, float h, float radius, int color, float blurStrength, int cornerMask) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!blurReady || pipeline == null || blurTarget == null) {
+            drawRect(x, y, w, h, radius, color, cornerMask);
+            return;
+        }
+        var mainTarget = mc.getMainRenderTarget();
+        var window     = mc.getWindow();
+        float sw = window.getGuiScaledWidth();
+        float sh = window.getGuiScaledHeight();
+        var colorView  = mainTarget.getColorTextureView();
+        if (colorView == null) return;
+        float ta = ((color >> 24) & 0xFF) / 255f;
+        float tr = ((color >> 16) & 0xFF) / 255f;
+        float tg = ((color >>  8) & 0xFF) / 255f;
+        float tb = ((color ) & 0xFF) / 255f;
+        var projSlice = orthoProjection.getBuffer(sw, sh);
+        RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC);
+        var tess = Tesselator.getInstance();
+        var buf  = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR);
+        buf.addVertex(x,   y+h, 0f).setUv(0f,0f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x+w, y+h, 0f).setUv(1f,0f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x+w, y,   0f).setUv(1f,1f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x,   y+h, 0f).setUv(0f,0f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x+w, y,   0f).setUv(1f,1f).setColor(tr,tg,tb,ta);
+        buf.addVertex(x,   y,   0f).setUv(0f,1f).setColor(tr,tg,tb,ta);
+        var mesh = buf.buildOrThrow();
+        var device  = RenderSystem.getDevice();
+        var encoder = device.createCommandEncoder();
+        encoder.writeToBuffer(cachedVertexBuffer.slice(), mesh.vertexBuffer());
+        mesh.close();
+        var shapeBB = ByteBuffer.allocateDirect(128).order(ByteOrder.nativeOrder());
+        shapeBB.putFloat(x); shapeBB.putFloat(y); shapeBB.putFloat(w); shapeBB.putFloat(h);
+        shapeBB.putFloat(radius); shapeBB.putFloat(1.0f); shapeBB.putFloat(MODE_ROUNDED_RECT); shapeBB.putFloat(0f);
+        shapeBB.putFloat(0f); shapeBB.putFloat(0f); shapeBB.putFloat(1f); shapeBB.putFloat((float) cornerMask);
+        shapeBB.putFloat(0f); shapeBB.putFloat(0f); shapeBB.putFloat(0f); shapeBB.putFloat(0f);
+        shapeBB.putFloat((float) mainTarget.width); shapeBB.putFloat((float) mainTarget.height); shapeBB.putFloat(0f); shapeBB.putFloat(0f);
+        shapeBB.flip();
+        encoder.writeToBuffer(cachedShapeBuffer.slice(), shapeBB);
+        var indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES);
+        try (var pass = encoder.createRenderPass(() -> "aporia:blur_rect", colorView, OptionalInt.empty())) {
+            pass.setPipeline(pipeline);
+            RenderSystem.bindDefaultUniforms(pass);
+            pass.setUniform("ShapeData", cachedShapeBuffer.slice());
+            pass.bindTexture("BlurTextureSampler", blurTarget.getColorTextureView(),
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.setVertexBuffer(0, cachedVertexBuffer);
+            pass.setIndexBuffer(indexBuf.getBuffer(6), indexBuf.type());
+            pass.drawIndexed(0, 0, 6, 0);
+        }
+    }
+
+    public void drawRect(float x, float y, float w, float h, float radius, int color) {
+        drawRect(x, y, w, h, radius, color, 15);
+    }
+
+    public void drawRect(float x, float y, float w, float h, float radius, int color, int cornerMask) {
+        int mode = radius > 0 ? MODE_ROUNDED_RECT : MODE_FILL;
+        drawShape(x, y, w, h, color, mode, x, y, w, h, radius, 0, 0f, 0f, cornerMask);
+    }
 
     public void drawRectGradient(float x, float y, float w, float h, float radius, int c1, int c2, int dir) {
         int steps = Math.max(2, (int)(dir==1 ? h : w) / 2);
         for (int i = 0; i < steps; i++) {
-            float t0 = (float) i / steps, t1 = (float)(i + 1) / steps; int ca = lerp(c1, c2, (t0 + t1) * 0.5f);
-            if (dir == 1) drawRect(x, y + t0 * h, w, (t1 - t0) * h, i==0||i==steps-1 ? radius : 0, ca);
-            else if (dir == 0) drawRect(x + t0 * w, y, (t1 - t0) * w, h, i==0||i==steps-1 ? radius : 0, ca);
-            else drawCircle(x + w/2f, y + h/2f, Math.min(w, h) * 0.5f * t1, lerp(c2, c1, t0));
+            float t0 = (float) i / steps;
+            float t1 = (float)(i + 1) / steps;
+            int ca = lerp(c1, c2, (t0 + t1) * 0.5f);
+            if (dir == 1) {
+                float sy = y + t0 * h, sh = (t1 - t0) * h;
+                drawRect(x, sy, w, sh, i==0||i==steps-1 ? radius : 0, ca);
+            } else if (dir == 0) {
+                float sx = x + t0 * w, sw = (t1 - t0) * w;
+                drawRect(sx, y, sw, h, i==0||i==steps-1 ? radius : 0, ca);
+            } else {
+                float cx2 = x + w/2f, cy2 = y + h/2f;
+                float r2 = Math.min(w, h) * 0.5f * t1;
+                drawCircle(cx2, cy2, r2, lerp(c2, c1, t0));
+            }
         }
     }
 
-    public void drawStroke(float x, float y, float w, float h, float radius, float thickness, int borderMode, float fadeCorner, int color) { drawShape(x, y, w, h, color, MODE_ROUNDED_RECT, x, y, w, h, radius, borderMode, thickness, fadeCorner); }
-    private void drawShape(float x, float y, float w, float h, int color, int mode, float bx, float by, float bw, float bh, float radius, int borderMode, float thickness, float fadeCorner) { drawShape(x, y, w, h, color, mode, bx, by, bw, bh, radius, borderMode, thickness, fadeCorner, 15); }
-    private void drawShape(float x, float y, float w, float h, int color, int mode, float bx, float by, float bw, float bh, float radius, int borderMode, float thickness, float fadeCorner, int cornerMask) { draw(new float[][]{{x, y+h}, {x+w, y+h}, {x+w, y}, {x, y+h}, {x+w, y}, {x, y}}, color, mode, bx, by, bw, bh, radius, borderMode, thickness, fadeCorner, cornerMask); }
+    public void drawStroke(float x, float y, float w, float h, float radius,
+                           float thickness, int borderMode, float fadeCorner, int color) {
+        drawShape(x, y, w, h, color, MODE_ROUNDED_RECT, x, y, w, h, radius,
+                borderMode, thickness, fadeCorner);
+    }
 
-    private void draw(float[][] verts, int color, int mode, float bx, float by, float bw, float bh, float radius) { draw(verts, color, mode, bx, by, bw, bh, radius, 0, 0f, 0f, 15); }
-    private void draw(float[][] verts, int color, int mode, float bx, float by, float bw, float bh, float radius, int borderMode, float thickness, float fadeCorner) { draw(verts, color, mode, bx, by, bw, bh, radius, borderMode, thickness, fadeCorner, 15); }
+    /* ===========================
+       Internal draw with caching
+       =========================== */
 
-    private void draw(float[][] verts, int color, int mode, float bx, float by, float bw, float bh, float radius, int borderMode, float thickness, float fadeCorner, int cornerMask) {
+    private void drawShape(float x, float y, float w, float h, int color,
+                           int mode, float bx, float by, float bw, float bh,
+                           float radius, int borderMode, float thickness, float fadeCorner) {
+        drawShape(x, y, w, h, color, mode, bx, by, bw, bh, radius, borderMode, thickness, fadeCorner, 15);
+    }
+
+    private void drawShape(float x, float y, float w, float h, int color,
+                           int mode, float bx, float by, float bw, float bh,
+                           float radius, int borderMode, float thickness, float fadeCorner, int cornerMask) {
+        draw(new float[][]{
+                {x,   y+h}, {x+w, y+h}, {x+w, y},
+                {x,   y+h}, {x+w, y  }, {x,   y}
+        }, color, mode, bx, by, bw, bh, radius, borderMode, thickness, fadeCorner, cornerMask);
+    }
+
+    private void draw(float[][] verts, int color, int mode,
+                      float bx, float by, float bw, float bh, float radius) {
+        draw(verts, color, mode, bx, by, bw, bh, radius, 0, 0f, 0f, 15);
+    }
+
+    private void draw(float[][] verts, int color, int mode,
+                      float bx, float by, float bw, float bh, float radius,
+                      int borderMode, float thickness, float fadeCorner) {
+        draw(verts, color, mode, bx, by, bw, bh, radius, borderMode, thickness, fadeCorner, 15);
+    }
+
+    private void draw(float[][] verts, int color, int mode,
+                      float bx, float by, float bw, float bh, float radius,
+                      int borderMode, float thickness, float fadeCorner, int cornerMask) {
         Minecraft mc = Minecraft.getInstance();
-        int screenW = mc.getWindow().getGuiScaledWidth(), screenH = mc.getWindow().getGuiScaledHeight();
-        int fbW = mc.getWindow().getWidth(), fbH = mc.getWindow().getHeight();
-        float a = ((color >> 24) & 0xFF) / 255f, r = ((color >> 16) & 0xFF) / 255f, g = ((color >> 8) & 0xFF) / 255f, b = (color & 0xFF) / 255f;
+        var window    = mc.getWindow();
+        var colorView = mc.getMainRenderTarget().getColorTextureView();
+        if (colorView == null || pipeline == null) return;
+        float a = ((color >> 24) & 0xFF) / 255f;
+        float r = ((color >> 16) & 0xFF) / 255f;
+        float g = ((color >>  8) & 0xFF) / 255f;
+        float b = ((color      ) & 0xFF) / 255f;
+        var projSlice = orthoProjection.getBuffer(window.getGuiScaledWidth(), window.getGuiScaledHeight());
+        RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC);
+
+        var tess = Tesselator.getInstance();
+        var buf = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR);
+        for (float[] v : verts) {
+            buf.addVertex(v[0], v[1], 0f).setUv(0f, 0f).setColor(r, g, b, a);
+        }
+        var mesh = buf.buildOrThrow();
+        var device  = RenderSystem.getDevice();
+        var encoder = device.createCommandEncoder();
+        encoder.writeToBuffer(cachedVertexBuffer.slice(), mesh.vertexBuffer());
+        mesh.close();
+
+        var bb = ByteBuffer.allocateDirect(128).order(ByteOrder.nativeOrder());
+        bb.putFloat(bx); bb.putFloat(by); bb.putFloat(bw); bb.putFloat(bh);
+        bb.putFloat(radius); bb.putFloat(1.0f); bb.putFloat(mode); bb.putFloat((float) borderMode);
+        bb.putFloat(thickness); bb.putFloat(fadeCorner); bb.putFloat(0f); bb.putFloat((float) cornerMask);
+        bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
+        bb.flip();
+        encoder.writeToBuffer(cachedShapeBuffer.slice(), bb);
+
+        var indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES);
         int vertexCount = verts.length;
-
-        for (int i = 0; i < vertexCount; i++) {
-            int idx = i * 9;
-            vertexDataCache[idx] = verts[i][0]; vertexDataCache[idx + 1] = verts[i][1]; vertexDataCache[idx + 2] = 0f;
-            vertexDataCache[idx + 3] = 0f; vertexDataCache[idx + 4] = 0f;
-            vertexDataCache[idx + 5] = r; vertexDataCache[idx + 6] = g; vertexDataCache[idx + 7] = b; vertexDataCache[idx + 8] = a;
-            indicesCache[i] = (short) i;
+        try (var pass = encoder.createRenderPass(() -> "aporia:draw", colorView, OptionalInt.empty())) {
+            pass.setPipeline(pipeline);
+            RenderSystem.bindDefaultUniforms(pass);
+            pass.setUniform("ShapeData", cachedShapeBuffer.slice());
+            pass.setVertexBuffer(0, cachedVertexBuffer);
+            pass.setIndexBuffer(indexBuf.getBuffer(vertexCount), indexBuf.type());
+            pass.drawIndexed(0, 0, vertexCount, 0);
         }
+    }
 
-        vertexByteBuffer.clear().limit(vertexCount * 36);
-        vertexByteBuffer.asFloatBuffer().put(vertexDataCache, 0, vertexCount * 9).flip();
-        indexByteBuffer.clear().limit(vertexCount * 2);
-        indexByteBuffer.asShortBuffer().put(indicesCache, 0, vertexCount).flip();
+    /* ===========================
+       Images & text
+       =========================== */
 
-        // IF/ELSE: Проверяем, настроен ли уже стейт хуком onRenderHud
-        if (!fboBound) {
-            // Если мы тут, значит мы рисуем вне HUD (например, в чате/табе).
-            // Берём контроль в свои руки! Выделяем буфер и пишем в него.
+    public void drawImage(float x, float y, float w, float h, Identifier id) {
+        drawImage(x, y, w, h, id, 0);
+    }
 
-            // Обновляем кэш FBO
-            if (cachedMcFBO == -1 || cachedScreenW != screenW || cachedScreenH != screenH) {
-                var mainTarget = mc.getMainRenderTarget();
-                var colorTex = mainTarget.getColorTexture(); var depthTex = mainTarget.getDepthTexture();
-                if (colorTex != null) {
-                    GlDevice glDevice = (GlDevice) RenderSystem.getDevice();
-                    cachedMcFBO = ((GlTexture) colorTex).getFbo(glDevice.directStateAccess(), depthTex != null ? (GlTexture) depthTex : null);
-                }
-                cachedFbW = fbW; cachedFbH = fbH; cachedScreenW = screenW; cachedScreenH = screenH;
+    public void drawImage(float x, float y, float w, float h, Identifier id, float radius) {
+        if (id == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        var tex = mc.getTextureManager().getTexture(id);
+        if (tex == null || tex.getTextureView() == null) return;
+        var colorView = mc.getMainRenderTarget().getColorTextureView();
+        if (colorView == null) return;
+
+        if (radius <= 0) {
+            var tess = Tesselator.getInstance();
+            var buf = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
+            buf.addVertex(x,   y+h, 0f).setUv(0f, 1f);
+            buf.addVertex(x+w, y+h, 0f).setUv(1f, 1f);
+            buf.addVertex(x+w, y,   0f).setUv(1f, 0f);
+            buf.addVertex(x,   y+h, 0f).setUv(0f, 1f);
+            buf.addVertex(x+w, y,   0f).setUv(1f, 0f);
+            buf.addVertex(x,   y,   0f).setUv(0f, 0f);
+            var mesh = buf.buildOrThrow();
+            var device  = RenderSystem.getDevice();
+            var encoder = device.createCommandEncoder();
+            encoder.writeToBuffer(cachedBlitVertexBuffer.slice(), mesh.vertexBuffer());
+            mesh.close();
+            try (var pass = encoder.createRenderPass(() -> "aporia:img_pass", colorView, OptionalInt.empty())) {
+                pass.setPipeline(blitPipeline);
+                pass.bindTexture("InputTexture", tex.getTextureView(),
+                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+                pass.setVertexBuffer(0, cachedBlitVertexBuffer);
+                pass.draw(0, 6);
             }
-
-            // Биндим FBO и настраиваем вьюпорт
-            if (cachedMcFBO != -1) {
-                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, cachedMcFBO);
-                GL11.glViewport(0, 0, cachedFbW, cachedFbH);
-            }
-
-            // Включаем бленд и отключаем глубину
-            GL11.glEnable(GL11.GL_BLEND);
-            GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            GL11.glDisable(GL11.GL_DEPTH_TEST);
-            GL11.glDisable(GL11.GL_CULL_FACE);
-        }
-        // Если fboBound == true, то всё уже настроено, пропускаем дорогие вызовы!
-
-        GL30.glBindVertexArray(drawVAO);
-        GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, drawVBO);
-        GL15.glBufferData(GL15.GL_ARRAY_BUFFER, vertexByteBuffer, GL15.GL_DYNAMIC_DRAW);
-        GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, drawEBO);
-        GL15.glBufferData(GL15.GL_ELEMENT_ARRAY_BUFFER, indexByteBuffer, GL15.GL_DYNAMIC_DRAW);
-
-        GL20.glVertexAttribPointer(0, 3, GL15.GL_FLOAT, false, 36, 0); GL20.glEnableVertexAttribArray(0);
-        GL20.glVertexAttribPointer(1, 2, GL15.GL_FLOAT, false, 36, 12); GL20.glEnableVertexAttribArray(1);
-        GL20.glVertexAttribPointer(2, 4, GL15.GL_FLOAT, false, 36, 20); GL20.glEnableVertexAttribArray(2);
-
-        GL20.glUseProgram(shaderProgram);
-        if (locScreenSize >= 0) GL20.glUniform2f(locScreenSize, screenW, screenH);
-        if (locBounds >= 0) GL20.glUniform4f(locBounds, bx, by, bw, bh);
-        if (locParams >= 0) GL20.glUniform4f(locParams, radius, 1.0f, (float)mode, (float)borderMode);
-        if (locParams2 >= 0) GL20.glUniform4f(locParams2, thickness, fadeCorner, 0f, 0.0f);
-        if (locScreen >= 0) GL20.glUniform4f(locScreen, fbW, fbH, 0f, 0f);
-
-        GL11.glDrawElements(GL11.GL_TRIANGLES, vertexCount, GL11.GL_UNSIGNED_SHORT, 0);
-    }
-
-    // =========================================================================
-    //  HUD / Text methods
-    // =========================================================================
-
-    public void onRenderHud(Minecraft mc) {
-        int screenW = mc.getWindow().getGuiScaledWidth(), screenH = mc.getWindow().getGuiScaledHeight();
-        int fbW = mc.getWindow().getWidth(), fbH = mc.getWindow().getHeight();
-
-        if (cachedMcFBO == -1 || cachedScreenW != screenW || cachedScreenH != screenH) {
-            var mainTarget = mc.getMainRenderTarget();
-            var colorTex = mainTarget.getColorTexture(); var depthTex = mainTarget.getDepthTexture();
-            if (colorTex != null) {
-                GlDevice glDevice = (GlDevice) RenderSystem.getDevice();
-                cachedMcFBO = ((GlTexture) colorTex).getFbo(glDevice.directStateAccess(), depthTex != null ? (GlTexture) depthTex : null);
-            }
-            cachedFbW = fbW; cachedFbH = fbH; cachedScreenW = screenW; cachedScreenH = screenH;
+            return;
         }
 
-        GL11.glGetIntegerv(GL11.GL_VIEWPORT, savedViewport);
-        savedDrawFBO = GL30.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
-        savedBlend = GL11.glIsEnabled(GL11.GL_BLEND);
-        savedDepth = GL11.glIsEnabled(GL11.GL_DEPTH_TEST);
-        savedCull = GL11.glIsEnabled(GL11.GL_CULL_FACE);
-        savedProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
-
-        if (cachedMcFBO != -1) { GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, cachedMcFBO); GL11.glViewport(0, 0, cachedFbW, cachedFbH); }
-
-        GL11.glEnable(GL11.GL_BLEND);
-        GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        GL11.glDisable(GL11.GL_DEPTH_TEST);
-        GL11.glDisable(GL11.GL_CULL_FACE);
-        fboBound = true;
-    }
-
-    public void prepareFrameBlur(Minecraft mc, float strength, float saturation) {}
-    public void invalidateBlurCache() { cachedMcFBO = -1; fboBound = false; }
-
-    public void postRenderHud() {
-        flushMsdfBatch();
-        if (fboBound) {
-            GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, savedDrawFBO);
-            GL11.glViewport(savedViewport[0], savedViewport[1], savedViewport[2], savedViewport[3]);
-            if (!savedBlend) GL11.glDisable(GL11.GL_BLEND);
-            if (savedDepth) GL11.glEnable(GL11.GL_DEPTH_TEST);
-            if (savedCull) GL11.glEnable(GL11.GL_CULL_FACE);
-            GL20.glUseProgram(savedProgram);
-            fboBound = false;
+        // Скруглённое изображение – через основной пайплайн с ImageTextureSampler
+        float sw = mc.getWindow().getGuiScaledWidth();
+        float sh = mc.getWindow().getGuiScaledHeight();
+        var projSlice = orthoProjection.getBuffer(sw, sh);
+        RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC);
+        var tess = Tesselator.getInstance();
+        var buf = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR);
+        buf.addVertex(x,   y+h, 0f).setUv(0f, 1f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(x+w, y+h, 0f).setUv(1f, 1f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(x+w, y,   0f).setUv(1f, 0f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(x,   y+h, 0f).setUv(0f, 1f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(x+w, y,   0f).setUv(1f, 0f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(x,   y,   0f).setUv(0f, 0f).setColor(1f, 1f, 1f, 1f);
+        var mesh = buf.buildOrThrow();
+        var device  = RenderSystem.getDevice();
+        var encoder = device.createCommandEncoder();
+        encoder.writeToBuffer(cachedVertexBuffer.slice(), mesh.vertexBuffer());
+        mesh.close();
+        var bb = ByteBuffer.allocateDirect(128).order(ByteOrder.nativeOrder());
+        bb.putFloat(x); bb.putFloat(y); bb.putFloat(w); bb.putFloat(h);
+        bb.putFloat(radius); bb.putFloat(1.0f); bb.putFloat(MODE_ROUNDED_RECT); bb.putFloat(0f);
+        bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(15f);
+        bb.putFloat(1.0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
+        bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
+        bb.flip();
+        encoder.writeToBuffer(cachedShapeBuffer.slice(), bb);
+        var indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES);
+        try (var pass = encoder.createRenderPass(() -> "aporia:img_rounded_pass", colorView, OptionalInt.empty())) {
+            pass.setPipeline(pipeline);
+            RenderSystem.bindDefaultUniforms(pass);
+            pass.setUniform("ShapeData", cachedShapeBuffer.slice());
+            pass.bindTexture("ImageTextureSampler", tex.getTextureView(),
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.setVertexBuffer(0, cachedVertexBuffer);
+            pass.setIndexBuffer(indexBuf.getBuffer(6), indexBuf.type());
+            pass.drawIndexed(0, 0, 6, 0);
         }
     }
 
-    public void drawText(String font, String text, float x, float y, float size, int color) { Aporia.FONTS.drawText(font, text, x, y, size, color); }
-    public void drawTextWithOutline(String font, String text, float x, float y, float size, int color, float outlineWidth, int outlineColor) { Aporia.FONTS.drawTextWithOutline(font, text, x, y, size, color, outlineWidth, outlineColor); }
-    public float getTextWidth(String font, String text, float size) { return Aporia.FONTS.getTextWidth(font, text, size); }
-    public void drawGlyph(int index, float x, float y, float size, int color) { Aporia.FONTS.drawGlyph(Fonts.FONT, index, x, y, size, color); }
-    public void onRenderWorld(Minecraft mc) {}
-
-    // =========================================================================
-    //  Image loading
-    // =========================================================================
-
-    private static int getGlTextureId(DynamicTexture texture) {
-        try { GpuTexture gpuTexture = texture.getTexture(); if (gpuTexture instanceof GlTexture glTexture) return glTexture.glId(); }
-        catch (Exception e) { Logger.error("Failed to get GL texture id: " + e.getMessage()); }
-        return -1;
-    }
-
-    public boolean isTextureLoaded(Identifier id) { return loadedTextures.containsKey(id.toString()); }
-
-    public Identifier loadImage(InputStream stream) {
-        try {
-            NativeImage img = NativeImage.read(stream);
-            return registerNativeImage(img, "stream_" + System.nanoTime());
-        } catch (IOException e) {
-            Logger.error("[loadImage] " + e.getMessage());
-            return null;
-        }
-    }
     public Identifier loadImage(Path path) {
         String key = path.toAbsolutePath().toString();
         if (imageIds.containsKey(key)) return imageIds.get(key);
-        try (FileInputStream fis = new FileInputStream(path.toFile())) { NativeImage img = NativeImage.read(fis); Identifier id = registerNativeImage(img, path.getFileName().toString()); imageIds.put(key, id); return id; }
-        catch (IOException e) { Logger.warn("[loadImage] Failed to load: " + path + " — " + e.getMessage()); return null; }
-    }
-
-    private Identifier registerNativeImage(NativeImage img, String name) {
-        DynamicTexture dynamicTexture = new DynamicTexture(() -> "aporia_image", img);
-        int glId = getGlTextureId(dynamicTexture);
-        if (glId == -1) { Logger.error("[loadImage] Failed to get GL texture ID!"); dynamicTexture.close(); return null; }
-        String safeName = name.toLowerCase().replaceAll("[^a-z0-9_.-]", "_");
-        Identifier id = Identifier.fromNamespaceAndPath("aporia", "user_image/" + safeName + "_" + Math.abs(name.hashCode()));
-        loadedTextures.put(id.toString(), glId);
-        return id;
-    }
-
-    // =========================================================================
-    //  Image rendering (Оптимизировано: без аллокаций, без save/restore стейта)
-    // =========================================================================
-
-    public void drawImage(float x, float y, float w, float h, Identifier id) { drawImage(x, y, w, h, id, 0, 0f, 1f, 1f, 0f); }
-    public void drawImage(float x, float y, float w, float h, Identifier id, float radius) { drawImage(x, y, w, h, id, radius, 0f, 1f, 1f, 0f); }
-    public void drawSubImage(Identifier id, float x, float y, float w, float h, float u0, float v0, float u1, float v1) { drawImage(x, y, w, h, id, 0, u0, v0, u1, v1); }
-
-    public void drawImage(float x, float y, float w, float h, Identifier id, float radius, float u0, float v0, float u1, float v1) {
-        if (id == null) return;
-        Integer glId = loadedTextures.get(id.toString());
-        if (glId == null || glId == 0) return;
-
-        Minecraft mc = Minecraft.getInstance();
-        int sw = mc.getWindow().getGuiScaledWidth(), sh = mc.getWindow().getGuiScaledHeight();
-        int fbW = mc.getWindow().getWidth(), fbH = mc.getWindow().getHeight(); // ОБЯЗАТЕЛЬНО получаем реальный FB
-
-        // Обновляем FBO кэш (без аллокаций, как в onRenderHud)
-        if (cachedMcFBO == -1 || cachedScreenW != sw || cachedScreenH != sh) {
-            var mainTarget = mc.getMainRenderTarget();
-            var colorTex = mainTarget.getColorTexture(); var depthTex = mainTarget.getDepthTexture();
-            if (colorTex != null) {
-                GlDevice glDevice = (GlDevice) RenderSystem.getDevice();
-                cachedMcFBO = ((GlTexture) colorTex).getFbo(glDevice.directStateAccess(), depthTex != null ? (GlTexture) depthTex : null);
-            }
-            cachedFbW = fbW; cachedFbH = fbH; cachedScreenW = sw; cachedScreenH = sh;
-        }
-
-        // Биндим свой FBO и Viewport (чтобы рисовать прямо на экран)
-        if (cachedMcFBO != -1) {
-            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, cachedMcFBO);
-            GL11.glViewport(0, 0, cachedFbW, cachedFbH);
-        }
-
-        // Заполняем кэш без аллокаций
-        imageVertexCache[0] = x;     imageVertexCache[1] = y;     imageVertexCache[2] = 0f; imageVertexCache[3] = u0; imageVertexCache[4] = v1;
-        imageVertexCache[5] = x + w; imageVertexCache[6] = y;     imageVertexCache[7] = 0f; imageVertexCache[8] = u1; imageVertexCache[9] = v1;
-        imageVertexCache[10]= x + w; imageVertexCache[11]= y + h; imageVertexCache[12]= 0f; imageVertexCache[13]= u1; imageVertexCache[14]= v0;
-        imageVertexCache[15]= x;     imageVertexCache[16]= y + h; imageVertexCache[17]= 0f; imageVertexCache[18]= u0; imageVertexCache[19]= v0;
-
-        imageVertexByteBuffer.clear().limit(4 * 5 * 4);
-        imageVertexByteBuffer.asFloatBuffer().put(imageVertexCache).flip();
-
-        GL30.glBindVertexArray(imageVAO);
-        GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, imageVBO);
-        GL15.glBufferData(GL15.GL_ARRAY_BUFFER, imageVertexByteBuffer, GL15.GL_DYNAMIC_DRAW);
-
-        GL20.glVertexAttribPointer(0, 3, GL15.GL_FLOAT, false, 20, 0); GL20.glEnableVertexAttribArray(0);
-        GL20.glVertexAttribPointer(1, 2, GL15.GL_FLOAT, false, 20, 12); GL20.glEnableVertexAttribArray(1);
-        GL20.glDisableVertexAttribArray(2);
-
-        // Бленд и стейт (обязательно, если вызываем вне onRenderHud)
-        GL11.glEnable(GL11.GL_BLEND);
-        GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        GL11.glDisable(GL11.GL_DEPTH_TEST);
-        GL11.glDisable(GL11.GL_CULL_FACE);
-
-        int prevProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM); // Сохраняем только шейдер
-
-        GL20.glUseProgram(blitShaderProgram);
-        if (locBlitScreenSize >= 0) GL20.glUniform2f(locBlitScreenSize, sw, sh);
-        if (locInputTex >= 0) GL20.glUniform1i(locInputTex, 0);
-
-        GL13.glActiveTexture(GL13.GL_TEXTURE0);
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, glId);
-
-        GL11.glDrawElements(GL11.GL_TRIANGLES, 6, GL11.GL_UNSIGNED_SHORT, 0);
-
-        // Восстанавливаем только шейдер, чтобы не сломать последующую отрисовку ванилы
-        GL20.glUseProgram(prevProgram);
-    }
-
-    /**
-     * Сбрасывает накопленный батч на экран.
-     */
-    private void flushMsdfBatch() {
-        if (currentBatchCount == 0) return;
-
-        // ОБЯЗАТЕЛЬНО: обновляем количество символов перед отправкой на GPU
-        msdfBatchBuffer.putInt(48, currentBatchCount);
-
-        Minecraft mc = Minecraft.getInstance();
-        int sw = mc.getWindow().getGuiScaledWidth(), sh = mc.getWindow().getGuiScaledHeight();
-        int fbW = mc.getWindow().getWidth(), fbH = mc.getWindow().getHeight();
-
-        if (!fboBound) {
-            if (cachedMcFBO == -1 || cachedScreenW != sw || cachedScreenH != sh) {
-                var mainTarget = mc.getMainRenderTarget();
-                var colorTex = mainTarget.getColorTexture(); var depthTex = mainTarget.getDepthTexture();
-                if (colorTex != null) {
-                    GlDevice glDevice = (GlDevice) RenderSystem.getDevice();
-                    cachedMcFBO = ((GlTexture) colorTex).getFbo(glDevice.directStateAccess(), depthTex != null ? (GlTexture) depthTex : null);
-                }
-                cachedFbW = fbW; cachedFbH = fbH; cachedScreenW = sw; cachedScreenH = sh;
-            }
-            if (cachedMcFBO != -1) { GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, cachedMcFBO); GL11.glViewport(0, 0, cachedFbW, cachedFbH); }
-            GL11.glEnable(GL11.GL_BLEND);
-            GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            GL11.glDisable(GL11.GL_DEPTH_TEST); GL11.glDisable(GL11.GL_CULL_FACE);
-        }
-
-        msdfBatchBuffer.flip();
-
-        GL15.glBindBuffer(GL31.GL_UNIFORM_BUFFER, msdfUBO);
-        GL15.glBufferSubData(GL31.GL_UNIFORM_BUFFER, 0, msdfBatchBuffer);
-        GL30.glBindBufferBase(GL31.GL_UNIFORM_BUFFER, 0, msdfUBO);
-
-        int prevProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
-        GL20.glUseProgram(msdfShaderProgram);
-
-        if (locMsdfSampler0 >= 0) GL20.glUniform1i(locMsdfSampler0, 0);
-
-        Integer glId = loadedTextures.get(currentAtlasId.toString());
-        if (glId != null && glId != 0) {
-            GL13.glActiveTexture(GL13.GL_TEXTURE0);
-            GL11.glBindTexture(GL11.GL_TEXTURE_2D, glId);
-        } else {
-            // ЕСЛИ ЭТО ВЫЛЕЗЕТ В КОНСОЛИ — ЗНАЧИТ ТЕКСТУРА ВСЁ ЕЩЁ НЕ НАЙДЕНА
-            Logger.error("MSDF FLUSH ERROR: Texture not found for " + currentAtlasId);
-            return; // Прерываем, чтобы не рисовать черноту
-        }
-
-        GL30.glBindVertexArray(msdfVAO);
-        GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, currentBatchCount * 6);
-
-        GL20.glUseProgram(prevProgram);
-        GL30.glBindVertexArray(0);
-
-        currentBatchCount = 0;
-        msdfBatchBuffer.clear();
-        prepareMsdfUBOHeader();
-    }
-
-    private void prepareMsdfUBOHeader() {
-        Minecraft mc = Minecraft.getInstance();
-        int sw = mc.getWindow().getGuiScaledWidth(), sh = mc.getWindow().getGuiScaledHeight();
-        float oR = ((currentOutlineColor >> 16) & 0xFF) / 255f;
-        float oG = ((currentOutlineColor >> 8) & 0xFF) / 255f;
-        float oB = (currentOutlineColor & 0xFF) / 255f;
-        float oA = ((currentOutlineColor >> 24) & 0xFF) / 255f;
-
-        msdfBatchBuffer.putFloat(0, sw);
-        msdfBatchBuffer.putFloat(4, sh);
-        msdfBatchBuffer.putFloat(8, mc.getWindow().getGuiScale());
-        msdfBatchBuffer.putFloat(12, currentOutlineWidth);
-
-        msdfBatchBuffer.putFloat(16, oR);
-        msdfBatchBuffer.putFloat(20, oG);
-        msdfBatchBuffer.putFloat(24, oB);
-        msdfBatchBuffer.putFloat(28, oA);
-
-        msdfBatchBuffer.putFloat(32, currentAtlasWidth);
-        msdfBatchBuffer.putFloat(36, currentAtlasHeight);
-        msdfBatchBuffer.putFloat(40, currentPxRange);
-        msdfBatchBuffer.putFloat(44, 0);
-
-        // ВОЗВРАЩАЕМ putInt! Шейдер ожидает бинарный int!
-        msdfBatchBuffer.putInt(48, currentBatchCount);
-        msdfBatchBuffer.putInt(52, 0);
-        msdfBatchBuffer.putInt(56, 0);
-        msdfBatchBuffer.putInt(60, 0);
-
-        msdfBatchBuffer.position(64);
-    }
-
-    public void drawMsdfGlyph(Identifier texId, float x, float y, float w, float h,
-                              float u0, float v0, float u1, float v1,
-                              int color, float outlineWidth, int outlineColor,
-                              float pxRange, float atlasWidth, float atlasHeight) {
-
-        if (currentBatchCount > 0 && (currentAtlasId != texId || currentOutlineWidth != outlineWidth || currentOutlineColor != outlineColor || currentPxRange != pxRange)) {
-            flushMsdfBatch();
-        }
-
-        currentAtlasId = texId;
-        currentOutlineWidth = outlineWidth;
-        currentOutlineColor = outlineColor;
-        currentPxRange = pxRange;
-        currentAtlasWidth = atlasWidth;
-        currentAtlasHeight = atlasHeight;
-
-        if (currentBatchCount == 0) {
-            prepareMsdfUBOHeader();
-        }
-
-        msdfBatchBuffer.putFloat(x);
-        msdfBatchBuffer.putFloat(y);
-        msdfBatchBuffer.putFloat(w);
-        msdfBatchBuffer.putFloat(h);
-
-        msdfBatchBuffer.putFloat(u0);
-        msdfBatchBuffer.putFloat(v0);
-        msdfBatchBuffer.putFloat(u1);
-        msdfBatchBuffer.putFloat(v1);
-
-        msdfBatchBuffer.putFloat(((color >> 16) & 0xFF) / 255f);
-        msdfBatchBuffer.putFloat(((color >> 8) & 0xFF) / 255f);
-        msdfBatchBuffer.putFloat((color & 0xFF) / 255f);
-        msdfBatchBuffer.putFloat(((color >> 24) & 0xFF) / 255f);
-
-        msdfBatchBuffer.putFloat(0f);
-        msdfBatchBuffer.putFloat(0f);
-        msdfBatchBuffer.putFloat(0f);
-        msdfBatchBuffer.putFloat(0f);
-
-        currentBatchCount++;
-
-        if (currentBatchCount >= MAX_MSDF_CHARS) {
-            flushMsdfBatch();
-        }
-    }
-
-    public void loadAtlasTexture(Identifier id, Path path) {
-        if (loadedTextures.containsKey(id.toString())) return;
-
-        try (InputStream stream = Files.newInputStream(path)) {
-            NativeImage img = NativeImage.read(stream);
-            DynamicTexture dynamicTexture = new DynamicTexture(() -> "aporia_msdf", img);
-            int glId = getGlTextureId(dynamicTexture);
-            if (glId == -1) {
-                dynamicTexture.close();
-                return;
-            }
-            loadedTextures.put(id.toString(), glId);
-            atlasDynamicTextures.put(id.toString(), dynamicTexture);
-            Logger.info("[loadAtlasTexture] OK glId=" + glId + " for " + id);
+        try (FileInputStream fis = new FileInputStream(path.toFile())) {
+            NativeImage img = NativeImage.read(fis);
+            DynamicTexture tex = new DynamicTexture(() -> key, img);
+            String name = path.getFileName().toString().toLowerCase().replaceAll("[^a-z0-9_.-]", "_");
+            Identifier id = Identifier.fromNamespaceAndPath("aporia", "user_image/" + name + "_" + Math.abs(key.hashCode()));
+            Minecraft.getInstance().getTextureManager().register(id, tex);
+            imageIds.put(key, id);
+            imageTextures.put(key, tex);
+            return id;
         } catch (IOException e) {
-            Logger.error("[loadAtlasTexture] Failed: " + e.getMessage());
+            Logger.warn("[loadImage] Failed to load: " + path + " — " + e.getMessage());
+            return null;
         }
     }
 
-    // =========================================================================
-    //  Cleanup
-    // =========================================================================
+    public Identifier loadImage(InputStream stream) {
+        String key = "discord_avatar_" + System.currentTimeMillis();
+        if (imageIds.containsKey(key)) return imageIds.get(key);
+        try {
+            NativeImage img = NativeImage.read(stream);
+            DynamicTexture tex = new DynamicTexture(() -> key, img);
+            Identifier id = Identifier.fromNamespaceAndPath("aporia", "user_image/discord_avatar_" + Math.abs(key.hashCode()));
+            Minecraft.getInstance().getTextureManager().register(id, tex);
+            imageIds.put(key, id);
+            imageTextures.put(key, tex);
+            return id;
+        } catch (IOException e) {
+            Logger.warn("[loadImage] Failed to load from stream: " + e.getMessage());
+            return null;
+        }
+    }
 
-    /**
-     * Освобождает ВСЕ ресурсы: шейдеры, буферы, текстуры и память.
-     * Вызывать при закрытии/перезагрузке!
-     */
-    public void cleanup() {
-        // 1. Удаляем шейдерные программы
-        if (shaderProgram != 0) { GL20.glDeleteProgram(shaderProgram); shaderProgram = 0; }
-        if (blitShaderProgram != 0) { GL20.glDeleteProgram(blitShaderProgram); blitShaderProgram = 0; }
-        if (msdfShaderProgram != 0) { GL20.glDeleteProgram(msdfShaderProgram); msdfShaderProgram = 0; }
+    public void drawText(String font, String text, float x, float y, float size, int color) {
+        Aporia.FONTS.drawText(font, text, x, y, size, color);
+    }
 
-        // 2. Удаляем Vertex Arrays и Buffers (Фигуры)
-        if (drawVAO != 0) { GL30.glDeleteVertexArrays(drawVAO); drawVAO = 0; }
-        if (drawVBO != 0) { GL15.glDeleteBuffers(drawVBO); drawVBO = 0; }
-        if (drawEBO != 0) { GL15.glDeleteBuffers(drawEBO); drawEBO = 0; }
+    public void drawTextWithOutline(String font, String text, float x, float y, float size,
+                                    int color, float outlineWidth, int outlineColor) {
+        Aporia.FONTS.drawTextWithOutline(font, text, x, y, size, color, outlineWidth, outlineColor);
+    }
 
-        // 3. Удаляем Vertex Arrays и Buffers (Картинки)
-        if (imageVAO != 0) { GL30.glDeleteVertexArrays(imageVAO); imageVAO = 0; }
-        if (imageVBO != 0) { GL15.glDeleteBuffers(imageVBO); imageVBO = 0; }
-        if (imageEBO != 0) { GL15.glDeleteBuffers(imageEBO); imageEBO = 0; }
+    public float getTextWidth(String font, String text, float size) {
+        return Aporia.FONTS.getTextWidth(font, text, size);
+    }
 
-        // 4. Удаляем Vertex Arrays и Buffers (MSDF Текст)
-        if (msdfVAO != 0) { GL30.glDeleteVertexArrays(msdfVAO); msdfVAO = 0; }
-        if (msdfVBO != 0) { GL15.glDeleteBuffers(msdfVBO); msdfVBO = 0; }
-        if (msdfEBO != 0) { GL15.glDeleteBuffers(msdfEBO); msdfEBO = 0; }
+    public void drawGlyph(int index, float x, float y, float size, int color) {
+        Aporia.FONTS.drawGlyph(Fonts.FONT, index, x, y, size, color);
+    }
 
-        // 5. ОЧЕНЬ ВАЖНО: Удаляем загруженные текстуры из видеопамяти (VRAM)!
-        for (int glId : loadedTextures.values()) {
-            if (glId != 0) {
-                GL11.glDeleteTextures(glId);
+    /* ===========================
+       Kawase Blur (down + up)
+       =========================== */
+
+    public void onRenderHud(Minecraft mc) {
+        if (saturation != 0.5f) applySaturation(mc, saturation);
+    }
+
+    public float saturation = 0.5f;
+
+    public void prepareFrameBlur(Minecraft mc, float strength, float saturation) {
+        blurFrameCounter++;
+        if (blurFrameCounter >= BLUR_UPDATE_INTERVAL) {
+            blurFrameCounter = 0;
+            prepareBlur(mc, strength, saturation);
+            cachedBlurStrength = strength;
+            cachedBlurSaturation = saturation;
+        }
+    }
+
+    public void invalidateBlurCache() {
+        cachedBlurStrength = -1f;
+        cachedBlurSaturation = -1f;
+        blurReady = false;
+    }
+
+    private void ensureBlurTarget(Minecraft mc) {
+        var main = mc.getMainRenderTarget();
+        if (main.width == blurTargetW && main.height == blurTargetH) return;
+
+        // Уничтожаем старые текстуры
+        if (kawaseDownTarget != null) kawaseDownTarget.destroyBuffers();
+        if (blurTarget       != null) blurTarget.destroyBuffers();
+        if (blurTempTarget   != null) blurTempTarget.destroyBuffers();
+
+        // half‑res текстура для downscale
+        int halfW = Math.max(1, main.width / 2);
+        int halfH = Math.max(1, main.height / 2);
+        kawaseDownTarget = new TextureTarget("aporia:kawase_down", halfW, halfH, false);
+
+        // full‑res текстуры для upscale пинг‑понга
+        blurTarget     = new TextureTarget("aporia:blur_final", main.width, main.height, false);
+        blurTempTarget = new TextureTarget("aporia:blur_temp",  main.width, main.height, false);
+
+        blurTargetW = main.width;
+        blurTargetH = main.height;
+        blurReady   = false;
+    }
+
+    public void prepareBlur(Minecraft mc, float strength, float saturation) {
+        ensureBlurTarget(mc);
+        var mainTarget = mc.getMainRenderTarget();
+        var device     = RenderSystem.getDevice();
+
+        int mainW = mainTarget.width;
+        int mainH = mainTarget.height;
+        int halfW = Math.max(1, mainW / 2);
+        int halfH = Math.max(1, mainH / 2);
+
+        var encoder = device.createCommandEncoder();
+
+        // ----- DOWNSCALE -----
+        var bb = ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder());
+        bb.putFloat((float) mainW);
+        bb.putFloat((float) mainH);
+        bb.putFloat(1.0f);
+        bb.putFloat(saturation);
+        bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
+        bb.flip();
+        encoder.writeToBuffer(blurUbo.slice(), bb);
+
+        try (var pass = encoder.createRenderPass(() -> "aporia:kawase_down",
+                kawaseDownTarget.getColorTextureView(), OptionalInt.empty())) {
+            pass.setPipeline(kawaseDownPipeline);
+            pass.bindTexture("InputTexture", mainTarget.getColorTextureView(),
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.setUniform("KawaseData", blurUbo.slice());
+            pass.setVertexBuffer(0, blurQuadVbo);
+            pass.draw(0, 6);
+        }
+
+        // ----- UPSCALE -----
+        int iterations = Math.max(1, (int) (strength / 2.0f));
+        float offset = 1.0f;
+        float offsetStep = Math.max(0.5f, strength / (iterations * 2.0f));
+
+        TextureTarget src = kawaseDownTarget;
+        TextureTarget dst = blurTempTarget;
+
+        for (int i = 0; i < iterations; i++) {
+            bb.clear();
+            bb.putFloat((float) halfW);
+            bb.putFloat((float) halfH);
+            bb.putFloat(offset);
+            bb.putFloat(0f);
+            bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
+            bb.flip();
+            encoder.writeToBuffer(blurUbo.slice(), bb);
+
+            try (var pass = encoder.createRenderPass(() -> "aporia:kawase_up",
+                    dst.getColorTextureView(), OptionalInt.empty())) {
+                pass.setPipeline(kawaseUpPipeline);
+                pass.bindTexture("InputTexture", src.getColorTextureView(),
+                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+                pass.setUniform("KawaseData", blurUbo.slice());
+                pass.setVertexBuffer(0, blurQuadVbo);
+                pass.draw(0, 6);
+            }
+
+            offset += offsetStep;
+            // Пинг-понг
+            var tmp = src;
+            src = dst;
+            dst = (tmp == blurTempTarget) ? blurTarget : blurTempTarget;
+        }
+
+        // Гарантируем, что результат в blurTarget
+        if (src != blurTarget) {
+            bb.clear();
+            bb.putFloat((float) halfW);
+            bb.putFloat((float) halfH);
+            bb.putFloat(0f);
+            bb.putFloat(0f);
+            bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
+            bb.flip();
+            encoder.writeToBuffer(blurUbo.slice(), bb);
+
+            try (var pass = encoder.createRenderPass(() -> "aporia:copy_to_final",
+                    blurTarget.getColorTextureView(), OptionalInt.empty())) {
+                pass.setPipeline(kawaseUpPipeline);
+                pass.bindTexture("InputTexture", blurTempTarget.getColorTextureView(),
+                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+                pass.setUniform("KawaseData", blurUbo.slice());
+                pass.setVertexBuffer(0, blurQuadVbo);
+                pass.draw(0, 6);
             }
         }
-        loadedTextures.clear();
-        imageIds.clear();
 
-        // 6. Освобождаем Java-память (Direct ByteBuffer)
-        if (vertexByteBuffer != null) { MemoryUtil.memFree(vertexByteBuffer); vertexByteBuffer = null; }
-        if (indexByteBuffer != null) { MemoryUtil.memFree(indexByteBuffer); indexByteBuffer = null; }
-        if (imageVertexByteBuffer != null) { MemoryUtil.memFree(imageVertexByteBuffer); imageVertexByteBuffer = null; }
-        if (imageIndexByteBuffer != null) { MemoryUtil.memFree(imageIndexByteBuffer); imageIndexByteBuffer = null; }
-        if (msdfVertexByteBuffer != null) { MemoryUtil.memFree(msdfVertexByteBuffer); msdfVertexByteBuffer = null; }
-        if (msdfIndexByteBuffer != null) { MemoryUtil.memFree(msdfIndexByteBuffer); msdfIndexByteBuffer = null; }
+        blurReady = true;
+    }
 
-        // Сбрасываем кэши
-        cachedMcFBO = -1;
-        cachedScreenW = -1;
-        cachedScreenH = -1;
-        fboBound = false;
+    public void prepareBlur(Minecraft mc, float strength) {
+        prepareBlur(mc, strength, 0.5f);
+    }
+
+    /* ===========================
+       Post‑process saturation
+       =========================== */
+
+    public void applySaturation(Minecraft mc, float saturation) {
+        if (postPipeline == null) return;
+        var mainTarget = mc.getMainRenderTarget();
+        if (mainTarget.width != postTempW || mainTarget.height != postTempH) {
+            if (postTempTarget != null) postTempTarget.destroyBuffers();
+            postTempTarget = new TextureTarget("aporia:post_temp", mainTarget.width, mainTarget.height, false);
+            postTempW = mainTarget.width;
+            postTempH = mainTarget.height;
+        }
+        var device  = RenderSystem.getDevice();
+        var encoder = device.createCommandEncoder();
+        var tess = Tesselator.getInstance();
+        var buf = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
+        buf.addVertex(-1f,  1f, 0f).setUv(0f, 1f);
+        buf.addVertex(-1f, -1f, 0f).setUv(0f, 0f);
+        buf.addVertex( 1f, -1f, 0f).setUv(1f, 0f);
+        buf.addVertex(-1f,  1f, 0f).setUv(0f, 1f);
+        buf.addVertex( 1f, -1f, 0f).setUv(1f, 0f);
+        buf.addVertex( 1f,  1f, 0f).setUv(1f, 1f);
+        var mesh = buf.buildOrThrow();
+        encoder.writeToBuffer(cachedBlitVertexBuffer.slice(), mesh.vertexBuffer());
+        mesh.close();
+
+        var dataBuf = device.createBuffer(() -> "aporia:post_data",
+                GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 16L);
+        var bb = ByteBuffer.allocateDirect(16).order(ByteOrder.nativeOrder());
+        bb.putFloat(saturation); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
+        bb.flip();
+        encoder.writeToBuffer(dataBuf.slice(), bb);
+
+        try (var pass = encoder.createRenderPass(() -> "aporia:post_pass",
+                postTempTarget.getColorTextureView(), OptionalInt.empty())) {
+            pass.setPipeline(postPipeline);
+            pass.bindTexture("InputTexture", mainTarget.getColorTextureView(),
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.setUniform("PostData", dataBuf.slice());
+            pass.setVertexBuffer(0, cachedBlitVertexBuffer);
+            pass.draw(0, 6);
+        }
+        try (var pass = encoder.createRenderPass(() -> "aporia:post_blit",
+                mainTarget.getColorTextureView(), OptionalInt.empty())) {
+            pass.setPipeline(blitPipeline);
+            pass.bindTexture("InputTexture", postTempTarget.getColorTextureView(),
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.setVertexBuffer(0, cachedBlitVertexBuffer);
+            pass.draw(0, 6);
+        }
+        dataBuf.close();
+    }
+
+    public void cleanupBlur() {
+        if (kawaseDownTarget != null) { kawaseDownTarget.destroyBuffers(); kawaseDownTarget = null; }
+        if (blurTarget       != null) { blurTarget.destroyBuffers();       blurTarget       = null; }
+        if (blurTempTarget   != null) { blurTempTarget.destroyBuffers();   blurTempTarget   = null; }
+        blurTargetW = -1; blurTargetH = -1; blurReady = false;
     }
 }

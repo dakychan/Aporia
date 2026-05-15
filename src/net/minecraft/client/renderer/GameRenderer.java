@@ -773,7 +773,6 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
             .levelRenderer
             .renderLevel(this.resourcePool, p_342230_, flag, this.mainCamera, matrix4f1, matrix4f, this.getProjectionMatrixForCulling(f1), gpubufferslice, vector4f, !flag1);
         if (this.minecraft.player != null) {
-            AporiaRenderer.INSTANCE.onRenderWorld(this.minecraft);
         }
         profilerfiller.popPush("hand");
         boolean flag2 = this.minecraft.getCameraEntity() instanceof LivingEntity && ((LivingEntity)this.minecraft.getCameraEntity()).isSleeping();

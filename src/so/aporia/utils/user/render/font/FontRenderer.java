@@ -1,24 +1,18 @@
-/*
- * Copyright (c) 2025-2026 Aporia.cc Project
- * Distributed under the Aporia.cc Software License Agreement v1.0
- * See LICENSE and COPYRIGHT files in the project root for full text.
- */
-
 package so.aporia.utils.user.render.font;
 
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
-import so.aporia.utils.user.render.core.AporiaRenderer;
-import so.aporia.utils.assets.AssetManager;
 import org.slf4j.LoggerFactory;
 
-
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * High-level font rendering API.
+ * <p>
+ * Manages a registry of named {@link FontAtlas} instances and delegates
+ * all GPU work to {@link FontPipeline}.
+ */
 public class FontRenderer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("aporia/FontRenderer");
@@ -27,8 +21,10 @@ public class FontRenderer {
     private final Map<String, FontAtlas> fonts = new HashMap<>();
     private boolean initialized = false;
 
-    public FontRenderer() {}
-
+    /**
+     * Registers a font by name, pointing to {@code assets/aporia/fonts/<path>.json}
+     * and {@code assets/aporia/fonts/<path>.png}.
+     */
     public void loadFont(String name, String path) {
         Identifier json    = Identifier.fromNamespaceAndPath("aporia", "fonts/" + path + ".json");
         Identifier texture = Identifier.fromNamespaceAndPath("aporia", "fonts/" + path + ".png");
@@ -36,41 +32,19 @@ public class FontRenderer {
         LOGGER.info("Registered font: {} -> {}", name, path);
     }
 
+    /**
+     * Force-loads all registered atlases. Called once after resources are ready.
+     */
     public void initialize() {
         if (initialized) return;
         LOGGER.info("Initializing {} fonts...", fonts.size());
         long t = System.currentTimeMillis();
-
-        for (FontAtlas atlas : fonts.values()) {
-            atlas.ensureLoaded();
-            loadAtlasTexture(atlas);
-        }
-
+        fonts.values().forEach(FontAtlas::ensureLoaded);
         initialized = true;
         LOGGER.info("Fonts ready in {}ms", System.currentTimeMillis() - t);
     }
 
-    private void loadAtlasTexture(FontAtlas atlas) {
-        Identifier texId = atlas.getTextureId();
-
-        if (AporiaRenderer.INSTANCE.isTextureLoaded(texId)) {
-            return;
-        }
-
-        try {
-            Path path = AssetManager.getResourcePath(texId);
-
-            if (path != null && Files.exists(path)) {
-                // ИСПОЛЬЗУЕМ НОВЫЙ БЕЗОПАСНЫЙ МЕТОД!
-                AporiaRenderer.INSTANCE.loadAtlasTexture(texId, path);
-            } else {
-                so.aporia.utils.user.logger.Logger.warn("Atlas texture not found: {} (path: {})");
-            }
-        } catch (Exception e) {
-            so.aporia.utils.user.logger.Logger.error("Failed to load atlas texture: {}");
-        }
-    }
-
+    /** Re-initializes fonts after a resource reload. */
     public void reload() {
         initialized = false;
         fonts.clear();
@@ -79,20 +53,24 @@ public class FontRenderer {
     }
 
     public boolean isInitialized() { return initialized; }
+
     public FontAtlas getAtlas(String name) { return fonts.get(name); }
 
+    /** Draws text at (x, y) with the given pixel size and ARGB color. */
     public void drawText(String fontName, String text, float x, float y, float size, int color) {
         FontAtlas atlas = fonts.get(fontName);
         if (atlas == null) return;
         pipeline.drawText(atlas, text, x, y, size, color);
     }
 
+    /** Draws text with rotation (degrees). */
     public void drawText(String fontName, String text, float x, float y, float size, int color, float rotation) {
         FontAtlas atlas = fonts.get(fontName);
         if (atlas == null) return;
         pipeline.drawText(atlas, text, x, y, size, color, 0, 0, rotation);
     }
 
+    /** Draws text with an MSDF outline. */
     public void drawTextWithOutline(String fontName, String text, float x, float y, float size,
                                     int color, float outlineWidth, int outlineColor) {
         FontAtlas atlas = fonts.get(fontName);
@@ -100,6 +78,7 @@ public class FontRenderer {
         pipeline.drawText(atlas, text, x, y, size, color, outlineWidth, outlineColor, 0);
     }
 
+    /** Draws text horizontally centered at (x, y). */
     public void drawCenteredText(String fontName, String text, float x, float y, float size, int color) {
         FontAtlas atlas = fonts.get(fontName);
         if (atlas == null) return;
@@ -107,17 +86,23 @@ public class FontRenderer {
         pipeline.drawText(atlas, text, x - w / 2f, y, size, color);
     }
 
+    /** Returns the rendered pixel width of the given string. */
     public float getTextWidth(String fontName, String text, float size) {
         FontAtlas atlas = fonts.get(fontName);
         return atlas != null ? pipeline.getTextWidth(atlas, text, size) : 0;
     }
 
+    /** Returns the line height in pixels for the given font at the given size. */
     public float getLineHeight(String fontName, float size) {
         FontAtlas atlas = fonts.get(fontName);
         if (atlas == null) return size;
         return (atlas.getLineHeight() / atlas.getFontSize()) * size;
     }
 
+    /**
+     * Draws a single glyph from an index-based font (like {@link Fonts#FONT}).
+     * Index is mapped to PUA codepoint {@code 0xE000 + index}.
+     */
     public void drawGlyph(String fontName, int index, float x, float y, float size, int color) {
         drawText(fontName, new String(Character.toChars(0xE000 + index)), x, y, size, color);
     }

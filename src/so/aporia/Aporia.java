@@ -65,20 +65,7 @@ public class Aporia implements ResourceManagerReloadListener {
      * Fires {@link RenderHudEvent} so all render modules can draw.
      */
     public void render(GuiGraphics gfx, float partialTick) {
-        // ОТКЛЮЧАЕМ УБЛЮЧАТЬ 3D МИР!
-        Minecraft.getInstance().smartCull = false;
-
-        // 1. Подготовка
-        AporiaRenderer.INSTANCE.onRenderHud(Minecraft.getInstance());
-
-        // 2. Рендер
         EventBus.INSTANCE.post(new RenderHudEvent(gfx, partialTick));
-
-        // 3. Сброс
-        AporiaRenderer.INSTANCE.postRenderHud();
-
-        // ВОССТАНАВЛИВАЕМ!
-        Minecraft.getInstance().smartCull = true;
     }
 
     @Override

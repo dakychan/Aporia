@@ -115,13 +115,12 @@ public final class ClickGuiScreen extends Screen {
         for (Category c : Category.values())
             hoverAnims.computeIfAbsent(c, k -> new Animator(200, Easing::cubicOut));
         if (animSelY < 0) animSelY = catY(active);
-        AporiaRenderer.INSTANCE.resetDebugFlags();
     }
 
     @Override
     public void render(GuiGraphics gfx, int mx, int my, float delta) {
         AporiaRenderer r = AporiaRenderer.INSTANCE;
-        r.prepareFrameBlur(Minecraft.getInstance(), 30f, 0.75f);
+        r.prepareFrameBlur(Minecraft.getInstance(), 15f, 0.75f);
 
         px = Math.max(0, Math.min(px, this.width  - pw));
         py = Math.max(0, Math.min(py, this.height - ph));
@@ -144,7 +143,7 @@ public final class ClickGuiScreen extends Screen {
         int scaledX = ipx + (ipw - scaledW) / 2;
         int scaledY = ipy + (iph - scaledH) / 2;
 
-        // r.drawRectBlurred(scaledX, scaledY, scaledW, scaledH, PANEL_R, C_PANEL_TINT, 20f);
+        r.drawRectBlurred(scaledX, scaledY, scaledW, scaledH, PANEL_R, C_PANEL_TINT, 1f);
         r.drawStroke(scaledX,     scaledY,     scaledW,     scaledH,     PANEL_R,     1f, 1, 0f, C_GLASS_OUT);
         r.drawStroke(scaledX + 1, scaledY + 1, scaledW - 2, scaledH - 2, PANEL_R - 1, 1f, 1, 0f, C_GLASS_IN);
 
@@ -341,7 +340,7 @@ public final class ClickGuiScreen extends Screen {
             int onAlpha = (int)(40 * modAlpha);
             int cardTint = sel ? ColorUtil.rgba(255, 255, 255, onAlpha) : (hov ? ColorUtil.rgba(255, 255, 255, hovAlpha) : ColorUtil.rgba(255, 255, 255, tintAlpha));
 
-            //  r.drawRectBlurred(cardX, (int)(y + offsetY), colW, CARD_H, CARD_R, cardTint, 8f);
+            r.drawRectBlurred(cardX, (int)(y + offsetY), colW, CARD_H, CARD_R, cardTint, 5f);
 
             int outlineAlpha = (int)((20 + 50 * hp) * modAlpha) + (on ? (int)(60 * modAlpha) : 0);
             int outlineColor = ColorUtil.rgba(255, 255, 255, outlineAlpha);
@@ -368,7 +367,6 @@ public final class ClickGuiScreen extends Screen {
             }
             settingsPopup.close();
             settingsPopup = null;
-            invalidateBlurThrottled();
             return true;
         }
 
@@ -390,7 +388,6 @@ public final class ClickGuiScreen extends Screen {
                 int cy = (int)catY(cat);
                 if (mx >= ipx && mx < ipx + SIDEBAR_W && my >= cy && my < cy + CAT_H) {
                     active = cat; search = ""; selected = null;
-                    invalidateBlurThrottled();
                     return true;
                 }
             }
@@ -404,7 +401,6 @@ public final class ClickGuiScreen extends Screen {
                 int cardX = modX + PAD + col2 * (colW + PAD);
                 if (mx >= cardX && mx < cardX + colW && my >= rowY && my < rowY + CARD_H) {
                     m.toggle();
-                    invalidateBlurThrottled();
                     return true;
                 }
                 col2++;
@@ -425,13 +421,11 @@ public final class ClickGuiScreen extends Screen {
                     if (settingsPopup != null && settingsPopup.getModule() == m) {
                         settingsPopup.close();
                         settingsPopup = null;
-                        invalidateBlurThrottled();
                     } else {
                         if (settingsPopup != null) {
                             settingsPopup.close();
                         }
                         settingsPopup = new SettingsPopup(m);
-                        invalidateBlurThrottled();
                     }
                     return true;
                 }

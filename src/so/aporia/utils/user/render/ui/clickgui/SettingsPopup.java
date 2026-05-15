@@ -102,7 +102,7 @@ public class SettingsPopup {
         int scaledX = px + (POPUP_W - scaledW) / 2;
         int scaledY = py + (popupH - scaledH) / 2;
         
-        // r.drawRectBlurred(scaledX, scaledY, scaledW, scaledH, R, C_BG, 8f);
+        r.drawRectBlurred(scaledX, scaledY, scaledW, scaledH, R, C_BG, 1f);
         r.drawStroke(scaledX, scaledY, scaledW, scaledH, R, 1f, 1, 0f, C_BORDER_OUT);
         r.drawStroke(scaledX + 1, scaledY + 1, scaledW - 2, scaledH - 2, R - 1, 1f, 1, 0f, C_BORDER_IN);
         
@@ -204,7 +204,7 @@ public class SettingsPopup {
             selectAnim.update();
             float selectProg = selectAnim.value();
             int bgAlpha = (int)(120 + selectProg * 80);
-            // r.drawRectBlurred(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(30, 30, 50, bgAlpha), 15f);
+            r.drawRectBlurred(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(30, 30, 50, bgAlpha), 15f);
             r.drawText("regular", displayText, valueX + 6, valueY + (valueH - 9) / 2f + 1, 8f, ColorUtil.rgba(255, 255, 255, 200));
         } else if (s instanceof TextSetting ts) {
             r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, C_TXT);
@@ -224,7 +224,7 @@ public class SettingsPopup {
             } catch (IllegalAccessException ignored) {}
             
             int bgColor = isFocused ? ColorUtil.rgba(40, 60, 100, 180) : ColorUtil.rgba(30, 30, 50, 150);
-            // r.drawRectBlurred(inputX, inputY, inputW, inputH, 4, bgColor, 15f);
+            r.drawRectBlurred(inputX, inputY, inputW, inputH, 4, bgColor, 1f);
             
             String text = ts.get().isEmpty() ? "..." : ts.get();
             int textColor = isFocused ? ColorUtil.rgba(255, 255, 255, 255) : ColorUtil.rgba(255, 255, 255, ts.get().isEmpty() ? 100 : 200);
@@ -272,7 +272,7 @@ public class SettingsPopup {
             } catch (IllegalAccessException ignored) {}
             
             int bgColor = isBound ? ColorUtil.rgba(40, 60, 100, 180) : ColorUtil.rgba(30, 30, 50, 150);
-            // r.drawRectBlurred(keyX, keyY, keyW, keyH, 4, bgColor, 15f);
+            r.drawRectBlurred(keyX, keyY, keyW, keyH, 4, bgColor, 1f);
             String keyName = bs2.isBound() ? keyName(bs2.getKey()) : "None";
             
             int keyWidth = (int) r.getTextWidth("regular", keyName, 8f);
@@ -322,7 +322,7 @@ public class SettingsPopup {
             multiAnim.update();
             float multiProg = multiAnim.value();
             int bgAlpha = (int)(120 + multiProg * 80);
-            // r.drawRectBlurred(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(30, 30, 50, bgAlpha), 15f);
+            r.drawRectBlurred(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(30, 30, 50, bgAlpha), 1f);
             
             String selected = displayText.isEmpty() ? "None" : displayText;
             r.drawText("regular", selected, valueX + 6, valueY + (valueH - 9) / 2f + 1, 7f, ColorUtil.rgba(255, 255, 255, 200));
@@ -631,7 +631,7 @@ public class SettingsPopup {
             int menuW = 80;
             int menuH = options.size() * itemH + 4;
             
-            // r.drawRectBlurred(x, y, menuW, menuH, 4, ColorUtil.rgba(20, 22, 35, 200), 8f);
+            r.drawRectBlurred(x, y, menuW, menuH, 4, ColorUtil.rgba(20, 22, 35, 200), 1f);
             r.drawStroke(x, y, menuW, menuH, 4, 1f, 1, 0f, ColorUtil.rgba(255, 255, 255, 40));
             
             for (int i = 0; i < options.size(); i++) {
