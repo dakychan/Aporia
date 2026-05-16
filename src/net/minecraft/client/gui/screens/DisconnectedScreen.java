@@ -66,7 +66,7 @@ public class DisconnectedScreen extends Screen {
         if (this.minecraft.allowsMultiplayer()) {
             button = Button.builder(this.buttonText, p_280799_ -> this.minecraft.setScreen(this.parent)).width(200).build();
         } else {
-            button = Button.builder(TO_TITLE, p_280800_ -> this.minecraft.setScreen(new TitleScreen())).width(200).build();
+            button = Button.builder(TO_TITLE, p_280800_ -> this.minecraft.setScreen(new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen())).width(200).build();
         }
 
         this.layout.addChild(button);

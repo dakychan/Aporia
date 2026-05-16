@@ -826,7 +826,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
             this.disconnectWithProgressScreen();
         }
 
-        this.setScreen(new TitleScreen());
+        this.setScreen(new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen());
         this.addResourcePackLoadFailToast(null);
     }
 
@@ -1103,7 +1103,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
             }
 
             if (this.level == null) {
-                p_91153_ = new TitleScreen();
+                p_91153_ = new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen();
             } else if (this.player.isDeadOrDying()) {
                 if (this.player.shouldShowDeathScreen()) {
                     p_91153_ = new DeathScreen(null, this.level.getLevelData().isHardcore(), this.player);
@@ -2081,11 +2081,11 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
             this.disconnectWithProgressScreen();
         }
 
-        TitleScreen titlescreen = new TitleScreen();
+        so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen mainmenu = new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen();
         if (flag) {
-            this.setScreen(titlescreen);
+            this.setScreen(mainmenu);
         } else if (serverdata != null && serverdata.isRealm()) {
-            this.setScreen(new RealmsMainScreen(titlescreen));
+            this.setScreen(new RealmsMainScreen(mainmenu));
         } else {
             this.setScreen(new JoinMultiplayerScreen(titlescreen));
         }

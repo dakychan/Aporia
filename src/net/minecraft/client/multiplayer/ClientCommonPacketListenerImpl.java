@@ -27,7 +27,6 @@ import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.dialog.DialogConnectionAccess;
 import net.minecraft.client.gui.screens.dialog.DialogScreen;
 import net.minecraft.client.gui.screens.dialog.DialogScreens;
@@ -371,7 +370,7 @@ public abstract class ClientCommonPacketListenerImpl implements ClientCommonPack
 
     protected Screen createDisconnectScreen(DisconnectionDetails p_342895_) {
         Screen screen = Objects.requireNonNullElseGet(
-            this.postDisconnectScreen, () -> (Screen)(this.serverData != null ? new JoinMultiplayerScreen(new TitleScreen()) : new TitleScreen())
+            this.postDisconnectScreen, () -> (Screen)(this.serverData != null ? new JoinMultiplayerScreen(new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen()) : new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen())
         );
         return this.serverData != null && this.serverData.isRealm()
             ? new DisconnectedScreen(screen, GENERIC_DISCONNECT_MESSAGE, p_342895_, CommonComponents.GUI_BACK)

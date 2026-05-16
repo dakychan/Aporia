@@ -97,7 +97,7 @@ public class DeathScreen extends Screen {
         }
 
         this.minecraft.disconnectWithSavingScreen();
-        this.minecraft.setScreen(new TitleScreen());
+        this.minecraft.setScreen(new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen());
     }
 
     @Override

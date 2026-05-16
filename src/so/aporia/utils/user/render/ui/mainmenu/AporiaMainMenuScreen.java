@@ -145,7 +145,7 @@ public final class AporiaMainMenuScreen extends Screen {
             if (f.alpha > 0.01f) {
                 int col = ColorUtil.rgba(100, 30, 200, (int)(f.alpha * 60));
                 float size = f.size * (1f - f.alpha) * 200f + 2f;
-                r.drawCircle((int)(f.x * this.width), (int)(f.y * this.height), (int)size, col);
+                r.drawCircle(f.x * this.width, f.y * this.height, size, col);
             }
         }
 
@@ -160,7 +160,7 @@ public final class AporiaMainMenuScreen extends Screen {
                 } else {
                     col = ColorUtil.rgba(255, 255, 255, (int)(s.alpha * 200));
                 }
-                r.drawRect((int)(s.x * this.width) - 1, (int)(s.y * this.height) - 1, 2, 2, 0, col);
+                r.drawRect(s.x * this.width - 1, s.y * this.height - 1, 2, 2, 0, col);
             }
         }
     }
@@ -252,16 +252,13 @@ public final class AporiaMainMenuScreen extends Screen {
         Minecraft mc = Minecraft.getInstance();
         switch (id) {
             case 0:
-                mc.setScreen(new net.minecraft.client.gui.screens.TitleScreen());
-                mc.execute(() -> mc.setScreen(new net.minecraft.client.gui.screens.worldselection.SelectWorldScreen(new net.minecraft.client.gui.screens.TitleScreen())));
+                mc.setScreen(new net.minecraft.client.gui.screens.worldselection.SelectWorldScreen(this));
                 break;
             case 1:
-                mc.setScreen(new net.minecraft.client.gui.screens.TitleScreen());
-                mc.execute(() -> mc.setScreen(new net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen(new net.minecraft.client.gui.screens.TitleScreen())));
+                mc.setScreen(new net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen(this));
                 break;
             case 2:
-                mc.setScreen(new net.minecraft.client.gui.screens.TitleScreen());
-                mc.execute(() -> mc.setScreen(new net.minecraft.client.gui.screens.OptionsScreen(new net.minecraft.client.gui.screens.TitleScreen())));
+                mc.setScreen(new net.minecraft.client.gui.screens.OptionsScreen(this));
                 break;
             case 3:
                 mc.execute(() -> mc.stop());

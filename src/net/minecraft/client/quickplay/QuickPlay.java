@@ -14,7 +14,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.screens.Screen;
+import so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.client.main.GameConfig;
@@ -45,7 +46,7 @@ public class QuickPlay {
     public static void connect(Minecraft p_279319_, GameConfig.QuickPlayVariant p_410522_, RealmsClient p_279322_) {
         if (!p_410522_.isEnabled()) {
             LOGGER.error("Quick play disabled");
-            p_279319_.setScreen(new TitleScreen());
+            p_279319_.setScreen(new AporiaMainMenuScreen());
         } else {
             switch (p_410522_) {
                 case GameConfig.QuickPlayMultiplayerData gameconfig$quickplaymultiplayerdata:
@@ -64,7 +65,7 @@ public class QuickPlay {
                     break;
                 case GameConfig.QuickPlayDisabled gameconfig$quickplaydisabled:
                     LOGGER.error("Quick play disabled");
-                    p_279319_.setScreen(new TitleScreen());
+                    p_279319_.setScreen(new AporiaMainMenuScreen());
                     break;
                 default:
                     throw new MatchException(null, null);
@@ -89,9 +90,9 @@ public class QuickPlay {
 
     private static void joinSingleplayerWorld(Minecraft p_279420_, @Nullable String p_279459_) {
         if (!StringUtil.isBlank(p_279459_) && p_279420_.getLevelSource().levelExists(p_279459_)) {
-            p_279420_.createWorldOpenFlows().openWorld(p_279459_, () -> p_279420_.setScreen(new TitleScreen()));
+            p_279420_.createWorldOpenFlows().openWorld(p_279459_, () -> p_279420_.setScreen(new AporiaMainMenuScreen()));
         } else {
-            Screen screen = new SelectWorldScreen(new TitleScreen());
+            Screen screen = new SelectWorldScreen(new AporiaMainMenuScreen());
             p_279420_.setScreen(new DisconnectedScreen(screen, ERROR_TITLE, INVALID_IDENTIFIER, TO_WORLD_LIST));
         }
     }
@@ -107,7 +108,7 @@ public class QuickPlay {
         }
 
         ServerAddress serveraddress = ServerAddress.parseString(p_279128_);
-        ConnectScreen.startConnecting(new JoinMultiplayerScreen(new TitleScreen()), p_279276_, serveraddress, serverdata, true, null);
+        ConnectScreen.startConnecting(new JoinMultiplayerScreen(new AporiaMainMenuScreen()), p_279276_, serveraddress, serverdata, true, null);
     }
 
     private static void joinRealmsWorld(Minecraft p_279320_, RealmsClient p_279468_, String p_279371_) {
@@ -117,22 +118,22 @@ public class QuickPlay {
             i = Long.parseLong(p_279371_);
             realmsserverlist = p_279468_.listRealms();
         } catch (NumberFormatException numberformatexception) {
-            Screen screen1 = new RealmsMainScreen(new TitleScreen());
+            Screen screen1 = new RealmsMainScreen(new AporiaMainMenuScreen());
             p_279320_.setScreen(new DisconnectedScreen(screen1, ERROR_TITLE, INVALID_IDENTIFIER, TO_REALMS_LIST));
             return;
         } catch (RealmsServiceException realmsserviceexception) {
-            Screen screen = new TitleScreen();
+            Screen screen = new AporiaMainMenuScreen();
             p_279320_.setScreen(new DisconnectedScreen(screen, ERROR_TITLE, REALM_CONNECT, TO_TITLE));
             return;
         }
 
         RealmsServer realmsserver = realmsserverlist.servers().stream().filter(p_279424_ -> p_279424_.id == i).findFirst().orElse(null);
         if (realmsserver == null) {
-            Screen screen2 = new RealmsMainScreen(new TitleScreen());
+            Screen screen2 = new RealmsMainScreen(new AporiaMainMenuScreen());
             p_279320_.setScreen(new DisconnectedScreen(screen2, ERROR_TITLE, REALM_PERMISSION, TO_REALMS_LIST));
         } else {
-            TitleScreen titlescreen = new TitleScreen();
-            p_279320_.setScreen(new RealmsLongRunningMcoTaskScreen(titlescreen, new GetServerDetailsTask(titlescreen, realmsserver)));
+            AporiaMainMenuScreen mainmenu = new AporiaMainMenuScreen();
+            p_279320_.setScreen(new RealmsLongRunningMcoTaskScreen(mainmenu, new GetServerDetailsTask(mainmenu, realmsserver)));
         }
     }
 }

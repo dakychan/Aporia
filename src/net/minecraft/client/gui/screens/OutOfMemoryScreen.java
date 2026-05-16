@@ -25,7 +25,7 @@ public class OutOfMemoryScreen extends Screen {
         this.layout.addTitleHeader(TITLE, this.font);
         this.layout.addToContents(FocusableTextWidget.builder(MESSAGE, this.font).maxWidth(300).build());
         LinearLayout linearlayout = this.layout.addToFooter(LinearLayout.horizontal().spacing(8));
-        linearlayout.addChild(Button.builder(CommonComponents.GUI_TO_TITLE, p_280810_ -> this.minecraft.setScreen(new TitleScreen())).build());
+        linearlayout.addChild(Button.builder(CommonComponents.GUI_TO_TITLE, p_280810_ -> this.minecraft.setScreen(new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen())).build());
         linearlayout.addChild(Button.builder(Component.translatable("menu.quit"), p_280811_ -> this.minecraft.stop()).build());
         this.layout.visitWidgets(this::addRenderableWidget);
         this.repositionElements();
