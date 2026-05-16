@@ -24,7 +24,8 @@ public final class ClickGui extends Module {
         "Показывать попап с настройками модулей", true);
     
     public ClickGui() {
-        super("ClickGui", Category.VISUAL, 0x43);
+        super("ClickGui", Category.VISUAL, 41);
+        so.aporia.utils.files.impl.ConfigFile.markModuleActivated(this);
     }
     
     @Override

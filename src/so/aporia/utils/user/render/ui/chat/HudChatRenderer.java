@@ -14,6 +14,7 @@ import so.aporia.utils.user.render.animation.Easing;
 import so.aporia.utils.user.render.animation.MessageAnim;
 import so.aporia.utils.user.render.color.ColorUtil;
 import so.aporia.utils.user.render.core.AporiaRenderer;
+import so.aporia.module.impl.render.Beautifully;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,6 +37,8 @@ public final class HudChatRenderer {
 
     /** Called every frame from the HUD render hook. */
     public static void render(GuiGraphics gfx, Font font, ChatComponent chat, int guiTicks) {
+        if (!Beautifully.isCustomChatEnabled()) return;
+
         AporiaChatScreen.WinCfg c = AporiaChatScreen.WinMgr.I.wins.get(0);
         if (c.lines.isEmpty()) return;
 
@@ -71,8 +74,12 @@ public final class HudChatRenderer {
 
         int actualH    = Math.min(boxH, count * AporiaChatScreen.LINE_H + AporiaChatScreen.BOX_PAD * 2);
         int actualBoxY = boxY + boxH - actualH;
-        AporiaRenderer.INSTANCE.drawRect(c.x, actualBoxY, c.w, actualH, AporiaChatScreen.RADIUS,
-            ColorUtil.rgba(0, 0, 0, (int)(150 * maxAlpha)));
+        int bgColor = ColorUtil.rgba(0, 0, 0, (int)(150 * maxAlpha));
+        if (Beautifully.isBlurEnabled()) {
+            AporiaRenderer.INSTANCE.drawRectBlurred(c.x, actualBoxY, c.w, actualH, AporiaChatScreen.RADIUS, bgColor);
+        } else {
+            AporiaRenderer.INSTANCE.drawRect(c.x, actualBoxY, c.w, actualH, AporiaChatScreen.RADIUS, bgColor);
+        }
 
         int textX = c.x + AporiaChatScreen.BOX_PAD;
         for (int j = 0; j < count; j++) {

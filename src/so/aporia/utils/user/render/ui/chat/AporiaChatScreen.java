@@ -33,6 +33,7 @@ import so.aporia.utils.events.impl.MouseClickEvent;
 import so.aporia.utils.events.impl.MouseScrollEvent;
 import aporia.cc.PanicSystem;
 import so.aporia.utils.user.command.CommandManager;
+import so.aporia.module.impl.render.Beautifully;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -579,7 +580,11 @@ public class AporiaChatScreen extends ChatScreen {
         renderWindowContent(gfx, r, cfg(), mouseX, mouseY, true);
 
         int bx = boxX(), iy = inputY(), bW = barWidth();
-        r.drawRect(bx, iy, bW, INPUT_H, RADIUS, C_INPUT_BG);
+        if (Beautifully.isBlurEnabled()) {
+            r.drawRectBlurred(bx, iy, bW, INPUT_H, RADIUS, C_INPUT_BG);
+        } else {
+            r.drawRect(bx, iy, bW, INPUT_H, RADIUS, C_INPUT_BG);
+        }
         gfx.enableScissor(bx, iy, bx+bW, iy+INPUT_H);
         this.input.render(gfx, mouseX, mouseY, delta);
         gfx.disableScissor();
@@ -622,7 +627,13 @@ public class AporiaChatScreen extends ChatScreen {
         int actualH  = msgCount == 0 ? 0 : Math.min(bh, msgCount * LINE_H + BOX_PAD * 2);
         int actualBy = by + bh - actualH;
         
-        if (actualH > 0) r.drawRect(bx, actualBy, bw, actualH, RADIUS, C_CHAT_BG);
+        if (actualH > 0) {
+            if (Beautifully.isBlurEnabled()) {
+                r.drawRectBlurred(bx, actualBy, bw, actualH, RADIUS, C_CHAT_BG);
+            } else {
+                r.drawRect(bx, actualBy, bw, actualH, RADIUS, C_CHAT_BG);
+            }
+        }
         
         gfx.enableScissor(bx, actualBy, bx+bw, by+bh);
         if (isActive) renderMessages(gfx, c, by+BOX_PAD, bx+BOX_PAD);

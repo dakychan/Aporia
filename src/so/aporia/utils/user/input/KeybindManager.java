@@ -57,6 +57,10 @@ public final class KeybindManager {
         Minecraft mc = Minecraft.getInstance();
         Screen screen = mc.screen;
 
+        if (screen instanceof ClickGuiScreen clickGui) {
+            if (clickGui.isBindingActive()) return;
+        }
+
         if (screen == null) {
             for (Module m : ModuleManager.INSTANCE.getAll()) {
                 if (m.keybind() != -1 && m.keybind() == e.button()) {

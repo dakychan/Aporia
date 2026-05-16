@@ -785,6 +785,10 @@ public class ClientPacketListener extends ClientCommonPacketListenerImpl impleme
                     this.removedPlayerVehicleId = OptionalInt.of(p_420851_);
                 }
 
+                if (entity instanceof net.minecraft.world.entity.player.Player player && player != this.minecraft.player) {
+                    so.aporia.utils.events.EventBus.INSTANCE.post(new so.aporia.utils.events.impl.PlayerDeathEvent(player));
+                }
+
                 this.level.removeEntity(p_420851_, Entity.RemovalReason.DISCARDED);
                 this.debugSubscriber.dropEntity(entity);
             }

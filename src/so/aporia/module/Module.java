@@ -45,6 +45,7 @@ public abstract class Module {
     public final void enable() {
         if (enabled) return;
         enabled = true;
+        so.aporia.utils.files.impl.ConfigFile.markModuleActivated(this);
         onEnable();
     }
 

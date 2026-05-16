@@ -4,6 +4,7 @@ import com.mojang.blaze3d.ProjectionType;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.platform.NativeImage;
@@ -44,10 +45,11 @@ public class AporiaRenderer {
     private RenderPipeline blitPipeline;
     private RenderPipeline postPipeline;
 
-    // Блюр-текстуры
-    private TextureTarget kawaseDownTarget;  // half-res для downscale
+    // В полях класса пишем так:
+    private TextureTarget[] kawaseDownTargets = new TextureTarget[4]; // Размер пишем в правых скобках!
     private TextureTarget blurTarget;        // full-res финальный блюр
-    private TextureTarget blurTempTarget;    // full-res для апскейл-пинг-понга
+    // blurTempTarget больше НЕ НУЖЕН, удаляем его
+
     private int blurTargetW = -1, blurTargetH = -1;
     private boolean blurReady = false;
 
@@ -595,13 +597,16 @@ public class AporiaRenderer {
     public float saturation = 0.5f;
 
     public void prepareFrameBlur(Minecraft mc, float strength, float saturation) {
-        blurFrameCounter++;
-        if (blurFrameCounter >= BLUR_UPDATE_INTERVAL) {
-            blurFrameCounter = 0;
-            prepareBlur(mc, strength, saturation);
-            cachedBlurStrength = strength;
-            cachedBlurSaturation = saturation;
-        }
+        // УБРАЛИ BLUR_UPDATE_INTERVAL! Теперь мы не пропускаем кадры искусственно.
+        // Но оставляем проверку: если сила или сатурация изменились, или если буфер сброшен — перерисовываем.
+        // При движении мыши или изменении UI вызывай invalidateBlurCache(), чтобы блюр обновлялся мгновенно.
+
+        // Для максимальной плавности при движении камеры лучше обновлять блюр КАЖДЫЙ КАДР,
+        // поэтому мы просто вызываем prepareBlur напрямую без условий:
+        prepareBlur(mc, strength, saturation);
+
+        cachedBlurStrength = strength;
+        cachedBlurSaturation = saturation;
     }
 
     public void invalidateBlurCache() {
@@ -611,27 +616,42 @@ public class AporiaRenderer {
     }
 
     private void ensureBlurTarget(Minecraft mc) {
-        var main = mc.getMainRenderTarget();
-        if (main.width == blurTargetW && main.height == blurTargetH) return;
+        var mainTarget = mc.getMainRenderTarget();
+        int mainW = mainTarget.width;
+        int mainH = mainTarget.height;
 
-        // Уничтожаем старые текстуры
-        if (kawaseDownTarget != null) kawaseDownTarget.destroyBuffers();
-        if (blurTarget       != null) blurTarget.destroyBuffers();
-        if (blurTempTarget   != null) blurTempTarget.destroyBuffers();
+        if (kawaseDownTargets != null && kawaseDownTargets.length > 0 && kawaseDownTargets[0] != null) {
+            if (blurTargetW == mainW && blurTargetH == mainH) {
+                return;
+            }
+        }
 
-        // half‑res текстура для downscale
-        int halfW = Math.max(1, main.width / 2);
-        int halfH = Math.max(1, main.height / 2);
-        kawaseDownTarget = new TextureTarget("aporia:kawase_down", halfW, halfH, false);
+        if (kawaseDownTargets == null || kawaseDownTargets.length != 5) {
+            kawaseDownTargets = new TextureTarget[5];
+        }
 
-        // full‑res текстуры для upscale пинг‑понга
-        blurTarget     = new TextureTarget("aporia:blur_final", main.width, main.height, false);
-        blurTempTarget = new TextureTarget("aporia:blur_temp",  main.width, main.height, false);
+        for (int i = 0; i < kawaseDownTargets.length; i++) {
+            kawaseDownTargets[i] = null;
+        }
+        blurTarget = null;
 
-        blurTargetW = main.width;
-        blurTargetH = main.height;
-        blurReady   = false;
+        blurTargetW = mainW;
+        blurTargetH = mainH;
+
+        blurTarget = new TextureTarget("aporia_blur_final", mainW, mainH, false);
+
+        int currentW = mainW;
+        int currentH = mainH;
+
+        for (int i = 0; i < kawaseDownTargets.length; i++) {
+            currentW = Math.max(1, currentW / 2);
+            currentH = Math.max(1, currentH / 2);
+
+            kawaseDownTargets[i] = new TextureTarget("aporia_blur_down_" + i, currentW, currentH, false);
+        }
     }
+
+
 
     public void prepareBlur(Minecraft mc, float strength, float saturation) {
         ensureBlurTarget(mc);
@@ -640,90 +660,80 @@ public class AporiaRenderer {
 
         int mainW = mainTarget.width;
         int mainH = mainTarget.height;
-        int halfW = Math.max(1, mainW / 2);
-        int halfH = Math.max(1, mainH / 2);
 
         var encoder = device.createCommandEncoder();
-
-        // ----- DOWNSCALE -----
         var bb = ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder());
-        bb.putFloat((float) mainW);
-        bb.putFloat((float) mainH);
-        bb.putFloat(1.0f);
-        bb.putFloat(saturation);
-        bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
-        bb.flip();
-        encoder.writeToBuffer(blurUbo.slice(), bb);
 
-        try (var pass = encoder.createRenderPass(() -> "aporia:kawase_down",
-                kawaseDownTarget.getColorTextureView(), OptionalInt.empty())) {
-            pass.setPipeline(kawaseDownPipeline);
-            pass.bindTexture("InputTexture", mainTarget.getColorTextureView(),
-                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
-            pass.setUniform("KawaseData", blurUbo.slice());
-            pass.setVertexBuffer(0, blurQuadVbo);
-            pass.draw(0, 6);
+        // Фиксируем 5 шагов для глубокого размытия без интервалов пропуска кадров
+        int maxSteps = 4;
+        float strengthFactor = strength / 30.0f;
+
+        // ----- 1. ЦИКЛ DOWNSCALE -----
+        RenderTarget currentSrc = mainTarget;
+
+        for (int i = 0; i < maxSteps; i++) {
+            TextureTarget currentDst = kawaseDownTargets[i];
+
+            bb.clear();
+            bb.putFloat((float) currentSrc.width);
+            bb.putFloat((float) currentSrc.height);
+            bb.putFloat(1.0f);
+            bb.putFloat(saturation);
+            bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
+            bb.flip();
+            encoder.writeToBuffer(blurUbo.slice(), bb);
+
+            if (i == 0) saturation = 0.5f;
+
+            final int stepIdx = i;
+            // ИСПРАВЛЕНО: Заменили OptionalInt.empty() на OptionalInt.of(0) для полной очистки текстуры перед пассом
+            try (var pass = encoder.createRenderPass(() -> "aporia:kawase_down_" + stepIdx,
+                    currentDst.getColorTextureView(), OptionalInt.of(0))) {
+                pass.setPipeline(kawaseDownPipeline);
+                pass.bindTexture("InputTexture", currentSrc.getColorTextureView(),
+                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+                pass.setUniform("KawaseData", blurUbo.slice());
+                pass.setVertexBuffer(0, blurQuadVbo);
+                pass.draw(0, 6);
+            }
+
+            currentSrc = currentDst;
         }
 
-        // ----- UPSCALE -----
-        int iterations = Math.max(1, (int) (strength / 2.0f));
-        float offset = 1.0f;
-        float offsetStep = Math.max(0.5f, strength / (iterations * 2.0f));
+        // ----- 2. ЦИКЛ UPSCALE -----
+        for (int i = maxSteps - 1; i >= 0; i--) {
+            TextureTarget currentDst = (i == 0) ? blurTarget : kawaseDownTargets[i - 1];
 
-        TextureTarget src = kawaseDownTarget;
-        TextureTarget dst = blurTempTarget;
+            float offset = ((float)i + 0.5f) * strengthFactor;
 
-        for (int i = 0; i < iterations; i++) {
             bb.clear();
-            bb.putFloat((float) halfW);
-            bb.putFloat((float) halfH);
+            bb.putFloat((float) currentSrc.width);
+            bb.putFloat((float) currentSrc.height);
             bb.putFloat(offset);
             bb.putFloat(0f);
             bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
             bb.flip();
             encoder.writeToBuffer(blurUbo.slice(), bb);
 
-            try (var pass = encoder.createRenderPass(() -> "aporia:kawase_up",
-                    dst.getColorTextureView(), OptionalInt.empty())) {
+            final int stepIdx = i;
+            // ИСПРАВЛЕНО: Здесь тоже принудительно чистим буфер, чтобы убрать шлейф и дёргания при движении
+            try (var pass = encoder.createRenderPass(() -> "aporia:kawase_up_" + stepIdx,
+                    currentDst.getColorTextureView(), OptionalInt.of(0))) {
                 pass.setPipeline(kawaseUpPipeline);
-                pass.bindTexture("InputTexture", src.getColorTextureView(),
+                pass.bindTexture("InputTexture", currentSrc.getColorTextureView(),
                         RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
                 pass.setUniform("KawaseData", blurUbo.slice());
                 pass.setVertexBuffer(0, blurQuadVbo);
                 pass.draw(0, 6);
             }
 
-            offset += offsetStep;
-            // Пинг-понг
-            var tmp = src;
-            src = dst;
-            dst = (tmp == blurTempTarget) ? blurTarget : blurTempTarget;
-        }
-
-        // Гарантируем, что результат в blurTarget
-        if (src != blurTarget) {
-            bb.clear();
-            bb.putFloat((float) halfW);
-            bb.putFloat((float) halfH);
-            bb.putFloat(0f);
-            bb.putFloat(0f);
-            bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
-            bb.flip();
-            encoder.writeToBuffer(blurUbo.slice(), bb);
-
-            try (var pass = encoder.createRenderPass(() -> "aporia:copy_to_final",
-                    blurTarget.getColorTextureView(), OptionalInt.empty())) {
-                pass.setPipeline(kawaseUpPipeline);
-                pass.bindTexture("InputTexture", blurTempTarget.getColorTextureView(),
-                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
-                pass.setUniform("KawaseData", blurUbo.slice());
-                pass.setVertexBuffer(0, blurQuadVbo);
-                pass.draw(0, 6);
-            }
+            currentSrc = currentDst;
         }
 
         blurReady = true;
     }
+
+
 
     public void prepareBlur(Minecraft mc, float strength) {
         prepareBlur(mc, strength, 0.5f);
@@ -784,9 +794,6 @@ public class AporiaRenderer {
     }
 
     public void cleanupBlur() {
-        if (kawaseDownTarget != null) { kawaseDownTarget.destroyBuffers(); kawaseDownTarget = null; }
-        if (blurTarget       != null) { blurTarget.destroyBuffers();       blurTarget       = null; }
-        if (blurTempTarget   != null) { blurTempTarget.destroyBuffers();   blurTempTarget   = null; }
         blurTargetW = -1; blurTargetH = -1; blurReady = false;
     }
 }

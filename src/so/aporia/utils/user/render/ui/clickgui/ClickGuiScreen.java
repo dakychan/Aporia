@@ -14,6 +14,7 @@ import so.aporia.module.Module;
 import so.aporia.module.ModuleManager;
 import so.aporia.utils.user.render.animation.Animator;
 import so.aporia.utils.user.render.animation.Easing;
+import so.aporia.utils.user.render.animation.TypeAnim;
 import so.aporia.utils.user.render.color.ColorUtil;
 import so.aporia.utils.user.render.core.AporiaRenderer;
 import so.aporia.utils.user.render.font.Fonts;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 @OnlyIn(Dist.CLIENT)
 public final class ClickGuiScreen extends Screen {
@@ -66,6 +68,7 @@ public final class ClickGuiScreen extends Screen {
     private static final int C_GLASS_IN    = ColorUtil.rgba(255, 255, 255,  12);
     private static final int C_SET_BG      = ColorUtil.rgba(255, 255, 255,  10);
     private static final int C_SET_H       = ColorUtil.rgba(255, 255, 255,  20);
+    private static final int C_BIND_YELLOW = ColorUtil.rgba(200, 180, 50, 255);
 
     private float px, py, pw, ph;
     private Category active = Category.values()[0];
@@ -73,7 +76,9 @@ public final class ClickGuiScreen extends Screen {
     private float animSelY  = -1;
 
     private final Map<Category, Animator> hoverAnims = new EnumMap<>(Category.class);
-    private final java.util.WeakHashMap<Module, Animator> modHoverAnims = new java.util.WeakHashMap<>();
+    private final WeakHashMap<Module, Animator> modHoverAnims = new WeakHashMap<>();
+    private final WeakHashMap<Module, TypeAnim> modNameAnims = new WeakHashMap<>();
+    private final WeakHashMap<Module, Animator> modBindFlashAnims = new WeakHashMap<>();
 
     private String  search        = "";
     private boolean searchFocused = false;
@@ -82,15 +87,18 @@ public final class ClickGuiScreen extends Screen {
     private float   dox, doy;
 
     private SettingsPopup settingsPopup = null;
+    private NewUpSetting newUpSetting = null;
     private Animator guiLoadAnim = null;
     private Animator guiOpenAnim = null;
     private Animator contentAnim = null;
     private long guiOpenTime = 0;
     private boolean loadingShown = false;
     private boolean guiInitialized = false;
+    private boolean guiHidden = false;
 
-    private long lastBlurInvalidateTime = 0;
-    private static final long BLUR_INVALIDATE_THROTTLE_MS = 100;
+    private boolean bindModeActive = false;
+    private Module bindModeModule = null;
+    private boolean altHeld = false;
 
     public ClickGuiScreen() { super(Component.literal("ClickGui")); }
 
@@ -110,7 +118,6 @@ public final class ClickGuiScreen extends Screen {
             guiOpenTime = System.currentTimeMillis();
             loadingShown = false;
             guiInitialized = false;
-            AporiaRenderer.INSTANCE.invalidateBlurCache();
         }
         for (Category c : Category.values())
             hoverAnims.computeIfAbsent(c, k -> new Animator(200, Easing::cubicOut));
@@ -121,6 +128,20 @@ public final class ClickGuiScreen extends Screen {
     public void render(GuiGraphics gfx, int mx, int my, float delta) {
         AporiaRenderer r = AporiaRenderer.INSTANCE;
         r.prepareFrameBlur(Minecraft.getInstance(), 15f, 0.75f);
+
+        if (newUpSetting != null && newUpSetting.isOpen()) {
+            newUpSetting.render(r, gfx, mx, my, this.width, this.height);
+            if (newUpSetting.isFullyClosed()) {
+                newUpSetting.close();
+                newUpSetting = null;
+                guiHidden = false;
+                contentAnim = new Animator(400, Easing::cubicOut);
+                contentAnim.play();
+            }
+            return;
+        }
+
+        if (guiHidden) return;
 
         px = Math.max(0, Math.min(px, this.width  - pw));
         py = Math.max(0, Math.min(py, this.height - ph));
@@ -324,12 +345,48 @@ public final class ClickGuiScreen extends Screen {
             boolean on  = m.isEnabled();
             boolean hov = hx >= cardX && hx < cardX + colW && hy >= y && hy < y + CARD_H;
             boolean sel = m == selected;
+            boolean inBind = bindModeActive && m == bindModeModule;
+            boolean showBind = altHeld && m.keybind() != -1;
 
             Animator ha = modHoverAnims.computeIfAbsent(m, k -> new Animator(180, Easing::cubicOut));
             if (hov && !ha.isPlaying() && ha.value() < 0.99f) ha.play();
             if (!hov && !ha.isPlaying() && ha.value() > 0.01f) ha.reverse();
             ha.update();
             float hp = ha.value();
+
+            TypeAnim ta = modNameAnims.computeIfAbsent(m, k -> {
+                TypeAnim a = new TypeAnim(110, 170);
+                a.snap(m.name());
+                return a;
+            });
+
+            if (inBind) {
+                String want = "Ожидаю бинд..";
+                if (!ta.isRunning() && !ta.update().equals(want)) {
+                    ta.setTarget(want);
+                }
+            } else if (showBind) {
+                String want = "Бинд: " + so.aporia.utils.user.input.KeyCodeMap.getName(m.keybind());
+                if (!ta.isRunning() && !ta.update().equals(want)) {
+                    ta.setTarget(want);
+                }
+            } else {
+                String want = m.name();
+                if (!ta.isRunning() && !ta.update().equals(want)) {
+                    ta.setTarget(want);
+                }
+            }
+
+            String displayName = ta.update();
+
+            Animator flashAnim = modBindFlashAnims.computeIfAbsent(m, k -> new Animator(300, Easing::sineInOut));
+            if (inBind) {
+                if (!flashAnim.isPlaying()) {
+                    flashAnim.reset();
+                    flashAnim.play();
+                }
+                flashAnim.update();
+            }
 
             float staggerDelay = modIdx * 0.05f;
             float modAlpha = Math.max(0, Math.min(1f, (contentAlpha - staggerDelay) / (1f - staggerDelay)));
@@ -338,16 +395,31 @@ public final class ClickGuiScreen extends Screen {
             int tintAlpha = (int)(12 * modAlpha);
             int hovAlpha = (int)(28 * modAlpha);
             int onAlpha = (int)(40 * modAlpha);
-            int cardTint = sel ? ColorUtil.rgba(255, 255, 255, onAlpha) : (hov ? ColorUtil.rgba(255, 255, 255, hovAlpha) : ColorUtil.rgba(255, 255, 255, tintAlpha));
+
+            int cardTint;
+            if (inBind) {
+                int bindAlpha = (int)(80 * modAlpha) + (int)(60 * flashAnim.value() * modAlpha);
+                cardTint = ColorUtil.rgba(200, 180, 50, bindAlpha);
+            } else {
+                cardTint = sel ? ColorUtil.rgba(255, 255, 255, onAlpha) : (hov ? ColorUtil.rgba(255, 255, 255, hovAlpha) : ColorUtil.rgba(255, 255, 255, tintAlpha));
+            }
 
             r.drawRectBlurred(cardX, (int)(y + offsetY), colW, CARD_H, CARD_R, cardTint, 5f);
 
-            int outlineAlpha = (int)((20 + 50 * hp) * modAlpha) + (on ? (int)(60 * modAlpha) : 0);
-            int outlineColor = ColorUtil.rgba(255, 255, 255, outlineAlpha);
+            int outlineAlpha;
+            int outlineColor;
+            if (inBind) {
+                outlineAlpha = (int)((100 + 100 * flashAnim.value()) * modAlpha);
+                outlineColor = ColorUtil.rgba(200, 180, 50, outlineAlpha);
+            } else {
+                outlineAlpha = (int)((20 + 50 * hp) * modAlpha) + (on ? (int)(60 * modAlpha) : 0);
+                outlineColor = ColorUtil.rgba(255, 255, 255, outlineAlpha);
+            }
             r.drawStroke(cardX, (int)(y + offsetY), colW, CARD_H, CARD_R, 1f, 1, 0f, outlineColor);
 
-            r.drawText("regular", m.name(),
-                    cardX + PAD, (int)(y + offsetY + (CARD_H - 9) / 2f - 1), 9f, ColorUtil.rgba(255, 255, 255, (int)((on ? 255 : 180) * modAlpha)));
+            int textColor = inBind ? C_BIND_YELLOW : ColorUtil.rgba(255, 255, 255, (int)((on ? 255 : 180) * modAlpha));
+            r.drawText("regular", displayName,
+                    cardX + PAD, (int)(y + offsetY + (CARD_H - 9) / 2f - 1), 9f, textColor);
 
             col++;
             if (col >= cols) { col = 0; rowY += CARD_H + CARD_GAP; }
@@ -360,6 +432,13 @@ public final class ClickGuiScreen extends Screen {
         int ipx = (int)px, ipy = (int)py, ipw = (int)pw, iph = (int)ph;
         int bodyY = ipy + TOPBAR_H;
 
+        if (newUpSetting != null && newUpSetting.isOpen()) {
+            if (!newUpSetting.isClosing()) {
+                newUpSetting.mouseClicked(mx, my, this.width, this.height, e.button());
+            }
+            return true;
+        }
+
         if (settingsPopup != null) {
             boolean consumed = settingsPopup.mouseClicked(mx, my, this.width, this.height, e.button());
             if (consumed) {
@@ -368,6 +447,26 @@ public final class ClickGuiScreen extends Screen {
             settingsPopup.close();
             settingsPopup = null;
             return true;
+        }
+
+        if (e.button() == 2) {
+            int cx  = ipx + SIDEBAR_W;
+            int cw  = ipw - SIDEBAR_W;
+            int modX = cx + 1;
+            int modW = cw - 1;
+            int cols = 2;
+            int colW = (modW - PAD * (cols + 1)) / cols;
+            int col2 = 0, rowY = bodyY + PAD;
+            for (Module m : filtered()) {
+                int cardX = modX + PAD + col2 * (colW + PAD);
+                if (mx >= cardX && mx < cardX + colW && my >= rowY && my < rowY + CARD_H) {
+                    bindModeActive = true;
+                    bindModeModule = m;
+                    return true;
+                }
+                col2++;
+                if (col2 >= cols) { col2 = 0; rowY += CARD_H + CARD_GAP; }
+            }
         }
 
         if (e.button() == 0) {
@@ -418,15 +517,12 @@ public final class ClickGuiScreen extends Screen {
             for (Module m : filtered()) {
                 int cardX = cx + PAD + col2 * (colW + PAD);
                 if (mx >= cardX && mx < cardX + colW && my >= y && my < y + CARD_H) {
-                    if (settingsPopup != null && settingsPopup.getModule() == m) {
+                    if (settingsPopup != null) {
                         settingsPopup.close();
                         settingsPopup = null;
-                    } else {
-                        if (settingsPopup != null) {
-                            settingsPopup.close();
-                        }
-                        settingsPopup = new SettingsPopup(m);
                     }
+                    guiHidden = true;
+                    newUpSetting = new NewUpSetting(m);
                     return true;
                 }
                 col2++;
@@ -452,22 +548,59 @@ public final class ClickGuiScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent e) {
+        int sc = e.scancode();
+
+        if (sc == 56) {
+            altHeld = true;
+            return true;
+        }
+
+        if (bindModeActive && bindModeModule != null) {
+            if (sc == 1) {
+                bindModeActive = false;
+                bindModeModule = null;
+                return true;
+            }
+            bindModeModule.setKeybind(sc);
+            so.aporia.utils.files.impl.ConfigFile.markDirty();
+            bindModeActive = false;
+            bindModeModule = null;
+            return true;
+        }
+
         if (e.key() == 256) {
+            if (newUpSetting != null && newUpSetting.isOpen()) {
+                if (!newUpSetting.isClosing()) {
+                    newUpSetting.startClose();
+                }
+                return true;
+            }
             if (settingsPopup != null) {
                 settingsPopup.close();
                 settingsPopup = null;
-                AporiaRenderer.INSTANCE.invalidateBlurCache();
                 return true;
             }
         }
-        if (settingsPopup != null && settingsPopup.keyPressed(e.scancode())) {
+        if (newUpSetting != null && newUpSetting.isOpen() && newUpSetting.keyPressed(sc)) {
+            return true;
+        }
+        if (settingsPopup != null && settingsPopup.keyPressed(sc)) {
             return true;
         }
         if (searchFocused) {
-            if (e.key() == 259 && !search.isEmpty()) { search = search.substring(0, search.length() - 1); return true; }
-            if (e.key() == 256) { searchFocused = false; return true; }
+            if (sc == 14 && !search.isEmpty()) { search = search.substring(0, search.length() - 1); return true; }
+            if (sc == 1) { searchFocused = false; return true; }
         }
         return super.keyPressed(e);
+    }
+
+    @Override
+    public boolean keyReleased(KeyEvent e) {
+        if (e.scancode() == 56) {
+            altHeld = false;
+            return true;
+        }
+        return super.keyReleased(e);
     }
 
     @Override
@@ -480,7 +613,6 @@ public final class ClickGuiScreen extends Screen {
         return super.charTyped(e);
     }
 
-    /** Y position of a category row in screen coords */
     private float catY(Category cat) {
         Category[] cats = Category.values();
         int CAT_GAP = 0;
@@ -518,22 +650,9 @@ public final class ClickGuiScreen extends Screen {
         return filteredCache != null ? filteredCache : base;
     }
 
-    private void invalidateBlurThrottled() {
-        long now = System.currentTimeMillis();
-        if (now - lastBlurInvalidateTime >= BLUR_INVALIDATE_THROTTLE_MS) {
-            AporiaRenderer.INSTANCE.invalidateBlurCache();
-            lastBlurInvalidateTime = now;
-        }
-    }
-
     private static String capitalize(String s) {
         if (s == null || s.isEmpty()) return s;
         return Character.toUpperCase(s.charAt(0)) + s.substring(1).toLowerCase();
-    }
-
-    private static String keyName(int key) {
-        return net.minecraft.client.KeyMapping.createNameSupplier("key.keyboard." + key)
-                .get().getString().toUpperCase();
     }
 
     @Override public boolean isPauseScreen()     { return false; }
@@ -544,9 +663,14 @@ public final class ClickGuiScreen extends Screen {
         return active.ordinal();
     }
 
+    public boolean isBindingActive() {
+        return bindModeActive;
+    }
+
     @Override
     public void onClose() {
-        AporiaRenderer.INSTANCE.invalidateBlurCache();
+        if (newUpSetting != null) newUpSetting.close();
+        so.aporia.utils.files.impl.ConfigFile.save();
         super.onClose();
     }
 }

@@ -100,6 +100,7 @@ public class FilesManager {
             }
         }
         ChatFile.load();
+        so.aporia.utils.files.impl.ConfigFile.load();
     }
 
     private static void hideWindowsDirectory(Path path) {

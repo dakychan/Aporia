@@ -7,12 +7,16 @@
 package so.aporia.module;
 
 import so.aporia.module.impl.misc.AutoConfig;
+import so.aporia.module.impl.misc.AutoEZ;
 import so.aporia.module.impl.misc.ClickGui;
 import so.aporia.module.impl.misc.DiscordRPCModule;
 import so.aporia.module.impl.misc.PacketDebug;
 import so.aporia.module.impl.misc.ServerHelper;
 import so.aporia.module.impl.misc.TestModule;
+import so.aporia.module.impl.move.AutoSprint;
+import so.aporia.module.impl.render.Beautifully;
 import so.aporia.module.impl.render.Hud;
+import so.aporia.module.impl.render.PlayerESP;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,13 +37,18 @@ public final class ModuleManager {
         registerAll(
                 // render
             new Hud(),
+            new Beautifully(),
+            new PlayerESP(),
             new ClickGui(),
                 // misc
             new ServerHelper(),
             new AutoConfig(),
+            new AutoEZ(),
             new TestModule(),
             new PacketDebug(),
-            new DiscordRPCModule()
+            new DiscordRPCModule(),
+                // move
+            new AutoSprint()
         );
     }
 
