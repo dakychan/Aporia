@@ -105,6 +105,21 @@ public class LocaleManager {
                 map.put("gui.cancel", "Cancel");
                 map.put("gui.enabled", "Enabled");
                 map.put("gui.disabled", "Disabled");
+                map.put("menu.title", "Aporia Client");
+                map.put("menu.subtitle", "Your choice to victory.");
+                map.put("menu.singleplayer", "Singleplayer");
+                map.put("menu.multiplayer", "Multiplayer");
+                map.put("menu.settings", "Settings");
+                map.put("menu.exit", "Exit");
+                map.put("lock.time_format", "%02d:%02d");
+                map.put("lock.day_0", "Sunday");
+                map.put("lock.day_1", "Monday");
+                map.put("lock.day_2", "Tuesday");
+                map.put("lock.day_3", "Wednesday");
+                map.put("lock.day_4", "Thursday");
+                map.put("lock.day_5", "Friday");
+                map.put("lock.day_6", "Saturday");
+                map.put("lock.click_hint", "Click anywhere to unlock");
                 break;
             case "ru_RU":
                 map.put("gui.config", "Конфиг");
@@ -117,6 +132,21 @@ public class LocaleManager {
                 map.put("gui.cancel", "Отмена");
                 map.put("gui.enabled", "Включено");
                 map.put("gui.disabled", "Выключено");
+                map.put("menu.title", "Aporia Client");
+                map.put("menu.subtitle", "Твой выбор к победе.");
+                map.put("menu.singleplayer", "Одиночная игра");
+                map.put("menu.multiplayer", "Мультиплеер");
+                map.put("menu.settings", "Настройки");
+                map.put("menu.exit", "Выход");
+                map.put("lock.time_format", "%02d:%02d");
+                map.put("lock.day_0", "Воскресенье");
+                map.put("lock.day_1", "Понедельник");
+                map.put("lock.day_2", "Вторник");
+                map.put("lock.day_3", "Среда");
+                map.put("lock.day_4", "Четверг");
+                map.put("lock.day_5", "Пятница");
+                map.put("lock.day_6", "Суббота");
+                map.put("lock.click_hint", "Нажмите в любом месте для разблокировки");
                 break;
             case "ch_CH":
                 map.put("gui.config", "配置");

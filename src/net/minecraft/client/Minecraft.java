@@ -704,7 +704,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
             if (p_299870_ != null && p_299870_.quickPlayData.isEnabled()) {
                 QuickPlay.connect(this, p_299870_.quickPlayData.variant(), p_299870_.realmsClient());
             } else {
-                this.setScreen(new TitleScreen(true, new LogoRenderer(flag)));
+                this.setScreen(new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen());
             }
         };
 
