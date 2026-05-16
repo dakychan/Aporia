@@ -35,8 +35,30 @@ public final class ConfigFile {
     private static final Path FILE = FilesManager.ROOT.resolve("config.apr");
     private static boolean dirty = false;
     private static final Set<String> activatedModules = new HashSet<>();
+    private static Thread autoSaveThread;
+    private static final long AUTO_SAVE_INTERVAL_MS = 30000;
 
     private ConfigFile() {}
+
+    private static void startAutoSave() {
+        if (autoSaveThread != null && autoSaveThread.isAlive()) return;
+        autoSaveThread = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    Thread.sleep(AUTO_SAVE_INTERVAL_MS);
+                    if (dirty) {
+                        save();
+                    }
+                } catch (InterruptedException e) {
+                    break;
+                } catch (Exception e) {
+                    Logger.error("Auto-save error: " + e.getMessage());
+                }
+            }
+        }, "Aporia-ConfigAutoSave");
+        autoSaveThread.setDaemon(true);
+        autoSaveThread.start();
+    }
 
     public static void markModuleActivated(Module mod) {
         activatedModules.add(mod.name());
@@ -114,6 +136,7 @@ public final class ConfigFile {
             }
 
             Logger.success("Config loaded");
+            startAutoSave();
         } catch (IOException e) {
             Logger.error("Failed to load config: " + e.getMessage());
         }

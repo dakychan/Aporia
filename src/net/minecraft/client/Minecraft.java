@@ -2087,7 +2087,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
         } else if (serverdata != null && serverdata.isRealm()) {
             this.setScreen(new RealmsMainScreen(mainmenu));
         } else {
-            this.setScreen(new JoinMultiplayerScreen(titlescreen));
+            this.setScreen(new JoinMultiplayerScreen(mainmenu));
         }
     }
 

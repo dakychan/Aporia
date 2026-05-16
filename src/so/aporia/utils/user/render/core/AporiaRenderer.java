@@ -44,6 +44,7 @@ public class AporiaRenderer {
     private RenderPipeline kawaseUpPipeline;
     private RenderPipeline blitPipeline;
     private RenderPipeline postPipeline;
+    private RenderPipeline mainmenuPipeline;
 
     // В полях класса пишем так:
     private TextureTarget[] kawaseDownTargets = new TextureTarget[4]; // Размер пишем в правых скобках!
@@ -66,6 +67,7 @@ public class AporiaRenderer {
     private GpuBuffer cachedBlitVertexBuffer; // VBO для блита (POSITION_TEX)
     private GpuBuffer blurQuadVbo;  // VBO для полноэкранного квада
     private GpuBuffer blurUbo;      // UBO для KawaseData (32 байта)
+    private GpuBuffer mainmenuUbo;  // UBO для mainmenu шейдера
 
     private float cachedBlurStrength = -1f;
     private float cachedBlurSaturation = -1f;
@@ -80,7 +82,6 @@ public class AporiaRenderer {
                 .withUniform("Projection", UniformType.UNIFORM_BUFFER)
                 .withUniform("ShapeData",  UniformType.UNIFORM_BUFFER)
                 .withSampler("BlurTextureSampler")
-                .withSampler("ImageTextureSampler")
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.TRIANGLES)
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
@@ -141,6 +142,19 @@ public class AporiaRenderer {
                 .withCull(false)
                 .build();
 
+        mainmenuPipeline = RenderPipeline.builder()
+                .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/mainmenu"))
+                .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/mainmenu"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/mainmenu"))
+                .withUniform("Time", UniformType.UNIFORM_BUFFER)
+                .withUniform("Resolution", UniformType.UNIFORM_BUFFER)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false)
+                .build();
+
         var device = RenderSystem.getDevice();
         // Кэшированные буферы: VBO на 6 вершин (позиция, uv, цвет) — 6 * 36 = 216 байт, округлим до 256
         cachedVertexBuffer = device.createBuffer(() -> "aporia:cached_vbo",
@@ -169,6 +183,56 @@ public class AporiaRenderer {
 // Один UBO под KawaseData (32 байта хватит на всё)
         blurUbo = device.createBuffer(() -> "aporia:blur_ubo",
                 GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 32L);
+
+        // UBO для mainmenu шейдера (time + resolution = 24 байта)
+        mainmenuUbo = device.createBuffer(() -> "aporia:mainmenu_ubo",
+                GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 32L);
+    }
+
+    public void drawMainMenuBackground(float time, int width, int height) {
+        if (mainmenuPipeline == null) return;
+
+        var mainTarget = Minecraft.getInstance().getMainRenderTarget();
+        var colorView = mainTarget.getColorTextureView();
+        if (colorView == null) return;
+
+        var device = RenderSystem.getDevice();
+        var encoder = device.createCommandEncoder();
+
+        var dataBB = ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder());
+        dataBB.putFloat(time);
+        dataBB.putFloat((float)width);
+        dataBB.putFloat((float)height);
+        dataBB.flip();
+        encoder.writeToBuffer(mainmenuUbo.slice(), dataBB);
+
+        var tess = Tesselator.getInstance();
+        var buf = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
+        buf.addVertex(0f, height, 0f).setUv(0f, 1f);
+        buf.addVertex(0f, 0f, 0f).setUv(0f, 0f);
+        buf.addVertex(width, 0f, 0f).setUv(1f, 0f);
+        buf.addVertex(0f, height, 0f).setUv(0f, 1f);
+        buf.addVertex(width, 0f, 0f).setUv(1f, 0f);
+        buf.addVertex(width, height, 0f).setUv(1f, 1f);
+        var mesh = buf.buildOrThrow();
+        var vbo = device.createBuffer(() -> "aporia:mainmenu_vbo",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, mesh.vertexBuffer());
+        mesh.close();
+
+        var projSlice = orthoProjection.getBuffer(width, height);
+        RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC);
+
+        try (var pass = encoder.createRenderPass(() -> "aporia:mainmenu_bg", colorView, OptionalInt.empty())) {
+            pass.setPipeline(mainmenuPipeline);
+            RenderSystem.bindDefaultUniforms(pass);
+            pass.setUniform("Time", mainmenuUbo.slice());
+            pass.setVertexBuffer(0, vbo);
+            pass.setIndexBuffer(RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES).getBuffer(6),
+                    RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES).type());
+            pass.drawIndexed(0, 0, 6, 0);
+        }
+
+        vbo.close();
     }
 
     /* ===========================
@@ -305,25 +369,41 @@ public class AporiaRenderer {
         float sh = window.getGuiScaledHeight();
         var colorView  = mainTarget.getColorTextureView();
         if (colorView == null) return;
-        float ta = ((color >> 24) & 0xFF) / 255f;
-        float tr = ((color >> 16) & 0xFF) / 255f;
-        float tg = ((color >>  8) & 0xFF) / 255f;
-        float tb = ((color ) & 0xFF) / 255f;
+
+        // Разбираем переданный цвет (это наша подложка)
+        float overlayA = ((color >> 24) & 0xFF) / 255f;
+        float overlayR = ((color >> 16) & 0xFF) / 255f;
+        float overlayG = ((color >>  8) & 0xFF) / 255f;
+        float overlayB = ((color      ) & 0xFF) / 255f;
+
+        // МАГИЯ СМЕШИВАНИЯ: Alpha Blending для вершин
+        // Чтобы размытый фон (Blur) был на 100% видим, а подложка (Overlay) накладывалась сверху:
+        // R = (1 - OverlayA) * 1.0 + OverlayA * OverlayR
+        // Но так как шейдер умножает на vertexColor, мы запаковываем это так:
+        float finalR = (1f - overlayA) + overlayA * overlayR;
+        float finalG = (1f - overlayA) + overlayA * overlayG;
+        float finalB = (1f - overlayA) + overlayA * overlayB;
+        float finalA = 1.0f; // Альфа 1.0, чтобы размытый фон не был прозрачным к скайбоксу
+
         var projSlice = orthoProjection.getBuffer(sw, sh);
         RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC);
+
         var tess = Tesselator.getInstance();
         var buf  = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR);
-        buf.addVertex(x,   y+h, 0f).setUv(0f,0f).setColor(tr,tg,tb,ta);
-        buf.addVertex(x+w, y+h, 0f).setUv(1f,0f).setColor(tr,tg,tb,ta);
-        buf.addVertex(x+w, y,   0f).setUv(1f,1f).setColor(tr,tg,tb,ta);
-        buf.addVertex(x,   y+h, 0f).setUv(0f,0f).setColor(tr,tg,tb,ta);
-        buf.addVertex(x+w, y,   0f).setUv(1f,1f).setColor(tr,tg,tb,ta);
-        buf.addVertex(x,   y,   0f).setUv(0f,1f).setColor(tr,tg,tb,ta);
+        // Используем ПОДСЧИТАННЫЕ finalR, finalG, finalB, finalA
+        buf.addVertex(x,   y+h, 0f).setUv(0f,0f).setColor(finalR, finalG, finalB, finalA);
+        buf.addVertex(x+w, y+h, 0f).setUv(1f,0f).setColor(finalR, finalG, finalB, finalA);
+        buf.addVertex(x+w, y,   0f).setUv(1f,1f).setColor(finalR, finalG, finalB, finalA);
+        buf.addVertex(x,   y+h, 0f).setUv(0f,0f).setColor(finalR, finalG, finalB, finalA);
+        buf.addVertex(x+w, y,   0f).setUv(1f,1f).setColor(finalR, finalG, finalB, finalA);
+        buf.addVertex(x,   y,   0f).setUv(0f,1f).setColor(finalR, finalG, finalB, finalA);
+
         var mesh = buf.buildOrThrow();
         var device  = RenderSystem.getDevice();
         var encoder = device.createCommandEncoder();
         encoder.writeToBuffer(cachedVertexBuffer.slice(), mesh.vertexBuffer());
         mesh.close();
+
         var shapeBB = ByteBuffer.allocateDirect(128).order(ByteOrder.nativeOrder());
         shapeBB.putFloat(x); shapeBB.putFloat(y); shapeBB.putFloat(w); shapeBB.putFloat(h);
         shapeBB.putFloat(radius); shapeBB.putFloat(1.0f); shapeBB.putFloat(MODE_ROUNDED_RECT); shapeBB.putFloat(0f);
@@ -332,6 +412,7 @@ public class AporiaRenderer {
         shapeBB.putFloat((float) mainTarget.width); shapeBB.putFloat((float) mainTarget.height); shapeBB.putFloat(0f); shapeBB.putFloat(0f);
         shapeBB.flip();
         encoder.writeToBuffer(cachedShapeBuffer.slice(), shapeBB);
+
         var indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES);
         try (var pass = encoder.createRenderPass(() -> "aporia:blur_rect", colorView, OptionalInt.empty())) {
             pass.setPipeline(pipeline);

@@ -1320,6 +1320,23 @@ public class OsManager {
     }
 
     /**
+     * Получить системную локаль в формате "ru_RU", "en_US" и т.д.
+     */
+    public static String getSystemLocale() {
+        java.util.Locale sys = java.util.Locale.getDefault();
+        String lang = sys.getLanguage();
+        String country = sys.getCountry();
+        if (country.isEmpty()) {
+            switch (lang.toLowerCase()) {
+                case "ru": return "ru_RU";
+                case "zh": return "ch_CH";
+                default: return "en_EU";
+            }
+        }
+        return lang + "_" + country;
+    }
+
+    /**
      * Получить строковое представление платформы.
      */
     public static String getPlatformName() {

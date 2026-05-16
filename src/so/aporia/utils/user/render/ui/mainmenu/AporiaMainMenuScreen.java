@@ -22,29 +22,6 @@ public final class AporiaMainMenuScreen extends Screen {
 
     private static final long LOCK_TIMEOUT_MS = 5 * 60 * 1000;
 
-    private static final int BTN_W = 220;
-    private static final int BTN_H = 32;
-    private static final int BTN_GAP = 8;
-    private static final int BTN_R = 6;
-
-    private static final int C_BG = ColorUtil.rgba(8, 4, 16, 255);
-    private static final int C_BTN_BG = ColorUtil.rgba(255, 255, 255, 10);
-    private static final int C_BTN_HOV = ColorUtil.rgba(255, 255, 255, 22);
-    private static final int C_BTN_CLICK = ColorUtil.rgba(255, 255, 255, 35);
-    private static final int C_TXT = ColorUtil.rgba(255, 255, 255, 255);
-    private static final int C_TXT_DIM = ColorUtil.rgba(255, 255, 255, 140);
-    private static final int C_SUBTITLE = ColorUtil.rgba(180, 140, 255, 200);
-    private static final int C_LOCK_TIME = ColorUtil.rgba(255, 255, 255, 255);
-    private static final int C_LOCK_DATE = ColorUtil.rgba(255, 255, 255, 160);
-    private static final int C_LOCK_HINT = ColorUtil.rgba(255, 255, 255, 80);
-    private static final int C_STAR_WHITE = ColorUtil.rgba(200, 220, 255, 255);
-    private static final int C_STAR_PURPLE = ColorUtil.rgba(150, 120, 255, 255);
-    private static final int C_FLASH = ColorUtil.rgba(100, 30, 200, 255);
-
-    private final Random rng = new Random(42);
-    private final Star[] stars = new Star[120];
-    private final Flash[] flashes = new Flash[6];
-
     private final List<MenuButton> buttons = new ArrayList<>();
     private Animator loadAnim;
 
@@ -52,13 +29,55 @@ public final class AporiaMainMenuScreen extends Screen {
     private long lastActivity = 0;
     private Animator lockFadeAnim;
 
+    private int sw, sh;
+    private float titleSize, subSize, btnTextSize, clockSize, dateSize;
+    private int btnW, btnH, btnGap, btnR;
+    private float logoY, subY, btnStartY;
+
     public AporiaMainMenuScreen() {
         super(Component.literal("Aporia"));
-        for (int i = 0; i < stars.length; i++) {
-            stars[i] = new Star(rng);
-        }
-        for (int i = 0; i < flashes.length; i++) {
-            flashes[i] = new Flash(rng);
+    }
+
+    private void calcLayout() {
+        sw = this.width;
+        sh = this.height;
+        float scale = Minecraft.getInstance().getWindow().getGuiScale();
+
+        float baseUnit = Math.min(sw, sh) / 100f;
+
+        btnW = Math.max(90, Math.min(150, (int)(sw * 0.17f)));
+        btnH = Math.max(24, Math.min(36, (int)(baseUnit * 3.5f)));
+        btnGap = Math.max(4, (int)(baseUnit * 0.8f));
+        btnR = Math.max(8, Math.min(16, (int)(baseUnit * 1.5f)));
+
+        titleSize = Math.max(18f, Math.min(42f, sw * 0.045f));
+        if (scale >= 3f) titleSize *= 0.75f;
+        else if (scale >= 2f) titleSize *= 0.85f;
+
+        subSize = Math.max(9f, Math.min(16f, sw * 0.016f));
+        if (scale >= 3f) subSize *= 0.75f;
+        else if (scale >= 2f) subSize *= 0.85f;
+
+        btnTextSize = Math.max(9f, Math.min(13f, sw * 0.013f));
+        if (scale >= 3f) btnTextSize *= 0.8f;
+        else if (scale >= 2f) btnTextSize *= 0.9f;
+
+        clockSize = Math.max(32f, Math.min(72f, sw * 0.07f));
+        dateSize = Math.max(11f, Math.min(20f, sw * 0.02f));
+
+        float centerY = sh / 2f;
+        logoY = centerY - sh * 0.38f;
+        subY = centerY - sh * 0.28f;
+
+        String[] keys = {"menu.singleplayer", "menu.multiplayer", "menu.settings", "menu.exit"};
+        int totalBtnH = keys.length * btnH + (keys.length - 1) * btnGap;
+        btnStartY = centerY + sh * 0.02f - totalBtnH / 2f;
+
+        buttons.clear();
+        for (int i = 0; i < keys.length; i++) {
+            int x = (sw - btnW) / 2;
+            int y = (int)(btnStartY + i * (btnH + btnGap));
+            buttons.add(new MenuButton(x, y, btnW, btnH, keys[i], i, i * 60));
         }
     }
 
@@ -66,21 +85,17 @@ public final class AporiaMainMenuScreen extends Screen {
     protected void init() {
         lastActivity = System.currentTimeMillis();
         locked = false;
+        calcLayout();
 
         loadAnim = new Animator(800, Easing::sineInOut);
         loadAnim.play();
         lockFadeAnim = new Animator(500, Easing::cubicOut);
+    }
 
-        buttons.clear();
-        String[] keys = {"menu.singleplayer", "menu.multiplayer", "menu.settings", "menu.exit"};
-        int totalH = keys.length * BTN_H + (keys.length - 1) * BTN_GAP;
-        int startY = this.height / 2 + 40 - totalH / 2;
-
-        for (int i = 0; i < keys.length; i++) {
-            int x = (this.width - BTN_W) / 2;
-            int y = startY + i * (BTN_H + BTN_GAP);
-            buttons.add(new MenuButton(x, y, BTN_W, BTN_H, keys[i], i));
-        }
+    @Override
+    public void resize(int width, int height) {
+        super.resize(width, height);
+        calcLayout();
     }
 
     @Override
@@ -92,38 +107,35 @@ public final class AporiaMainMenuScreen extends Screen {
             lockFadeAnim = new Animator(500, Easing::cubicOut);
             lockFadeAnim.play();
         }
+
         if (locked) {
-            renderLockScreen(gfx, mx, my, now);
+            renderLockScreen(AporiaRenderer.INSTANCE, gfx, now);
             return;
         }
 
         AporiaRenderer r = AporiaRenderer.INSTANCE;
-
-        gfx.fill(0, 0, this.width, this.height, C_BG);
-
-        updateAndRenderBg(r, now);
+        r.prepareFrameBlur(Minecraft.getInstance(), 30f, 0.5f);
 
         loadAnim.update();
         float prog = loadAnim.value();
 
+        float lift = (1f - prog) * sh * 0.03f;
         float logoAlpha = Math.max(0, Math.min(1, (prog - 0.1f) / 0.4f));
         float subAlpha = Math.max(0, Math.min(1, (prog - 0.3f) / 0.4f));
         float btnAlpha = Math.max(0, Math.min(1, (prog - 0.4f) / 0.5f));
 
         if (logoAlpha > 0.01f) {
             String title = LocaleManager.INSTANCE.get("menu.title");
-            float titleW = r.getTextWidth("bold", title, 36f);
-            float titleX = (this.width - titleW) / 2f;
-            float titleY = this.height / 2f - 80f;
-            r.drawText("bold", title, titleX, titleY, 36f, ColorUtil.rgba(255, 255, 255, (int)(255 * logoAlpha)));
+            float titleW = r.getTextWidth("bold", title, titleSize);
+            float titleX = (sw - titleW) / 2f;
+            r.drawText("bold", title, titleX, logoY - lift, titleSize, ColorUtil.rgba(255, 255, 255, (int)(255 * logoAlpha)));
         }
 
         if (subAlpha > 0.01f) {
             String sub = LocaleManager.INSTANCE.get("menu.subtitle");
-            float subW = r.getTextWidth("regular", sub, 12f);
-            float subX = (this.width - subW) / 2f;
-            float subY = this.height / 2f - 38f;
-            r.drawText("regular", sub, subX, subY, 12f, ColorUtil.rgba(180, 140, 255, (int)(200 * subAlpha)));
+            float subW = r.getTextWidth("regular", sub, subSize);
+            float subX = (sw - subW) / 2f;
+            r.drawText("regular", sub, subX, subY - lift, subSize, ColorUtil.rgba(180, 140, 255, (int)(200 * subAlpha)));
         }
 
         if (btnAlpha > 0.01f) {
@@ -134,43 +146,10 @@ public final class AporiaMainMenuScreen extends Screen {
 
         String version = "Aporia v1.0";
         float verW = r.getTextWidth("regular", version, 8f);
-        r.drawText("regular", version, this.width - verW - 10, this.height - 18, 8f, ColorUtil.rgba(255, 255, 255, (int)(80 * prog)));
+        r.drawText("regular", version, sw - verW - 8, sh - 14, 8f, ColorUtil.rgba(255, 255, 255, (int)(80 * prog)));
     }
 
-    private void updateAndRenderBg(AporiaRenderer r, long now) {
-        float t = now / 1000f;
-
-        for (Flash f : flashes) {
-            f.update(t, rng);
-            if (f.alpha > 0.01f) {
-                int col = ColorUtil.rgba(100, 30, 200, (int)(f.alpha * 60));
-                float size = f.size * (1f - f.alpha) * 200f + 2f;
-                r.drawCircle(f.x * this.width, f.y * this.height, size, col);
-            }
-        }
-
-        for (Star s : stars) {
-            s.update(t);
-            if (s.alpha > 0.01f) {
-                int col;
-                if (s.colorType == 0) {
-                    col = ColorUtil.rgba(200, 220, 255, (int)(s.alpha * 180));
-                } else if (s.colorType == 1) {
-                    col = ColorUtil.rgba(150, 120, 255, (int)(s.alpha * 150));
-                } else {
-                    col = ColorUtil.rgba(255, 255, 255, (int)(s.alpha * 200));
-                }
-                r.drawRect(s.x * this.width - 1, s.y * this.height - 1, 2, 2, 0, col);
-            }
-        }
-    }
-
-    private void renderLockScreen(GuiGraphics gfx, int mx, int my, long now) {
-        AporiaRenderer r = AporiaRenderer.INSTANCE;
-
-        gfx.fill(0, 0, this.width, this.height, C_BG);
-        updateAndRenderBg(r, now);
-
+    private void renderLockScreen(AporiaRenderer r, GuiGraphics gfx, long now) {
         lockFadeAnim.update();
         float alpha = lockFadeAnim.value();
 
@@ -185,20 +164,22 @@ public final class AporiaMainMenuScreen extends Screen {
         String dayName = LocaleManager.INSTANCE.get("lock.day_" + dayOfWeek);
         String dateStr = String.format("%s, %02d.%04d", dayName, month, year);
 
-        float timeW = r.getTextWidth("bold", timeStr, 64f);
-        float timeX = (this.width - timeW) / 2f;
-        float timeY = this.height / 2f - 50f;
-        r.drawText("bold", timeStr, timeX, timeY, 64f, ColorUtil.rgba(255, 255, 255, (int)(255 * alpha)));
+        float floatOffset = (float)(Math.sin(now / 1500.0) * 6f);
 
-        float dateW = r.getTextWidth("regular", dateStr, 16f);
-        float dateX = (this.width - dateW) / 2f;
-        float dateY = timeY + 45f;
-        r.drawText("regular", dateStr, dateX, dateY, 16f, ColorUtil.rgba(255, 255, 255, (int)(160 * alpha)));
+        float timeW = r.getTextWidth("bold", timeStr, clockSize);
+        float timeX = (sw - timeW) / 2f;
+        float timeY = sh / 2f - clockSize * 0.6f + floatOffset;
+        r.drawText("bold", timeStr, timeX, timeY, clockSize, ColorUtil.rgba(255, 255, 255, (int)(255 * alpha)));
+
+        float dateW = r.getTextWidth("regular", dateStr, dateSize);
+        float dateX = (sw - dateW) / 2f;
+        float dateY = timeY + clockSize * 0.55f + floatOffset * 0.5f;
+        r.drawText("regular", dateStr, dateX, dateY, dateSize, ColorUtil.rgba(255, 255, 255, (int)(160 * alpha)));
 
         String hint = LocaleManager.INSTANCE.get("lock.click_hint");
         float hintW = r.getTextWidth("regular", hint, 10f);
-        float hintX = (this.width - hintW) / 2f;
-        float hintY = this.height / 2f + 80f;
+        float hintX = (sw - hintW) / 2f;
+        float hintY = sh / 2f + sh * 0.12f;
         float pulse = (float)(Math.sin(now / 800.0) * 0.3 + 0.7);
         r.drawText("regular", hint, hintX, hintY, 10f, ColorUtil.rgba(255, 255, 255, (int)(80 * alpha * pulse)));
     }
@@ -258,7 +239,7 @@ public final class AporiaMainMenuScreen extends Screen {
                 mc.setScreen(new net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen(this));
                 break;
             case 2:
-                mc.setScreen(new net.minecraft.client.gui.screens.OptionsScreen(this));
+                mc.setScreen(new net.minecraft.client.gui.screens.options.OptionsScreen(this, mc.options));
                 break;
             case 3:
                 mc.execute(() -> mc.stop());
@@ -267,88 +248,71 @@ public final class AporiaMainMenuScreen extends Screen {
     }
 
     @Override public boolean isPauseScreen() { return false; }
-    @Override public void renderBackground(GuiGraphics gfx, int mx, int my, float d) {}
-
-    private static final class Star {
-        float x, y, baseAlpha, alpha, twinkleSpeed;
-        int colorType;
-
-        Star(Random rng) {
-            x = rng.nextFloat();
-            y = rng.nextFloat();
-            baseAlpha = 0.3f + rng.nextFloat() * 0.7f;
-            twinkleSpeed = 0.5f + rng.nextFloat() * 2f;
-            colorType = rng.nextInt(3);
-        }
-
-        void update(float t) {
-            alpha = baseAlpha * (0.5f + 0.5f * (float)Math.sin(t * twinkleSpeed + x * 100));
-        }
+    @Override
+    public void renderBackground(GuiGraphics gfx, int mx, int my, float delta) {
+        float time = (float)(System.currentTimeMillis() / 1000.0);
+        AporiaRenderer.INSTANCE.drawMainMenuBackground(time, this.width, this.height);
     }
-
-    private static final class Flash {
-        float x, y, alpha, size;
-        float timer;
-        boolean active;
-
-        Flash(Random rng) {
-            x = rng.nextFloat();
-            y = rng.nextFloat();
-            size = 0.5f + rng.nextFloat() * 1.5f;
-            timer = rng.nextFloat() * 15f;
-            active = false;
-            alpha = 0;
-        }
-
-        void update(float t, Random rng) {
-            timer -= 0.016f;
-            if (timer <= 0 && !active) {
-                timer = 5f + rng.nextFloat() * 10f;
-                x = rng.nextFloat();
-                y = rng.nextFloat();
-                active = true;
-                alpha = 1f;
-            }
-            if (active) {
-                alpha -= 0.02f;
-                if (alpha <= 0) {
-                    alpha = 0;
-                    active = false;
-                }
-            }
-        }
-    }
-
     private static final class MenuButton {
         final int x, y, w, h, id;
         final String localeKey;
         Animator hoverAnim;
+        Animator appearAnim;
+        int appearDelay;
 
-        MenuButton(int x, int y, int w, int h, String localeKey, int id) {
+        MenuButton(int x, int y, int w, int h, String localeKey, int id, int appearDelay) {
             this.x = x; this.y = y; this.w = w; this.h = h;
             this.localeKey = localeKey; this.id = id;
+            this.appearDelay = appearDelay;
             this.hoverAnim = new Animator(200, Easing::cubicOut);
+            this.appearAnim = new Animator(400, Easing::cubicOut);
         }
 
-        void render(AporiaRenderer r, GuiGraphics gfx, int mx, int my, float alpha) {
+        void render(AporiaRenderer r, GuiGraphics gfx, int mx, int my, float globalAlpha) {
             boolean hov = mx >= x && mx < x + w && my >= y && my < y + h;
             if (hov && !hoverAnim.isPlaying() && hoverAnim.value() < 0.99f) hoverAnim.play();
             if (!hov && !hoverAnim.isPlaying() && hoverAnim.value() > 0.01f) hoverAnim.reverse();
             hoverAnim.update();
 
+            if (!appearAnim.isPlaying() && appearAnim.value() < 0.99f) {
+                appearAnim.play();
+            }
+            appearAnim.update();
+
             float hp = hoverAnim.value();
-            int bgAlpha = (int)(10 + 12 * hp);
-            int bg = ColorUtil.rgba(255, 255, 255, (int)(bgAlpha * alpha));
+            float ap = appearAnim.value();
+            float alpha = globalAlpha * ap;
 
-            r.drawRectBlurred(x, y, w, h, BTN_R, bg, 5f);
-            int borderAlpha = (int)((15 + 25 * hp) * alpha);
-            r.drawStroke(x, y, w, h, BTN_R, 1f, 1, 0f, ColorUtil.rgba(255, 255, 255, borderAlpha));
+            float slideY = (1f - ap) * h * 0.5f;
+            int drawY = (int)(y + slideY);
 
+            // 1. Рендерим размытый фон (Frosted Glass)
+            if (alpha > 0.01f) {
+                // Передаем полупрозрачный фиолетовый цвет (наш тинт поверх блюра)
+                // Альфа 0.3 (76 из 255) - это степень "заморозки" стекла. Можешь поиграть с ней.
+                int glassTint = ColorUtil.rgba(20, 10, 40, (int)(76 * alpha));
+                r.drawRectBlurred(x, drawY, w, h, h * 0.5f, glassTint, 10f);
+            }
+
+            float rVal = h * 0.5f;
+
+            // 2. Стеклянная подложка (Она больше не нужна как прямоугольник, так как блюр её включает!
+            // Но если хочешь добавить легкий глянец при наведении, можно оставить очень тонкий слой:
+            int bgAlpha = (int)((10 + 20 * hp) * alpha);
+            int bg = ColorUtil.rgba(255, 255, 255, bgAlpha);
+            r.drawRect(x, drawY, w, h, rVal, bg);
+
+            // 3. Обводка
+            int borderAlpha = (int)((30 + 50 * hp) * alpha);
+            r.drawStroke(x, drawY, w, h, rVal, 1f, 1, 0f, ColorUtil.rgba(255, 255, 255, borderAlpha));
+
+            // 4. Текст
+            float txtSize = Math.max(9f, Math.min(13f, h * 0.38f));
             String text = LocaleManager.INSTANCE.get(localeKey);
-            float textW = r.getTextWidth("regular", text, 11f);
+            float textW = r.getTextWidth("regular", text, txtSize);
             float textX = x + (w - textW) / 2f;
-            float textY = y + (h - 11) / 2f;
-            r.drawText("regular", text, textX, textY, 11f, ColorUtil.rgba(255, 255, 255, (int)((180 + 75 * hp) * alpha)));
+            float textY = drawY + (h - txtSize) / 2f - 1f;
+            r.drawText("regular", text, textX, textY, txtSize, ColorUtil.rgba(255, 255, 255, (int)((180 + 75 * hp) * alpha)));
         }
 
         boolean clicked(int mx, int my, int button) {

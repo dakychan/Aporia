@@ -537,6 +537,10 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
                     throw new ReportedException(crashreport);
                 }
             } else if (flag && this.minecraft.screen != null) {
+                if (this.minecraft.screen instanceof so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen) {
+                    so.aporia.utils.user.render.core.AporiaRenderer.INSTANCE.drawMainMenuBackground(
+                        (float)(System.currentTimeMillis() / 1000.0), i, j);
+                }
                 try {
                     this.minecraft.screen.renderWithTooltipAndSubtitles(guigraphics, i, j, p_343467_.getGameTimeDeltaTicks());
                 } catch (Throwable throwable1) {

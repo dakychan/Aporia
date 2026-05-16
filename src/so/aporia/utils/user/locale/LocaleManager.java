@@ -23,9 +23,8 @@ public class LocaleManager {
     private static final String[] BUILTIN_LANGS = {"en_EU", "ru_RU", "ch_CH"};
 
     private final Map<String, Map<String, String>> locales = new HashMap<>();
-    private String currentLang = "en_EU";
+    private String currentLang;
 
-    // Кеш результата get() — чтобы не лазить в мапу каждый кадр
     private String cachedLang = null;
     private Map<String, String> cachedLocale = null;
 
@@ -35,11 +34,8 @@ public class LocaleManager {
         return INSTANCE;
     }
 
-    /**
-     * Инициализация: загружает все встроенные локали,
-     * создаёт файлы-заполнители если их нет.
-     */
     public void init() {
+        this.currentLang = aporia.cc.OsManager.getSystemLocale();
         for (String lang : BUILTIN_LANGS) {
             loadOrCreateLocale(lang);
         }
@@ -55,8 +51,28 @@ public class LocaleManager {
                 String content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
                 Map<String, String> localeMap = parseJson(content);
                 if (!localeMap.isEmpty()) {
+                    // Проверяем на полноту и обновляем при необходимости
+                    Map<String, String> defaultTemplate = getDefaultLocaleTemplate(lang);
+                    boolean needsUpdate = false;
+
+                    for (String key : defaultTemplate.keySet()) {
+                        if (!localeMap.containsKey(key)) {
+                            needsUpdate = true;
+                            localeMap.put(key, defaultTemplate.get(key));
+                            Logger.info("[LocaleManager] Added missing key '" + key + "' for " + lang);
+                        }
+                    }
+
                     locales.put(lang, localeMap);
                     Logger.info("[LocaleManager] Loaded from resources: " + lang + " (" + localeMap.size() + " keys)");
+
+                    if (needsUpdate) {
+                        // Сохраняем обновлённую версию в файл
+                        Path localeFile = FilesManager.ROOT.resolve(".assets").resolve("aporia").resolve("locale").resolve(lang + ".json");
+                        saveLocaleFile(localeFile, localeMap);
+                        Logger.info("[LocaleManager] Updated locale file with missing keys: " + lang);
+                    }
+
                     invalidateCache();
                     return;
                 }
@@ -71,11 +87,32 @@ public class LocaleManager {
             try {
                 String content = Files.readString(localeFile, StandardCharsets.UTF_8);
                 Map<String, String> localeMap = parseJson(content);
+
                 if (!localeMap.isEmpty()) {
+                    // Проверяем на полноту
+                    Map<String, String> defaultTemplate = getDefaultLocaleTemplate(lang);
+                    boolean needsUpdate = false;
+
+                    for (String key : defaultTemplate.keySet()) {
+                        if (!localeMap.containsKey(key)) {
+                            needsUpdate = true;
+                            localeMap.put(key, defaultTemplate.get(key));
+                            Logger.info("[LocaleManager] Added missing key '" + key + "' for " + lang);
+                        }
+                    }
+
                     locales.put(lang, localeMap);
                     Logger.info("[LocaleManager] Loaded from file: " + lang + " (" + localeMap.size() + " keys)");
+
+                    if (needsUpdate) {
+                        saveLocaleFile(localeFile, localeMap);
+                        Logger.info("[LocaleManager] Saved updated locale: " + lang);
+                    }
+
                     invalidateCache();
                     return;
+                } else {
+                    Logger.warn("[LocaleManager] File is empty or invalid: " + localeFile);
                 }
             } catch (IOException e) {
                 Logger.error("[LocaleManager] Failed to parse " + localeFile + ": " + e.getMessage());
@@ -89,6 +126,76 @@ public class LocaleManager {
         locales.put(lang, defaultContent);
         Logger.info("[LocaleManager] Created: " + lang + " (" + defaultContent.size() + " keys)");
         invalidateCache();
+    }
+
+    /**
+     * Обновляет все локали, добавляя недостающие ключи из шаблона
+     */
+    public void updateAllLocales() {
+        Logger.info("[LocaleManager] Updating all locales with missing keys...");
+        for (String lang : locales.keySet()) {
+            updateLocale(lang);
+        }
+    }
+
+    /**
+     * Обновляет конкретную локаль, добавляя недостающие ключи
+     */
+    public void updateLocale(String lang) {
+        if (!locales.containsKey(lang)) {
+            loadOrCreateLocale(lang);
+            return;
+        }
+
+        Map<String, String> currentLocale = locales.get(lang);
+        Map<String, String> defaultTemplate = getDefaultLocaleTemplate(lang);
+        boolean needsUpdate = false;
+
+        for (String key : defaultTemplate.keySet()) {
+            if (!currentLocale.containsKey(key)) {
+                needsUpdate = true;
+                currentLocale.put(key, defaultTemplate.get(key));
+                Logger.info("[LocaleManager] Added missing key '" + key + "' for " + lang);
+            }
+        }
+
+        if (needsUpdate) {
+            Path localeFile = FilesManager.ROOT.resolve(".assets").resolve("aporia").resolve("locale").resolve(lang + ".json");
+            saveLocaleFile(localeFile, currentLocale);
+            Logger.info("[LocaleManager] Updated locale file: " + lang);
+            invalidateCache();
+        }
+    }
+
+    /**
+     * Проверяет валидность JSON файла локализации
+     */
+    public boolean validateLocaleFile(String lang) {
+        Path localeFile = FilesManager.ROOT.resolve(".assets").resolve("aporia").resolve("locale").resolve(lang + ".json");
+        if (!Files.exists(localeFile)) {
+            Logger.warn("[LocaleManager] Locale file does not exist: " + lang);
+            return false;
+        }
+
+        try {
+            String content = Files.readString(localeFile, StandardCharsets.UTF_8);
+            if (content.trim().isEmpty()) {
+                Logger.warn("[LocaleManager] Locale file is empty: " + lang);
+                return false;
+            }
+
+            Map<String, String> parsed = parseJson(content);
+            if (parsed.isEmpty()) {
+                Logger.warn("[LocaleManager] Locale file has invalid JSON structure: " + lang);
+                return false;
+            }
+
+            Logger.info("[LocaleManager] Locale file is valid: " + lang + " (" + parsed.size() + " keys)");
+            return true;
+        } catch (IOException e) {
+            Logger.error("[LocaleManager] Failed to validate locale file " + lang + ": " + e.getMessage());
+            return false;
+        }
     }
 
     private Map<String, String> getDefaultLocaleTemplate(String lang) {
@@ -132,7 +239,7 @@ public class LocaleManager {
                 map.put("gui.cancel", "Отмена");
                 map.put("gui.enabled", "Включено");
                 map.put("gui.disabled", "Выключено");
-                map.put("menu.title", "Aporia Client");
+                map.put("menu.title", "Апория Клиент");
                 map.put("menu.subtitle", "Твой выбор к победе.");
                 map.put("menu.singleplayer", "Одиночная игра");
                 map.put("menu.multiplayer", "Мультиплеер");
@@ -159,6 +266,21 @@ public class LocaleManager {
                 map.put("gui.cancel", "取消");
                 map.put("gui.enabled", "已启用");
                 map.put("gui.disabled", "已禁用");
+                map.put("menu.title", "Aporia Client");
+                map.put("menu.subtitle", "你的胜利之选.");
+                map.put("menu.singleplayer", "单人游戏");
+                map.put("menu.multiplayer", "多人游戏");
+                map.put("menu.settings", "设置");
+                map.put("menu.exit", "退出");
+                map.put("lock.time_format", "%02d:%02d");
+                map.put("lock.day_0", "星期日");
+                map.put("lock.day_1", "星期一");
+                map.put("lock.day_2", "星期二");
+                map.put("lock.day_3", "星期三");
+                map.put("lock.day_4", "星期四");
+                map.put("lock.day_5", "星期五");
+                map.put("lock.day_6", "星期六");
+                map.put("lock.click_hint", "点击任意位置解锁");
                 break;
             default:
                 // Для новых языков — пустые ключи
@@ -172,6 +294,21 @@ public class LocaleManager {
                 map.put("gui.cancel", lang + ":cancel");
                 map.put("gui.enabled", lang + ":enabled");
                 map.put("gui.disabled", lang + ":disabled");
+                map.put("menu.title", "Aporia Client");
+                map.put("menu.subtitle", "Your choice to victory.");
+                map.put("menu.singleplayer", "Singleplayer");
+                map.put("menu.multiplayer", "Multiplayer");
+                map.put("menu.settings", "Settings");
+                map.put("menu.exit", "Exit");
+                map.put("lock.time_format", "%02d:%02d");
+                map.put("lock.day_0", "Sunday");
+                map.put("lock.day_1", "Monday");
+                map.put("lock.day_2", "Tuesday");
+                map.put("lock.day_3", "Wednesday");
+                map.put("lock.day_4", "Thursday");
+                map.put("lock.day_5", "Friday");
+                map.put("lock.day_6", "Saturday");
+                map.put("lock.click_hint", "Click anywhere to unlock");
                 break;
         }
         return map;
@@ -184,13 +321,14 @@ public class LocaleManager {
             int i = 0;
             for (var entry : content.entrySet()) {
                 sb.append("  \"").append(escapeJson(entry.getKey())).append("\": \"")
-                  .append(escapeJson(entry.getValue())).append("\"");
+                        .append(escapeJson(entry.getValue())).append("\"");
                 if (i < content.size() - 1) sb.append(",");
                 sb.append("\n");
                 i++;
             }
             sb.append("}");
             Files.writeString(path, sb.toString(), StandardCharsets.UTF_8);
+            Logger.info("[LocaleManager] Saved locale file: " + path);
         } catch (IOException e) {
             Logger.error("[LocaleManager] Failed to save " + path + ": " + e.getMessage());
         }
@@ -256,8 +394,15 @@ public class LocaleManager {
 
     private Map<String, String> parseJson(String json) {
         Map<String, String> result = new HashMap<>();
+
+        if (json == null || json.trim().isEmpty()) {
+            Logger.warn("[LocaleManager] Empty JSON string");
+            return result;
+        }
+
         json = json.trim();
         if (!json.startsWith("{") || !json.endsWith("}")) {
+            Logger.warn("[LocaleManager] Invalid JSON format: does not start/end with {}");
             return result;
         }
 
@@ -266,39 +411,54 @@ public class LocaleManager {
         StringBuilder value = new StringBuilder();
         boolean inKey = true;
         boolean inString = false;
-        int braceDepth = 0;
+        boolean escaped = false;
 
         for (int i = 0; i < json.length(); i++) {
             char c = json.charAt(i);
 
-            if (c == '{') braceDepth++;
-            if (c == '}') braceDepth--;
-
-            if (!inString && braceDepth > 0) continue;
-
-            if (c == '"' && (i == 0 || json.charAt(i - 1) != '\\')) {
-                inString = !inString;
-                if (inString) {
-                    if (inKey) {
-                        key.setLength(0);
-                    } else {
-                        value.setLength(0);
-                    }
+            if (escaped) {
+                if (inKey) {
+                    key.append(c);
                 } else {
+                    value.append(c);
+                }
+                escaped = false;
+                continue;
+            }
+
+            if (c == '\\') {
+                escaped = true;
+                continue;
+            }
+
+            if (c == '"') {
+                inString = !inString;
+                if (!inString) {
                     if (inKey) {
                         inKey = false;
                     } else {
-                        result.put(key.toString(), value.toString());
+                        if (key.length() > 0 && value.length() > 0) {
+                            result.put(key.toString(), value.toString());
+                        }
+                        key.setLength(0);
+                        value.setLength(0);
                         inKey = true;
                     }
                 }
-            } else if (inString) {
+                continue;
+            }
+
+            if (inString) {
                 if (inKey) {
                     key.append(c);
                 } else {
                     value.append(c);
                 }
             }
+        }
+
+        if (result.isEmpty() && json.trim().length() > 0) {
+            Logger.warn("[LocaleManager] Failed to parse JSON, result is empty");
         }
 
         return result;
