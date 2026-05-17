@@ -1,7 +1,5 @@
 # Aporia Client
 
-![Aporia 截图](https://raw.githubusercontent.com/dakychan/Aporia/main/.github/scren2ru.jpg)
-
 **Aporia** — 适用于 Minecraft 1.21.11+ 的现代作弊客户端，具有模块化架构、GPU 加速渲染和 Discord 集成。
 
 ## 功能
