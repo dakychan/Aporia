@@ -1,6 +1,6 @@
 # Aporia Client
 
-![Aporia Screenshot](https://raw.githubusercontent.com/aporia-cc/Aporia/main/.github/scren2ru.png)
+![Aporia Screenshot](https://raw.githubusercontent.com/dakychan/Aporia/main/.github/scren2ru.jpg)
 
 **Aporia** — современный чит-клиент для Minecraft 1.21.11+ с модульной архитектурой, GPU-ускоренным рендерингом и интеграцией Discord.
 

@@ -1,6 +1,6 @@
 # Aporia Client
 
-![Aporia Screenshot](https://raw.githubusercontent.com/aporia-cc/Aporia/main/.github/scren2ru.png)
+![Aporia Screenshot](https://raw.githubusercontent.com/dakychan/Aporia/main/.github/scren2ru.jpg)
 
 **Aporia** — a modern cheat client for Minecraft 1.21.11+ with modular architecture, GPU-accelerated rendering, and Discord integration.
 
