@@ -1,199 +1,163 @@
-# Aporia
+# Aporia Client
 
-Современный чит-клиент для Minecraft, построенный на Fabric с модульной архитектурой, пользовательским GPU-ускоренным рендерингом и интеграцией Discord.
+![Aporia Screenshot](.github/scren2ru.png)
 
-## Обзор
+**Aporia** — современный чит-клиент для Minecraft 1.21.11+ с модульной архитектурой, GPU-ускоренным рендерингом и интеграцией Discord.
 
-Aporia — это легкий и расширяемый чит-клиент для Minecraft 1.21.1+. Он предоставляет чистую систему модулей, мощные возможности рендеринга и бесшовную интеграцию с Discord Rich Presence. Клиент использует модульный подход, где функции реализованы как переключаемые модули с настраиваемыми параметрами.
-
-## Требования
-
-- **Java**: 26 или выше
-- **Minecraft**: 1.21.11+
-- **Загрузчик**: сосать какой нахуй загрузчик, тока net.minecrat.client.main.Main
-- **Инструмент сборки**: НЕТУ НАХУЙ, javac
-
-## Возможности
-
-### Основная архитектура
-- **Модульная система** - Расширяемый фреймворк модулей с управлением жизненным циклом
-- **Организация по категориям** - Модули сгруппированы по типам (Combat, Render, Misc)
-- **Фреймворк настроек** - Гибкая конфигурация (переключатели, выпадающие списки, текст, горячие клавиши)
-- **Система событий** - Развязанная событийная архитектура
-
-### Рендеринг
-- **GPU-ускорение** - Конвейер рендеринга на основе Blaze3D
-- **Скругленные фигуры** - SDF-основанные скругленные прямоугольники и круги
-- **Эффекты размытия** - Настраиваемое размытие с контролем насыщенности
-- **Поддержка изображений** - Рендеринг PNG с опциональным скруглением углов
-- **Пользовательские шейдеры** - Расширяемая система шейдеров для продвинутых эффектов
-
-### Пользовательский интерфейс
-- **ClickGui** - Современный интерфейс на основе боковой панели
-- **Поиск модулей** - Быстрый поиск функциональности
-- **Профиль Discord** - Отображение имени пользователя, UUID и аватара
-- **Живое отображение активности** - Отображение статуса модулей в реальном времени
-
-### Интеграция Discord
-- **Rich Presence** - Отображение активности на Discord
-- **Отображение аватара** - Аватар пользователя показывается в интерфейсе
-- **Обновления статуса** - Статус сервера/меню в реальном времени
-
-## Начало работы
-
-### Сборка и запуск
-
-```bash
-# Клонирование и подготовка
-git clone <repo>
-cd aporia
-./gradlew build
-
-# Запуск клиента
-./gradlew runClient
-```
-
-### Создание модуля
-
-```java
-public class MyModule extends Module {
-    private BooleanSetting enabled = new BooleanSetting("Enabled", true);
-    
-    public MyModule() {
-        super("My Module", Category.MISC);
-    }
-    
-    @Override
-    protected void onEnable() {
-        // Логика модуля
-    }
-    
-    @Override
-    protected void onDisable() {
-        // Очистка
-    }
-}
-```
-
-## Структура проекта
-
-```
-src/so/aporia/
-├── Aporia.java                 # Точка входа
-├── module/
-│   ├── Module.java             # Базовый класс модуля
-│   ├── ModuleManager.java      # Реестр модулей
-│   ├── Category.java           # Категории модулей
-│   ├── impl/                   # Реализации модулей
-│   │   ├── combat/
-│   │   ├── render/
-│   │   └── misc/
-│   └── settings/               # Фреймворк настроек
-└── utils/
-    ├── assets/                 # Управление ресурсами
-    ├── events/                 # Система событий
-    ├── files/                  # Файловый ввод-вывод
-    └── user/
-        ├── render/             # Движок рендеринга
-        ├── logger/             # Логирование
-        ├── input/              # Обработка ввода
-        └── command/            # Система команд
-```
-
-## Конфигурация
-
-Aporia хранит конфигурацию в зависящих от платформы директориях:
-
-- **Windows**: `%USERPROFILE%\.apr`
-- **Linux**: `~/.config/apr`
-- **macOS**: `~/.config/apr`
-
-Файлы конфигурации используют формат `.apr` (ZIP-архив с метаданными).
-
-## Зависимости
-
-- **Minecraft**: 1.21.11
-- **Discord IPC**: Для интеграции Rich Presence
-- **Gson**: Сериализация JSON
-- **Blaze3D**: Бэкенд рендеринга
-
-## Разработка
-
-### Добавление нового модуля
-
-1. Создайте класс в `src/so/aporia/module/impl/<category>/`
-2. Расширьте базовый класс `Module`
-3. Реализуйте `onEnable()` и `onDisable()`
-4. Добавьте настройки при необходимости
-5. Модуль автоматически регистрируется через ModuleManager
-
-### Пользовательский рендеринг
-
-Используйте `AporiaRenderer.INSTANCE` для рендеринга:
-
-```java
-AporiaRenderer r = AporiaRenderer.INSTANCE;
-
-// Рисование фигур
-r.drawRect(x, y, w, h, radius, color);
-r.drawCircle(cx, cy, radius, color);
-r.drawLine(x1, y1, x2, y2, thickness, color);
-
-// Рисование текста
-r.drawText("bold", "Hello", x, y, size, color);
-
-// Рисование изображений
-r.drawImage(x, y, w, h, identifier, radius);
-```
-
-### Система событий
-
-Подпишитесь на события используя `@EventHandler`:
-
-```java
-@EventHandler
-public void onRender(RenderEvent event) {
-    // Обработка события рендеринга
-}
-```
-
-## Производительность
-
-- GPU-ускоренный рендеринг для плавных 60+ FPS
-- Эффективное управление жизненным циклом модулей
-- Кэширование загруженных ресурсов
-- Оптимизированная диспетчеризация событий
-
-## Решение проблем
-
-### Клиент не запускается
-- Убедитесь, что установлена Java 21+
-- Проверьте версию Minecraft 1.21.1+
-- Убедитесь, что установлен загрузчик Fabric
-
-### Модули не загружаются
-- Проверьте, что класс модуля расширяет `Module`
-- Убедитесь, что реализованы `onEnable()` и `onDisable()`
-- Проверьте логи в `~/.apr/logs/`
-
-### Проблемы с рендерингом
-- Обновите драйверы GPU
-- Проверьте файлы шейдеров в `aporia/shaders/`
-- Убедитесь в совместимости с Blaze3D
-
-## Лицензия
-
-Собственность - Aporia Cheat Client
-
-## Поддержка
-
-По вопросам и проблемам обратитесь к документации проекта или создайте issue.
+> [RU](#ru) · [EN](#en) · [中文](#cn)
 
 ---
 
-**Версия**: 0.5-dev  
+<div id="ru"></div>
+
+## 🇷🇺 Русский
+
+### Возможности
+
+- **Модульная система** — расширяемый фреймворк с управлением жизненным циклом
+- **GPU-рендеринг** — SDF-шейдеры, размытие, скруглённые фигуры, хроматическая аберрация
+- **ClickGui** — современный интерфейс с поиском, превью 3D-моделей и скроллом настроек
+- **Aura** — серверная ротация, свободная камера, мульти-таргеты, 1.8/1.9+ режимы
+- **Discord RPC** — аватар, статус, профиль в интерфейсе
+- **Мультиязычность** — EN, RU, CN
+
+### Требования
+
+- **Java**: 26+
+- **Minecraft**: 1.21.11+
+- **Сборка**: `javac` напрямую, без Gradle
+
+### Сборка
+
+```bash
+git clone <repo>
+cd Aporia
+javac -d build -sourcepath src --release 26 -encoding UTF-8 @find src -name "*.java"
+```
+
+### Структура
+
+```
+src/so/aporia/
+├── module/          # Модули (Aura, AutoSprint, ESP...)
+├── utils/
+│   ├── events/      # Event bus
+│   ├── packets/     # Packet interceptor
+│   ├── user/
+│   │   ├── rotation/  # Server rotation
+│   │   ├── render/    # GPU renderer
+│   │   └── locale/    # i18n (EN/RU/CN)
+│   └── files/       # Config
+└── aporia/cc/       # OS manager, auth
+```
+
+### Лицензия
+
+Aporia.cc Software License Agreement v1.0 — проприетарное ПО.
+
+---
+
+<div id="en"></div>
+
+## 🇬🇧 English
+
+### Features
+
+- **Modular system** — extensible framework with lifecycle management
+- **GPU rendering** — SDF shaders, blur, rounded shapes, chromatic aberration
+- **ClickGui** — modern UI with search, 3D model preview, scrollable settings
+- **Aura** — server-side rotation, free camera, multi-targets, 1.8/1.9+ modes
+- **Discord RPC** — avatar, status, profile in UI
+- **Multi-language** — EN, RU, CN
+
+### Requirements
+
+- **Java**: 26+
+- **Minecraft**: 1.21.11+
+- **Build**: `javac` directly, no Gradle
+
+### Build
+
+```bash
+git clone <repo>
+cd Aporia
+javac -d build -sourcepath src --release 26 -encoding UTF-8 @find src -name "*.java"
+```
+
+### Structure
+
+```
+src/so/aporia/
+├── module/          # Modules (Aura, AutoSprint, ESP...)
+├── utils/
+│   ├── events/      # Event bus
+│   ├── packets/     # Packet interceptor
+│   ├── user/
+│   │   ├── rotation/  # Server rotation
+│   │   ├── render/    # GPU renderer
+│   │   └── locale/    # i18n (EN/RU/CN)
+│   └── files/       # Config
+└── aporia/cc/       # OS manager, auth
+```
+
+### License
+
+Aporia.cc Software License Agreement v1.0 — proprietary software.
+
+---
+
+<div id="cn"></div>
+
+## 🇨🇳 中文
+
+![Aporia 截图](.github/scren2ru.png)
+
+### 功能
+
+- **模块化系统** — 可扩展的框架，具有生命周期管理
+- **GPU 渲染** — SDF 着色器、模糊、圆角形状、色差
+- **ClickGui** — 现代 UI，支持搜索、3D 模型预览、可滚动设置
+- **Aura** — 服务器端旋转、自由相机、多目标、1.8/1.9+ 模式
+- **Discord RPC** — 头像、状态、UI 中的个人资料
+- **多语言** — EN, RU, CN
+
+### 要求
+
+- **Java**: 26+
+- **Minecraft**: 1.21.11+
+- **构建**: 直接使用 `javac`，无需 Gradle
+
+### 构建
+
+```bash
+git clone <repo>
+cd Aporia
+javac -d build -sourcepath src --release 26 -encoding UTF-8 @find src -name "*.java"
+```
+
+### 项目结构
+
+```
+src/so/aporia/
+├── module/          # 模块 (Aura, AutoSprint, ESP...)
+├── utils/
+│   ├── events/      # 事件总线
+│   ├── packets/     # 数据包拦截器
+│   ├── user/
+│   │   ├── rotation/  # 服务器端旋转
+│   │   ├── render/    # GPU 渲染器
+│   │   └── locale/    # 国际化 (EN/RU/CN)
+│   └── files/       # 配置文件
+└── aporia/cc/       # 操作系统管理，认证
+```
+
+### 许可证
+
+Aporia.cc 软件许可协议 v1.0 — 专有软件。
+
+---
+
+**Version**: 0.5-dev  
 **Minecraft**: 1.21.11  
 **Java**: 26+  
-**Статус**: Активная разработка
-
-[English version](README_EN.md)
+**Status**: Active development

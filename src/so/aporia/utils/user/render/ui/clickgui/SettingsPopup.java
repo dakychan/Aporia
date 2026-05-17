@@ -13,6 +13,8 @@ import so.aporia.module.settings.BooleanSetting;
 import so.aporia.module.settings.BindSetting;
 import so.aporia.module.settings.ButtonSetting;
 import so.aporia.module.settings.MultiSelectSetting;
+import so.aporia.module.settings.NumberSetting;
+import so.aporia.module.settings.RangeSetting;
 import so.aporia.module.settings.SelectSetting;
 import so.aporia.module.settings.Setting;
 import so.aporia.module.settings.TextSetting;
@@ -55,6 +57,8 @@ public class SettingsPopup {
     private final Map<Object, Animator> boolToggleAnims = new WeakHashMap<>();
     private final Map<Object, Animator> selectAnims = new WeakHashMap<>();
     private final Map<Object, Animator> multiSelectAnims = new WeakHashMap<>();
+    private final Map<Object, Animator> sliderAnims = new WeakHashMap<>();
+    private final Map<Object, Boolean> sliderDragging = new WeakHashMap<>();
     private static final long BOOL_FLASH_COOLDOWN = 1000;
     
     private Animator popupAnim = null;
@@ -303,29 +307,88 @@ public class SettingsPopup {
                 a.snap(String.join(", ", mss.getSelected()));
                 return a;
             });
-            
+
             Animator multiAnim = multiSelectAnims.computeIfAbsent(s, k -> new Animator(400, so.aporia.utils.user.render.animation.Easing::cubicOut));
-            
+
             String displayText = ta.update();
             String current = String.join(", ", mss.getSelected());
             if (!ta.isRunning() && !displayText.equals(current)) {
                 ta.setTarget(current);
             }
-            
+
             r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, C_TXT);
-            
+
             int valueW = 70;
             int valueH = 14;
             int valueX = cx + cw - valueW - 8;
             int valueY = y + (LINE_H - valueH) / 2;
-            
+
             multiAnim.update();
             float multiProg = multiAnim.value();
             int bgAlpha = (int)(120 + multiProg * 80);
             r.drawRectBlurred(valueX, valueY, valueW, valueH, 4, ColorUtil.rgba(30, 30, 50, bgAlpha), 1f);
-            
+
             String selected = displayText.isEmpty() ? "None" : displayText;
             r.drawText("regular", selected, valueX + 6, valueY + (valueH - 9) / 2f + 1, 7f, ColorUtil.rgba(255, 255, 255, 200));
+
+        } else if (s instanceof NumberSetting ns) {
+            Animator slAnim = sliderAnims.computeIfAbsent(s, k -> new Animator(300, so.aporia.utils.user.render.animation.Easing::cubicOut));
+            boolean dragging = sliderDragging.getOrDefault(s, false);
+
+            r.drawText("regular", s.name(), cx, y + 3, 9f, C_TXT);
+
+            int sliderY = y + 15;
+            int sliderH = 4;
+            int sliderW = cw;
+            int sliderX = cx;
+
+            r.drawRect(sliderX, sliderY, sliderW, sliderH, 2, ColorUtil.rgba(40, 40, 60, 180));
+
+            slAnim.update();
+            float fill = (float) ((ns.get() - ns.getMin()) / (ns.getMax() - ns.getMin()));
+            int fillW = (int) (sliderW * fill);
+            int fillColor = ColorUtil.rgba(120, 160, 255, 220);
+            r.drawRect(sliderX, sliderY, fillW, sliderH, 2, fillColor);
+
+            int knobSize = 10;
+            int knobX = sliderX + fillW - knobSize / 2;
+            int knobY = sliderY - knobSize / 2 + sliderH / 2;
+            int knobColor = dragging ? ColorUtil.rgba(160, 200, 255, 255) : ColorUtil.rgba(200, 220, 255, 230);
+            r.drawRect(knobX, knobY, knobSize, knobSize, knobSize / 2, knobColor);
+
+            String valStr = String.format("%.1f", ns.get());
+            int valW = (int) r.getTextWidth("regular", valStr, 7f);
+            r.drawText("regular", valStr, cx + cw - valW, y + 3, 7f, ColorUtil.rgba(180, 210, 255, 200));
+
+        } else if (s instanceof RangeSetting rs) {
+            Animator slAnim = sliderAnims.computeIfAbsent(s, k -> new Animator(300, so.aporia.utils.user.render.animation.Easing::cubicOut));
+            boolean dragging = sliderDragging.getOrDefault(s, false);
+
+            r.drawText("regular", s.name(), cx, y + 3, 9f, C_TXT);
+
+            int sliderY = y + 15;
+            int sliderH = 4;
+            int sliderW = cw;
+            int sliderX = cx;
+
+            r.drawRect(sliderX, sliderY, sliderW, sliderH, 2, ColorUtil.rgba(40, 40, 60, 180));
+
+            slAnim.update();
+            float fill = (float) ((rs.get() - rs.getMin()) / (rs.getMax() - rs.getMin()));
+            int fillW = (int) (sliderW * fill);
+            int fillColor = ColorUtil.rgba(120, 160, 255, 220);
+            r.drawRect(sliderX, sliderY, fillW, sliderH, 2, fillColor);
+
+            int knobSize = 10;
+            int knobX = sliderX + fillW - knobSize / 2;
+            int knobY = sliderY - knobSize / 2 + sliderH / 2;
+            int knobColor = dragging ? ColorUtil.rgba(160, 200, 255, 255) : ColorUtil.rgba(200, 220, 255, 230);
+            r.drawRect(knobX, knobY, knobSize, knobSize, knobSize / 2, knobColor);
+
+            String valStr = String.format("%.1f", rs.get());
+            int valW = (int) r.getTextWidth("regular", valStr, 7f);
+            r.drawText("regular", valStr, cx + cw - valW, y + 3, 7f, ColorUtil.rgba(180, 210, 255, 200));
+
         } else {
             r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, C_TXT);
         }
@@ -499,6 +562,18 @@ public class SettingsPopup {
                     } else if (s instanceof BindSetting bs2) {
                         bindingField = f;
                         bindingModule = module;
+                    } else if (s instanceof NumberSetting ns) {
+                        sliderDragging.put(s, true);
+                        float clickX = Math.max(0, Math.min(1, (mx - cx) / (float) cw));
+                        double value = ns.getMin() + clickX * (ns.getMax() - ns.getMin());
+                        ns.setValue(value);
+                        so.aporia.utils.files.impl.ConfigFile.markDirty();
+                    } else if (s instanceof RangeSetting rs) {
+                        sliderDragging.put(s, true);
+                        float clickX = Math.max(0, Math.min(1, (mx - cx) / (float) cw));
+                        double value = rs.getMin() + clickX * (rs.getMax() - rs.getMin());
+                        rs.setValue(value);
+                        so.aporia.utils.files.impl.ConfigFile.markDirty();
                     }
                     return true;
                 }

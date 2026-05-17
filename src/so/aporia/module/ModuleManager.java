@@ -6,6 +6,7 @@
 
 package so.aporia.module;
 
+import so.aporia.module.impl.combat.Aura;
 import so.aporia.module.impl.misc.AutoConfig;
 import so.aporia.module.impl.misc.AutoEZ;
 import so.aporia.module.impl.misc.ClickGui;
@@ -48,7 +49,9 @@ public final class ModuleManager {
             new PacketDebug(),
             new DiscordRPCModule(),
                 // move
-            new AutoSprint()
+            new AutoSprint(),
+                // combat
+            new Aura()
         );
     }
 

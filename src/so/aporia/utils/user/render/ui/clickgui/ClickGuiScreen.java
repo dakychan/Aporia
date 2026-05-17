@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025-2026 Aporia.cc Project
+ * Distributed under the Aporia.cc Software License Agreement v1.0
+ * See LICENSE and COPYRIGHT files in the project root for full text.
+ */
+
 package so.aporia.utils.user.render.ui.clickgui;
 
 import net.minecraft.client.Minecraft;
@@ -535,14 +541,30 @@ public final class ClickGuiScreen extends Screen {
     @Override
     public boolean mouseDragged(MouseButtonEvent e, double dx, double dy) {
         float mx = (float)e.x(), my = (float)e.y();
+        if (newUpSetting != null && newUpSetting.isOpen()) {
+            newUpSetting.mouseDragged((int)mx, (int)my, this.width, this.height);
+            return true;
+        }
         if (dragging) { px = mx - dox; py = my - doy; return true; }
         return super.mouseDragged(e, dx, dy);
     }
 
     @Override
     public boolean mouseReleased(MouseButtonEvent e) {
+        if (newUpSetting != null && newUpSetting.isOpen()) {
+            newUpSetting.mouseReleased((int)e.x(), (int)e.y());
+        }
         dragging = false;
         return super.mouseReleased(e);
+    }
+
+    @Override
+    public boolean mouseScrolled(double p_330476_, double p_330477_, double p_330478_, double p_330479_) {
+        if (newUpSetting != null && newUpSetting.isOpen()) {
+            newUpSetting.mouseScrolled(p_330479_);
+            return true;
+        }
+        return super.mouseScrolled(p_330476_, p_330477_, p_330478_, p_330479_);
     }
 
     @Override

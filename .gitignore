@@ -18,3 +18,5 @@ run/
 screenshots/
 servers.dat
 servers.dat_old
+.idea
+hotbar.nbt

@@ -526,7 +526,7 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
             if (this.minecraft.player != null) {
                 Aporia.INSTANCE.render(guigraphics, p_343467_.getGameTimeDeltaTicks());
                 AporiaRenderer r = AporiaRenderer.INSTANCE;
-                r.prepareFrameBlur(Minecraft.getInstance(), 15f, 0.75f);
+                r.prepareFrameBlur(Minecraft.getInstance(), 20f, 0.75f);
             }
 
             if (this.minecraft.getOverlay() != null) {

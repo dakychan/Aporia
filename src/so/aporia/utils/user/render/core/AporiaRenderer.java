@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025-2026 Aporia.cc Project
+ * Distributed under the Aporia.cc Software License Agreement v1.0
+ * See LICENSE and COPYRIGHT files in the project root for full text.
+ */
+
 package so.aporia.utils.user.render.core;
 
 import com.mojang.blaze3d.ProjectionType;
@@ -40,6 +46,7 @@ public class AporiaRenderer {
     public static final int MODE_ROUNDED_RECT = 2;
 
     private RenderPipeline pipeline;
+    private RenderPipeline roundedRectPipeline;
     private CachedOrthoProjectionMatrixBuffer orthoProjection;
     private RenderPipeline kawaseDownPipeline;
     private RenderPipeline kawaseUpPipeline;
@@ -84,6 +91,19 @@ public class AporiaRenderer {
                 .withUniform("ShapeData",  UniformType.UNIFORM_BUFFER)
                 .withSampler("BlurTextureSampler")
                 .withSampler("ImageTextureSampler")
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.TRIANGLES)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false)
+                .build();
+
+        roundedRectPipeline = RenderPipeline.builder()
+                .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/rounded_rect"))
+                .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/rounded_rect"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/rounded_rect"))
+                .withUniform("Projection", UniformType.UNIFORM_BUFFER)
+                .withUniform("ShapeData",  UniformType.UNIFORM_BUFFER)
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.TRIANGLES)
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
@@ -529,7 +549,7 @@ public class AporiaRenderer {
         var indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES);
         int vertexCount = verts.length;
         try (var pass = encoder.createRenderPass(() -> "aporia:draw", colorView, OptionalInt.empty())) {
-            pass.setPipeline(pipeline);
+            pass.setPipeline(roundedRectPipeline);
             RenderSystem.bindDefaultUniforms(pass);
             pass.setUniform("ShapeData", cachedShapeBuffer.slice());
             pass.setVertexBuffer(0, cachedVertexBuffer);

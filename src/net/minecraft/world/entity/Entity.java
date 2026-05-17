@@ -462,6 +462,10 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
     }
 
     public void turn(double p_19885_, double p_19886_) {
+        if (this instanceof net.minecraft.world.entity.player.Player && so.aporia.utils.user.rotation.RotationUtil.isActive()) {
+            so.aporia.utils.user.rotation.RotationUtil.turnClientCamera((float)p_19885_, (float)p_19886_);
+            return;
+        }
         float f = (float)p_19886_ * 0.15F;
         float f1 = (float)p_19885_ * 0.15F;
         this.setXRot(this.getXRot() + f);

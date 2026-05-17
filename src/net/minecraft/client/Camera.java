@@ -99,6 +99,13 @@ public class Camera implements TrackedWaypoint.Camera {
             this.setRotation(direction != null ? direction.toYRot() - 180.0F : 0.0F, 0.0F);
             this.move(0.0F, 0.3F, 0.0F);
         }
+
+        if (so.aporia.utils.user.rotation.RotationUtil.isActive() && !p_90578_) {
+            this.setRotation(
+                so.aporia.utils.user.rotation.RotationUtil.getClientYaw(),
+                so.aporia.utils.user.rotation.RotationUtil.getClientPitch()
+            );
+        }
     }
 
     public void tick() {

@@ -21,6 +21,8 @@ import so.aporia.module.settings.BooleanSetting;
 import so.aporia.module.settings.BindSetting;
 import so.aporia.module.settings.ButtonSetting;
 import so.aporia.module.settings.MultiSelectSetting;
+import so.aporia.module.settings.NumberSetting;
+import so.aporia.module.settings.RangeSetting;
 import so.aporia.module.settings.SelectSetting;
 import so.aporia.module.settings.Setting;
 import so.aporia.module.settings.TextSetting;
@@ -68,12 +70,15 @@ public class NewUpSetting {
     private final Map<Object, Animator> boolToggleAnims = new WeakHashMap<>();
     private final Map<Object, Animator> selectAnims = new WeakHashMap<>();
     private final Map<Object, Animator> multiSelectAnims = new WeakHashMap<>();
+    private final Map<Object, Animator> sliderAnims = new WeakHashMap<>();
+    private final Map<Object, Boolean> sliderDragging = new WeakHashMap<>();
 
     private Animator openAnim = null;
     private Animator closeAnim = null;
     private float mouseX = 0f;
     private float lastMouseX = 0f;
     private float playerYRot = 0f;
+    private float scrollOffset = 0f;
 
     public NewUpSetting(Module module) {
         this.module = module;
@@ -161,23 +166,44 @@ public class NewUpSetting {
 
         if (prog > 0.3f) {
             int alpha = Math.min(255, (int)((prog - 0.3f) / 0.7f * 255));
-            renderSettings(r, px, py, settingsW, alpha);
+
+            int settingsAreaX = px + PAD;
+            int settingsAreaY = py + TOPBAR_H + 2;
+            int settingsAreaW = settingsW - PAD;
+            int settingsAreaH = PANEL_H - TOPBAR_H - PAD - 2;
+
+            gfx.enableScissor(settingsAreaX, settingsAreaY, settingsAreaX + settingsAreaW, settingsAreaY + settingsAreaH);
+            renderSettings(r, px, py, settingsW, alpha, settingsAreaY, settingsAreaH);
+            gfx.disableScissor();
+
             renderPlayerPreview(r, gfx, dividerX + PAD, py + TOPBAR_H + PAD, PREVIEW_W - PAD * 2, PANEL_H - TOPBAR_H - PAD * 2, alpha);
         }
     }
 
-    private void renderSettings(AporiaRenderer r, int px, int py, int settingsW, int alpha) {
+    private void renderSettings(AporiaRenderer r, int px, int py, int settingsW, int alpha, int clipY, int clipH) {
         int cx = px + PAD;
-        int y = py + TOPBAR_H + PAD;
+        int y = py + TOPBAR_H + PAD - (int)scrollOffset;
+        int maxSettingsY = clipY + clipH;
 
         for (Field f : module.getClass().getDeclaredFields()) {
             if (!Setting.class.isAssignableFrom(f.getType())) continue;
             f.setAccessible(true);
             try {
                 Setting<?> s = (Setting<?>) f.get(module);
-                renderSettingRow(r, s, cx, settingsW - PAD, y, alpha);
+                if (y + LINE_H > clipY && y < maxSettingsY) {
+                    renderSettingRow(r, s, cx, settingsW - PAD, y, alpha);
+                }
                 y += LINE_H;
             } catch (IllegalAccessException ignored) {}
+        }
+
+        // Ограничиваем скролл
+        int totalH = settingCount * LINE_H;
+        int visibleH = clipH;
+        if (totalH > visibleH) {
+            scrollOffset = Math.max(0, Math.min(scrollOffset, totalH - visibleH));
+        } else {
+            scrollOffset = 0;
         }
     }
 
@@ -244,6 +270,65 @@ public class NewUpSetting {
             ma.update();
             r.drawRectBlurred(vX, vY, vW, vH, 4, ColorUtil.rgba(30, 30, 50, (int)((120 + ma.value() * 80) * a)), 1f);
             r.drawText("regular", txt.isEmpty() ? "None" : txt, vX + 6, vY + (vH - 9) / 2f + 1, 7f, ColorUtil.rgba(255, 255, 255, (int)(200 * a)));
+
+        } else if (s instanceof NumberSetting ns) {
+            Animator slAnim = sliderAnims.computeIfAbsent(s, k -> new Animator(300, Easing::cubicOut));
+            boolean dragging = sliderDragging.getOrDefault(s, false);
+
+            r.drawText("regular", s.name(), cx, y + 3, 9f, ColorUtil.rgba(255, 255, 255, (int)(220 * a)));
+
+            int sliderY = y + 15;
+            int sliderH = 4;
+            int sliderW = cw;
+            int sliderX = cx;
+
+            r.drawRect(sliderX, sliderY, sliderW, sliderH, 2, ColorUtil.rgba(40, 40, 60, (int)(180 * a)));
+
+            slAnim.update();
+            float fill = (float) ((ns.get() - ns.getMin()) / (ns.getMax() - ns.getMin()));
+            int fillW = (int) (sliderW * fill);
+            int fillColor = ColorUtil.rgba(120, 160, 255, (int)(220 * a));
+            r.drawRect(sliderX, sliderY, fillW, sliderH, 2, fillColor);
+
+            int knobSize = 10;
+            int knobX = sliderX + fillW - knobSize / 2;
+            int knobY = sliderY - knobSize / 2 + sliderH / 2;
+            int knobColor = dragging ? ColorUtil.rgba(160, 200, 255, (int)(255 * a)) : ColorUtil.rgba(200, 220, 255, (int)(230 * a));
+            r.drawRect(knobX, knobY, knobSize, knobSize, knobSize / 2, knobColor);
+
+            String valStr = String.format("%.1f", ns.get());
+            int valW = (int) r.getTextWidth("regular", valStr, 7f);
+            r.drawText("regular", valStr, cx + cw - valW, y + 3, 7f, ColorUtil.rgba(180, 210, 255, (int)(200 * a)));
+
+        } else if (s instanceof RangeSetting rs) {
+            Animator slAnim = sliderAnims.computeIfAbsent(s, k -> new Animator(300, Easing::cubicOut));
+            boolean dragging = sliderDragging.getOrDefault(s, false);
+
+            r.drawText("regular", s.name(), cx, y + 3, 9f, ColorUtil.rgba(255, 255, 255, (int)(220 * a)));
+
+            int sliderY = y + 15;
+            int sliderH = 4;
+            int sliderW = cw;
+            int sliderX = cx;
+
+            r.drawRect(sliderX, sliderY, sliderW, sliderH, 2, ColorUtil.rgba(40, 40, 60, (int)(180 * a)));
+
+            slAnim.update();
+            float fill = (float) ((rs.get() - rs.getMin()) / (rs.getMax() - rs.getMin()));
+            int fillW = (int) (sliderW * fill);
+            int fillColor = ColorUtil.rgba(120, 160, 255, (int)(220 * a));
+            r.drawRect(sliderX, sliderY, fillW, sliderH, 2, fillColor);
+
+            int knobSize = 10;
+            int knobX = sliderX + fillW - knobSize / 2;
+            int knobY = sliderY - knobSize / 2 + sliderH / 2;
+            int knobColor = dragging ? ColorUtil.rgba(160, 200, 255, (int)(255 * a)) : ColorUtil.rgba(200, 220, 255, (int)(230 * a));
+            r.drawRect(knobX, knobY, knobSize, knobSize, knobSize / 2, knobColor);
+
+            String valStr = String.format("%.1f", rs.get());
+            int valW = (int) r.getTextWidth("regular", valStr, 7f);
+            r.drawText("regular", valStr, cx + cw - valW, y + 3, 7f, ColorUtil.rgba(180, 210, 255, (int)(200 * a)));
+
         } else {
             r.drawText("regular", s.name(), cx, y + (LINE_H - 9) / 2f - 1, 9f, ColorUtil.rgba(255, 255, 255, (int)(220 * a)));
         }
@@ -312,14 +397,15 @@ public class NewUpSetting {
 
         int settingsW = PANEL_W - PREVIEW_W - PAD * 2;
         int cx = px + PAD;
-        int y = py + TOPBAR_H + PAD;
+        int y = py + TOPBAR_H + PAD - (int)scrollOffset;
 
         for (Field f : module.getClass().getDeclaredFields()) {
             if (!Setting.class.isAssignableFrom(f.getType())) continue;
             f.setAccessible(true);
             try {
                 Setting<?> s = (Setting<?>) f.get(module);
-                if (mx >= cx && mx < cx + settingsW - PAD && my >= y && my < y + LINE_H) {
+                int rowW = settingsW - PAD;
+                if (mx >= cx && mx < cx + rowW && my >= y && my < y + LINE_H) {
                     if (s instanceof BooleanSetting bs) {
                         bs.toggle();
                         Animator tog = boolToggleAnims.get(s);
@@ -331,17 +417,27 @@ public class NewUpSetting {
                         Animator sa = selectAnims.get(s);
                         if (sa != null) { sa.reset(); sa.play(); }
                     } else if (s instanceof MultiSelectSetting mss) {
-                        List<String> opts = mss.getOptions();
-                        if (!opts.isEmpty()) {
-                            List<String> cur = mss.getSelected();
-                            String cv = cur.isEmpty() ? opts.get(0) : cur.get(0);
-                            String next = opts.get((opts.indexOf(cv) + 1) % opts.size());
-                            mss.setSelected(java.util.Arrays.asList(next));
-                            Animator ma = multiSelectAnims.get(s);
-                            if (ma != null) { ma.reset(); ma.play(); }
-                        }
+                        mss.toggle(mss.getOptions().get(0));
+                        Animator ma = multiSelectAnims.get(s);
+                        if (ma != null) { ma.reset(); ma.play(); }
                     } else if (s instanceof ButtonSetting btn) {
                         btn.click();
+                    } else if (s instanceof NumberSetting ns) {
+                        sliderDragging.put(s, true);
+                        int sliderX = cx;
+                        int sliderW2 = rowW;
+                        float clickX = Math.max(0, Math.min(1, (mx - sliderX) / (float) sliderW2));
+                        double value = ns.getMin() + clickX * (ns.getMax() - ns.getMin());
+                        ns.setValue(value);
+                        so.aporia.utils.files.impl.ConfigFile.markDirty();
+                    } else if (s instanceof RangeSetting rs) {
+                        sliderDragging.put(s, true);
+                        int sliderX = cx;
+                        int sliderW2 = rowW;
+                        float clickX = Math.max(0, Math.min(1, (mx - sliderX) / (float) sliderW2));
+                        double value = rs.getMin() + clickX * (rs.getMax() - rs.getMin());
+                        rs.setValue(value);
+                        so.aporia.utils.files.impl.ConfigFile.markDirty();
                     }
                     return true;
                 }
@@ -359,4 +455,57 @@ public class NewUpSetting {
     public Module getModule() { return module; }
     public void close() { module = null; }
     public boolean isOpen() { return module != null; }
+
+    public void mouseScrolled(double amount) {
+        scrollOffset += amount * 15.0;
+        scrollOffset = Math.max(0, scrollOffset);
+    }
+
+    public void mouseDragged(int mx, int my, int screenW, int screenH) {
+        if (isClosing() || !isReady()) return;
+
+        float prog = openAnim != null ? openAnim.value() : 1f;
+        int px = (screenW - PANEL_W) / 2;
+        int py = (screenH - PANEL_H) / 2;
+        int settingsW = PANEL_W - PREVIEW_W - PAD * 2;
+        int cx = px + PAD;
+        int y = py + TOPBAR_H + PAD - (int)scrollOffset;
+
+        for (Field f : module.getClass().getDeclaredFields()) {
+            if (!Setting.class.isAssignableFrom(f.getType())) continue;
+            f.setAccessible(true);
+            try {
+                Setting<?> s = (Setting<?>) f.get(module);
+                if (sliderDragging.getOrDefault(s, false)) {
+                    int rowW = settingsW - PAD;
+                    int sliderX = cx;
+                    int sliderW2 = rowW;
+                    float clickX = Math.max(0, Math.min(1, (mx - sliderX) / (float) sliderW2));
+                    if (s instanceof NumberSetting ns) {
+                        double value = ns.getMin() + clickX * (ns.getMax() - ns.getMin());
+                        ns.setValue(value);
+                    } else if (s instanceof RangeSetting rs) {
+                        double value = rs.getMin() + clickX * (rs.getMax() - rs.getMin());
+                        rs.setValue(value);
+                    }
+                    so.aporia.utils.files.impl.ConfigFile.markDirty();
+                    return;
+                }
+                y += LINE_H;
+            } catch (IllegalAccessException ignored) {}
+        }
+    }
+
+    public void mouseReleased(int mx, int my) {
+        for (Field f : module.getClass().getDeclaredFields()) {
+            if (!Setting.class.isAssignableFrom(f.getType())) continue;
+            f.setAccessible(true);
+            try {
+                Setting<?> s = (Setting<?>) f.get(module);
+                if (sliderDragging.getOrDefault(s, false)) {
+                    sliderDragging.put(s, false);
+                }
+            } catch (IllegalAccessException ignored) {}
+        }
+    }
 }
