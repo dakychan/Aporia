@@ -127,7 +127,6 @@ public final class ClickGuiScreen extends Screen {
     @Override
     public void render(GuiGraphics gfx, int mx, int my, float delta) {
         AporiaRenderer r = AporiaRenderer.INSTANCE;
-        r.prepareFrameBlur(Minecraft.getInstance(), 15f, 0.75f);
 
         if (newUpSetting != null && newUpSetting.isOpen()) {
             newUpSetting.render(r, gfx, mx, my, this.width, this.height);

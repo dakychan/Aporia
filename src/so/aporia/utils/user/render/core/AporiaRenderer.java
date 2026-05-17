@@ -11,6 +11,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -82,6 +83,7 @@ public class AporiaRenderer {
                 .withUniform("Projection", UniformType.UNIFORM_BUFFER)
                 .withUniform("ShapeData",  UniformType.UNIFORM_BUFFER)
                 .withSampler("BlurTextureSampler")
+                .withSampler("ImageTextureSampler")
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.TRIANGLES)
                 .withBlend(BlendFunction.TRANSLUCENT)
                 .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
@@ -739,15 +741,12 @@ public class AporiaRenderer {
         var mainTarget = mc.getMainRenderTarget();
         var device     = RenderSystem.getDevice();
 
-        int mainW = mainTarget.width;
-        int mainH = mainTarget.height;
-
         var encoder = device.createCommandEncoder();
         var bb = ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder());
 
-        // Фиксируем 5 шагов для глубокого размытия без интервалов пропуска кадров
-        int maxSteps = 4;
-        float strengthFactor = strength / 30.0f;
+        // Динамическое количество шагов в зависимости от strength
+        // strength от 1 до 30 -> шагов от 1 до 5
+        int maxSteps = Math.max(1, Math.min(5, Math.round(strength / 6.0f)));
 
         // ----- 1. ЦИКЛ DOWNSCALE -----
         RenderTarget currentSrc = mainTarget;
@@ -756,21 +755,21 @@ public class AporiaRenderer {
             TextureTarget currentDst = kawaseDownTargets[i];
 
             bb.clear();
+            // ВАЖНО: Передаем размер ИСТОЧНИКА! (для первой итерации это экран)
             bb.putFloat((float) currentSrc.width);
             bb.putFloat((float) currentSrc.height);
-            bb.putFloat(1.0f);
+            bb.putFloat(1.0f); // Offset не важен для нового Downscale шейдера
             bb.putFloat(saturation);
             bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f); bb.putFloat(0f);
             bb.flip();
             encoder.writeToBuffer(blurUbo.slice(), bb);
 
-            if (i == 0) saturation = 0.5f;
+            if (i == 0) saturation = 0.5f; // Градация сатурации
 
             final int stepIdx = i;
-            // ИСПРАВЛЕНО: Заменили OptionalInt.empty() на OptionalInt.of(0) для полной очистки текстуры перед пассом
             try (var pass = encoder.createRenderPass(() -> "aporia:kawase_down_" + stepIdx,
                     currentDst.getColorTextureView(), OptionalInt.of(0))) {
-                pass.setPipeline(kawaseDownPipeline);
+                pass.setPipeline(kawaseDownPipeline); // Используем НОВЫЙ Downscale шейдер
                 pass.bindTexture("InputTexture", currentSrc.getColorTextureView(),
                         RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
                 pass.setUniform("KawaseData", blurUbo.slice());
@@ -785,9 +784,13 @@ public class AporiaRenderer {
         for (int i = maxSteps - 1; i >= 0; i--) {
             TextureTarget currentDst = (i == 0) ? blurTarget : kawaseDownTargets[i - 1];
 
-            float offset = ((float)i + 0.5f) * strengthFactor;
+            // ИСПРАВЛЕНО: Фиксированный небольшой шаг для пирамидального блюра.
+            // 0.5 - идеально перекрывает границы, давая мягкий "боке" без артефактов.
+            // Если хочешь чуть более резкий блюр, поставь 1.0 или 1.5
+            float offset = 0.5f;
 
             bb.clear();
+            // ВАЖНО: Передаем размер ИСТОЧНИКА (маленькой текстуры)
             bb.putFloat((float) currentSrc.width);
             bb.putFloat((float) currentSrc.height);
             bb.putFloat(offset);
@@ -797,10 +800,9 @@ public class AporiaRenderer {
             encoder.writeToBuffer(blurUbo.slice(), bb);
 
             final int stepIdx = i;
-            // ИСПРАВЛЕНО: Здесь тоже принудительно чистим буфер, чтобы убрать шлейф и дёргания при движении
             try (var pass = encoder.createRenderPass(() -> "aporia:kawase_up_" + stepIdx,
                     currentDst.getColorTextureView(), OptionalInt.of(0))) {
-                pass.setPipeline(kawaseUpPipeline);
+                pass.setPipeline(kawaseUpPipeline); // Используем ИСПРАВЛЕННЫЙ Upscale шейдер
                 pass.bindTexture("InputTexture", currentSrc.getColorTextureView(),
                         RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
                 pass.setUniform("KawaseData", blurUbo.slice());
