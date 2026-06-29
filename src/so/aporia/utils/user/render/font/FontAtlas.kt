@@ -8,9 +8,9 @@ package so.aporia.utils.user.render.font
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import net.minecraft.client.Minecraft
 import net.minecraft.resources.Identifier
 import org.slf4j.LoggerFactory
+import so.aporia.utils.imports.*
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
 import java.util.HashMap
@@ -39,7 +39,7 @@ class FontAtlas(private val jsonId: Identifier, private val textureId: Identifie
 
     private fun doLoad() {
         try {
-            val res = Minecraft.getInstance().resourceManager.getResource(jsonId)
+            val res = mc.resourceManager.getResource(jsonId)
             if (res.isEmpty) {
                 LOGGER.warn("Font JSON not found in ResourceManager: {}, trying AssetManager...", jsonId)
                 loadFromAssetManager()

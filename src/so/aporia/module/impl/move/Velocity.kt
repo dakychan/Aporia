@@ -1,5 +1,6 @@
 package so.aporia.module.impl.move
 
+import so.aporia.utils.imports.*
 import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
 import net.minecraft.world.phys.Vec3
@@ -7,7 +8,6 @@ import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.NumberSetting
 import so.aporia.module.settings.SelectSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
 
@@ -32,11 +32,11 @@ class Velocity : Module("Velocity", Category.MOVE) {
     }
 
     override fun onEnable() {
-        EventBus.register(this)
+        bus.register(this)
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
     }
 
     @EventHandler

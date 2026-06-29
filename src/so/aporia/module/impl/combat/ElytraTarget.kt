@@ -1,6 +1,5 @@
 package so.aporia.module.impl.combat
 
-import net.minecraft.client.Minecraft
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.animal.Animal
@@ -13,10 +12,10 @@ import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
 import so.aporia.module.settings.NumberSetting
 import so.aporia.module.settings.SelectSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.TickEvent
-import so.aporia.utils.user.friend.FriendManager
+import net.minecraft.client.Minecraft
+import so.aporia.utils.imports.*
 import so.aporia.utils.user.player.movement.MoveUtil
 import so.aporia.utils.user.player.rotation.RotationUtil
 
@@ -53,19 +52,11 @@ class ElytraTarget : Module("ElytraTarget", Category.COMBAT) {
     private var currentBypass = ""
 
     override fun onEnable() {
-        EventBus.register(this)
-        RotationUtil.sync()
-        currentBypass = ""
-        applyBypassMode()
-        phase = Phase.IDLE
-        lockedTarget = null
-        lastLmbTime = System.currentTimeMillis()
-        nextLmbDelay = getRandomCpsDelay()
-        tickCounter = 0
+        bus.register(this)
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
         RotationUtil.reset()
         phase = Phase.IDLE
         lockedTarget = null
@@ -197,7 +188,7 @@ class ElytraTarget : Module("ElytraTarget", Category.COMBAT) {
         if (entity == mc.player || entity?.isAlive != true) return false
         if (entity is Player) {
             if (!targets.isSelected("Players")) return false
-            if (FriendManager.isFriend(entity.name.string) && !targets.isSelected("Friends")) return false
+            if (fm.isFriend(entity.name.string) && !targets.isSelected("Friends")) return false
             return true
         }
         if (entity is Mob) return targets.isSelected("Mobs")

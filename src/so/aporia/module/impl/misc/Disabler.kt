@@ -1,7 +1,6 @@
 package so.aporia.module.impl.misc
 
 import com.chaos.annotation.Obfuscate
-import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket
@@ -10,9 +9,9 @@ import net.minecraft.world.entity.Relative
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
+import so.aporia.utils.imports.*
 
 @Obfuscate
 class Disabler : Module("Disabler", Category.MISC) {
@@ -23,12 +22,11 @@ class Disabler : Module("Disabler", Category.MISC) {
     val noPlayerMove = BooleanSetting("NoPlayerMove", "Не давать серверу двигать игрока через пакеты энтити", false)
     val noEntityMove = BooleanSetting("NoEntityMove", "Блокировать любое движение энтити от сервера", false)
 
-    override fun onEnable() { EventBus.register(this) }
-    override fun onDisable() { EventBus.unregister(this) }
+    override fun onEnable() { bus.register(this) }
+    override fun onDisable() { bus.unregister(this) }
 
     @EventHandler
     fun onPacketReceive(event: PacketEvent) {
-        val mc = Minecraft.getInstance()
         if (mc.player == null || mc.level == null) return
         if (event.direction != PacketEvent.Direction.INBOUND) return
 

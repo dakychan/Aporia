@@ -1,8 +1,8 @@
 package aporia.cc
 
 import com.chaos.annotation.Obfuscate
-import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
+import so.aporia.utils.imports.*
 
 @Obfuscate
 class PanicSystem private constructor() {
@@ -16,7 +16,6 @@ class PanicSystem private constructor() {
         if (isPanicked) return
         isPanicked = true
 
-        val mc = Minecraft.getInstance()
         restoreKey = mc.user.name
 
         mc.gui.chat.clearMessages(false)
@@ -30,7 +29,6 @@ class PanicSystem private constructor() {
     fun restore() {
         isPanicked = false
         restoreKey = null
-        val mc = Minecraft.getInstance()
         mc.player?.displayClientMessage(
             Component.literal("§aAporia restored."),
             false

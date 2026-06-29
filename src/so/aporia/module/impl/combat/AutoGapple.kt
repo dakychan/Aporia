@@ -1,7 +1,6 @@
 package so.aporia.module.impl.combat
 
 import com.chaos.annotation.Obfuscate
-import net.minecraft.client.Minecraft
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.item.Items
@@ -10,9 +9,10 @@ import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
 import so.aporia.module.settings.NumberSetting
 import so.aporia.module.settings.SelectSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.TickEvent
+import net.minecraft.client.Minecraft
+import so.aporia.utils.imports.*
 import so.aporia.utils.user.player.inventory.InventoryUtil
 
 @Obfuscate
@@ -46,7 +46,7 @@ class AutoGapple : Module("AutoGapple", Category.COMBAT) {
     }
 
     override fun onEnable() {
-        EventBus.register(this)
+        bus.register(this)
         wasUsePressed = false
         hasEaten = false
         eatQueued = false
@@ -54,7 +54,7 @@ class AutoGapple : Module("AutoGapple", Category.COMBAT) {
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
         wasUsePressed = false
         hasEaten = false
         eatQueued = false

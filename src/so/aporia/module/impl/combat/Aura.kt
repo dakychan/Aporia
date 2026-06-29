@@ -1,7 +1,6 @@
 package so.aporia.module.impl.combat
 
 import com.chaos.annotation.Obfuscate
-import net.minecraft.client.Minecraft
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.Mob
@@ -14,19 +13,16 @@ import so.aporia.module.settings.BooleanSetting
 import so.aporia.module.settings.MultiSelectSetting
 import so.aporia.module.settings.NumberSetting
 import so.aporia.module.settings.SelectSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.events.impl.TickEvent
-import so.aporia.utils.user.friend.FriendManager
+import so.aporia.utils.imports.*
 import so.aporia.utils.user.locale.LocaleManager
 import so.aporia.utils.user.player.rotation.RotationUtil
 import so.aporia.utils.user.player.rotation.RotationUtil.RotationMode
 
 @Obfuscate
 class Aura : Module("Aura", Category.COMBAT, -1) {
-
-    private val mc = Minecraft.getInstance()
 
     val combatMode: SelectSetting
     val range: NumberSetting
@@ -90,7 +86,7 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
 
     override fun onEnable() {
         super.onEnable()
-        EventBus.register(this)
+        bus.register(this)
         RotationUtil.sync()
         applyRotationMode()
         lockedTarget = null
@@ -103,7 +99,7 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
 
     override fun onDisable() {
         super.onDisable()
-        EventBus.unregister(this)
+        bus.unregister(this)
         RotationUtil.reset()
         lockedTarget = null
         currentTps = 20.0
@@ -252,7 +248,7 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
     private fun isValidTarget(entity: Entity?): Boolean {
         if (entity == mc.player || !entity!!.isAlive) return false
         if (entity is Player) {
-            if (FriendManager.isFriend(entity.name.string) && !targets.isSelected("Friends")) return false
+            if (fm.isFriend(entity.name.string) && !targets.isSelected("Friends")) return false
             return targets.isSelected("Players")
         }
         if (entity is Mob) return targets.isSelected("Mobs")

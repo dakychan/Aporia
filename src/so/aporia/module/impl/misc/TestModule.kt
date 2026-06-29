@@ -4,10 +4,9 @@ import com.chaos.annotation.Obfuscate
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.TickEvent
-import so.aporia.utils.user.logger.Logger
+import so.aporia.utils.imports.*
 
 @Obfuscate
 class TestModule : Module("TestModule", Category.MISC) {
@@ -20,8 +19,8 @@ class TestModule : Module("TestModule", Category.MISC) {
         .options("Игроки", "Мобы", "Животные", "Боссы")
     val hotkey = so.aporia.module.settings.BindSetting("Хоткей", "Клавиша активации")
     val action = so.aporia.module.settings.ButtonSetting("Выполнить", "Запускает действие",
-        Runnable { Logger.info("[TestModule] Action triggered! mode=${mode.get()} user=${username.get()}") })
+        Runnable { logger.info("[TestModule] Action triggered! mode=${mode.get()} user=${username.get()}") })
 
-    override fun onEnable() { EventBus.register(this) }
-    override fun onDisable() { EventBus.unregister(this) }
+    override fun onEnable() { bus.register(this) }
+    override fun onDisable() { bus.unregister(this) }
 }

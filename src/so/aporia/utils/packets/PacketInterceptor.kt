@@ -1,16 +1,14 @@
 package so.aporia.utils.packets
 
 import com.chaos.annotation.Obfuscate
-import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
 import net.minecraft.util.Mth
 import so.aporia.utils.events.impl.PacketEvent
+import so.aporia.utils.imports.*
 import so.aporia.utils.user.player.rotation.RotationUtil
 
 @Obfuscate
 object PacketInterceptor {
-    private val mc = Minecraft.getInstance()
-
     private var lastSentX = 0.0
     private var lastSentY = 0.0
     private var lastSentZ = 0.0

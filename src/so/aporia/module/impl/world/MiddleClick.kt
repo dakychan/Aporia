@@ -14,14 +14,11 @@ import org.joml.Vector4f
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.MouseClickEvent
 import so.aporia.utils.events.impl.RenderHudEvent
-import so.aporia.utils.user.friend.FriendManager
-import so.aporia.utils.user.render.color.ColorUtil
-import so.aporia.utils.user.render.core.AporiaRenderer
 import so.aporia.utils.user.render.font.Fonts
+import so.aporia.utils.imports.*
 import java.util.HashMap
 
 @Obfuscate
@@ -30,15 +27,14 @@ class MiddleClick : Module("MiddleClick", Category.WORLD) {
     val autoFriend = BooleanSetting("AutoFriend",
         "Middle click on a player nametag to add/remove friend", true)
 
-    private val mc = Minecraft.getInstance()
     private val projectedPositions = HashMap<Player, FloatArray>()
 
     override fun onEnable() {
-        EventBus.register(this)
+        bus.register(this)
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
     }
 
     @EventHandler
@@ -50,10 +46,10 @@ class MiddleClick : Module("MiddleClick", Category.WORLD) {
         val target = findTargetPlayerAtCrosshair()
         if (target != null) {
             val name = target.name.string
-            if (FriendManager.isFriend(name)) {
-                FriendManager.remove(name)
+            if (fm.isFriend(name)) {
+                fm.remove(name)
             } else {
-                FriendManager.add(name)
+                fm.add(name)
             }
         }
     }
@@ -96,7 +92,7 @@ class MiddleClick : Module("MiddleClick", Category.WORLD) {
             val scrY = projectY(vp, px, headY, pz, mc)
             if (scrX.isNaN() || scrY.isNaN()) continue
 
-            val nameWidth = AporiaRenderer.INSTANCE.getTextWidth(Fonts.BOLD, entity.name.string, 12f)
+            val nameWidth = r.getTextWidth(Fonts.BOLD, entity.name.string, 12f)
             val zoneW = nameWidth + 20
             val zoneH = 24f
 
@@ -111,29 +107,29 @@ class MiddleClick : Module("MiddleClick", Category.WORLD) {
 
         if (hovered != null) {
             val displayName = hovered.name.string
-            val nameWidth = AporiaRenderer.INSTANCE.getTextWidth(Fonts.BOLD, displayName, 12f)
+            val nameWidth = r.getTextWidth(Fonts.BOLD, displayName, 12f)
             val zoneW = nameWidth + 20
             val zoneH = 24f
 
-            val isFriend = FriendManager.isFriend(displayName)
+            val isFriend = fm.isFriend(displayName)
             val zoneColor = if (isFriend)
-                ColorUtil.rgba(100, 200, 255, 60)
+                colorUtil.rgba(100, 200, 255, 60)
             else
-                ColorUtil.rgba(100, 255, 100, 60)
+                colorUtil.rgba(100, 255, 100, 60)
             val borderColor = if (isFriend)
-                ColorUtil.rgba(100, 200, 255, 160)
+                colorUtil.rgba(100, 200, 255, 160)
             else
-                ColorUtil.rgba(100, 255, 100, 160)
+                colorUtil.rgba(100, 255, 100, 160)
 
             val zx = hoverScrX - zoneW / 2
             val zy = hoverScrY - zoneH / 2
 
-            AporiaRenderer.INSTANCE.drawRect(zx, zy, zoneW, zoneH, 4f, zoneColor)
-            AporiaRenderer.INSTANCE.drawStroke(zx, zy, zoneW, zoneH, 4f, 1f, 1, 0f, borderColor)
+            r.drawRect(zx, zy, zoneW, zoneH, 4f, zoneColor)
+            r.drawStroke(zx, zy, zoneW, zoneH, 4f, 1f, 1, 0f, borderColor)
 
             val label = if (isFriend) "-" else "+"
-            AporiaRenderer.INSTANCE.drawText(Fonts.BOLD, label, zx - 16, zy + (zoneH - 14f) / 2f - 1f, 14f,
-                if (isFriend) ColorUtil.rgba(100, 200, 255, 255) else ColorUtil.rgba(100, 255, 100, 255))
+            r.drawText(Fonts.BOLD, label, zx - 16, zy + (zoneH - 14f) / 2f - 1f, 14f,
+                if (isFriend) colorUtil.rgba(100, 200, 255, 255) else colorUtil.rgba(100, 255, 100, 255))
         }
     }
 

@@ -1,16 +1,16 @@
 package so.aporia.module.impl.combat
 
 import com.chaos.annotation.Obfuscate
-import net.minecraft.client.Minecraft
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.item.Items
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
 import so.aporia.module.settings.NumberSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.TickEvent
+import net.minecraft.client.Minecraft
+import so.aporia.utils.imports.*
 import so.aporia.utils.user.player.inventory.InventoryUtil
 
 @Obfuscate
@@ -42,11 +42,11 @@ class AutoTotem : Module("AutoTotem", Category.COMBAT) {
     }
 
     override fun onEnable() {
-        EventBus.register(this)
+        bus.register(this)
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
     }
 
     @EventHandler

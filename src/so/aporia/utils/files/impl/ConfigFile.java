@@ -168,6 +168,8 @@ public final class ConfigFile {
             return "[" + String.join(", ", sel) + "]";
         } else if (s instanceof BindSetting bs2) {
             return AprParser.keyToString(bs2.getKey());
+        } else if (s instanceof ColorSetting cs) {
+            return "'" + cs.toHexString() + "'";
         }
         return null;
     }
@@ -198,6 +200,12 @@ public final class ConfigFile {
             }
         } else if (s instanceof BindSetting bs2) {
             bs2.setKey(AprParser.parseKey(val));
+        } else if (s instanceof ColorSetting cs) {
+            try {
+                String hex = stripQuotes(val);
+                if (hex.startsWith("#")) hex = hex.substring(1);
+                cs.set((int)Long.parseLong(hex, 16));
+            } catch (NumberFormatException ignored) {}
         }
     }
 

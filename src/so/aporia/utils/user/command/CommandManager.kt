@@ -2,8 +2,8 @@ package so.aporia.utils.user.command
 
 import aporia.cc.PanicSystem
 import com.chaos.annotation.Obfuscate
-import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
+import so.aporia.utils.imports.*
 import so.aporia.utils.user.command.impl.*
 
 @Obfuscate
@@ -52,7 +52,6 @@ object CommandManager {
     @JvmStatic
     fun chat(text: String) {
         if (PanicSystem.INSTANCE.isPanicked) return
-        val mc = Minecraft.getInstance()
         mc.player?.displayClientMessage(Component.literal(text), false)
     }
 }

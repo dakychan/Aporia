@@ -1,10 +1,9 @@
 package so.aporia.utils.math
 
-import net.minecraft.client.Minecraft
 import net.minecraft.world.entity.Entity
+import so.aporia.utils.imports.*
 
 object Speed {
-    private val mc = Minecraft.getInstance()
     private var prevX = 0.0
     private var prevZ = 0.0
     private var bps = 0.0

@@ -1,5 +1,6 @@
 package so.aporia.module.impl.render
 
+import so.aporia.utils.imports.*
 import com.chaos.annotation.Obfuscate
 import com.mojang.blaze3d.vertex.BufferBuilder
 import com.mojang.blaze3d.vertex.ByteBufferBuilder
@@ -7,7 +8,6 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.VertexFormat
 import com.mojang.math.Axis
-import net.minecraft.client.Minecraft
 import net.minecraft.client.model.player.PlayerModel
 import net.minecraft.client.player.AbstractClientPlayer
 import net.minecraft.client.renderer.entity.player.AvatarRenderer
@@ -22,11 +22,8 @@ import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
 import so.aporia.module.settings.NumberSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.WorldRenderEvent
-import so.aporia.utils.user.logger.Logger
-import so.aporia.utils.user.render.core.AporiaRenderer
 import so.aporia.utils.user.render.core.RenderFilter
 import java.util.UUID
 
@@ -51,14 +48,14 @@ class PlayerESP : Module("PlayerESP", Category.VISUAL) {
     private var debugDrawn = false
 
     override fun onEnable() {
-        Logger.info("PlayerESP enabled")
-        EventBus.register(this)
+        logger.info("PlayerESP enabled")
+        bus.register(this)
         RenderFilter.setEntityFilter { e -> e is Player && shouldSkipVanilla(e) }
     }
 
     override fun onDisable() {
-        Logger.info("PlayerESP disabled")
-        EventBus.unregister(this)
+        logger.info("PlayerESP disabled")
+        bus.unregister(this)
         RenderFilter.clearEntityFilter()
         renderState = null
         playerModel = null
@@ -66,7 +63,6 @@ class PlayerESP : Module("PlayerESP", Category.VISUAL) {
     }
 
     private fun shouldSkipVanilla(player: Player): Boolean {
-        val mc = Minecraft.getInstance()
         if (mc.level == null || mc.player == null) return false
         if (player == mc.player && !showSelf.isEnabled) return false
         if (player.isInvisible && !showInvisible.isEnabled) return false
@@ -75,7 +71,6 @@ class PlayerESP : Module("PlayerESP", Category.VISUAL) {
 
     @EventHandler
     fun onWorldRender(e: WorldRenderEvent) {
-        val mc = Minecraft.getInstance()
         val level = mc.level ?: return
         val self = mc.player ?: return
         val pt = e.partialTick
@@ -110,7 +105,7 @@ class PlayerESP : Module("PlayerESP", Category.VISUAL) {
             val distFade = maxOf(0.15f, 1.0f - (dist / maxRange).toFloat())
 
             if (cached != null && !cached.isStale(now, pos.x, pos.y, pos.z)) {
-                AporiaRenderer.INSTANCE.drawPlayerGlowSubmit(
+                r.drawPlayerGlowSubmit(
                     cached.vertexData, cached.vertexCount,
                     cr, cg, cb, alpha.getFloat() * distFade,
                     glowIntensity.getFloat(), rimPower.getFloat(),
@@ -150,7 +145,7 @@ class PlayerESP : Module("PlayerESP", Category.VISUAL) {
 
             if (fresh == null) continue
 
-            AporiaRenderer.INSTANCE.drawPlayerGlowSubmit(
+            r.drawPlayerGlowSubmit(
                 fresh.vertexData, fresh.vertexCount,
                 cr, cg, cb, ca,
                 glowIntensity.getFloat(), rimPower.getFloat(),
@@ -166,9 +161,9 @@ class PlayerESP : Module("PlayerESP", Category.VISUAL) {
 
         // DEBUG: one-shot test quad to verify entityGlowPipeline works
         if (!debugDrawn) {
-            AporiaRenderer.INSTANCE.drawTestQuad(1f, 0f, 0f, 1f, 1f, 1f, 2f, 0.5f)
+            r.drawTestQuad(1f, 0f, 0f, 1f, 1f, 1f, 2f, 0.5f)
             debugDrawn = true
-            Logger.info("PlayerESP: test quad drawn")
+            logger.info("PlayerESP: test quad drawn")
         }
     }
 

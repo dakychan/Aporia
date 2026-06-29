@@ -1,12 +1,10 @@
 package so.aporia.utils.packets
 
 import com.chaos.annotation.Obfuscate
-import net.minecraft.client.Minecraft
+import so.aporia.utils.imports.*
 
 @Obfuscate
 object PacketUtil {
-
-    private val mc = Minecraft.getInstance()
 
     @JvmStatic
     fun isMovePacket(className: String): Boolean {

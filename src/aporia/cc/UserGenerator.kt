@@ -121,7 +121,7 @@ object UserGenerator {
     @JvmStatic
     fun generateHardwareId(): String {
         val input = System.getProperty("user.name") +
-                System.getProperty("os.name") +
+                OsManager.osName +
                 System.getenv("PROCESSOR_IDENTIFIER") +
                 Runtime.getRuntime().availableProcessors()
         return generateUUIDFromString(input)
@@ -131,7 +131,7 @@ object UserGenerator {
     fun generateSystemHardwareId(): String? {
         return try {
             val runtime = Runtime.getRuntime()
-            val os = System.getProperty("os.name").lowercase()
+            val os = OsManager.osName.lowercase()
             val process = when {
                 os.contains("win") -> runtime.exec("wmic csproduct get uuid")
                 os.contains("linux") -> runtime.exec("cat /etc/machine-id")

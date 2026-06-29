@@ -1,6 +1,5 @@
 package so.aporia.module.impl.combat
 
-import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.game.*
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.Entity
@@ -14,11 +13,11 @@ import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
 import so.aporia.module.settings.NumberSetting
 import so.aporia.module.settings.SelectSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.events.impl.TickEvent
-import so.aporia.utils.user.friend.FriendManager
+import net.minecraft.client.Minecraft
+import so.aporia.utils.imports.*
 import so.aporia.utils.user.player.rotation.RotationUtil
 import java.util.ArrayDeque
 import java.util.UUID
@@ -87,7 +86,7 @@ class TPAura : Module("TPAura", Category.COMBAT) {
     private var blinkDuration = 0
 
     override fun onEnable() {
-        EventBus.register(this)
+        bus.register(this)
         resetState()
         lastAttackTime = System.currentTimeMillis()
         nextAttackDelay = getRandomDelay()
@@ -97,7 +96,7 @@ class TPAura : Module("TPAura", Category.COMBAT) {
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
         resetState()
         RotationUtil.reset()
     }
@@ -508,7 +507,7 @@ class TPAura : Module("TPAura", Category.COMBAT) {
 
         if (entity is Player) {
             if (!targets.isSelected("Players")) return false
-            if (FriendManager.isFriend(entity.name.string) && !targets.isSelected("Friends")) return false
+            if (fm.isFriend(entity.name.string) && !targets.isSelected("Friends")) return false
             return true
         }
         if (entity is Mob) return targets.isSelected("Mobs")

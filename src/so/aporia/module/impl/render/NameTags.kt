@@ -1,24 +1,22 @@
 package so.aporia.module.impl.render
 
+import so.aporia.utils.imports.*
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
+import so.aporia.utils.user.render.core.AporiaRenderer
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.ItemStack
 import org.joml.Matrix4f
 import org.joml.Vector4f
-import so.aporia.Aporia
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
 import so.aporia.module.settings.NumberSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.RenderHudEvent
 import so.aporia.utils.events.impl.TickEvent
-import so.aporia.utils.user.render.color.ColorUtil
-import so.aporia.utils.user.render.core.AporiaRenderer
 import so.aporia.utils.user.render.font.Fonts
 import java.util.UUID
 
@@ -31,6 +29,7 @@ class NameTags : Module("NameTags", Category.VISUAL) {
     private val flashMap = mutableMapOf<UUID, FlashState>()
     private val prevHealthMap = mutableMapOf<UUID, Float>()
 
+    val showSelf = BooleanSetting("Self", "Show own name tag", false)
     val showEnchants = BooleanSetting("Enchantments", "Show key enchantments", true)
     val showHealth = BooleanSetting("Health", "Show player health", true)
     val showArmor = BooleanSetting("Armor", "Show armor items", true)
@@ -39,24 +38,23 @@ class NameTags : Module("NameTags", Category.VISUAL) {
 
     override fun onEnable() {
         active = true
-        EventBus.register(this)
+        bus.register(this)
     }
 
     override fun onDisable() {
         active = false
-        EventBus.unregister(this)
+        bus.unregister(this)
         flashMap.clear()
         prevHealthMap.clear()
     }
 
     @EventHandler
     fun onTick(e: TickEvent) {
-        val mc = Minecraft.getInstance()
         if (mc.level == null || mc.player == null) return
         val now = System.currentTimeMillis()
         for (entity in mc.level!!.entitiesForRendering()) {
             if (entity !is Player) continue
-            if (entity == mc.player) continue
+            if (entity == mc.player && !showSelf.isEnabled) continue
             val uuid = entity.uuid
             val currentHealth = entity.health + entity.absorptionAmount
             val prev = prevHealthMap[uuid]
@@ -79,9 +77,14 @@ class NameTags : Module("NameTags", Category.VISUAL) {
     private val vp = Matrix4f()
     private val clip = Vector4f()
 
+    private fun shouldRender(entity: Player, camera: net.minecraft.world.entity.Entity): Boolean {
+        if (entity.name.string.isBlank()) return false
+        if (entity == camera) return showSelf.isEnabled
+        return true
+    }
+
     @EventHandler
     fun onRenderHud(e: RenderHudEvent) {
-        val mc = Minecraft.getInstance()
         val camera = mc.cameraEntity ?: return
         val level = mc.level ?: return
         if (mc.player == null) return
@@ -95,95 +98,44 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         val sw = mc.window.guiScaledWidth
         val sh = mc.window.guiScaledHeight
 
-        // Phase 1: draw blurred backgrounds
-        for (entity in level.entitiesForRendering()) {
-            if (entity !is Player) continue
-            if (entity == camera) continue
-            val dist = camera.distanceTo(entity)
-            if (dist > 64.0) continue
+        val renderable = level.entitiesForRendering()
+            .filterIsInstance<Player>()
+            .filter { shouldRender(it, camera) }
+            .filter { camera.distanceTo(it) <= 64.0 }
 
-            val px = Mth.lerp(pt.toDouble(), entity.xo, entity.x).toFloat() - camPos.x.toFloat()
-            val py = Mth.lerp(pt.toDouble(), entity.yo, entity.y).toFloat() - camPos.y.toFloat()
-            val pz = Mth.lerp(pt.toDouble(), entity.zo, entity.z).toFloat() - camPos.z.toFloat()
+        // Phase 1: blurred backgrounds
+        for (entity in renderable) {
+            val (s, left, top, totalW, totalH) = computeLayout(entity, camPos, pt, sw, sh) ?: continue
 
-            val distScale = maxOf(0.5, 1.0 - dist / 64.0).toFloat()
-            val s = scale.getFloat() * distScale
-
-            val headY = py + entity.bbHeight + 0.15f
-
-            val sx = projectX(vp, px, headY, pz, mc)
-            val sy = projectY(vp, px, headY, pz, mc)
-            if (sx.isNaN() || sy.isNaN()) continue
-            if (sx < -300 || sx > sw + 300 || sy < -300 || sy > sh + 300) continue
-
-            val totalW = getTotalWidth(entity, s)
-            val totalH = getTotalHeight(entity, s)
-
-            val left = sx - totalW / 2f
-            val top = sy - totalH
-
-            // Health bubble background
             if (showHealth.isEnabled) {
-                val hbW = s * 32
-                val hbH = s * 22
-                AporiaRenderer.INSTANCE.drawRectBlurred(left + s * 4, top + totalH - hbH - s * 4, hbW, hbH, s * 6f, ColorUtil.rgba(30, 30, 40, 200), 3f, 15)
+                val hbW = s * 32; val hbH = s * 22
+                r.drawRectBlurred(left + s * 4, top + totalH - hbH - s * 4, hbW, hbH, s * 6f, colorUtil.rgba(30, 30, 40, 200), 3f, 15)
             }
 
-            // Name bubble background
-            val nameW = Aporia.FONTS.getTextWidth(Fonts.BOLD, entity.name.string, s * 16f) + s * 16f
+            val nameW = fonts.getTextWidth(Fonts.BOLD, entity.name.string, s * 16f) + s * 16f
             val nameBubbleW = if (showHealth.isEnabled) nameW else totalW - s * 8f
             val nbH = s * 22f
             val nbX = if (showHealth.isEnabled) left + s * 4f + s * 32f + s * 4f else left + s * 4f
             val nbY = top + totalH - nbH - s * 4f
-            AporiaRenderer.INSTANCE.drawRectBlurred(nbX, nbY, nameBubbleW, nbH, s * 6f, ColorUtil.rgba(25, 25, 35, 200), 3f, 15)
+            r.drawRectBlurred(nbX, nbY, nameBubbleW, nbH, s * 6f, colorUtil.rgba(25, 25, 35, 200), 3f, 15)
 
-            // Item bubble background
             if (showItem.isEnabled) {
                 val hand = entity.mainHandItem
                 if (!hand.isEmpty) {
-                    val ibW = s * 22f
-                    val ibH = s * 22f
-                    val ibX = nbX + nameBubbleW + s * 4f
-                    val ibY = top + totalH - ibH - s * 4f
-                    AporiaRenderer.INSTANCE.drawRectBlurred(ibX, ibY, ibW, ibH, s * 6f, ColorUtil.rgba(25, 25, 35, 200), 3f, 15)
+                    val ibW = s * 22f; val ibH = s * 22f
+                    r.drawRectBlurred(nbX + nameBubbleW + s * 4f, top + totalH - ibH - s * 4f, ibW, ibH, s * 6f, colorUtil.rgba(25, 25, 35, 200), 3f, 15)
                 }
             }
         }
 
-        // Flush backgrounds now
-        AporiaRenderer.INSTANCE.flush()
+        r.flush()
 
-        // Phase 2: draw item icons
-        for (entity in level.entitiesForRendering()) {
-            if (entity !is Player) continue
-            if (entity == camera) continue
-            val dist = camera.distanceTo(entity)
-            if (dist > 64.0) continue
+        // Phase 2: item icons
+        for (entity in renderable) {
+            val (s, left, top, totalW, totalH) = computeLayout(entity, camPos, pt, sw, sh) ?: continue
 
-            val px = Mth.lerp(pt.toDouble(), entity.xo, entity.x).toFloat() - camPos.x.toFloat()
-            val py = Mth.lerp(pt.toDouble(), entity.yo, entity.y).toFloat() - camPos.y.toFloat()
-            val pz = Mth.lerp(pt.toDouble(), entity.zo, entity.z).toFloat() - camPos.z.toFloat()
+            if (showArmor.isEnabled) renderArmorItems(gfx, entity, left, top, totalW, s)
 
-            val distScale = maxOf(0.5, 1.0 - dist / 64.0).toFloat()
-            val s = scale.getFloat() * distScale
-
-            val headY = py + entity.bbHeight + 0.15f
-
-            val sx = projectX(vp, px, headY, pz, mc)
-            val sy = projectY(vp, px, headY, pz, mc)
-            if (sx.isNaN() || sy.isNaN()) continue
-
-            val totalW = getTotalWidth(entity, s)
-            val totalH = getTotalHeight(entity, s)
-            val left = sx - totalW / 2f
-            val top = sy - totalH
-
-            // Armor items
-            if (showArmor.isEnabled) {
-                renderArmorItems(gfx, entity, left, top, totalW, s)
-            }
-
-            // Hand item icon
             if (showItem.isEnabled) {
                 val hand = entity.mainHandItem
                 if (!hand.isEmpty) {
@@ -195,47 +147,22 @@ class NameTags : Module("NameTags", Category.VISUAL) {
             }
         }
 
-        // Phase 3: draw text
-        for (entity in level.entitiesForRendering()) {
-            if (entity !is Player) continue
-            if (entity == camera) continue
-            val dist = camera.distanceTo(entity)
-            if (dist > 64.0) continue
+        // Phase 3: text
+        for (entity in renderable) {
+            val (s, left, top, _, totalH) = computeLayout(entity, camPos, pt, sw, sh) ?: continue
 
-            val px = Mth.lerp(pt.toDouble(), entity.xo, entity.x).toFloat() - camPos.x.toFloat()
-            val py = Mth.lerp(pt.toDouble(), entity.yo, entity.y).toFloat() - camPos.y.toFloat()
-            val pz = Mth.lerp(pt.toDouble(), entity.zo, entity.z).toFloat() - camPos.z.toFloat()
-
-            val distScale = maxOf(0.5, 1.0 - dist / 64.0).toFloat()
-            val s = scale.getFloat() * distScale
-
-            val headY = py + entity.bbHeight + 0.15f
-
-            val sx = projectX(vp, px, headY, pz, mc)
-            val sy = projectY(vp, px, headY, pz, mc)
-            if (sx.isNaN() || sy.isNaN()) continue
-
-            val totalW = getTotalWidth(entity, s)
-            val totalH = getTotalHeight(entity, s)
-            val left = sx - totalW / 2f
-            val top = sy - totalH
-
-            // Player name
-            val nameW = Aporia.FONTS.getTextWidth(Fonts.BOLD, entity.name.string, s * 16f)
+            val nameW = fonts.getTextWidth(Fonts.BOLD, entity.name.string, s * 16f)
             val nbX = if (showHealth.isEnabled) left + s * 4f + s * 32f + s * 4f else left + s * 4f
             val nbY = top + totalH - s * 4f - s * 22f
-            Aporia.FONTS.drawText(Fonts.BOLD, entity.name.string,
+            fonts.drawText(Fonts.BOLD, entity.name.string,
                 nbX + (getCenterNameWidth(entity, s) - nameW) / 2f,
-                nbY + (s * 22f - s * 16f) / 2f - 1f,
-                s * 16f, -0x1)
+                nbY + (s * 22f - s * 16f) / 2f - 1f, s * 16f, -0x1)
 
-            // Health text
             if (showHealth.isEnabled) {
                 val health = entity.health + entity.absorptionAmount
-                val now = System.currentTimeMillis()
                 val flash = flashMap[entity.uuid]
-                var hurtFlash = 0f
-                var healFlash = 0f
+                var hurtFlash = 0f; var healFlash = 0f
+                val now = System.currentTimeMillis()
                 if (flash != null) {
                     val dt = (now - flash.hurtTime) / 400f
                     if (dt < 1f) hurtFlash = 1f - dt
@@ -243,22 +170,33 @@ class NameTags : Module("NameTags", Category.VISUAL) {
                     if (dt2 < 1f) healFlash = 1f - dt2
                 }
                 var heartColor = if (health > 10) -0x00AA00AB else if (health > 5) -0xAB else -0xAAAB
-                if (hurtFlash > 0.01f) {
-                    heartColor = ColorUtil.lerp(heartColor, -0xCCCD, hurtFlash)
-                } else if (healFlash > 0.01f) {
-                    heartColor = ColorUtil.lerp(heartColor, -0x22CD, healFlash)
-                }
-                val hbX = left + s * 4f
-                val hbY = top + totalH - s * 4f - s * 22f
+                if (hurtFlash > 0.01f) heartColor = colorUtil.lerp(heartColor, -0xCCCD, hurtFlash)
+                else if (healFlash > 0.01f) heartColor = colorUtil.lerp(heartColor, -0x22CD, healFlash)
+                val hbX = left + s * 4f; val hbY = top + totalH - s * 4f - s * 22f
                 val hpText = "%.0f".format(health)
-                val hpW = Aporia.FONTS.getTextWidth(Fonts.BOLD, hpText, s * 14f)
-                Aporia.FONTS.drawText(Fonts.BOLD, hpText,
-                    hbX + (s * 32f - hpW) / 2f,
-                    hbY + (s * 22f - s * 14f) / 2f - 1f,
-                    s * 14f, heartColor)
+                val hpW = fonts.getTextWidth(Fonts.BOLD, hpText, s * 14f)
+                fonts.drawText(Fonts.BOLD, hpText, hbX + (s * 32f - hpW) / 2f, hbY + (s * 22f - s * 14f) / 2f - 1f, s * 14f, heartColor)
             }
         }
     }
+
+    private fun computeLayout(entity: Player, camPos: net.minecraft.world.phys.Vec3, pt: Float, sw: Int, sh: Int): FiveFold? {
+        val dist = camPos.distanceTo(entity.position())
+        val px = Mth.lerp(pt.toDouble(), entity.xo, entity.x).toFloat() - camPos.x.toFloat()
+        val py = Mth.lerp(pt.toDouble(), entity.yo, entity.y).toFloat() - camPos.y.toFloat()
+        val pz = Mth.lerp(pt.toDouble(), entity.zo, entity.z).toFloat() - camPos.z.toFloat()
+        val distScale = maxOf(0.5, 1.0 - dist / 64.0).toFloat()
+        val s = scale.getFloat() * distScale
+        val headY = py + entity.bbHeight + 0.15f
+        val sx = projectX(vp, px, headY, pz, mc)
+        val sy = projectY(vp, px, headY, pz, mc)
+        if (sx.isNaN() || sy.isNaN()) return null
+        if (sx < -300 || sx > sw + 300 || sy < -300 || sy > sh + 300) return null
+        val totalW = getTotalWidth(entity, s); val totalH = getTotalHeight(entity, s)
+        return FiveFold(s, sx - totalW / 2f, sy - totalH, totalW, totalH)
+    }
+
+    private data class FiveFold(val s: Float, val left: Float, val top: Float, val totalW: Float, val totalH: Float)
 
     private fun renderArmorItems(gfx: GuiGraphics, player: Player, left: Float, top: Float, totalW: Float, s: Float) {
         val slots = listOf(EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET)
@@ -269,7 +207,7 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         val armorTotalW = count * s * 14f + (count - 1) * s * 3f
         val armorStartX = left + (totalW - armorTotalW) / 2f
 
-        AporiaRenderer.INSTANCE.drawRectBlurred(armorStartX - s * 4f, armorY - s * 2f, armorTotalW + s * 8f, s * 18f + s * 4f, s * 5f, ColorUtil.rgba(16, 16, 24, 190), 3f, 15)
+        r.drawRectBlurred(armorStartX - s * 4f, armorY - s * 2f, armorTotalW + s * 8f, s * 18f + s * 4f, s * 5f, colorUtil.rgba(16, 16, 24, 190), 3f, 15)
 
         var idx = 0
         for (slot in slots) {
@@ -294,7 +232,7 @@ class NameTags : Module("NameTags", Category.VISUAL) {
     }
 
     private fun getCenterNameWidth(player: Player, s: Float): Float {
-        return Aporia.FONTS.getTextWidth(Fonts.BOLD, player.name.string, s * 16f) + s * 16f
+        return fonts.getTextWidth(Fonts.BOLD, player.name.string, s * 16f) + s * 16f
     }
 
     private fun getTotalWidth(player: Player, s: Float): Float {

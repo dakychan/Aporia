@@ -1,14 +1,12 @@
 package so.aporia.utils.user.player.inventory
 
-import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket
 import net.minecraft.world.inventory.ClickType
+import so.aporia.utils.imports.*
 
 object InventoryUtil {
-
-    private val mc = Minecraft.getInstance()
 
     @JvmStatic
     fun findItemInInventory(item: net.minecraft.world.item.Item): Int {

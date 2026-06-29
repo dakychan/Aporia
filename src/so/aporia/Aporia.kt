@@ -1,20 +1,15 @@
 package so.aporia
 
+import so.aporia.utils.imports.*
 import com.chaos.annotation.Obfuscate
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.server.packs.resources.ResourceManager
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener
-import so.aporia.module.ModuleManager
 import so.aporia.module.impl.render.Beautifully
 import so.aporia.module.impl.render.Hud
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.impl.RenderHudEvent
-import so.aporia.utils.files.FilesManager
 import so.aporia.utils.user.input.KeybindManager
 import so.aporia.utils.user.friend.FriendManager
-import so.aporia.utils.user.locale.LocaleManager
-import so.aporia.utils.user.logger.Logger
-import so.aporia.utils.user.render.core.AporiaRenderer
 import so.aporia.utils.user.render.core.DefaultLibraries
 import so.aporia.utils.user.render.core.DefaultSnippets
 import so.aporia.utils.user.render.core.DrawBatch
@@ -22,7 +17,7 @@ import so.aporia.utils.user.render.theme.ThemeManager
 import so.aporia.utils.user.render.font.FontRenderer
 import so.aporia.utils.user.render.font.Fonts
 import so.aporia.utils.user.render.render3d.AporiaRenderer3D
-import so.aporia.utils.user.render.ui.mainmenu.ScreenshotCapture
+
 
 @Obfuscate
 class Aporia private constructor() : ResourceManagerReloadListener {
@@ -31,55 +26,90 @@ class Aporia private constructor() : ResourceManagerReloadListener {
     val fonts: FontRenderer = FontRenderer()
 
     init {
-        Logger.info("Starting Aporia...")
+        logger.info("Starting Aporia...")
         try {
-            FilesManager.init()
-            Logger.success("FilesManager initialized")
+            files.init()
+            logger.success("FilesManager initialized")
         } catch (e: Exception) {
-            Logger.error("FilesManager init failed: ${e.message}")
+            logger.error("FilesManager init failed: ${e.message}")
         }
         KeybindManager.toString()
-        ScreenshotCapture.start()
-        ModuleManager.toString()
-        LocaleManager.INSTANCE.init()
+        mm.toString()
+        locale.init()
         FriendManager.init()
         ThemeManager.INSTANCE.init()
         initializeDiscordRPC()
-        Logger.success("Aporia initialized")
+        loadFontMode()
+        logger.success("Aporia initialized")
+    }
+
+    private fun loadFontMode() {
+        val clickGui = mm.get("ClickGui") as? so.aporia.module.impl.misc.ClickGui
+        if (clickGui != null) {
+            val idx = clickGui.fontRendererMode.getSelectedIndex()
+            fonts.currentMode = when (idx) {
+                0 -> so.aporia.utils.user.render.font.FontMode.MSDF
+                1 -> so.aporia.utils.user.render.font.FontMode.TTF
+                2 -> so.aporia.utils.user.render.font.FontMode.OTF
+                else -> so.aporia.utils.user.render.font.FontMode.MSDF
+            }
+            val famIdx = clickGui.fontFamily.getSelectedIndex()
+            fonts.currentFamily = if (famIdx == 1) "Inter" else "Default"
+        }
     }
 
     private fun initializeDiscordRPC() {
         try {
-            val discordRPC = ModuleManager.get("Discord RPC")
+            val discordRPC = mm.get("Discord RPC")
             discordRPC?.enable()
         } catch (e: Exception) {
-            Logger.error("Discord RPC initialization failed: ${e.message}")
+            logger.error("Discord RPC initialization failed: ${e.message}")
         }
     }
 
+    private var lastRenderError = 0L
+    private var renderErrorCount = 0
+
     fun render(gfx: GuiGraphics, partialTick: Float) {
-        val beautifully = ModuleManager.get("Beautifully") as? Beautifully
-        if (beautifully != null && beautifully.isEnabled) {
-            beautifully.render(gfx, 0, 0, partialTick)
+        val mem = Runtime.getRuntime()
+        if (mem.freeMemory() < 32L * 1024L * 1024L) {
+            System.gc()
+            if (mem.freeMemory() < 16L * 1024L * 1024L) return
         }
+        try {
+            val beautifully = mm.get("Beautifully") as? Beautifully
+            if (beautifully != null && beautifully.isEnabled) {
+                beautifully.render(gfx, 0, 0, partialTick)
+            }
 
-        // NameTags (3D world-space) FIRST — под HUD
-        EventBus.post(RenderHudEvent(gfx, partialTick))
-        DrawBatch.INSTANCE.flush()
-        AporiaRenderer.INSTANCE.flush()
+            bus.post(RenderHudEvent(gfx, partialTick))
+            DrawBatch.INSTANCE.flush()
+            r.flush()
 
-        // HUD (DynamicIsland, InfoPanel) SECOND — поверх неймтегов
-        val hud = ModuleManager.get("HUD") as? Hud
-        if (hud != null && hud.isEnabled) {
-            hud.render(gfx, 0, 0, partialTick)
+            val hud = mm.get("HUD") as? Hud
+            if (hud != null && hud.isEnabled) {
+                hud.render(gfx, 0, 0, partialTick)
+            }
+
+            DrawBatch.INSTANCE.flush()
+            r.flush()
+            renderErrorCount = 0
+        } catch (e: OutOfMemoryError) {
+            renderErrorCount++
+            System.err.println("[Aporia] OOM in render #$renderErrorCount")
+            if (renderErrorCount > 5) throw e
+            System.gc()
+        } catch (e: Exception) {
+            val now = System.currentTimeMillis()
+            if (now - lastRenderError > 5000) {
+                lastRenderError = now
+                System.err.println("[Aporia] Render error: ${e.javaClass.name}: ${e.message}")
+            }
         }
-
-        DrawBatch.INSTANCE.flush()
-        AporiaRenderer.INSTANCE.flush()
     }
 
     override fun onResourceManagerReload(resourceManager: ResourceManager) {
-        AporiaRenderer.INSTANCE.init()
+        r.init()
         AporiaRenderer3D.INSTANCE.init()
         DefaultSnippets.registerAll()
         DefaultLibraries.registerAll()

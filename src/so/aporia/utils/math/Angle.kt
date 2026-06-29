@@ -1,12 +1,11 @@
 package so.aporia.utils.math
 
-import net.minecraft.client.Minecraft
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.phys.Vec3
+import so.aporia.utils.imports.*
 
 object Angle {
-    private val mc = Minecraft.getInstance()
 
     fun calculate(entity: Entity): FloatArray {
         val player = mc.player ?: return floatArrayOf(0f, 0f)

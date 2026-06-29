@@ -1,13 +1,12 @@
 package so.aporia.module.impl.misc
 
 import com.chaos.annotation.Obfuscate
-import net.minecraft.client.Minecraft
+import so.aporia.utils.imports.*
 import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.game.ClientboundSystemChatPacket
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.ChatHideEvent
 import so.aporia.utils.events.impl.PacketEvent
@@ -29,14 +28,14 @@ class ServerHelper : Module("ServerHelper", Category.MISC) {
     private var captchaSolvedByUs = false
 
     override fun onEnable() {
-        EventBus.register(this)
+        bus.register(this)
         isFalling = false
         ticksWithoutGround = 0
         ticksSinceLastCommand = COMMAND_COOLDOWN
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
         isFalling = false
         ticksWithoutGround = 0
         ticksSinceLastCommand = 0
@@ -74,7 +73,6 @@ class ServerHelper : Module("ServerHelper", Category.MISC) {
     fun onTick(event: TickEvent) {
         if (!autoFlyMe.isEnabled) return
         ticksSinceLastCommand++
-        val mc = Minecraft.getInstance()
         val player = mc.player ?: run { isFalling = false; ticksWithoutGround = 0; return }
         if (player.abilities.flying || player.onGround()) { isFalling = false; ticksWithoutGround = 0; return }
         ticksWithoutGround++
@@ -88,7 +86,6 @@ class ServerHelper : Module("ServerHelper", Category.MISC) {
     }
 
     private fun solveCaptcha(text: String) {
-        val mc = Minecraft.getInstance()
         val player = mc.player ?: return
         var answer = -1L
         val simpleMatcher = SIMPLE_MATH.matcher(text)

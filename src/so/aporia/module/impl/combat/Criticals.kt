@@ -1,15 +1,16 @@
 package so.aporia.module.impl.combat
 
-import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.game.ServerboundInteractPacket
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.SelectSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.events.impl.TickEvent
+import net.minecraft.client.Minecraft
+import so.aporia.utils.imports.*
+
 
 class Criticals : Module("Criticals", Category.COMBAT) {
     companion object {
@@ -28,12 +29,12 @@ class Criticals : Module("Criticals", Category.COMBAT) {
     }
 
     override fun onEnable() {
-        EventBus.register(this)
+        bus.register(this)
         critTicks = 0
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
         critTicks = 0
     }
 

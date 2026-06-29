@@ -1,10 +1,10 @@
 package so.aporia.module.impl.move
 
 import com.chaos.annotation.Obfuscate
+import so.aporia.utils.imports.*
 import net.minecraft.client.Minecraft
 import so.aporia.module.Category
 import so.aporia.module.Module
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.TickEvent
 
@@ -16,11 +16,11 @@ class AutoSprint : Module("AutoSprint", Category.MOVE) {
 
 
     override fun onEnable() {
-        EventBus.register(this)
+        bus.register(this)
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
         if (mc.player != null) {
             mc.player!!.setSprinting(false)
         }

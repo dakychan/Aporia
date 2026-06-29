@@ -1,6 +1,5 @@
 package so.aporia.module.impl.combat
 
-import net.minecraft.client.Minecraft
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.animal.Animal
@@ -10,10 +9,11 @@ import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.NumberSetting
 import so.aporia.module.settings.SelectSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.TickEvent
-import so.aporia.utils.user.friend.FriendManager
+import so.aporia.utils.imports.*
+import net.minecraft.client.Minecraft
+
 import so.aporia.utils.user.player.movement.MoveUtil
 import so.aporia.utils.user.player.rotation.RotationUtil
 
@@ -45,15 +45,11 @@ class SpearTarget : Module("SpearTarget", Category.COMBAT) {
     private var currentBypass = ""
 
     override fun onEnable() {
-        EventBus.register(this)
-        currentBypass = ""
-        applyBypassMode()
-        lastAttackTime = System.currentTimeMillis()
-        nextAttackDelay = getRandomDelay()
+bus.register(this)
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
         RotationUtil.reset()
         MoveUtil.stop()
         lockedTarget = null
@@ -150,7 +146,7 @@ class SpearTarget : Module("SpearTarget", Category.COMBAT) {
         if (entity == mc.player || entity?.isAlive != true) return false
         if (entity is Player) {
             if (!targets.isSelected("Players")) return false
-            if (FriendManager.isFriend(entity.name.string) && !targets.isSelected("Friends")) return false
+            if (fm.isFriend(entity.name.string) && !targets.isSelected("Friends")) return false
             return true
         }
         if (entity is Mob) return targets.isSelected("Mobs")

@@ -3,17 +3,17 @@ package so.aporia.module.impl.player
 import com.chaos.annotation.Obfuscate
 import so.aporia.module.Category
 import so.aporia.module.Module
-import so.aporia.utils.events.EventBus
+import so.aporia.utils.imports.*
 
 @Obfuscate
 class NoPush : Module("NoPush", Category.PLAYER) {
 
     override fun onEnable() {
-        EventBus.register(this)
+        bus.register(this)
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
     }
 
     companion object {

@@ -12,7 +12,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
@@ -123,7 +122,7 @@ object AssetManager {
         if (id.namespace != "aporia" || id.path.startsWith("/")) {
             return null
         }
-        val aprPath = Paths.get(System.getProperty("user.home"), ".apr", ".assets", id.namespace, id.path)
+        val aprPath = FilesManager.ROOT.resolve(".assets").resolve(id.namespace).resolve(id.path)
         if (Files.exists(aprPath)) return aprPath
         val ccPath = FilesManager.ROOT.resolve(ASSETS_DIR).resolve(id.namespace).resolve(id.path)
         if (Files.exists(ccPath)) return ccPath

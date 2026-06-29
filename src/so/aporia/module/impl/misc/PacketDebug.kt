@@ -5,11 +5,10 @@ import net.minecraft.network.protocol.Packet
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.files.FilesManager
-import so.aporia.utils.user.logger.Logger
+import so.aporia.utils.imports.*
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -28,23 +27,23 @@ class PacketDebug : Module("PacketDebug", Category.MISC) {
         sessionFile = FilesManager.ROOT.resolve("packets/parse_$ts.log")
         try {
             FilesManager.append(sessionFile!!, "=== PacketDebug Session: $ts ===\n\n")
-            Logger.success("[PacketDebug] ENABLED → ${sessionFile!!.fileName}")
+            logger.success("[PacketDebug] ENABLED → ${sessionFile!!.fileName}")
         } catch (e: Exception) {
-            Logger.error("[PacketDebug] init failed: ${e.message}")
+            logger.error("[PacketDebug] init failed: ${e.message}")
             sessionFile = null
             return
         }
-        EventBus.register(this)
+        bus.register(this)
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
         try {
             val sf = sessionFile ?: return
             FilesManager.append(sf, "\n=== Session ended ($packetCount packets) ===\n")
-            Logger.success("[PacketDebug] DISABLED — logged $packetCount packets")
+            logger.success("[PacketDebug] DISABLED — logged $packetCount packets")
         } catch (e: Exception) {
-            Logger.error("[PacketDebug] disable failed: ${e.message}")
+            logger.error("[PacketDebug] disable failed: ${e.message}")
         }
         sessionFile = null
     }
@@ -62,7 +61,7 @@ class PacketDebug : Module("PacketDebug", Category.MISC) {
             FilesManager.append(sf, entry)
             packetCount++
         } catch (e: Exception) {
-            Logger.error("[PacketDebug] write failed: ${e.message}")
+            logger.error("[PacketDebug] write failed: ${e.message}")
         }
     }
 

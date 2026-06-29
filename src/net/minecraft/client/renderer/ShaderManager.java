@@ -157,6 +157,7 @@ public class ShaderManager extends SimplePreparableReloadListener<ShaderManager.
         List<Identifier> list = new ArrayList<>();
         GpuDevice gpudevice = RenderSystem.getDevice();
         gpudevice.clearPipelineCache();
+        gpudevice.updateDefaultShaderSource(shadermanager$compilationcache::getShaderSource);
 
         for (RenderPipeline renderpipeline : set) {
             CompiledRenderPipeline compiledrenderpipeline = gpudevice.precompilePipeline(renderpipeline, shadermanager$compilationcache::getShaderSource);

@@ -1,6 +1,5 @@
 package so.aporia.module.impl.combat
 
-import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.game.*
 import net.minecraft.world.phys.Vec3
 import so.aporia.module.Category
@@ -8,10 +7,12 @@ import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
 import so.aporia.module.settings.NumberSetting
 import so.aporia.module.settings.SelectSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.events.impl.TickEvent
+import net.minecraft.client.Minecraft
+import so.aporia.utils.imports.*
+
 
 class God : Module("God", Category.COMBAT) {
     companion object {
@@ -31,16 +32,11 @@ class God : Module("God", Category.COMBAT) {
     private var clipCooldown = 0
 
     override fun onEnable() {
-        EventBus.register(this)
-        if (mc.player != null) {
-            spoofHealth = mc.player!!.health
-        }
-        tickCounter = 0
-        clipCooldown = 0
+        bus.register(this)
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
         tickCounter = 0
         clipCooldown = 0
     }

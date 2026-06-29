@@ -36,7 +36,7 @@ object ModuleManager {
             so.aporia.module.impl.combat.ElytraTarget(),
             so.aporia.module.impl.render.NoRender(),
             so.aporia.module.impl.render.PlayerBlur(),
-            so.aporia.module.impl.world.WorldRenderer()
+            so.aporia.module.impl.render.WorldRenderer()
         )
     }
 

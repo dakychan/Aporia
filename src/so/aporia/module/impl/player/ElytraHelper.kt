@@ -1,6 +1,5 @@
 package so.aporia.module.impl.player
 
-import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.EquipmentSlot
@@ -10,10 +9,12 @@ import net.minecraft.world.item.Items
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BindSetting
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.KeyInputEvent
 import so.aporia.utils.events.impl.KeyInputEvent.Action
+import net.minecraft.client.Minecraft
+import so.aporia.utils.imports.*
+
 
 class ElytraHelper : Module("ElytraHelper", Category.PLAYER) {
     companion object {
@@ -29,12 +30,11 @@ class ElytraHelper : Module("ElytraHelper", Category.PLAYER) {
     private var waitTicks = 0
 
     override fun onEnable() {
-        EventBus.register(this)
-        waitTicks = 0
+        bus.register(this)
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
         waitTicks = 0
     }
 

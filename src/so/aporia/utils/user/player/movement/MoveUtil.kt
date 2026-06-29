@@ -1,12 +1,10 @@
 package so.aporia.utils.user.player.movement
 
-import net.minecraft.client.Minecraft
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
+import so.aporia.utils.imports.*
 
 object MoveUtil {
-    private val mc = Minecraft.getInstance()
-
     private fun player(): Player? = mc.player
 
     fun forward(speed: Double, ticks: Int = 1) {

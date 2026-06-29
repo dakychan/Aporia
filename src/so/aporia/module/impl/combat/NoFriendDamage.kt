@@ -1,14 +1,14 @@
 package so.aporia.module.impl.combat
 
-import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.game.ServerboundInteractPacket
 import net.minecraft.world.entity.player.Player
 import so.aporia.module.Category
 import so.aporia.module.Module
-import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
-import so.aporia.utils.user.friend.FriendManager
+import so.aporia.utils.imports.*
+import net.minecraft.client.Minecraft
+
 
 class NoFriendDamage : Module("NoFriendDamage", Category.COMBAT) {
     companion object {
@@ -21,11 +21,11 @@ class NoFriendDamage : Module("NoFriendDamage", Category.COMBAT) {
     }
 
     override fun onEnable() {
-        EventBus.register(this)
+        bus.register(this)
     }
 
     override fun onDisable() {
-        EventBus.unregister(this)
+        bus.unregister(this)
     }
 
     @EventHandler
@@ -37,7 +37,7 @@ class NoFriendDamage : Module("NoFriendDamage", Category.COMBAT) {
         if (packet is ServerboundInteractPacket) {
             val entityId = entityIdField.getInt(packet)
             val entity = mc.level!!.getEntity(entityId)
-            if (entity is Player && FriendManager.isFriend(entity.name.string)) {
+            if (entity is Player && fm.isFriend(entity.name.string)) {
                 event.cancel()
             }
         }

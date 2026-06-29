@@ -3,13 +3,13 @@ package so.aporia.utils.user.command.impl
 import com.chaos.annotation.Obfuscate
 import so.aporia.utils.user.command.Command
 import so.aporia.utils.user.command.CommandManager
+import so.aporia.utils.imports.*
 
 @Obfuscate
 class InfoCommand : Command {
     override fun name() = "info"
     override fun description() = "Shows mod and player info"
     override fun execute(args: Array<String>) {
-        val mc = net.minecraft.client.Minecraft.getInstance()
         CommandManager.chat("§6--- Aporia Info ---")
         CommandManager.chat("§eVersion: §f1.0.0")
         CommandManager.chat("§eMinecraft: §f${mc.launchedVersion}")

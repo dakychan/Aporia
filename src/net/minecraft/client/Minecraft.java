@@ -2064,6 +2064,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
     }
 
     public void setLevel(ClientLevel p_91157_) {
+        so.aporia.utils.user.render.core.BlurRenderer.cleanup();
         this.level = p_91157_;
         this.updateLevelInEngines(p_91157_);
     }
@@ -2148,6 +2149,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
             this.setScreenAndShow(p_457642_);
             this.isLocalServer = false;
+            so.aporia.utils.user.render.core.BlurRenderer.cleanup();
             this.level = null;
             this.updateLevelInEngines(null, p_453114_);
             this.player = null;
@@ -2179,6 +2181,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
         try {
             this.setScreenAndShow(p_297406_);
             this.gui.onDisconnected();
+            so.aporia.utils.user.render.core.BlurRenderer.cleanup();
             this.level = null;
             this.updateLevelInEngines(null);
             this.player = null;

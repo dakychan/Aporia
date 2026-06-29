@@ -3,7 +3,6 @@ package so.aporia.utils.user.render.ui.mainmenu
 import com.mojang.serialization.Lifecycle
 import net.minecraft.client.ClientRecipeBook
 import net.minecraft.client.DeltaTracker
-import net.minecraft.client.Minecraft
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.multiplayer.ClientPacketListener
 import net.minecraft.client.multiplayer.CommonListenerCookie
@@ -42,10 +41,9 @@ import net.minecraft.world.level.storage.ValueInput
 import net.minecraft.world.level.storage.ValueOutput
 import java.util.function.BooleanSupplier
 import java.util.UUID
+import so.aporia.utils.imports.*
 
 class SceneWorld {
-
-    private val mc = Minecraft.getInstance()
     lateinit var level: ClientLevel
     lateinit var cameraEntity: Entity
 

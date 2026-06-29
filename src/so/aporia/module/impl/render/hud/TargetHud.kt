@@ -1,6 +1,6 @@
 package so.aporia.module.impl.render.hud
 
-import net.minecraft.client.Minecraft
+import so.aporia.utils.imports.*
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
@@ -9,8 +9,7 @@ import so.aporia.module.ModuleManager
 import so.aporia.module.impl.combat.Aura
 import so.aporia.module.impl.combat.TPAura
 import so.aporia.module.impl.render.Beautifully
-import so.aporia.utils.user.render.color.ColorUtil
-import so.aporia.utils.user.render.core.AporiaRenderer
+
 
 object TargetHud {
 
@@ -21,22 +20,20 @@ object TargetHud {
     const val FS = 12f
     const val HEALTH_FS = 16f
     const val RADIUS = 8f
-    val C_BG = ColorUtil.rgba(12, 18, 22, 200)
-    val C_ACCENT = ColorUtil.rgba(80, 200, 200, 255)
-    val C_NAME = ColorUtil.rgba(255, 255, 255, 255)
-    val C_DIST = ColorUtil.rgba(180, 180, 190, 200)
-    val C_HEALTH_GREEN = ColorUtil.rgba(85, 255, 85, 255)
-    val C_HEALTH_YELLOW = ColorUtil.rgba(255, 255, 85, 255)
-    val C_HEALTH_RED = ColorUtil.rgba(255, 85, 85, 255)
-    val C_BAR_BG = ColorUtil.rgba(0, 0, 0, 100)
+    val C_BG = colorUtil.rgba(12, 18, 22, 200)
+    val C_ACCENT = colorUtil.rgba(80, 200, 200, 255)
+    val C_NAME = colorUtil.rgba(255, 255, 255, 255)
+    val C_DIST = colorUtil.rgba(180, 180, 190, 200)
+    val C_HEALTH_GREEN = colorUtil.rgba(85, 255, 85, 255)
+    val C_HEALTH_YELLOW = colorUtil.rgba(255, 255, 85, 255)
+    val C_HEALTH_RED = colorUtil.rgba(255, 85, 85, 255)
+    val C_BAR_BG = colorUtil.rgba(0, 0, 0, 100)
 
     @JvmStatic
     fun render(gfx: GuiGraphics) {
-        val mc = Minecraft.getInstance()
         if (mc.player == null || mc.level == null) return
 
         val target = resolveTarget() ?: return
-        val r = AporiaRenderer.INSTANCE
         val blur = Beautifully.isBlurEnabled()
 
         val x = MARGIN
@@ -59,7 +56,7 @@ object TargetHud {
         val avatarSize = H - PAD * 2
         val avatarX = x + PAD
         val avatarY = y + PAD
-        r.drawRect(avatarX, avatarY, avatarSize, avatarSize, avatarSize / 2f, ColorUtil.rgba(30, 34, 40, 255))
+        r.drawRect(avatarX, avatarY, avatarSize, avatarSize, avatarSize / 2f, colorUtil.rgba(30, 34, 40, 255))
         val skinId = (target as? Player)?.let { mc.getSkinManager().createLookup(it.gameProfile, false).get().body().texturePath() }
         if (skinId != null) {
             r.drawImageCropped(avatarX, avatarY, avatarSize, avatarSize, skinId, avatarSize / 2f, 8f/64f, 8f/64f, 16f/64f, 16f/64f)
@@ -105,7 +102,6 @@ object TargetHud {
                 if (target is LivingEntity) return target
             }
         } catch (_: Exception) {}
-        val mc = Minecraft.getInstance()
         var closest: Player? = null
         var closestDist = Double.MAX_VALUE
         for (entity in mc.level!!.entitiesForRendering()) {

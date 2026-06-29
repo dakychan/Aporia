@@ -1,7 +1,7 @@
 package so.aporia.utils.user.render.ui.mainmenu
 
+import so.aporia.utils.imports.*
 import com.chaos.annotation.Obfuscate
-import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.CharacterEvent
@@ -14,11 +14,8 @@ import net.minecraftforge.api.distmarker.OnlyIn
 import org.joml.Vector3f
 import so.aporia.utils.user.render.animation.Animator
 import so.aporia.utils.user.render.animation.Easing
-import so.aporia.utils.user.render.color.ColorUtil
 import so.aporia.utils.user.render.core.AporiaRenderer
 import so.aporia.utils.user.render.core.BlurRenderer
-import so.aporia.utils.user.locale.LocaleManager
-import so.aporia.utils.user.render.theme.ThemeManager
 import so.aporia.utils.user.render.theme.ThemeManager.Theme
 import java.io.File
 import net.minecraft.client.renderer.texture.TextureAtlas
@@ -114,7 +111,7 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
 
     private fun calcLayout() {
         sw = width; sh = height
-        val scale = Minecraft.getInstance().window.guiScale
+        val scale = mc.window.guiScale
         val baseUnit = min(sw, sh) / 100f
 
         btnW = maxOf(90, minOf(150, (sw * 0.17f).toInt()))
@@ -157,10 +154,10 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
     // ============================================================
 
     private fun initScreenshot() {
-        val path = Minecraft.getInstance().gameDirectory.toPath().resolve(SCREENSHOT_PATH)
+        val path = mc.gameDirectory.toPath().resolve(SCREENSHOT_PATH)
         val file = path.toFile()
         if (file.exists()) {
-            val id = AporiaRenderer.INSTANCE.loadImage(path)
+            val id = r.loadImage(path)
             if (id != null) {
                 screenshotId = id
                 return
@@ -220,7 +217,6 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
     // ============================================================
 
     private fun renderScene3D(r: AporiaRenderer) {
-        val mc = Minecraft.getInstance()
         val atlas: net.minecraft.client.renderer.texture.TextureAtlas
         try {
             val tex = mc.textureManager.getTexture(TextureAtlas.LOCATION_BLOCKS)
@@ -338,11 +334,10 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
 
     override fun render(gfx: GuiGraphics, mx: Int, my: Int, delta: Float) {
         val now = System.currentTimeMillis()
-        val r = AporiaRenderer.INSTANCE
         var safe = true
 
         try {
-            BlurRenderer.prepareFrameBlur(Minecraft.getInstance(), 30f, 0.5f)
+            BlurRenderer.prepareFrameBlur(mc, 30f, 0.5f)
             renderBackground(r)
         } catch (_: Throwable) {
             safe = false
@@ -366,7 +361,7 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
 
         if (!safe) return
 
-        val th = ThemeManager.INSTANCE.active()
+        val th = theme
         loadAnim.update()
         val prog = loadAnim.value()
         val lift = (1f - prog) * sh * 0.03f
@@ -378,18 +373,18 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
             renderModeToggle(r, th, mx, my, prog)
 
             if (logoAlpha > 0.01f) {
-                val title = LocaleManager.INSTANCE.get("menu.title")
+                val title = locale.get("menu.title")
                 val tw = r.getTextWidth("bold", title, titleSize)
                 val tx = (sw - tw) / 2f
-                val tc = ColorUtil.rgba(255, 255, 255, (logoAlpha * 255).toInt())
+                val tc = colorUtil.rgba(255, 255, 255, (logoAlpha * 255).toInt())
                 r.drawText("bold", title, tx, logoY - lift, titleSize, tc)
             }
 
             if (subAlpha > 0.01f) {
-                val sub = LocaleManager.INSTANCE.get("menu.subtitle")
+                val sub = locale.get("menu.subtitle")
                 val sw2 = r.getTextWidth("regular", sub, subSize)
                 val sx = (sw - sw2) / 2f
-                val sc = ColorUtil.rgba(255, 255, 255, (subAlpha * 255).toInt())
+                val sc = colorUtil.rgba(255, 255, 255, (subAlpha * 255).toInt())
                 r.drawText("regular", sub, sx, subY - lift, subSize, sc)
             }
 
@@ -401,7 +396,7 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
 
             val ver = "Aporia v1.0"
             val vw = r.getTextWidth("regular", ver, 8f)
-            r.drawText("regular", ver, sw - vw - 8, sh - 14f, 8f, ColorUtil.rgba(255, 255, 255, (80 * prog).toInt()))
+            r.drawText("regular", ver, sw - vw - 8, sh - 14f, 8f, colorUtil.rgba(255, 255, 255, (80 * prog).toInt()))
         } catch (_: Throwable) {}
     }
 
@@ -433,7 +428,7 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
 
     private fun renderModeToggle(r: AporiaRenderer, th: Theme, mx: Int, my: Int, prog: Float) {
         val alpha = ((th.mmButtonBg shr 24) and 0xFF) * prog
-        val bgColor = ColorUtil.rgba(
+        val bgColor = colorUtil.rgba(
             (th.mmButtonBg shr 16) and 0xFF, (th.mmButtonBg shr 8) and 0xFF, th.mmButtonBg and 0xFF,
             alpha.toInt())
         r.drawRectBlurred(toggleBtnX.toFloat(), toggleBtnY.toFloat(), toggleBtnW.toFloat(), toggleBtnH.toFloat(),
@@ -447,9 +442,9 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
             val ly = toggleBtnY
             if (sel) {
                 r.drawRect(lx.toFloat(), ly.toFloat(), itemW.toFloat(), toggleBtnH.toFloat(), 0f,
-                    ColorUtil.rgba(255, 255, 255, 40))
+                    colorUtil.rgba(255, 255, 255, 40))
             }
-            val fgColor = if (sel) -1 else ColorUtil.rgba(255, 255, 255, 150)
+            val fgColor = if (sel) -1 else colorUtil.rgba(255, 255, 255, 150)
             val txtSize = 9f
             val tw = r.getTextWidth("regular", labels[i], txtSize)
             r.drawText("regular", labels[i],
@@ -473,8 +468,8 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
         val month = cal.get(java.util.Calendar.MONTH) + 1
         val year = cal.get(java.util.Calendar.YEAR)
 
-        val timeStr = String.format(LocaleManager.INSTANCE.get("lock.time_format"), hour, minute)
-        val dayName = LocaleManager.INSTANCE.get("lock.day_$dayOfWeek")
+        val timeStr = String.format(locale.get("lock.time_format"), hour, minute)
+        val dayName = locale.get("lock.day_$dayOfWeek")
         val dateStr = "$dayName, ${String.format("%02d", month)}.$year"
 
         val floatOffset = (sin(now / 1500.0) * 6f).toFloat()
@@ -482,19 +477,19 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
         val timeW = r.getTextWidth("bold", timeStr, clockSize)
         val timeX = (sw - timeW) / 2f
         val timeY = sh / 2f - clockSize * 0.6f + floatOffset
-        r.drawText("bold", timeStr, timeX, timeY, clockSize, ColorUtil.rgba(255, 255, 255, (alpha * 255).toInt()))
+        r.drawText("bold", timeStr, timeX, timeY, clockSize, colorUtil.rgba(255, 255, 255, (alpha * 255).toInt()))
 
         val dateW = r.getTextWidth("regular", dateStr, dateSize)
         val dateX = (sw - dateW) / 2f
         val dateY = timeY + clockSize * 0.55f + floatOffset * 0.5f
-        r.drawText("regular", dateStr, dateX, dateY, dateSize, ColorUtil.rgba(255, 255, 255, (alpha * 0.6f * 255).toInt()))
+        r.drawText("regular", dateStr, dateX, dateY, dateSize, colorUtil.rgba(255, 255, 255, (alpha * 0.6f * 255).toInt()))
 
-        val hint = LocaleManager.INSTANCE.get("lock.click_hint")
+        val hint = locale.get("lock.click_hint")
         val hintW = r.getTextWidth("regular", hint, 10f)
         val hintX = (sw - hintW) / 2f
         val hintY = sh / 2f + sh * 0.12f
         val pulse = (sin(now / 800.0) * 0.3 + 0.7).toFloat()
-        r.drawText("regular", hint, hintX, hintY, 10f, ColorUtil.rgba(255, 255, 255, (80 * alpha * pulse).toInt()))
+        r.drawText("regular", hint, hintX, hintY, 10f, colorUtil.rgba(255, 255, 255, (80 * alpha * pulse).toInt()))
     }
 
     // ============================================================
@@ -589,7 +584,6 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
     }
 
     private fun onButtonAction(id: Int) {
-        val mc = Minecraft.getInstance()
         when (id) {
             0 -> mc.setScreen(net.minecraft.client.gui.screens.worldselection.SelectWorldScreen(this))
             1 -> mc.setScreen(net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen(this))
@@ -602,7 +596,7 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
 
     override fun renderBackground(gfx: GuiGraphics, mx: Int, my: Int, delta: Float) {}
     override fun removed() {
-        try { AporiaRenderer.INSTANCE.flush() } catch (_: Throwable) {}
+        try { r.flush() } catch (_: Throwable) {}
     }
 
     // ============================================================
@@ -635,7 +629,7 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
                 val bgR = (th.mmButtonBg shr 16) and 0xFF
                 val bgG = (th.mmButtonBg shr 8) and 0xFF
                 val bgB = th.mmButtonBg and 0xFF
-                val glassTint = ColorUtil.rgba(bgR, bgG, bgB, bgA)
+                val glassTint = colorUtil.rgba(bgR, bgG, bgB, bgA)
                 r.drawRectBlurred(x.toFloat(), drawY.toFloat(), w.toFloat(), h.toFloat(), h * 0.5f, glassTint, 10f)
             }
 
@@ -643,19 +637,19 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
 
             val bgAlpha = ((10 + 20 * hp) * alpha).toInt()
             r.drawRect(x.toFloat(), drawY.toFloat(), w.toFloat(), h.toFloat(), rVal,
-                ColorUtil.rgba(255, 255, 255, bgAlpha))
+                colorUtil.rgba(255, 255, 255, bgAlpha))
 
             val borderAlpha = ((30 + 50 * hp) * alpha).toInt()
             r.drawStroke(x.toFloat(), drawY.toFloat(), w.toFloat(), h.toFloat(), rVal, 1f, 1, 0f,
-                ColorUtil.rgba(255, 255, 255, borderAlpha))
+                colorUtil.rgba(255, 255, 255, borderAlpha))
 
             val txtSize = maxOf(9f, minOf(13f, h * 0.38f))
-            val text = LocaleManager.INSTANCE.get(localeKey)
+            val text = locale.get(localeKey)
             val textW = r.getTextWidth("regular", text, txtSize)
             val textX = x + (w - textW) / 2f
             val textY = drawY + (h - txtSize) / 2f - 1f
             r.drawText("regular", text, textX, textY, txtSize,
-                ColorUtil.rgba(255, 255, 255, ((180 + 75 * hp) * alpha).toInt()))
+                colorUtil.rgba(255, 255, 255, ((180 + 75 * hp) * alpha).toInt()))
         }
 
         fun clicked(mx: Int, my: Int, button: Int): Boolean {

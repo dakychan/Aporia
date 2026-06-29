@@ -13,7 +13,7 @@ object UserData {
 
     @JvmStatic
     fun getSystemUsername(): String {
-        val os = System.getProperty("os.name").lowercase()
+        val os = OsManager.osName.lowercase()
         val username = when {
             os.contains("linux") -> getLinuxUsername()
             os.contains("win") -> getWindowsUsername()

@@ -1,5 +1,6 @@
-package so.aporia.module.impl.render.hud
+﻿package so.aporia.module.impl.render.hud
 
+import so.aporia.utils.imports.*
 import dev.redstones.mediaplayerinfo.IMediaSession
 import dev.redstones.mediaplayerinfo.MediaPlayerInfo
 import net.minecraft.client.Minecraft
@@ -8,47 +9,32 @@ import org.lwjgl.opengl.GL11
 import so.aporia.module.ModuleManager
 import so.aporia.module.impl.misc.DiscordRPCModule
 import so.aporia.module.impl.render.Beautifully
-import so.aporia.utils.user.locale.LocaleManager
-import so.aporia.utils.user.render.color.ColorUtil
+import so.aporia.utils.user.render.animation.TypeAnim
 import so.aporia.utils.user.render.core.AporiaRenderer
 import java.io.ByteArrayInputStream
-import java.nio.file.Path
 import java.util.Arrays
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.math.min
 
 object DynamicIsland {
 
-    private const val PILL_H = 20
-    private const val AVATAR_SZ = 14
-    private const val PAD = 6
-    private const val GAP = 4
-    private const val MARGIN = 4
-    private const val FS = 9f
-    private val C_BG = ColorUtil.rgba(12, 18, 22, 220)
-    private val C_ACCENT = ColorUtil.rgba(80, 200, 200, 255)
-    private val C_DIM = ColorUtil.rgba(160, 160, 160, 255)
+    enum class State { IDLE, MEDIA, CONTROLS }
+    enum class Mode { AUTO, LOGO, AVATAR, SKIN }
 
-    // ── Media bubble constants ──
-    private const val MEDIA_H = 20
-    private const val MEDIA_ART_SZ = 14
-    private const val MEDIA_TITLE_SZ = 9f
-    private const val MAX_TITLE_W = 130f
+    private var state = State.IDLE
+    private var prevState = State.IDLE
+    private var animProgress = 0f
 
-    // ── Background-thread media state ──
     @Volatile private var bgSession: IMediaSession? = null
     @Volatile private var bgTitle: String? = null
     @Volatile private var bgPlaying = false
     @Volatile private var bgArtBytes: ByteArray? = null
 
-    // ── Render-thread fields ──
     private var mArtId: Identifier? = null
     private var mPrevArtHash = 0
-    private var mLeftId: Identifier? = null
-    private var mRightId: Identifier? = null
-    private var mPlayId: Identifier? = null
-    private var mPauseId: Identifier? = null
-    private var mIconsLoaded = false
+    private var prevAnimTitle: String? = null
+    private val typeAnim = TypeAnim(80, 40)
     private var marqueeTitle: String? = null
     private var marqueeStart = 0L
 
@@ -56,134 +42,183 @@ object DynamicIsland {
         Thread(r, "Aporia-MediaPoller").apply { isDaemon = true }
     }
     private var mediaPollStarted = false
+    private var mediaPresent = false
 
-    enum class Mode { AUTO, LOGO, AVATAR, SKIN }
+    private var hoverPrev = false
+    private var hoverPlay = false
+    private var hoverNext = false
+    private var pillRect = floatArrayOf(0f, 0f, 0f, 0f)
 
     @JvmStatic
     fun render(r: AporiaRenderer, mode: Mode) {
-        val mc = Minecraft.getInstance()
         if (mc.player == null) return
 
         val blur = Beautifully.isBlurEnabled()
         val sw = mc.window.guiScaledWidth.toFloat()
-
-        val name = LocaleManager.INSTANCE.get("watermark.name")
+        val name = locale.get("watermark.name")
         val time = aporia.cc.OsManager.getTimeFormatted("HH:mm")
+        val mx = mc.mouseHandler.getScaledXPos(mc.window).toFloat()
+        val my = mc.mouseHandler.getScaledYPos(mc.window).toFloat()
+        val y = 4f
 
-        val radius = PILL_H / 2f
-        val y = MARGIN.toFloat()
-
-        val wLabel = r.getTextWidth("bold", name, FS)
-        val wCenter = PAD + AVATAR_SZ + GAP + wLabel + PAD
-        val cx = (sw - wCenter) / 2f
-
-        if (blur) r.drawRectBlurred(cx, y, wCenter, PILL_H.toFloat(), radius, C_BG)
-        else r.drawRect(cx, y, wCenter, PILL_H.toFloat(), radius, C_BG)
-
-        val ax = cx + PAD
-        val ay = y + (PILL_H - AVATAR_SZ) / 2f
-        renderAvatar(r, ax, ay, AVATAR_SZ, mc, mode, blur)
-        r.drawText("bold", name, ax + AVATAR_SZ + GAP, y + (PILL_H - FS) / 2f, FS, C_ACCENT)
-
-        val wTime = r.getTextWidth("regular", time, FS) + PAD * 2
-        val lx = cx - GAP - wTime
-        if (blur) r.drawRectBlurred(lx, y, wTime, PILL_H.toFloat(), radius, C_BG)
-        else r.drawRect(lx, y, wTime, PILL_H.toFloat(), radius, C_BG)
-        r.drawText("regular", time, lx + PAD, y + (PILL_H - FS) / 2f, FS, C_DIM)
-
-        if (mc.level != null) renderMedia(r)
-    }
-
-    // ── Media bubble ──
-
-    private fun renderMedia(r: AporiaRenderer) {
         startPolling()
-        val title = bgTitle ?: return
-        val mc = Minecraft.getInstance()
-        val sw = mc.window.guiScaledWidth.toFloat()
+        mediaPresent = bgTitle != null
 
-        val artBytes = bgArtBytes
-        if (artBytes != null) {
-            val h = Arrays.hashCode(artBytes)
-            if (h != mPrevArtHash) {
-                mPrevArtHash = h
-                try { mArtId = AporiaRenderer.INSTANCE.loadImage(ByteArrayInputStream(artBytes)) }
-                catch (_: Exception) { mArtId = null }
+        prevState = state
+        state = when {
+            !mediaPresent -> State.IDLE
+            mx >= pillRect[0] && mx < pillRect[0] + pillRect[2] && my >= pillRect[1] && my < pillRect[1] + pillRect[3] -> State.CONTROLS
+            else -> State.MEDIA
+        }
+        animProgress = when {
+            state == prevState && animProgress < 1f -> (animProgress + 0.08f).coerceAtMost(1f)
+            state != prevState -> 0f
+            else -> animProgress
+        }
+
+        val wTime = r.getTextWidth("regular", time, 9f) + 12
+        val baseW = 100f
+        val wMedia = if (mediaPresent) min(r.getTextWidth("regular", bgTitle ?: "", 9f), 130f) else 0f
+        val mediaW = if (mediaPresent) 18f + wMedia else 0f
+        val controlsW = 44f
+        val wTarget = when (state) {
+            State.IDLE -> baseW
+            State.MEDIA -> baseW + mediaW
+            State.CONTROLS -> baseW + mediaW + controlsW
+        }
+        val pillW = (baseW + ((wTarget - baseW) * animProgress)).toInt().coerceAtLeast(1)
+        val cx = (sw - pillW) / 2f
+        val bgColor = if (state == State.CONTROLS) colorUtil.rgba(30, 40, 50, 240) else colorUtil.rgba(12, 18, 22, 220)
+        val radius = 10f
+        pillRect = floatArrayOf(cx, y, pillW.toFloat(), 20f)
+
+        val lx = cx - 4 - wTime
+        if (blur) r.drawRectBlurred(lx, y, wTime, 20f, radius, colorUtil.rgba(12, 18, 22, 220))
+        else r.drawRect(lx, y, wTime, 20f, radius, colorUtil.rgba(12, 18, 22, 220))
+        r.drawText("regular", time, lx + 6, y + 5.5f, 9f, colorUtil.rgba(180, 180, 180, 255))
+
+        if (blur) r.drawRectBlurred(cx, y, pillW.toFloat(), 20f, radius, bgColor)
+        else r.drawRect(cx, y, pillW.toFloat(), 20f, radius, bgColor)
+
+        val ax = cx + 6
+        val ay = y + 3f
+        renderAvatar(r, ax, ay, 14, mc, mode, blur)
+
+        var textX = ax + 18f
+        r.drawText("bold", name, textX, y + 5.5f, 9f, colorUtil.rgba(255, 255, 255, 255))
+        textX += r.getTextWidth("bold", name, 9f) + 4
+
+        if (mediaPresent) {
+            updateArtTexture()
+            if (mArtId != null) {
+                r.drawImage(textX, y + 3f, 14f, 14f, mArtId!!, 7f)
+            } else {
+                r.drawRect(textX, y + 3f, 14f, 14f, 7f, colorUtil.rgba(180, 180, 180, 255))
             }
-        }
+            textX += 18f
 
-        val fullW = r.getTextWidth("regular", title, MEDIA_TITLE_SZ)
-        val titleW = minOf(fullW, MAX_TITLE_W)
-        val contentW = (PAD + MEDIA_ART_SZ + GAP + titleW + PAD).toFloat()
-        val blur = Beautifully.isBlurEnabled()
-        val radius = MEDIA_H / 2f
-        val bx = (sw - contentW) / 2f
-        val by = (MARGIN + PILL_H + GAP).toFloat()
+            val title = bgTitle ?: ""
+            if (title != prevAnimTitle) { typeAnim.setTarget(title); prevAnimTitle = title }
+            val display = typeAnim.update()
+            val typing = typeAnim.isRunning()
 
-        if (blur) r.drawRectBlurred(bx, by, contentW, MEDIA_H.toFloat(), radius, C_BG)
-        else r.drawRect(bx, by, contentW, MEDIA_H.toFloat(), radius, C_BG)
-
-        val artX = bx + PAD
-        val artY = by + (MEDIA_H - MEDIA_ART_SZ) / 2f
-        if (mArtId != null) {
-            r.drawImage(artX, artY, MEDIA_ART_SZ.toFloat(), MEDIA_ART_SZ.toFloat(), mArtId!!, MEDIA_ART_SZ / 2f)
-        } else {
-            r.drawRect(artX, artY, MEDIA_ART_SZ.toFloat(), MEDIA_ART_SZ.toFloat(), MEDIA_ART_SZ / 2f, C_ACCENT)
-        }
-
-        var textX = artX + MEDIA_ART_SZ + GAP
-        val visibleW = contentW - PAD - MEDIA_ART_SZ - GAP - PAD
-        if (fullW > visibleW) {
-            if (title != marqueeTitle) { marqueeTitle = title; marqueeStart = System.currentTimeMillis() }
-            val now = System.currentTimeMillis()
-            val scrollDist = fullW - visibleW + 8f
-            val speed = 22f
-            val scrollMs = (scrollDist / speed * 1000f).toLong()
-            val pauseMs = 1500L
-            val cycleMs = pauseMs * 2 + scrollMs * 2
-            val phase = (now - marqueeStart) % cycleMs
-            textX -= when {
-                phase < pauseMs -> 0f
-                phase < pauseMs + scrollMs -> (phase - pauseMs).toFloat() / scrollMs * scrollDist
-                phase < pauseMs * 2 + scrollMs -> scrollDist
-                else -> scrollDist - (phase - pauseMs * 2 - scrollMs).toFloat() / scrollMs * scrollDist
+            if (typing) {
+                r.drawText("regular", display, textX, y + 5.5f, 9f, colorUtil.rgba(180, 180, 180, 255))
+            } else {
+                val fullW = r.getTextWidth("regular", title, 9f)
+                val visibleW = (cx + pillW - 6 - textX).coerceAtLeast(0f)
+                var titleX = textX
+                if (fullW > visibleW) {
+                    if (title != marqueeTitle) { marqueeTitle = title; marqueeStart = System.currentTimeMillis() }
+                    val now = System.currentTimeMillis()
+                    val scrollDist = fullW - visibleW + 8f
+                    val scrollMs = (scrollDist / 22f * 1000f).toLong()
+                    val pauseMs = 1500L; val cycleMs = pauseMs * 2 + scrollMs * 2
+                    val phase = (now - marqueeStart) % cycleMs
+                    titleX -= when {
+                        phase < pauseMs -> 0f
+                        phase < pauseMs + scrollMs -> (phase - pauseMs).toFloat() / scrollMs * scrollDist
+                        phase < pauseMs * 2 + scrollMs -> scrollDist
+                        else -> scrollDist - (phase - pauseMs * 2 - scrollMs).toFloat() / scrollMs * scrollDist
+                    }
+                    scissorClip(mc, textX, y, visibleW, 20f) {
+                        r.drawText("regular", title, titleX, y + 5.5f, 9f, colorUtil.rgba(180, 180, 180, 255))
+                    }
+                } else {
+                    r.drawText("regular", title, titleX, y + 5.5f, 9f, colorUtil.rgba(180, 180, 180, 255))
+                }
             }
-        }
 
-        // scissor clip to bubble text area
-        val scaleFactor = mc.window.guiScale.toFloat()
-        val scX = ((bx + PAD + MEDIA_ART_SZ + GAP) * scaleFactor).toInt()
-        val scY = ((mc.window.guiScaledHeight - (by + MEDIA_H)) * scaleFactor).toInt()
-        val scW = ((contentW - PAD - PAD - MEDIA_ART_SZ - GAP) * scaleFactor).toInt()
-        val scH = (MEDIA_H * scaleFactor).toInt()
-        GL11.glEnable(GL11.GL_SCISSOR_TEST)
-        GL11.glScissor(scX, scY, scW, scH)
-        try {
-            r.drawText("regular", title, textX, by + (MEDIA_H - MEDIA_TITLE_SZ) / 2f, MEDIA_TITLE_SZ, 0xFFFFFFFF.toInt())
-        } finally {
-            GL11.glDisable(GL11.GL_SCISSOR_TEST)
+            if (state == State.CONTROLS) {
+                val ctrlX = cx + pillW - 50f
+                val ctrlY = y + 6f
+                val prevX = ctrlX; val playX = ctrlX + 18f; val nextX = ctrlX + 36f
+
+                hoverPrev = mx >= prevX && mx < prevX + 8f && my >= ctrlY && my < ctrlY + 8f
+                hoverPlay = mx >= playX && mx < playX + 8f && my >= ctrlY && my < ctrlY + 8f
+                hoverNext = mx >= nextX && mx < nextX + 8f && my >= ctrlY && my < ctrlY + 8f
+
+                r.drawTriangle(prevX + 8f, ctrlY, prevX, ctrlY + 4f, prevX + 8f, ctrlY + 8f, if (hoverPrev) -1 else colorUtil.rgba(180, 180, 180, 255))
+                if (bgPlaying) {
+                    r.drawRect(playX, ctrlY, 3f, 8f, 0f, if (hoverPlay) -1 else colorUtil.rgba(180, 180, 180, 255))
+                    r.drawRect(playX + 5f, ctrlY, 3f, 8f, 0f, if (hoverPlay) -1 else colorUtil.rgba(180, 180, 180, 255))
+                } else {
+                    r.drawTriangle(playX, ctrlY, playX, ctrlY + 8f, playX + 8f, ctrlY + 4f, if (hoverPlay) -1 else colorUtil.rgba(180, 180, 180, 255))
+                }
+                r.drawTriangle(nextX, ctrlY, nextX + 8f, ctrlY + 4f, nextX, ctrlY + 8f, if (hoverNext) -1 else colorUtil.rgba(180, 180, 180, 255))
+            }
         }
     }
 
     @JvmStatic
-    fun handleMediaClick(x: Double, y: Double, button: Int): Boolean = false
+    fun handleMediaClick(x: Double, y: Double, button: Int): Boolean {
+        if (!mediaPresent || state != State.CONTROLS) return false
+        val cx = pillRect[0]; val cy = pillRect[1]; val cw = pillRect[2]
+        val ctrlX = cx + cw - 50f
+        val ctrlY = cy + 6f
+        val relX = (x - ctrlX).toFloat()
+        val relY = (y - ctrlY).toFloat()
+        if (relY < 0 || relY > 8f || relX < 0 || relX > 44f) return false
+        if (button != 0) return true
+        try {
+            when {
+                relX < 8f -> bgSession?.previous()
+                relX < 26f -> if (bgPlaying) bgSession?.pause() else bgSession?.play()
+                else -> bgSession?.next()
+            }
+        } catch (_: Exception) {}
+        return true
+    }
 
-    // ── Background polling ──
+    @JvmStatic
+    fun isMediaPresent(): Boolean = mediaPresent
+
+    @JvmStatic
+    fun getPillRect(): FloatArray = pillRect
+
+    fun resetMediaPoller() {
+        mediaPollStarted = false
+        bgSession = null; bgTitle = null; bgArtBytes = null
+        mArtId = null; mPrevArtHash = 0
+    }
 
     private fun startPolling() {
         if (mediaPollStarted) return
         mediaPollStarted = true
         mediaPoller.scheduleWithFixedDelay({
             try {
-                val sessions = MediaPlayerInfo.INSTANCE.mediaSessions ?: return@scheduleWithFixedDelay
+                val sessions = MediaPlayerInfo.INSTANCE.mediaSessions
+                if (sessions == null || sessions.isEmpty()) {
+                    if (bgSession != null) { bgSession = null; bgTitle = null }
+                    return@scheduleWithFixedDelay
+                }
                 val s = sessions.firstOrNull { ses ->
                     val m = ses.media; m != null && !m.title.isNullOrEmpty() && m.isPlaying
                 } ?: sessions.firstOrNull { ses ->
                     val m = ses.media; m != null && !m.title.isNullOrEmpty()
-                } ?: sessions.firstOrNull()
+                }
                 if (s == null) { bgSession = null; bgTitle = null; return@scheduleWithFixedDelay }
                 val info = s.media ?: run { bgSession = null; bgTitle = null; return@scheduleWithFixedDelay }
-
                 bgSession = s
                 bgTitle = if (!info.title.isNullOrBlank()) info.title else info.artist
                 bgPlaying = info.isPlaying
@@ -194,22 +229,14 @@ object DynamicIsland {
         }, 2, 1, TimeUnit.SECONDS)
     }
 
-    // ── Icons (render thread) ──
-
-    private fun ensureIcons() {
-        if (mIconsLoaded) return
-        try {
-            val home = System.getProperty("user.home")
-            val dir = "$home/.apr/aporia/texture/dynamic island"
-            mLeftId = AporiaRenderer.INSTANCE.loadImage(Path.of(dir, "left.png"))
-            mRightId = AporiaRenderer.INSTANCE.loadImage(Path.of(dir, "right.png"))
-            mPlayId = AporiaRenderer.INSTANCE.loadImage(Path.of(dir, "play.png"))
-            mPauseId = AporiaRenderer.INSTANCE.loadImage(Path.of(dir, "pause.png"))
-        } catch (_: Throwable) {}
-        mIconsLoaded = true
+    private fun updateArtTexture() {
+        val bytes = bgArtBytes ?: return
+        val h = Arrays.hashCode(bytes)
+        if (h == mPrevArtHash) return
+        mPrevArtHash = h
+        try { mArtId = r.loadImage(ByteArrayInputStream(bytes)) }
+        catch (_: Exception) { mArtId = null }
     }
-
-    // ── Avatar rendering ──
 
     private fun renderAvatar(r: AporiaRenderer, x: Float, y: Float, size: Int, mc: Minecraft, mode: Mode, blur: Boolean) {
         when (mode) {
@@ -226,14 +253,14 @@ object DynamicIsland {
     }
 
     private fun renderLogo(r: AporiaRenderer, x: Float, y: Float, size: Int) {
-        r.drawRect(x, y, size.toFloat(), size.toFloat(), 4f, C_ACCENT)
+        r.drawRect(x, y, size.toFloat(), size.toFloat(), 4f, colorUtil.rgba(255, 255, 255, 255))
     }
 
     private fun renderDiscord(r: AporiaRenderer, x: Float, y: Float, size: Int, blur: Boolean) {
         val id = getDiscordAvatarId() ?: return renderLogo(r, x, y, size)
         val radius = size / 2f
-        if (blur) r.drawRectBlurred(x, y, size.toFloat(), size.toFloat(), radius, C_BG)
-        else r.drawRect(x, y, size.toFloat(), size.toFloat(), radius, C_BG)
+        if (blur) r.drawRectBlurred(x, y, size.toFloat(), size.toFloat(), radius, colorUtil.rgba(12, 18, 22, 220))
+        else r.drawRect(x, y, size.toFloat(), size.toFloat(), radius, colorUtil.rgba(12, 18, 22, 220))
         r.drawImageCropped(x, y, size.toFloat(), size.toFloat(), id, radius, 0f, 0f, 1f, 1f)
     }
 
@@ -241,8 +268,8 @@ object DynamicIsland {
         if (mc.player == null) return
         val skinId = mc.player!!.skin.body.texturePath() ?: return
         val radius = size / 2f
-        if (blur) r.drawRectBlurred(x, y, size.toFloat(), size.toFloat(), radius, C_BG)
-        else r.drawRect(x, y, size.toFloat(), size.toFloat(), radius, C_BG)
+        if (blur) r.drawRectBlurred(x, y, size.toFloat(), size.toFloat(), radius, colorUtil.rgba(12, 18, 22, 220))
+        else r.drawRect(x, y, size.toFloat(), size.toFloat(), radius, colorUtil.rgba(12, 18, 22, 220))
         r.drawImageCropped(x, y, size.toFloat(), size.toFloat(), skinId, radius, 8f/64f, 8f/64f, 16f/64f, 16f/64f)
         r.drawImageCropped(x, y, size.toFloat(), size.toFloat(), skinId, radius, 40f/64f, 8f/64f, 48f/64f, 16f/64f)
     }
@@ -253,5 +280,14 @@ object DynamicIsland {
         val discordModule = discordRPC as DiscordRPCModule
         discordModule.loadAvatarOnRenderThread()
         return discordModule.avatarId
+    }
+
+    private fun scissorClip(mc: Minecraft, x: Float, y: Float, w: Float, h: Float, block: () -> Unit) {
+        val scale = mc.window.guiScale.toFloat()
+        val sx = (x * scale).toInt(); val sy = ((mc.window.guiScaledHeight - (y + h)) * scale).toInt()
+        val sw = (w * scale).toInt(); val sh = (h * scale).toInt()
+        GL11.glEnable(GL11.GL_SCISSOR_TEST)
+        GL11.glScissor(sx, sy, sw, sh)
+        try { block() } finally { GL11.glDisable(GL11.GL_SCISSOR_TEST) }
     }
 }
