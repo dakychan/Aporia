@@ -51,11 +51,10 @@ class Hud : Module("HUD", Category.VISUAL) {
     fun onMouseClick(e: MouseClickEvent) {
         if (e.action() != MouseClickEvent.Action.PRESS) return
         if (DynamicIsland.handleMediaClick(e.x(), e.y(), e.button())) { e.cancel(); return }
-        if (mc.screen !is ChatScreen) return
         val x = e.x().toFloat()
         val y = e.y().toFloat()
         val r = panelPos
-        if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) {
+        if (r.w > 0f && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) {
             isDragging = true
             dragOffX = x - r.x
             dragOffY = y - r.y
@@ -73,7 +72,7 @@ class Hud : Module("HUD", Category.VISUAL) {
         mouseY = mc.mouseHandler.getScaledYPos(mc.window).toFloat()
         isChatOpen = mc.screen is ChatScreen
 
-        if (isChatOpen && isDragging &&
+        if (isDragging &&
             GLFW.glfwGetMouseButton(mc.window.handle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) != 1) {
             isDragging = false
         }
@@ -141,7 +140,7 @@ class Hud : Module("HUD", Category.VISUAL) {
         var bgY = margin + 24f
         if (panelPos.w > 0f) { bgX = panelPos.x; bgY = panelPos.y }
 
-        if (isChatOpen && isDragging) {
+        if (isDragging) {
             bgX = mouseX - dragOffX; bgY = mouseY - dragOffY
             if (altDown) { bgX = snap(bgX); bgY = snap(bgY) }
         }
@@ -159,7 +158,8 @@ class Hud : Module("HUD", Category.VISUAL) {
             textY += lineH + 2f
         }
 
-        if (isChatOpen && isDragging && altDown) {
+        if (isDragging && altDown) {
+            r.drawRect(0f, 0f, sw.toFloat(), sh.toFloat(), 0f, colorUtil.rgba(0, 0, 0, 80))
             for (x in 0 until sw step 16) r.drawLine(x.toFloat(), 0f, x.toFloat(), sh.toFloat(), 0.5f, colorUtil.rgba(255, 255, 255, 30))
             for (y in 0 until sh step 16) r.drawLine(0f, y.toFloat(), sw.toFloat(), y.toFloat(), 0.5f, colorUtil.rgba(255, 255, 255, 30))
         }

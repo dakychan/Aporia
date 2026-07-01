@@ -472,7 +472,8 @@ __declspec(dllexport) int webview_capture_rgba(void* handle, unsigned char* outB
                 if (SUCCEEDED(wicFactory->CreateFormatConverter(&converter)) && converter) {
                     converter->Initialize(frame, GUID_WICPixelFormat32bppBGRA,
                         WICBitmapDitherTypeNone, NULL, 0.0, WICBitmapPaletteTypeCustom);
-                    converter->CopyPixels(NULL, cw * 4, bufSz, outBuf);
+                    WICRect rc = {0, 0, (INT)cw, (INT)ch};
+                    converter->CopyPixels(&rc, cw * 4, bufSz, outBuf);
                     converter->Release();
                 }
 

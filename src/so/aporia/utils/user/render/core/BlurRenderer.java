@@ -128,9 +128,9 @@ public final class BlurRenderer {
         }
 
         for (int i = 0; i < kawaseDownTargets.length; i++) {
-            kawaseDownTargets[i] = null;
+            if (kawaseDownTargets[i] != null) { kawaseDownTargets[i].destroyBuffers(); kawaseDownTargets[i] = null; }
         }
-        blurTarget = null;
+        if (blurTarget != null) { blurTarget.destroyBuffers(); blurTarget = null; }
 
         blurTargetW = mainW;
         blurTargetH = mainH;
@@ -159,7 +159,7 @@ public final class BlurRenderer {
             if (blurTargetW == mainW && blurTargetH == mainH) return;
         }
 
-        guiBlurTarget = null;
+        if (guiBlurTarget != null) { guiBlurTarget.destroyBuffers(); guiBlurTarget = null; }
         guiBlurTarget = new TextureTarget("aporia_gui_blur", mainW, mainH, false);
         guiBlurTargetsDirty = true;
     }
@@ -173,7 +173,7 @@ public final class BlurRenderer {
             return;
         }
 
-        prePlayerBlurTarget = null;
+        if (prePlayerBlurTarget != null) { prePlayerBlurTarget.destroyBuffers(); prePlayerBlurTarget = null; }
         prePlayerBlurTarget = new TextureTarget("aporia_pre_player_blur", mainW, mainH, false);
         prePlayerBlurReady = false;
     }
@@ -363,7 +363,20 @@ public final class BlurRenderer {
     }
 
     public static void cleanup() {
-        blurTargetW = -1; blurTargetH = -1; blurReady = false; prePlayerBlurReady = false;
+        if (blurTarget != null) { blurTarget.destroyBuffers(); blurTarget = null; }
+        if (guiBlurTarget != null) { guiBlurTarget.destroyBuffers(); guiBlurTarget = null; }
+        if (prePlayerBlurTarget != null) { prePlayerBlurTarget.destroyBuffers(); prePlayerBlurTarget = null; }
+        if (kawaseDownTargets != null) {
+            for (int i = 0; i < kawaseDownTargets.length; i++) {
+                if (kawaseDownTargets[i] != null) {
+                    kawaseDownTargets[i].destroyBuffers();
+                    kawaseDownTargets[i] = null;
+                }
+            }
+        }
+        blurTargetW = -1; blurTargetH = -1;
+        blurReady = false; prePlayerBlurReady = false; guiBlurReady = false;
+        blurTargetsDirty = true; guiBlurTargetsDirty = true;
     }
 
     private BlurRenderer() {}

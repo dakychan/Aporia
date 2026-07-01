@@ -523,12 +523,12 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
             }
             // Aporia: чистим depth buffer после 3D, чтобы GUI/HUD не был позади 3D
             RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(rendertarget.getDepthTexture(), 1.0);
-            // Aporia: prepareBlur (для GUI-блюра) — захватывает мир + Aporia-оверлеи
-            if (flag && p_109096_ && this.minecraft.level != null && this.minecraft.player != null) {
+            // Aporia: prepareBlur — только когда нет экрана (нет смысла при оверлее)
+            if (flag && p_109096_ && this.minecraft.level != null && this.minecraft.player != null && this.minecraft.screen == null) {
                 BlurRenderer.prepareBlur(Minecraft.getInstance(), 20f, 0.75f);
             }
-            // Aporia: флаш 2D-фона (чат, блюр) ДО ванильного GUI
-            if (flag && p_109096_ && this.minecraft.level != null) {
+            // Aporia: флаш 2D-фона ДО ванильного GUI
+            if (flag && p_109096_ && this.minecraft.level != null && this.minecraft.screen == null) {
                 AporiaRenderer.INSTANCE.flush();
                 this.guiRenderer.render(this.fogRenderer.getBuffer(FogRenderer.FogMode.NONE));
             }
@@ -536,19 +536,18 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
                 this.minecraft.gui.render(guigraphics, p_343467_);
             }
 
-            // Aporia HUD: после vanilla GUI (chat, tab, scoreboard), но ДО экранов (ClickGui, ESC)
-            if (this.minecraft.player != null) {
+            // Aporia HUD: показываем при инвентаре/чате, скрываем при паузе/смерти/дисконнекте
+            if (this.minecraft.player != null && (this.minecraft.screen == null || !this.minecraft.screen.isPauseScreen())) {
                 Aporia.INSTANCE.render(guigraphics, p_343467_.getGameTimeDeltaTicks());
             }
 
-            // Aporia: флаш HUD-элементов (DynamicIsland, InfoPanel) — они ставятся в очередь в Aporia.INSTANCE.render()
-            if (this.minecraft.player != null) {
+            // Aporia: флаш HUD-элементов
+            if (this.minecraft.player != null && (this.minecraft.screen == null || !this.minecraft.screen.isPauseScreen())) {
                 AporiaRenderer.INSTANCE.flush();
             }
 
-            // Aporia: промежуточный флаш после Aporia HUD — отрисовываем deferred предметы
-            // (Nametags item icons) ДО оверлеев/экранов, чтобы они НЕ перекрывали GUI
-            if (flag && p_109096_ && this.minecraft.level != null) {
+            // Aporia: промежуточный флаш после Aporia HUD — только без экрана
+            if (flag && p_109096_ && this.minecraft.level != null && this.minecraft.screen == null) {
                 this.guiRenderer.render(this.fogRenderer.getBuffer(FogRenderer.FogMode.NONE));
             }
 

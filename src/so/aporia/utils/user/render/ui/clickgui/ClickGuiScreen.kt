@@ -19,6 +19,7 @@ import so.aporia.module.impl.misc.ClickGui
 import so.aporia.module.impl.misc.DiscordRPCModule
 import so.aporia.module.settings.*
 
+import so.aporia.utils.user.render.animation.TypeAnim
 import so.aporia.utils.user.render.font.Fonts
 import so.aporia.utils.user.render.theme.ThemeManager
 import so.aporia.utils.user.render.theme.ThemeManager.Theme
@@ -50,6 +51,14 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
     private var dragColorSetting = false
     private var dragColorHue = false
     private var dragColorAlpha = false
+    private val bindTypeAnim = TypeAnim(60, 120)
+
+    /* ===== ColorPicker кэш (чтобы не перерисовывать SV-сетку каждый кадр) ===== */
+    private val svGrid = IntArray(48 * 48)
+    private var svLastCacheKey: Int = Int.MIN_VALUE
+    private var svCacheKey: Int = Int.MIN_VALUE
+    private var dragColorSV = false
+    private var dragColorSettingRef: ColorSetting? = null
 
     private var minimized = false
     private var maximized = false
@@ -64,7 +73,7 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
 
     companion object {
         const val TOP_BAR_H = 24f
-        const val CORNER_RADIUS = 2f
+        const val CORNER_RADIUS = 6f
         const val PAD = 6f
         const val CAT_W_RATIO = 0.18f
         const val MOD_W_RATIO = 0.37f
@@ -96,6 +105,9 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
     private val modW get() = panelW * MOD_W_RATIO
     private val setW get() = panelW - catW - modW
 
+    /** Y координата открытого ColorPicker'а (используется в mouseDragged). */
+    private var pickerBoundsY: Float = 0f
+
     override fun init() {
         val sw = width.toFloat()
         val sh = height.toFloat()
@@ -119,7 +131,10 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
         r.flush()
 
         val bm = bindMod ?: return
-        val hint = locale.get("gui.presskey") ?: "Press any key..."
+        if (bindTypeAnim.getTarget() != (locale.get("gui.bindprompt") ?: "Press any key...")) {
+            bindTypeAnim.setTarget(locale.get("gui.bindprompt") ?: "Press any key...")
+        }
+        val hint = bindTypeAnim.update()
         val hs = 12f
         val hw = r.getTextWidth(Fonts.BOLD, hint, hs)
         val hx = (width - hw) / 2f
@@ -177,22 +192,13 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
             if (isAvOrQs) th.guiTitleBg else colorUtil.rgba(255, 255, 255, 12))
 
         val skinId = mc.player?.skin?.body?.texturePath()
-        val ay = by + (TOP_BAR_H - avatarS) / 2f
-        if (skinId != null && activeTab == Tab.QUESTS) {
-            // Full-size skin render for QUESTS tab button
+        if (skinId != null) {
             r.drawImageCropped(rightX + 2f, by + 2f, combinedW - 4f, TOP_BAR_H - 4f,
-                skinId, 0f, 8f / 64f, 8f / 64f, 16f / 64f, 16f / 64f)
-            r.drawRectBlurred(rightX, by + 2f, combinedW, TOP_BAR_H - 4f, 3f,
-                colorUtil.rgba(0, 0, 0, 80))
-        } else if (skinId != null) {
-            r.drawImageCropped(rightX + 2f, ay, avatarS, avatarS, skinId, avatarS / 2f,
-                8f / 64f, 8f / 64f, 16f / 64f, 16f / 64f)
+                skinId, (combinedW - 4f) / 2f, 8f / 64f, 8f / 64f, 16f / 64f, 16f / 64f)
         } else {
-            r.drawCircle(rightX + avatarS / 2f + 2f, ay + avatarS / 2f, avatarS / 2f,
+            r.drawCircle(rightX + combinedW / 2f, by + TOP_BAR_H / 2f, (TOP_BAR_H - 6f) / 2f,
                 if (isAvOrQs) th.guiTitleBg else colorUtil.rgba(255, 255, 255, 40))
         }
-        r.drawText(Fonts.BOLD, Tab.QUESTS.label, rightX + avatarH + 6f, by + (TOP_BAR_H - 10f) / 2f - 1f, 10f,
-            if (isAvOrQs) 0xFFFFFFFF.toInt() else th.guiDisabledDot)
 
         val closeOver = mx >= closeX && mx < closeX + ctrlR * 2 + 4f && my >= ctrlY && my < ctrlY + ctrlR * 2 + 4f
         r.drawCircle(closeX + ctrlR, ctrlY + ctrlR, ctrlR, if (closeOver) 0xFFFF5555.toInt() else 0xFFFF6666.toInt())
@@ -274,16 +280,24 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
         val mTop = cy
         var my2 = mTop + scrollY
         val mods = ModuleManager.getByCategory(categories[selCategory])
+        val altDown = org.lwjgl.glfw.GLFW.glfwGetKey(mc.window.handle(), org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_ALT) == 1
         for (mod in mods) {
             if (my2 + MOD_H < mTop || my2 > py + panelH - PAD) { my2 += MOD_H; continue }
             val over = mx >= mLeft && mx < mLeft + modW && my >= my2 && my < my2 + MOD_H
             val en = mod.isEnabled
             val selMod = mod === selectedModule
+            r.drawRectBlurred(mLeft, my2, modW, MOD_H, 2f,
+                colorUtil.rgba(0, 0, 0, if (en) 70 else 40))
             if (over || selMod) r.drawRectBlurred(mLeft, my2, modW, MOD_H, 2f,
                 if (selMod) th.guiTitleBg else colorUtil.rgba(255, 255, 255, 12))
             if (en) r.drawRectBlurred(mLeft + 2f, my2 + 2f, 2f, MOD_H - 4f, 1f, th.guiEnabledDot)
             r.drawText(Fonts.REGULAR, mod.name, mLeft + 8f, my2 + (MOD_H - 10f) / 2f - 1f, 10f,
                 if (en) 0xFFFFFFFF.toInt() else th.guiDisabledDot)
+            if (altDown && mod.keybind != -1) {
+                val keyName = so.aporia.utils.user.input.KeyCodeMap.getName(mod.keybind)
+                val kw = r.getTextWidth(Fonts.REGULAR, keyName, 7f)
+                r.drawText(Fonts.REGULAR, keyName, mLeft + modW - kw - 4f, my2 + (MOD_H - 7f) / 2f, 7f, 0xFFAAAAAA.toInt())
+            }
             if (selMod) r.drawText(Fonts.REGULAR, "\u25C0", mLeft + modW - 12f, my2 + (MOD_H - 9f) / 2f - 1f, 9f, colorUtil.rgba(180, 180, 200, 200))
             my2 += MOD_H
         }
@@ -320,14 +334,113 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
                 drawSetting(r, s, sy3, th, sLeft, sWidth, sov, mx, my)
                 sy3 += sh
             }
+
+            // Info panel on the right
+            val infoX = sLeft + sWidth + PAD
+            val infoW = (panelW - (sLeft + sWidth + PAD) - px).coerceAtLeast(0f)
+            if (infoW > 20f) {
+                val infoY = sTop
+                val infoH = panelH - TOP_BAR_H - PAD * 2
+                r.drawRectBlurred(infoX, infoY, infoW, infoH, 4f, colorUtil.rgba(0, 0, 0, 60))
+                r.drawText(Fonts.BOLD, locale.get("gui.info.title") ?: "Info", infoX + 6f, infoY + 6f, 10f, 0xFFFFFFFF.toInt())
+                val modDesc = locale.get("module.${selMod.name.lowercase().replace(" ", "_")}.desc") ?: ""
+                val descLines = wrapText(modDesc, infoW - 12f, 8f, r)
+                var descY = infoY + 20f
+                for (line in descLines) {
+                    r.drawText(Fonts.REGULAR, line, infoX + 6f, descY, 8f, th.guiSettingText)
+                    descY += 10f
+                }
+            }
         }
     }
 
     private fun drawQuestsContent(r: AporiaRenderer, th: Theme) {
         val cy = contentY
-        val label = locale.get("gui.quests.coming_soon") ?: "Quests \u2014 Coming Soon"
-        r.drawText(Fonts.BOLD, label, px + panelW / 2f - r.getTextWidth(Fonts.BOLD, label, 14f) / 2f,
-            cy + 20f, 14f, th.guiSettingText)
+        val margin = PAD * 2f
+        val title = locale.get("gui.quests.title") ?: "Daily Quests"
+        r.drawText(Fonts.BOLD, title, px + margin, cy, 14f, 0xFFFFFFFF.toInt())
+
+        // Прокручиваемый список квестов.
+        val listX = px + margin
+        val listY = cy + 26f
+        val listW = panelW - margin * 2f
+        val cardH = 50f
+        val gap = 6f
+        val visibleH = panelH - (listY - py) - PAD
+
+        // Заголовок прогресса.
+        val total = QuestManager.getAll().size
+        val done = QuestManager.getAll().count { it.completed }
+        val stats = "$done / $total completed"
+        val sw = r.getTextWidth(Fonts.REGULAR, stats, 9f)
+        r.drawText(Fonts.REGULAR, stats, listX + listW - sw, cy + 4f, 9f, th.guiSettingValue)
+
+        // Область со скроллом
+        val scrollOffset = questScrollY
+        val totalH = (total * (cardH + gap)).toFloat()
+        var qy = listY + scrollOffset
+
+        for (q in QuestManager.getAll()) {
+            val top = qy
+            val bottom = qy + cardH
+            if (bottom < listY || top > listY + visibleH) { qy += cardH + gap; continue }
+            drawQuestCard(r, th, q, listX, qy, listW, cardH)
+            qy += cardH + gap
+        }
+
+        // Если список длиннее видимой области — намекаем возможностью прокрутки.
+        if (totalH > visibleH) {
+            val trackX = listX + listW - 3f
+            val trackY = listY
+            val trackH = visibleH
+            r.drawRect(trackX, trackY, 2f, trackH, 1f, colorUtil.rgba(255, 255, 255, 30))
+            val thumbH = (trackH * (visibleH / totalH)).coerceAtLeast(20f)
+            val range = (totalH - visibleH).coerceAtLeast(1f)
+            val thumbY = trackY + ((-scrollOffset / range) * (trackH - thumbH))
+            r.drawRect(trackX, thumbY, 2f, thumbH, 1f, th.guiSettingValue)
+        }
+    }
+
+    private var questScrollY: Float = 0f
+
+    private fun drawQuestCard(
+        r: AporiaRenderer, th: Theme,
+        q: QuestManager.Quest,
+        x: Float, y: Float, w: Float, h: Float
+    ) {
+        // BG
+        r.drawRectBlurred(x, y, w, h, 4f, colorUtil.rgba(0, 0, 0, 90))
+
+        // Левая цветовая полоска (зелёная = выполнен)
+        r.drawRect(x, y, 3f, h, 1.5f, if (q.completed) th.guiEnabledDot else th.guiSettingValue)
+
+        // Title
+        val title = q.type.displayName
+        r.drawText(Fonts.BOLD, title, x + 10f, y + 6f, 11f, 0xFFFFFFFF.toInt())
+
+        // Description
+        r.drawText(Fonts.REGULAR, q.description, x + 10f, y + 22f, 9f,
+            if (q.completed) colorUtil.rgba(140, 220, 140, 230) else th.guiSettingText)
+
+        // Progress
+        val frac = q.percent
+        val barX = x + 10f
+        val barY = y + h - 12f
+        val barW = w - 20f
+        r.drawRectBlurred(barX, barY, barW, 4f, 2f, colorUtil.rgba(255, 255, 255, 30))
+        r.drawRectBlurred(barX, barY, barW * frac, 4f, 2f,
+            if (q.completed) th.guiEnabledDot else th.guiSettingValue)
+
+        // Числитель
+        val progText = "${q.progress} / ${q.target}"
+        val pw = r.getTextWidth(Fonts.REGULAR, progText, 8f)
+        r.drawText(Fonts.REGULAR, progText, x + w - 10f - pw, y + 6f, 8f, th.guiSettingValue)
+
+        // Reward (если есть)
+        q.reward?.let { reward ->
+            r.drawText(Fonts.REGULAR, "\u2605 $reward", x + 10f + r.getTextWidth(Fonts.REGULAR, q.description, 9f) + 8f, y + 22f, 9f,
+                0xFFFFD700.toInt())
+        }
     }
 
     private fun drawSettingsContent(r: AporiaRenderer, th: Theme, mx: Float, my: Float) {
@@ -373,7 +486,7 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
             val opts = if (s is SelectSetting) s.getOptions() else (s as MultiSelectSetting).getOptions()
             SET_H + 4f + opts.size * DH + 3f
         }
-        s == dropSetting && s is ColorSetting -> SET_H + 50f
+        s == dropSetting && s is ColorSetting -> SET_H + 4f + 96f + 6f + 10f + 6f + 14f + 6f
         s is NumberSetting || s is RangeSetting -> SET_H + 8f
         else -> SET_H
     }
@@ -468,6 +581,14 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
                 r.drawRectBlurred(bx, y + 1f, bw, SET_H - 3f, 2f, colorUtil.rgba(255, 255, 255, 30))
                 r.drawText(Fonts.REGULAR, s.name, bx + 4f, y + (SET_H - 8f) / 2f - 1f, 8f, th.guiSettingValue)
             }
+            is Preview3DSetting -> {
+                val label = locale.get("gui.3dpreview") ?: "Preview"
+                val bw = r.getTextWidth(Fonts.REGULAR, label, 8f) + 12f
+                val bx = sx + sw - 8f - bw
+                r.drawRectBlurred(bx, y + 1f, bw, SET_H - 3f, 2f, colorUtil.rgba(80, 200, 200, 60))
+                r.drawText(Fonts.REGULAR, label, bx + 4f, y + (SET_H - 8f) / 2f - 1f, 8f, 0xFF55CCCC.toInt())
+                // // Video not yet created — WebView preview placeholder
+            }
             is ColorSetting -> {
                 val color = s.get()
                 val previewSize = SET_H - 4f
@@ -480,49 +601,10 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
                 val hex = String.format("#%06X", color and 0xFFFFFF)
                 val hw = r.getTextWidth(Fonts.REGULAR, hex, 7f)
                 r.drawText(Fonts.REGULAR, hex, previewX - 4f - hw, y + (SET_H - 7f) / 2f, 7f, th.guiSettingValue)
+
                 if (s == dropSetting) {
-                    val pickerY = y + SET_H + 4f
-                    val pickerW = (sw - 16f).coerceAtMost(180f)
-                    val hueBarH = 10f
-                    val svSize = 80f
-                    val swatchSize = 14f
-                    val gap = 2f
-
-                    // HSV picker: Sat/Val box
-                    val hue = s.getHue()
-                    for (sy in 0 until svSize.toInt()) {
-                        for (sx2 in 0 until svSize.toInt()) {
-                            val sat = sx2 / svSize
-                            val val_ = 1f - sy / svSize
-                            val clr = ColorSetting.fromHSV(hue, sat, val_, 255)
-                            r.drawRect(sx + 8f + sx2, pickerY + sy, 1f, 1f, 0f, clr)
-                        }
-                    }
-                    r.drawStroke(sx + 8f, pickerY, svSize, svSize, 1f, 1f, 0, 0f, colorUtil.rgba(255, 255, 255, 80))
-
-                    // Hue bar
-                    val hueBarX = sx + 8f + svSize + 6f
-                    for (hi in 0 until (pickerW - svSize - 6f).toInt()) {
-                        val hFrac = hi / (pickerW - svSize - 6f)
-                        val hClr = ColorSetting.fromHSV(hFrac, 1f, 1f)
-                        r.drawRect(hueBarX + hi, pickerY, 1f, hueBarH, 0f, hClr)
-                    }
-                    r.drawStroke(hueBarX, pickerY, pickerW - svSize - 6f, hueBarH, 1f, 1f, 0, 0f, colorUtil.rgba(255, 255, 255, 80))
-
-                    // Presets row
-                    val presetsY = pickerY + svSize + 4f
-                    val presets = intArrayOf(
-                        0xFFFF0000.toInt(), 0xFFFF8800.toInt(), 0xFFFFFF00.toInt(), 0xFF00FF00.toInt(),
-                        0xFF00FFFF.toInt(), 0xFF0000FF.toInt(), 0xFF8800FF.toInt(), 0xFFFF00FF.toInt(),
-                        0xFFFFFFFF.toInt(), 0xFF888888.toInt(), 0xFF000000.toInt()
-                    )
-                    var psX = sx + 8f
-                    for (preset in presets) {
-                        r.drawRect(psX, presetsY, swatchSize, swatchSize, 2f, preset)
-                        r.drawStroke(psX, presetsY, swatchSize, swatchSize, 2f, 0.5f, 0, 0f,
-                            colorUtil.rgba(255, 255, 255, 40))
-                        psX += swatchSize + gap
-                    }
+                    pickerBoundsY = y + SET_H + 4f
+                    drawColorPicker(r, s, sx, sw, y, pickerBoundsY, th)
                 }
             }
             else -> {
@@ -530,6 +612,98 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
                 val tw = r.getTextWidth(Fonts.REGULAR, txt, 8f)
                 r.drawText(Fonts.REGULAR, txt, sx + sw - 8f - tw, y + (SET_H - 8f) / 2f - 1f, 8f, th.guiSettingValue)
             }
+        }
+    }
+
+    private fun drawColorPicker(r: AporiaRenderer, s: ColorSetting, sx: Float, sw: Float, y: Float, pickerBoundsY: Float, th: Theme) {
+        val padX = 8f
+        val pickerX = sx + padX
+        val pickerY = pickerBoundsY
+        val pickerW = (sw - padX * 2f).coerceIn(140f, 220f)
+        val svSize = 96f
+        val barH = 10f
+        val gap = 6f
+
+        val hue = s.getHue()
+        val sat = s.getSaturation()
+        val v = s.getValue()
+        svCacheKey = hue.toRawBits().toInt()
+        if (svCacheKey != svLastCacheKey) {
+            svCacheKey = hue.toRawBits().toInt()
+            svLastCacheKey = svCacheKey
+            val n = 48
+            var i = 0
+            for (sy in 0 until n) {
+                val vy = 1f - sy.toFloat() / n
+                for (sx2 in 0 until n) {
+                    val st = sx2.toFloat() / n
+                    svGrid[i++] = ColorSetting.fromHSV(hue, st, vy, 255)
+                }
+            }
+        }
+        var idx = 0
+        for (sy in 0 until 48) {
+            for (sx2 in 0 until 48) {
+                r.drawRect(pickerX + sx2 * 2f, pickerY + sy * 2f, 2f, 2f, 0f, svGrid[idx++])
+            }
+        }
+        r.drawStroke(pickerX, pickerY, svSize, svSize, 1f, 1f, 0, 0f, colorUtil.rgba(255, 255, 255, 90))
+
+        val markerX = pickerX + (svSize * sat)
+        val markerY = pickerY + (svSize * (1f - v))
+        val mhw = 4f
+        r.drawStroke(markerX - mhw, markerY - mhw, mhw * 2f, mhw * 2f, 0.5f, 1f, 0, 0f, 0xFFFFFFFF.toInt())
+        r.drawStroke(markerX - mhw + 0.5f, markerY - mhw + 0.5f, mhw * 2f - 1f, mhw * 2f - 1f, 0.5f, 1f, 0, 0f, 0xFF000000.toInt())
+
+        val hueX = pickerX + svSize + gap
+        val hueW = 14f
+        for (hi in 0 until hueW.toInt()) {
+            val hFrac = hi.toFloat() / hueW
+            r.drawRect(hueX + hi, pickerY, 1f, svSize, 0f, ColorSetting.fromHSV(hFrac, 1f, 1f))
+        }
+        r.drawStroke(hueX, pickerY, hueW, svSize, 1f, 1f, 0, 0f, colorUtil.rgba(255, 255, 255, 90))
+        val hueMarkerY = pickerY + svSize * hue
+        r.drawStroke(hueX - 1.5f, hueMarkerY - 1.5f, hueW + 3f, 3f, 0.5f, 1f, 0, 0f, 0xFFFFFFFF.toInt())
+
+        val alphaY = pickerY + svSize + gap
+        val alphaW = pickerW
+        val cell = 5f
+        var cx = pickerX
+        while (cx < pickerX + alphaW) {
+            var cy = alphaY
+            while (cy < alphaY + barH) {
+                val xx = ((cx - pickerX) / cell).toInt()
+                val yy = ((cy - alphaY) / cell).toInt()
+                val c = if ((xx + yy) % 2 == 0) 0xFFCCCCCC.toInt() else 0xFF777777.toInt()
+                r.drawRect(cx, cy, cell, cell, 0f, c)
+                cy += cell
+            }
+            cx += cell
+        }
+        for (ai in 0 until alphaW.toInt()) {
+            val aFrac = ai.toFloat() / alphaW
+            val baseColor = s.get() and 0x00FFFFFF
+            val a = (aFrac * 255f).toInt().coerceIn(0, 255)
+            val packed = (a shl 24) or baseColor
+            r.drawRect(pickerX + ai, alphaY, 1f, barH, 0f, packed)
+        }
+        r.drawStroke(pickerX, alphaY, alphaW, barH, 1f, 1f, 0, 0f, colorUtil.rgba(255, 255, 255, 90))
+
+        val presetsY = pickerY + svSize + barH + gap * 2f
+        val curColor = s.get()
+        val presets = intArrayOf(
+            0xFFFF0000.toInt(), 0xFFFF8800.toInt(), 0xFFFFFF00.toInt(), 0xFF00FF00.toInt(),
+            0xFF00FFFF.toInt(), 0xFF0000FF.toInt(), 0xFF8800FF.toInt(), 0xFFFF00FF.toInt(),
+            0xFFFFFFFF.toInt(), 0xFF888888.toInt(), 0xFF000000.toInt(), curColor
+        )
+        val presetSize = ((pickerW / presets.size) - 2f).coerceAtLeast(10f)
+        val presetGap = 2f
+        var psX = pickerX
+        for (preset in presets) {
+            r.drawRect(psX, presetsY, presetSize, presetSize, 2f, preset)
+            r.drawStroke(psX, presetsY, presetSize, presetSize, 2f, 0.5f, 0, 0f,
+                if (preset == curColor) th.guiEnabledDot else colorUtil.rgba(255, 255, 255, 40))
+            psX += presetSize + presetGap
         }
     }
 
@@ -608,7 +782,7 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
 
         if (activeTab == Tab.SETTINGS) {
             val sWidth = panelW - PAD * 2
-            var sy = contentY + 20f
+            var sy = contentY + 20f + settingsScrollY
             for (s in getSettings(clickGui)) {
                 val sh = settingHeight(s)
                 if (my >= sy && my < sy + sh) {
@@ -638,10 +812,66 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
                             } else { dropSetting = s; return true }
                         }
                         is ColorSetting -> {
+                            // Если picker уже открыт — проверим, в какую зону кликнули.
                             if (s == dropSetting) {
-                                dropSetting = null
-                            } else { dropSetting = s }
-                            return true
+                                val padX = 8f
+                                val pY = sy + SET_H + 4f
+                                val pX = px + PAD + padX
+                                val pW = (sWidth - padX * 2f).coerceIn(140f, 220f)
+                                val svSize = 96f
+                                val gap = 6f
+                                val hueX = pX + svSize + gap
+                                val hueW = 14f
+                                val alphaY = pY + svSize + gap
+                                val presetY = pY + svSize + 10f + gap * 2f
+
+                                when {
+                                    // SV box
+                                    mx in pX..(pX + svSize) && my in pY..(pY + svSize) -> {
+                                        val sat = ((mx - pX) / svSize).coerceIn(0f, 1f)
+                                        val v = (1f - (my - pY) / svSize).coerceIn(0f, 1f)
+                                        s.setHSV(s.getHue(), sat, v, s.getA())
+                                        dragColorSetting = true
+                                        dragColorSV = true
+                                        dragColorSettingRef = s
+                                        return true
+                                    }
+                                    // Hue bar
+                                    mx in hueX..(hueX + hueW) && my in pY..(pY + svSize) -> {
+                                        val h = ((my - pY) / svSize).coerceIn(0f, 1f)
+                                        s.setHSV(h, s.getSaturation(), s.getValue(), s.getA())
+                                        dragColorHue = true
+                                        dragColorSettingRef = s
+                                        return true
+                                    }
+                                    // Alpha bar
+                                    mx in pX..(pX + pW) && my in alphaY..(alphaY + 10f) -> {
+                                        val a = ((mx - pX) / pW).coerceIn(0f, 1f)
+                                        s.setA((a * 255).toInt())
+                                        dragColorAlpha = true
+                                        dragColorSettingRef = s
+                                        return true
+                                    }
+                                    // Presets row
+                                    my in presetY..(presetY + 14f) -> {
+                                        val presets = intArrayOf(
+                                            0xFFFF0000.toInt(), 0xFFFF8800.toInt(), 0xFFFFFF00.toInt(), 0xFF00FF00.toInt(),
+                                            0xFF00FFFF.toInt(), 0xFF0000FF.toInt(), 0xFF8800FF.toInt(), 0xFFFF00FF.toInt(),
+                                            0xFFFFFFFF.toInt(), 0xFF888888.toInt(), 0xFF000000.toInt(), s.get()
+                                        )
+                                        val sw2 = (pW / presets.size - 2f).coerceAtLeast(10f) + 2f
+                                        val idx = ((mx - pX) / sw2).toInt().coerceIn(0, presets.size - 1)
+                                        val curA = s.getA()
+                                        s.set((curA shl 24) or (presets[idx] and 0x00FFFFFF))
+                                        return true
+                                    }
+                                    // Клик вне picker'а — закрыть
+                                    else -> { dropSetting = null; return true }
+                                }
+                            } else {
+                                dropSetting = s
+                                return true
+                            }
                         }
                         is ButtonSetting -> { s.click(); return true }
                         is BindSetting -> return true
@@ -674,7 +904,7 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
                 when (btn) {
                     0 -> { mod.toggle() }
                     1 -> { selectedModule = if (selectedModule === mod) null else mod; dropSetting = null; settingsScrollY = 0f }
-                    2 -> { val bs = getSettings(mod).find { it is BindSetting } as? BindSetting; if (bs != null) { bindSet = bs; bindMod = mod } }
+                    2 -> { val bs = getSettings(mod).find { it is BindSetting } as? BindSetting; if (bs != null) { bindSet = bs; bindMod = mod; bindTypeAnim.setTarget(locale.get("gui.bindprompt") ?: "Press any key...") } }
                 }
                 return true
             }
@@ -731,49 +961,57 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
                                 val sLeft = px + catW + modW
                                 val sWidth = setW - PAD
                                 val pickerY = sy3 + SET_H + 4f
-                                val svSize = 80f
+                                val svSize = 96f
                                 val svBoxX = sLeft + PAD + 8f
                                 val svBoxY = pickerY
-                                val hueBarX = svBoxX + svSize + 6f
-                                val hueBarH = 10f
+                                val gap = 6f
+                                val hueX = svBoxX + svSize + gap
+                                val hueW = 14f
+                                val alphaY = pickerY + svSize + gap
 
-                                // SV box click
+                                // SV box click → drag mode
                                 if (mx >= svBoxX && mx < svBoxX + svSize && my >= svBoxY && my < svBoxY + svSize) {
                                     val sat = ((mx - svBoxX) / svSize).coerceIn(0f, 1f)
                                     val value = (1f - (my - svBoxY) / svSize).coerceIn(0f, 1f)
-                                    val alpha = s.getA()
-                                    s.set(ColorSetting.fromHSV(s.getHue(), sat, value, alpha))
-                                    dropSetting = null
+                                    s.setHSV(s.getHue(), sat, value, s.getA())
+                                    dragColorSV = true
+                                    dragColorSettingRef = s
                                     return true
                                 }
 
-                                // Hue bar click
-                                val hueBarW = (sWidth - 22f - svSize).coerceAtMost(180f - svSize - 6f)
-                                if (mx >= hueBarX && mx < hueBarX + hueBarW && my >= svBoxY && my < svBoxY + hueBarH) {
-                                    val hue = ((mx - hueBarX) / hueBarW).coerceIn(0f, 1f)
-                                    val sat = s.getSaturation()
-                                    val value = s.getValue()
-                                    val alpha = s.getA()
-                                    s.set(ColorSetting.fromHSV(hue, sat, value, alpha))
-                                    dropSetting = null
+                                // Hue bar (вертикальный справа) → drag mode
+                                if (mx >= hueX && mx < hueX + hueW && my >= svBoxY && my < svBoxY + svSize) {
+                                    val hue = ((my - svBoxY) / svSize).coerceIn(0f, 1f)
+                                    s.setHSV(hue, s.getSaturation(), s.getValue(), s.getA())
+                                    dragColorHue = true
+                                    dragColorSettingRef = s
+                                    return true
+                                }
+
+                                // Alpha bar
+                                if (mx >= svBoxX && mx < svBoxX + sWidth && my >= alphaY && my < alphaY + 10f) {
+                                    val a = ((mx - svBoxX) / sWidth).coerceIn(0f, 1f)
+                                    s.setA((a * 255).toInt())
+                                    dragColorAlpha = true
+                                    dragColorSettingRef = s
                                     return true
                                 }
 
                                 // Presets
-                                val presetsY = pickerY + svSize + 4f
+                                val presetsY = pickerY + svSize + 10f + gap * 2f
                                 val relX = mx - sLeft - PAD - 8f
-                                if (relX >= 0f) {
-                                    val swatchSize = 14f
-                                    val gap = 2f
-                                    val idx = (relX / (swatchSize + gap)).toInt()
+                                if (my >= presetsY && my < presetsY + 14f && relX >= 0f) {
+                                    val swatchSize = ((sWidth / 12f) - 2f).coerceAtLeast(10f)
+                                    val pgap = 2f
+                                    val idx = (relX / (swatchSize + pgap)).toInt()
                                     val presets = intArrayOf(
                                         0xFFFF0000.toInt(), 0xFFFF8800.toInt(), 0xFFFFFF00.toInt(), 0xFF00FF00.toInt(),
                                         0xFF00FFFF.toInt(), 0xFF0000FF.toInt(), 0xFF8800FF.toInt(), 0xFFFF00FF.toInt(),
-                                        0xFFFFFFFF.toInt(), 0xFF888888.toInt(), 0xFF000000.toInt()
+                                        0xFFFFFFFF.toInt(), 0xFF888888.toInt(), 0xFF000000.toInt(), s.get()
                                     )
                                     if (idx in presets.indices) {
-                                        s.set(presets[idx])
-                                        dropSetting = null
+                                        val curA = s.getA()
+                                        s.set((curA shl 24) or (presets[idx] and 0x00FFFFFF))
                                         return true
                                     }
                                 }
@@ -795,6 +1033,11 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
     override fun mouseReleased(e: MouseButtonEvent): Boolean {
         draggingWindow = false
         dragSlider = null
+        dragColorSetting = false
+        dragColorHue = false
+        dragColorAlpha = false
+        dragColorSV = false
+        dragColorSettingRef = null
         return super.mouseReleased(e)
     }
 
@@ -805,6 +1048,38 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
             windowX = (mx - windowDragX).coerceIn(0f, width - panelW)
             windowY = (my - windowDragY).coerceIn(0f, height - panelH)
             return true
+        }
+
+        // ColorPicker drag — двигаем hue / saturation / alpha.
+        val ref = dragColorSettingRef
+        if (ref != null) {
+            val padX = 8f
+            val pickerX = if (activeTab == Tab.SETTINGS) px + PAD + padX else px + catW + modW + padX
+            val sw = if (activeTab == Tab.SETTINGS) panelW - PAD * 2 else setW - PAD - padX * 2f
+            val pickerY = pickerBoundsY
+            val svSize = 96f
+            val barH = 10f
+            val gap = 6f
+            val hueX = pickerX + svSize + gap
+            val hueW = 14f
+            val alphaY = pickerY + svSize + gap
+
+            if (dragColorSV) {
+                val sat = ((mx - pickerX) / svSize).coerceIn(0f, 1f)
+                val v = (1f - (my - pickerY) / svSize).coerceIn(0f, 1f)
+                ref.setHSV(ref.getHue(), sat, v, ref.getA())
+                return true
+            }
+            if (dragColorHue) {
+                val h = ((my - pickerY) / svSize).coerceIn(0f, 1f)
+                ref.setHSV(h, ref.getSaturation(), ref.getValue(), ref.getA())
+                return true
+            }
+            if (dragColorAlpha) {
+                val a = ((mx - pickerX) / sw.coerceAtMost(220f)).coerceIn(0f, 1f)
+                ref.setA((a * 255).toInt())
+                return true
+            }
         }
 
         val info = dragSlider ?: return super.mouseDragged(e, ddx, ddy)
@@ -861,6 +1136,24 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
     override fun removed() {}
     override fun isPauseScreen() = false
     override fun onClose() { ThemeManager.INSTANCE.saveAll(); mc.setScreen(null) }
+
+    private fun wrapText(text: String, maxWidth: Float, fontSize: Float, r: AporiaRenderer): List<String> {
+        if (text.isEmpty()) return emptyList()
+        val words = text.split(" ")
+        val lines = mutableListOf<String>()
+        var current = ""
+        for (word in words) {
+            val test = if (current.isEmpty()) word else "$current $word"
+            if (r.getTextWidth(Fonts.REGULAR, test, fontSize) > maxWidth && current.isNotEmpty()) {
+                lines.add(current)
+                current = word
+            } else {
+                current = test
+            }
+        }
+        if (current.isNotEmpty()) lines.add(current)
+        return lines
+    }
 
     data class DragInfo(val mod: Module, val si: Int)
 }

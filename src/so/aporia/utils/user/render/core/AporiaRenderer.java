@@ -1060,4 +1060,19 @@ public class AporiaRenderer {
         }
     }
 
+    /** Clears cached GPU textures for clean reconnect. Called from Minecraft.disconnect(). */
+    public static void cleanupImages() {
+        INSTANCE.imageIds.clear();
+        INSTANCE.imageTextures.values().forEach(tex -> {
+            try { tex.close(); } catch (Exception ignored) {}
+        });
+        INSTANCE.imageTextures.clear();
+        if (INSTANCE.postTempTarget != null) {
+            INSTANCE.postTempTarget.destroyBuffers();
+            INSTANCE.postTempTarget = null;
+        }
+        INSTANCE.postTempW = -1;
+        INSTANCE.postTempH = -1;
+    }
+
 }

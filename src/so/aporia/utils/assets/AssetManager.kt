@@ -58,8 +58,8 @@ object AssetManager {
             ZipInputStream(bais).use { zis ->
                 var entry: ZipEntry?
                 while (zis.nextEntry.also { entry = it } != null) {
-                    val sanitizedName = entry!!.name.replace("[\\\\/:*?\"<>|]".toRegex(), "_")
-                    val entryPath = targetDir.resolve(sanitizedName)
+                    // НЕ ТРОГАЙ ИМЯ! Оно уже нормальное!
+                    val entryPath = targetDir.resolve(entry!!.name)
 
                     if (entry!!.isDirectory) {
                         Files.createDirectories(entryPath)

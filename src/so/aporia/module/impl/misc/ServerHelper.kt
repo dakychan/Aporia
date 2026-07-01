@@ -87,24 +87,28 @@ class ServerHelper : Module("ServerHelper", Category.MISC) {
 
     private fun solveCaptcha(text: String) {
         val player = mc.player ?: return
-        var answer = -1L
-        val simpleMatcher = SIMPLE_MATH.matcher(text)
-        if (simpleMatcher.find()) {
-            try { answer = simpleMatcher.group(1).toLong() + simpleMatcher.group(2).toLong() } catch (_: Exception) { return }
-        } else {
-            val complexMatcher = COMPLEX_MATH.matcher(text)
-            if (complexMatcher.find()) {
-                try { answer = Math.round(evalExpression(complexMatcher.group(1).trim())) } catch (_: Exception) { return }
-            }
+        val index = text.indexOf("Решите:")
+        if (index == -1) return
+        val startTime = System.nanoTime()
+        var expr = text.substring(index + 7).trim()
+        val lastValidChar = expr.indexOfFirst {
+            !it.isDigit() && it != '+' && it != '-' && it != '*' && it != '/' && it != '(' && it != ')' && !it.isWhitespace()
         }
-        if (answer >= 0 && player.connection != null) {
-            player.connection.sendChat(answer.toString())
-            captchaSolvedByUs = true
-            val durationNanos = System.nanoTime() - captchaStartTime
-            mc.execute {
-                val msg = "§6Aporia.cc §f→ §a${player.name.string} решил капчу за §e${durationNanos} ns§a!"
-                player.displayClientMessage(Component.literal(msg), false)
+        if (lastValidChar != -1) {
+            expr = expr.substring(0, lastValidChar).trim()
+        }
+        try {
+            val answer = Math.round(evalExpression(expr))
+            if (player.connection != null) {
+                player.connection.sendChat(answer.toString())
+                captchaSolvedByUs = true
+                val durationNanos = System.nanoTime() - startTime
+                mc.execute {
+                    val msg = "§6Aporia.cc §f→ §a${player.name.string} решил капчу за §e${durationNanos} ns§a! (Унижен в нули)"
+                    player.displayClientMessage(Component.literal(msg), false)
+                }
             }
+        } catch (_: Exception) {
         }
     }
 

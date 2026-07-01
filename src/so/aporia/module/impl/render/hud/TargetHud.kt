@@ -34,6 +34,7 @@ object TargetHud {
         if (mc.player == null || mc.level == null) return
 
         val target = resolveTarget() ?: return
+        if (target.isDeadOrDying) return
         val blur = Beautifully.isBlurEnabled()
 
         val x = MARGIN
@@ -43,8 +44,8 @@ object TargetHud {
         else r.drawRect(x, y, W, H, RADIUS, C_BG)
 
         val name = target.name.string
-        val health = target.health + target.absorptionAmount
-        val maxHealth = target.maxHealth
+        val health = (target.health + target.absorptionAmount).coerceAtLeast(0f)
+        val maxHealth = target.maxHealth.coerceAtLeast(1f)
         val healthPct = (health / maxHealth).coerceIn(0f, 1f)
 
         val healthColor = when {

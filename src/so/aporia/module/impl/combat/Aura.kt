@@ -17,6 +17,7 @@ import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.events.impl.TickEvent
 import so.aporia.utils.imports.*
+import so.aporia.utils.user.render.ui.clickgui.QuestManager
 import so.aporia.utils.user.locale.LocaleManager
 import so.aporia.utils.user.player.rotation.RotationUtil
 import so.aporia.utils.user.player.rotation.RotationUtil.RotationMode
@@ -206,6 +207,11 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
         mc.gameMode?.attack(mc.player!!, target)
         lastAttackTime = System.currentTimeMillis()
         nextAttackDelay = getRandomDelay()
+        // Квесты: учёт убийств игроков (синхронно с атакой — параллельно с чат-детектом
+        // в QuestManager.onChat, не страшно, у квеста один счётчик).
+        if (target is Player) {
+            QuestManager.notifyKill()
+        }
     }
 
     private fun closesToValidCooldown(): Boolean {

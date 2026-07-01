@@ -159,6 +159,8 @@ public final class ConfigFile {
             return bs.isEnabled() ? "T" : "F";
         } else if (s instanceof NumberSetting ns) {
             return String.valueOf(ns.get());
+        } else if (s instanceof RangeSetting rs) {
+            return String.valueOf(rs.get());
         } else if (s instanceof TextSetting ts) {
             return "'" + ts.get().replace("'", "\\'") + "'";
         } else if (s instanceof SelectSetting ss) {
@@ -180,6 +182,10 @@ public final class ConfigFile {
         } else if (s instanceof NumberSetting ns) {
             try {
                 ns.setValue(Double.parseDouble(val));
+            } catch (NumberFormatException ignored) {}
+        } else if (s instanceof RangeSetting rs) {
+            try {
+                rs.setValue(Float.parseFloat(val));
             } catch (NumberFormatException ignored) {}
         } else if (s instanceof TextSetting ts) {
             ts.set(stripQuotes(val));

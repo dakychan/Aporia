@@ -2147,9 +2147,11 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
                 profilerfiller.pop();
             }
 
+            so.aporia.utils.user.render.core.BlurRenderer.cleanup();
+            so.aporia.utils.user.render.core.AporiaRenderer.cleanupImages();
+            so.aporia.Aporia.FONTS.clearCache();
             this.setScreenAndShow(p_457642_);
             this.isLocalServer = false;
-            so.aporia.utils.user.render.core.BlurRenderer.cleanup();
             this.level = null;
             this.updateLevelInEngines(null, p_453114_);
             this.player = null;
@@ -2179,9 +2181,11 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
         this.clientLevelTeardownInProgress = true;
 
         try {
+            so.aporia.utils.user.render.core.BlurRenderer.cleanup();
+            so.aporia.utils.user.render.core.AporiaRenderer.cleanupImages();
+            so.aporia.Aporia.FONTS.clearCache();
             this.setScreenAndShow(p_297406_);
             this.gui.onDisconnected();
-            so.aporia.utils.user.render.core.BlurRenderer.cleanup();
             this.level = null;
             this.updateLevelInEngines(null);
             this.player = null;

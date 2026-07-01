@@ -14,6 +14,7 @@ import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
 import so.aporia.module.settings.NumberSetting
+import so.aporia.module.settings.SelectSetting
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.RenderHudEvent
 import so.aporia.utils.events.impl.TickEvent
@@ -33,7 +34,9 @@ class NameTags : Module("NameTags", Category.VISUAL) {
     val showEnchants = BooleanSetting("Enchantments", "Show key enchantments", true)
     val showHealth = BooleanSetting("Health", "Show player health", true)
     val showArmor = BooleanSetting("Armor", "Show armor items", true)
-    val showItem = BooleanSetting("HandItem", "Show held item icon", true)
+    val showItem = SelectSetting("HandItem", "Show held item icons")
+        .value("Both", "Main Hand", "Off Hand", "None")
+        .selected("Both")
     val scale = NumberSetting("Scale", "Tag scale", 1.0, 0.3, 2.0, 0.1)
 
     override fun onEnable() {
@@ -119,7 +122,7 @@ class NameTags : Module("NameTags", Category.VISUAL) {
             val nbY = top + totalH - nbH - s * 4f
             r.drawRectBlurred(nbX, nbY, nameBubbleW, nbH, s * 6f, colorUtil.rgba(25, 25, 35, 200), 3f, 15)
 
-            if (showItem.isEnabled) {
+            if (showItem.isSelected("Both") || showItem.isSelected("Main Hand")) {
                 val hand = entity.mainHandItem
                 if (!hand.isEmpty) {
                     val ibW = s * 22f; val ibH = s * 22f
@@ -136,7 +139,7 @@ class NameTags : Module("NameTags", Category.VISUAL) {
 
             if (showArmor.isEnabled) renderArmorItems(gfx, entity, left, top, totalW, s)
 
-            if (showItem.isEnabled) {
+            if (showItem.isSelected("Both") || showItem.isSelected("Main Hand")) {
                 val hand = entity.mainHandItem
                 if (!hand.isEmpty) {
                     val itemBubbleW = s * 22f
@@ -239,7 +242,7 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         var w = s * 8f
         if (showHealth.isEnabled) w += s * 32f + s * 4f
         w += getCenterNameWidth(player, s)
-        if (showItem.isEnabled) {
+        if (showItem.isSelected("Both") || showItem.isSelected("Main Hand")) {
             val hand = player.mainHandItem
             if (!hand.isEmpty) w += s * 22f + s * 4f
         }

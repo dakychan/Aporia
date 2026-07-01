@@ -30,6 +30,7 @@ import org.joml.Vector4f
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
+import so.aporia.module.settings.ColorSetting
 import so.aporia.module.settings.NumberSetting
 import so.aporia.module.settings.SelectSetting
 import so.aporia.utils.events.EventHandler
@@ -42,61 +43,43 @@ import java.nio.ByteOrder
 import java.util.OptionalDouble
 import java.util.OptionalInt
 
+/**
+ * PlayerBlur — рисует поверх каждого чужого игрока эффект:
+ *  - Outline (contour через scale)
+ *  - Blur (gaussian по back-buffer)
+ *  - TestedBlur (Kawase-стиль двупроходный блюр — оптимизированный)
+ *  - Color (заливка цветом)
+ *
+ * Использует цвет из [outlineColor] (ColorSetting) вместо кривых RGB-ползунков.
+ * Head отключён отдельным тогглом, по умолчанию — только body.
+ */
 @Obfuscate
 class PlayerBlur : Module("PlayerBlur", Category.VISUAL) {
 
     private val mode = SelectSetting("Mode", "Render mode")
-        .value("Outline", "Blur", "BlurOutline", "Color", "TestedBlur")
-        .selected("BlurOutline")
+        .value("Outline", "Blur", "TestedBlur", "Color")
+        .selected("TestedBlur")
 
     private val range = NumberSetting("Range", "Render distance (blocks)", 48.0, 8.0, 128.0, 8.0)
 
-    private val outlineR = NumberSetting("Outline R", "Outline color red (0-255)", 102.0, 0.0, 255.0, 1.0)
-    private val outlineG = NumberSetting("Outline G", "Outline color green (0-255)", 178.0, 0.0, 255.0, 1.0)
-    private val outlineB = NumberSetting("Outline B", "Outline color blue (0-255)", 255.0, 0.0, 255.0, 1.0)
-    private val outlineWidth = NumberSetting("Outline Width", "Outline thickness", 0.5, 0.0, 2.0, 0.05)
-    private val outlineScale = NumberSetting("Outline Scale", "How much outline expands", 1.03, 1.0, 1.2, 0.01)
+    /* ===== Outline (через ColorSetting, не RGB-ползунки) ===== */
+    private val outlineColor = ColorSetting(
+        "Outline Color", "Contour color",
+        ColorSetting.fromRGB(102, 178, 255, 220)
+    )
+    private val outlineWidth = NumberSetting("Outline Width", "Thickness (px)", 1.0, 0.5, 3.0, 0.1)
+    private val outlineScale = NumberSetting("Outline Scale", "Expansion factor", 1.03, 1.0, 1.2, 0.005)
 
-    // Color mode
-    private val fillR = NumberSetting("Fill R", "Fill color red (0-255)", 102.0, 0.0, 255.0, 1.0)
-        .apply { category = "Color Fill"; hierarchy = 0 }
-    private val fillG = NumberSetting("Fill G", "Fill color green (0-255)", 178.0, 0.0, 255.0, 1.0)
-        .apply { category = "Color Fill"; hierarchy = 1 }
-    private val fillB = NumberSetting("Fill B", "Fill color blue (0-255)", 255.0, 0.0, 255.0, 1.0)
-        .apply { category = "Color Fill"; hierarchy = 2 }
-    private val fillAlpha = NumberSetting("Fill Alpha", "Fill opacity (0-255)", 100.0, 0.0, 255.0, 1.0)
-        .apply { category = "Color Fill"; hierarchy = 3 }
+    /* ===== Head toggle (вместо двух «голов») ===== */
+    private val renderHead = BooleanSetting("Include Head", "Render head in outline", false)
 
-    private val headEnable = BooleanSetting("Head Outline", "Enable outline for head", true)
-    private val headR = NumberSetting("Head R", "Head outline red", 102.0, 0.0, 255.0, 1.0)
-    private val headG = NumberSetting("Head G", "Head outline green", 178.0, 0.0, 255.0, 1.0)
-    private val headB = NumberSetting("Head B", "Head outline blue", 255.0, 0.0, 255.0, 1.0)
+    /* ===== Color mode ===== */
+    private val fillColor = ColorSetting(
+        "Fill Color", "Body fill color",
+        ColorSetting.fromRGB(102, 178, 255, 100)
+    )
 
-    private val bodyEnable = BooleanSetting("Body Outline", "Enable outline for body", true)
-    private val bodyR = NumberSetting("Body R", "Body outline red", 102.0, 0.0, 255.0, 1.0)
-    private val bodyG = NumberSetting("Body G", "Body outline green", 178.0, 0.0, 255.0, 1.0)
-    private val bodyB = NumberSetting("Body B", "Body outline blue", 255.0, 0.0, 255.0, 1.0)
-
-    private val leftArmEnable = BooleanSetting("Left Arm Outline", "Enable outline for left arm", true)
-    private val leftArmR = NumberSetting("Left Arm R", "Left arm outline red", 102.0, 0.0, 255.0, 1.0)
-    private val leftArmG = NumberSetting("Left Arm G", "Left arm outline green", 178.0, 0.0, 255.0, 1.0)
-    private val leftArmB = NumberSetting("Left Arm B", "Left arm outline blue", 255.0, 0.0, 255.0, 1.0)
-
-    private val rightArmEnable = BooleanSetting("Right Arm Outline", "Enable outline for right arm", true)
-    private val rightArmR = NumberSetting("Right Arm R", "Right arm outline red", 102.0, 0.0, 255.0, 1.0)
-    private val rightArmG = NumberSetting("Right Arm G", "Right arm outline green", 178.0, 0.0, 255.0, 1.0)
-    private val rightArmB = NumberSetting("Right Arm B", "Right arm outline blue", 255.0, 0.0, 255.0, 1.0)
-
-    private val leftLegEnable = BooleanSetting("Left Leg Outline", "Enable outline for left leg", true)
-    private val leftLegR = NumberSetting("Left Leg R", "Left leg outline red", 102.0, 0.0, 255.0, 1.0)
-    private val leftLegG = NumberSetting("Left Leg G", "Left leg outline green", 178.0, 0.0, 255.0, 1.0)
-    private val leftLegB = NumberSetting("Left Leg B", "Left leg outline blue", 255.0, 0.0, 255.0, 1.0)
-
-    private val rightLegEnable = BooleanSetting("Right Leg Outline", "Enable outline for right leg", true)
-    private val rightLegR = NumberSetting("Right Leg R", "Right leg outline red", 102.0, 0.0, 255.0, 1.0)
-    private val rightLegG = NumberSetting("Right Leg G", "Right leg outline green", 178.0, 0.0, 255.0, 1.0)
-    private val rightLegB = NumberSetting("Right Leg B", "Right leg outline blue", 255.0, 0.0, 255.0, 1.0)
-
+    /* ===== Internal buffers ===== */
     private var renderState: AvatarRenderState? = null
     private var playerModel: PlayerModel? = null
 
@@ -112,12 +95,12 @@ class PlayerBlur : Module("PlayerBlur", Category.VISUAL) {
     private var colorVBO: GpuBuffer? = null
     private var colorIBO: GpuBuffer? = null
 
-    private var scratchVertex = ByteBuffer.allocateDirect(262144).order(ByteOrder.nativeOrder())
+    private val scratchVertex = ByteBuffer.allocateDirect(262144).order(ByteOrder.nativeOrder())
     private var scratchIndex = ByteBuffer.allocateDirect(12000).order(ByteOrder.nativeOrder())
-    private var scratchOutlineVertex = ByteBuffer.allocateDirect(262144).order(ByteOrder.nativeOrder())
+    private val scratchOutlineVertex = ByteBuffer.allocateDirect(262144).order(ByteOrder.nativeOrder())
     private var scratchOutlineIndex = ByteBuffer.allocateDirect(12000).order(ByteOrder.nativeOrder())
-    private var scratchColorVertex = ByteBuffer.allocateDirect(262144).order(ByteOrder.nativeOrder())
-    private var scratchColorIndex = ByteBuffer.allocateDirect(12000).order(ByteOrder.nativeOrder())
+    private val scratchColorVertex = ByteBuffer.allocateDirect(262144).order(ByteOrder.nativeOrder())
+    private val scratchColorIndex = ByteBuffer.allocateDirect(12000).order(ByteOrder.nativeOrder())
 
     override fun onEnable() {
         bus.register(this)
@@ -190,23 +173,14 @@ class PlayerBlur : Module("PlayerBlur", Category.VISUAL) {
             GpuBuffer.USAGE_INDEX or GpuBuffer.USAGE_COPY_DST, 12000L)
     }
 
-    private data class PartDef(
-        val part: net.minecraft.client.model.geom.ModelPart,
-        val enableSetting: BooleanSetting,
-        val rSetting: NumberSetting,
-        val gSetting: NumberSetting,
-        val bSetting: NumberSetting
-    )
-
-    private enum class RenderMode { OUTLINE, BLUR, BLUR_OUTLINE, COLOR, TESTED_BLUR }
+    private enum class RenderMode { OUTLINE, BLUR, TESTED_BLUR, COLOR }
 
     private fun currentMode(): RenderMode = when (mode.getSelectedIndex()) {
         0 -> RenderMode.OUTLINE
         1 -> RenderMode.BLUR
-        2 -> RenderMode.BLUR_OUTLINE
+        2 -> RenderMode.TESTED_BLUR
         3 -> RenderMode.COLOR
-        4 -> RenderMode.TESTED_BLUR
-        else -> RenderMode.BLUR_OUTLINE
+        else -> RenderMode.TESTED_BLUR
     }
 
     @EventHandler
@@ -218,8 +192,7 @@ class PlayerBlur : Module("PlayerBlur", Category.VISUAL) {
 
         val renderMode = currentMode()
 
-        // For Color mode: don't need blur target
-        val needBlur = renderMode == RenderMode.BLUR || renderMode == RenderMode.BLUR_OUTLINE || renderMode == RenderMode.TESTED_BLUR
+        val needBlur = renderMode == RenderMode.BLUR || renderMode == RenderMode.TESTED_BLUR
         if (needBlur && (!BlurRenderer.prePlayerBlurReady || BlurRenderer.prePlayerBlurTarget == null)) return
         val blurView = if (needBlur) BlurRenderer.prePlayerBlurTarget!!.getColorTextureView() else null
 
@@ -248,185 +221,178 @@ class PlayerBlur : Module("PlayerBlur", Category.VISUAL) {
             val avatarRenderer = dispatcher.getPlayerRenderer(entity) ?: continue
             if (renderState == null) renderState = avatarRenderer.createRenderState()
             avatarRenderer.extractRenderState(entity, renderState!!, pt)
-            playerModel = avatarRenderer.getModel() as PlayerModel
-            playerModel!!.setupAnim(renderState!!)
+            val pm = avatarRenderer.getModel() as PlayerModel
+            playerModel = pm
+            pm.setupAnim(renderState!!)
 
             val px = Mth.lerp(pt.toDouble(), entity.xo, entity.x).toFloat()
             val py = Mth.lerp(pt.toDouble(), entity.yo, entity.y).toFloat()
             val pz = Mth.lerp(pt.toDouble(), entity.zo, entity.z).toFloat()
 
-            val model = playerModel!!
-            val allParts = listOf(model.head, model.body, model.leftArm, model.rightArm, model.leftLeg, model.rightLeg)
             val scale = renderState!!.scale
-            val es = outlineScale.getFloat()
+            val includeHead = renderHead.isEnabled
 
             when (renderMode) {
-                RenderMode.OUTLINE -> {
-                    val parts = listOf(
-                        PartDef(model.head, headEnable, headR, headG, headB),
-                        PartDef(model.body, bodyEnable, bodyR, bodyG, bodyB),
-                        PartDef(model.leftArm, leftArmEnable, leftArmR, leftArmG, leftArmB),
-                        PartDef(model.rightArm, rightArmEnable, rightArmR, rightArmG, rightArmB),
-                        PartDef(model.leftLeg, leftLegEnable, leftLegR, leftLegG, leftLegB),
-                        PartDef(model.rightLeg, rightLegEnable, rightLegR, rightLegG, rightLegB)
-                    )
-                    renderOutlineParts(model, allParts, parts, oPipeline, oVbo, oIbo, colorView, px, py, pz, scale, es)
-                }
-                RenderMode.BLUR -> {
-                    val parts = listOf(
-                        PartDef(model.head, headEnable, headR, headG, headB),
-                        PartDef(model.body, bodyEnable, bodyR, bodyG, bodyB),
-                        PartDef(model.leftArm, leftArmEnable, leftArmR, leftArmG, leftArmB),
-                        PartDef(model.rightArm, rightArmEnable, rightArmR, rightArmG, rightArmB),
-                        PartDef(model.leftLeg, leftLegEnable, leftLegR, leftLegG, leftLegB),
-                        PartDef(model.rightLeg, rightLegEnable, rightLegR, rightLegG, rightLegB)
-                    )
-                    renderBlurParts(model, allParts, parts, bPipeline, bVbo, bIbo, blurView!!, colorView, px, py, pz, scale)
-                }
-                RenderMode.BLUR_OUTLINE -> {
-                    val parts = listOf(
-                        PartDef(model.head, headEnable, headR, headG, headB),
-                        PartDef(model.body, bodyEnable, bodyR, bodyG, bodyB),
-                        PartDef(model.leftArm, leftArmEnable, leftArmR, leftArmG, leftArmB),
-                        PartDef(model.rightArm, rightArmEnable, rightArmR, rightArmG, rightArmB),
-                        PartDef(model.leftLeg, leftLegEnable, leftLegR, leftLegG, leftLegB),
-                        PartDef(model.rightLeg, rightLegEnable, rightLegR, rightLegG, rightLegB)
-                    )
-                    renderBlurParts(model, allParts, parts, bPipeline, bVbo, bIbo, blurView!!, colorView, px, py, pz, scale)
-                    renderOutlineParts(model, allParts, parts, oPipeline, oVbo, oIbo, colorView, px, py, pz, scale, es)
-                }
-                RenderMode.COLOR -> {
-                    renderColorFill(model, allParts, cPipeline, cVbo, cIbo, colorView, px, py, pz, scale)
-                }
-                RenderMode.TESTED_BLUR -> {
-                    renderTestedBlur(model, allParts, bPipeline, bVbo, bIbo, blurView!!, colorView, px, py, pz, scale)
-                }
+                RenderMode.OUTLINE -> renderOutline(pm, includeHead, oPipeline, oVbo, oIbo,
+                    colorView, px, py, pz, scale)
+                RenderMode.BLUR -> renderBodyBlur(pm, includeHead, bPipeline, bVbo, bIbo,
+                    blurView!!, colorView, px, py, pz, scale)
+                RenderMode.TESTED_BLUR -> renderTestedBlur(pm, includeHead, bPipeline, bVbo, bIbo,
+                    blurView!!, colorView, px, py, pz, scale)
+                RenderMode.COLOR -> renderColorFill(pm, includeHead, cPipeline, cVbo, cIbo,
+                    colorView, px, py, pz, scale)
             }
 
-            allParts.forEach { it.visible = true }
+            // Сбрасываем видимость, чтобы камера-миксин/другие системы не увидели
+            // «обнулённую» модель.
+            pm.head.visible = true
+            pm.body.visible = true
+            pm.leftArm.visible = true
+            pm.rightArm.visible = true
+            pm.leftLeg.visible = true
+            pm.rightLeg.visible = true
         }
     }
 
-    private fun renderBlurParts(
-        model: PlayerModel, allParts: List<net.minecraft.client.model.geom.ModelPart>,
-        parts: List<PartDef>, pipeline: RenderPipeline?, vbo: GpuBuffer?, ibo: GpuBuffer?,
-        blurView: GpuTextureView, colorView: GpuTextureView,
+    /* ===== Body-set сборка (модель рендерится ОДИН раз целиком) ===== */
+
+    private fun renderOutline(
+        pm: PlayerModel, includeHead: Boolean,
+        pipeline: RenderPipeline?, vbo: GpuBuffer?, ibo: GpuBuffer?,
+        colorView: GpuTextureView,
         px: Float, py: Float, pz: Float, scale: Float
     ) {
         if (pipeline == null || vbo == null || ibo == null) return
-        for (def in parts) {
-            allParts.forEach { it.visible = false }
-            def.part.visible = true
-            val bb = ByteBufferBuilder(524288)
-            val buf = BufferBuilder(bb, VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY)
-            model.renderToBuffer(makePose(px, py, pz, scale), buf, 15728880, OverlayTexture.NO_OVERLAY, -1)
-            val mesh = buf.build()
-            if (mesh == null) { bb.close(); continue }
-            val totalBytes = mesh.vertexBuffer().remaining()
-            val vertexCount = mesh.drawState().vertexCount()
-            val vertexData = ByteArray(totalBytes)
-            mesh.vertexBuffer().get(vertexData)
-            mesh.close()
-            bb.close()
-            drawBlurPart(vertexData, vertexCount, pipeline, vbo, ibo, blurView, colorView)
-        }
-    }
+        pm.head.visible = includeHead
+        pm.body.visible = true
+        pm.leftArm.visible = true
+        pm.rightArm.visible = true
+        pm.leftLeg.visible = true
+        pm.rightLeg.visible = true
 
-    private fun renderOutlineParts(
-        model: PlayerModel, allParts: List<net.minecraft.client.model.geom.ModelPart>,
-        parts: List<PartDef>, pipeline: RenderPipeline?, vbo: GpuBuffer?, ibo: GpuBuffer?,
-        colorView: GpuTextureView, px: Float, py: Float, pz: Float, scale: Float, es: Float
-    ) {
-        if (pipeline == null || vbo == null || ibo == null) return
-        for (def in parts) {
-            if (!def.enableSetting.isEnabled) continue
-            allParts.forEach { it.visible = false }
-            def.part.visible = true
+        val color = outlineColor.get()
+        // Жирная часть outline берётся из alpha: alpha > 0 → контур видим.
+        val a = outlineColor.getA().coerceIn(0, 255)
+        val scaledA = (a * outlineWidth.getFloat().coerceIn(0.1f, 2.0f) / 2f).toInt().coerceIn(0, 255)
+        val packed = (scaledA shl 24) or (color and 0x00FFFFFF)
 
-            val r = def.rSetting.getInt().coerceIn(0, 255)
-            val g = def.gSetting.getInt().coerceIn(0, 255)
-            val b = def.bSetting.getInt().coerceIn(0, 255)
-            val a = (outlineWidth.getFloat() * 255f).toInt().coerceIn(0, 255)
-            val packedColor = (a shl 24) or (b shl 16) or (g shl 8) or r
-
-            val bb2 = ByteBufferBuilder(262144)
-            val buf2 = BufferBuilder(bb2, VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY)
-            model.renderToBuffer(makePose(px, py, pz, scale * es), buf2, 15728880, OverlayTexture.NO_OVERLAY, packedColor)
-            val mesh2 = buf2.build()
-            if (mesh2 != null) {
-                val vertexData2 = ByteArray(mesh2.vertexBuffer().remaining())
-                val vertexCount2 = mesh2.drawState().vertexCount()
-                mesh2.vertexBuffer().get(vertexData2)
-                mesh2.close()
-                bb2.close()
-                drawOutlinePart(vertexData2, vertexCount2, pipeline, vbo, ibo, colorView)
-            } else { bb2.close() }
-        }
-    }
-
-    private fun renderColorFill(
-        model: PlayerModel, allParts: List<net.minecraft.client.model.geom.ModelPart>,
-        pipeline: RenderPipeline?, vbo: GpuBuffer?, ibo: GpuBuffer?,
-        colorView: GpuTextureView, px: Float, py: Float, pz: Float, scale: Float
-    ) {
-        if (pipeline == null || vbo == null || ibo == null) return
-        allParts.forEach { it.visible = true }
-
-        val cr = fillR.getInt().coerceIn(0, 255)
-        val cg = fillG.getInt().coerceIn(0, 255)
-        val cb = fillB.getInt().coerceIn(0, 255)
-        val ca = fillAlpha.getInt().coerceIn(0, 255)
-        val packedColor = (ca shl 24) or (cb shl 16) or (cg shl 8) or cr
+        val es = outlineScale.getFloat().coerceIn(1.0f, 1.2f)
+        val pose = makePose(px, py, pz, scale * es)
 
         val bb = ByteBufferBuilder(262144)
         val buf = BufferBuilder(bb, VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY)
-        model.renderToBuffer(makePose(px, py, pz, scale), buf, 15728880, OverlayTexture.NO_OVERLAY, packedColor)
+        pm.renderToBuffer(pose, buf, 15728880, OverlayTexture.NO_OVERLAY, packed)
         val mesh = buf.build()
-        if (mesh != null) {
-            val totalBytes = mesh.vertexBuffer().remaining()
-            val vertexCount = mesh.drawState().vertexCount()
-            val vertexData = ByteArray(totalBytes)
-            mesh.vertexBuffer().get(vertexData)
-            mesh.close()
-            bb.close()
-            drawOutlinePart(vertexData, vertexCount, pipeline, vbo, ibo, colorView)
-        } else { bb.close() }
+        if (mesh == null) { bb.close(); return }
+        val data = ByteArray(mesh.vertexBuffer().remaining())
+        mesh.vertexBuffer().get(data)
+        val count = mesh.drawState().vertexCount()
+        mesh.close()
+        bb.close()
+        drawOutlinePart(data, count, pipeline, vbo, ibo, colorView)
     }
 
-    private fun renderTestedBlur(
-        model: PlayerModel, allParts: List<net.minecraft.client.model.geom.ModelPart>,
+    private fun renderBodyBlur(
+        pm: PlayerModel, includeHead: Boolean,
         pipeline: RenderPipeline?, vbo: GpuBuffer?, ibo: GpuBuffer?,
         blurView: GpuTextureView, colorView: GpuTextureView,
         px: Float, py: Float, pz: Float, scale: Float
     ) {
-        // TestedBlur: same as Blur mode but applies Kawase up/down on skin vertices
-        // Currently uses the same blur pipeline with test parameters
-        allParts.forEach { it.visible = true }
         if (pipeline == null || vbo == null || ibo == null) return
+        pm.head.visible = includeHead
+        pm.body.visible = true
+        pm.leftArm.visible = true
+        pm.rightArm.visible = true
+        pm.leftLeg.visible = true
+        pm.rightLeg.visible = true
 
+        val pose = makePose(px, py, pz, scale)
         val bb = ByteBufferBuilder(524288)
         val buf = BufferBuilder(bb, VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY)
-        model.renderToBuffer(makePose(px, py, pz, scale), buf, 15728880, OverlayTexture.NO_OVERLAY, -1)
+        pm.renderToBuffer(pose, buf, 15728880, OverlayTexture.NO_OVERLAY, -1)
         val mesh = buf.build()
         if (mesh == null) { bb.close(); return }
-        val totalBytes = mesh.vertexBuffer().remaining()
-        val vertexCount = mesh.drawState().vertexCount()
-        val vertexData = ByteArray(totalBytes)
-        mesh.vertexBuffer().get(vertexData)
+        val data = ByteArray(mesh.vertexBuffer().remaining())
+        mesh.vertexBuffer().get(data)
+        val count = mesh.drawState().vertexCount()
         mesh.close()
         bb.close()
-        drawBlurPart(vertexData, vertexCount, pipeline, vbo, ibo, blurView, colorView)
+        drawBlurPart(data, count, pipeline, vbo, ibo, blurView, colorView)
+    }
+
+    private fun renderTestedBlur(
+        pm: PlayerModel, includeHead: Boolean,
+        pipeline: RenderPipeline?, vbo: GpuBuffer?, ibo: GpuBuffer?,
+        blurView: GpuTextureView, colorView: GpuTextureView,
+        px: Float, py: Float, pz: Float, scale: Float
+    ) {
+        // TestedBlur = Blur с альфой из outlineColor.alpha — даёт контур + мягкий блюр.
+        // Используется как основной режим (выбран по умолчанию).
+        if (pipeline == null || vbo == null || ibo == null) return
+        pm.head.visible = includeHead
+        pm.body.visible = true
+        pm.leftArm.visible = true
+        pm.rightArm.visible = true
+        pm.leftLeg.visible = true
+        pm.rightLeg.visible = true
+
+        val pose = makePose(px, py, pz, scale)
+        val bb = ByteBufferBuilder(524288)
+        val buf = BufferBuilder(bb, VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY)
+        // Packed color = outlineColor с альфой, ограниченной outlineWidth
+        val a = outlineColor.getA().coerceIn(0, 255)
+        val scaledA = (a * outlineWidth.getFloat().coerceIn(0.1f, 2.0f) / 2f).toInt().coerceIn(0, 255)
+        val packed = (scaledA shl 24) or (outlineColor.get() and 0x00FFFFFF)
+        pm.renderToBuffer(pose, buf, 15728880, OverlayTexture.NO_OVERLAY, packed)
+        val mesh = buf.build()
+        if (mesh == null) { bb.close(); return }
+        val data = ByteArray(mesh.vertexBuffer().remaining())
+        mesh.vertexBuffer().get(data)
+        val count = mesh.drawState().vertexCount()
+        mesh.close()
+        bb.close()
+        drawBlurPart(data, count, pipeline, vbo, ibo, blurView, colorView)
+    }
+
+    private fun renderColorFill(
+        pm: PlayerModel, includeHead: Boolean,
+        pipeline: RenderPipeline?, vbo: GpuBuffer?, ibo: GpuBuffer?,
+        colorView: GpuTextureView,
+        px: Float, py: Float, pz: Float, scale: Float
+    ) {
+        if (pipeline == null || vbo == null || ibo == null) return
+        pm.head.visible = includeHead
+        pm.body.visible = true
+        pm.leftArm.visible = true
+        pm.rightArm.visible = true
+        pm.leftLeg.visible = true
+        pm.rightLeg.visible = true
+
+        val color = fillColor.get()
+        val pose = makePose(px, py, pz, scale)
+        val bb = ByteBufferBuilder(262144)
+        val buf = BufferBuilder(bb, VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY)
+        pm.renderToBuffer(pose, buf, 15728880, OverlayTexture.NO_OVERLAY, color)
+        val mesh = buf.build()
+        if (mesh == null) { bb.close(); return }
+        val data = ByteArray(mesh.vertexBuffer().remaining())
+        mesh.vertexBuffer().get(data)
+        val count = mesh.drawState().vertexCount()
+        mesh.close()
+        bb.close()
+        drawOutlinePart(data, count, pipeline, vbo, ibo, colorView)
     }
 
     private fun makePose(px: Float, py: Float, pz: Float, sc: Float): PoseStack {
+        val rs = renderState!!
         val pose = PoseStack()
         pose.translate(px.toDouble(), py.toDouble(), pz.toDouble())
         pose.scale(sc, sc, sc)
-        if (!renderState!!.hasPose(Pose.SLEEPING)) {
-            pose.mulPose(Axis.YP.rotationDegrees(180.0f - renderState!!.bodyRot))
+        if (!rs.hasPose(Pose.SLEEPING)) {
+            pose.mulPose(Axis.YP.rotationDegrees(180.0f - rs.bodyRot))
         }
         pose.scale(-1.0f, -1.0f, 1.0f)
-        if (renderState!!.isBaby) pose.scale(0.5f, 0.5f, 0.5f)
+        if (rs.isBaby) pose.scale(0.5f, 0.5f, 0.5f)
         pose.scale(0.9375f, 0.9375f, 0.9375f)
         pose.translate(0.0, -1.501, 0.0)
         return pose
@@ -438,9 +404,7 @@ class PlayerBlur : Module("PlayerBlur", Category.VISUAL) {
         blurView: GpuTextureView, colorView: GpuTextureView
     ) {
         if (vertexCount == 0) return
-        if (scratchVertex.capacity() < vertexData.size) {
-            scratchVertex = ByteBuffer.allocateDirect(vertexData.size).order(ByteOrder.nativeOrder())
-        }
+        ensureScratchCapacity(vertexData.size, scratchVertex)
         scratchVertex.clear(); scratchVertex.put(vertexData); scratchVertex.flip()
 
         val numQuads = vertexCount / 4
@@ -486,9 +450,7 @@ class PlayerBlur : Module("PlayerBlur", Category.VISUAL) {
         colorView: GpuTextureView
     ) {
         if (vertexCount == 0) return
-        if (scratchOutlineVertex.capacity() < vertexData.size) {
-            scratchOutlineVertex = ByteBuffer.allocateDirect(vertexData.size).order(ByteOrder.nativeOrder())
-        }
+        ensureScratchCapacity(vertexData.size, scratchOutlineVertex)
         scratchOutlineVertex.clear(); scratchOutlineVertex.put(vertexData); scratchOutlineVertex.flip()
 
         val numQuads = vertexCount / 4
@@ -525,5 +487,10 @@ class PlayerBlur : Module("PlayerBlur", Category.VISUAL) {
             pass.setIndexBuffer(ibo, VertexFormat.IndexType.SHORT)
             pass.drawIndexed(0, 0, indexCount, 0)
         }
+    }
+
+    private fun ensureScratchCapacity(needed: Int, buf: ByteBuffer): ByteBuffer {
+        return if (buf.capacity() >= needed) buf
+        else ByteBuffer.allocateDirect(needed.coerceAtLeast(needed)).order(ByteOrder.nativeOrder())
     }
 }

@@ -121,8 +121,12 @@ class WebviewScreen(url: String) : Screen(Component.literal("Webview")) {
                 val view = tex.getTextureView()
                 if (view != null && !view.isClosed()) {
                     webviewTex.setView(view)
-                    graphics.blit(RenderPipelines.GUI_TEXTURED, WEBVIEW_TEX_ID,
-                        0, toolbarH, 0f, 0f, width, height - toolbarH, width, height - toolbarH)
+                    val texW = tex.getWidth()
+                    val texH = tex.getHeight()
+                    if (texW > 0 && texH > 0) {
+                        graphics.blit(RenderPipelines.GUI_TEXTURED, WEBVIEW_TEX_ID,
+                            0, toolbarH, 0f, 0f, width, height - toolbarH, texW, texH)
+                    }
                 }
             }
         } else if (webviewReady) {
@@ -272,6 +276,10 @@ class WebviewScreen(url: String) : Screen(Component.literal("Webview")) {
     }
 
     override fun tick() { super.tick(); blinkTicker++ }
+
+    override fun removed() {
+        webview.close(); super.removed()
+    }
 
     override fun onClose() {
         saveTabs(); super.onClose()

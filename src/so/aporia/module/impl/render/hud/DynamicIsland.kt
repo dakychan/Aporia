@@ -9,6 +9,8 @@ import org.lwjgl.opengl.GL11
 import so.aporia.module.ModuleManager
 import so.aporia.module.impl.misc.DiscordRPCModule
 import so.aporia.module.impl.render.Beautifully
+import so.aporia.utils.events.EventHandler
+import so.aporia.utils.events.impl.TickEvent
 import so.aporia.utils.user.render.animation.TypeAnim
 import so.aporia.utils.user.render.core.AporiaRenderer
 import java.io.ByteArrayInputStream
@@ -19,7 +21,7 @@ import kotlin.math.min
 
 object DynamicIsland {
 
-    enum class State { IDLE, MEDIA, CONTROLS }
+    enum class State { IDLE, MEDIA, BOSSBAR }
     enum class Mode { AUTO, LOGO, AVATAR, SKIN }
 
     private var state = State.IDLE
@@ -49,13 +51,43 @@ object DynamicIsland {
     private var hoverNext = false
     private var pillRect = floatArrayOf(0f, 0f, 0f, 0f)
 
+    private const val STATIC_PILL_W = 100f
+    private const val PILL_H = 20f
+    private const val PILL_RADIUS = 10f
+
+    private var bossbarTitle: String? = null
+    private var bossbarProgress = 0f
+    private val bossbarTypeAnim = TypeAnim(60, 120)
+
+    init {
+        bus.register(this)
+    }
+
+    @EventHandler
+    fun onTick(e: TickEvent) {
+        if (mc.player == null) return
+        bossbarTitle = null
+        try {
+            val overlay = mc.gui?.bossOverlay ?: return
+            val eventsField = overlay.javaClass.getDeclaredField("events")
+            eventsField.isAccessible = true
+            @Suppress("UNCHECKED_CAST")
+            val events = eventsField.get(overlay) as? Map<*, *> ?: return
+            val bb = events.values.firstOrNull() ?: return
+            bossbarTitle = bb.javaClass.getMethod("getName").invoke(bb)?.toString()
+            bossbarProgress = bb.javaClass.getMethod("getProgress").invoke(bb) as? Float ?: 0f
+        } catch (_: Exception) {
+            bossbarTitle = null
+        }
+    }
+
     @JvmStatic
     fun render(r: AporiaRenderer, mode: Mode) {
         if (mc.player == null) return
 
         val blur = Beautifully.isBlurEnabled()
         val sw = mc.window.guiScaledWidth.toFloat()
-        val name = locale.get("watermark.name")
+        val name = locale.get("watermark.name") ?: "Aporia.cc"
         val time = aporia.cc.OsManager.getTimeFormatted("HH:mm")
         val mx = mc.mouseHandler.getScaledXPos(mc.window).toFloat()
         val my = mc.mouseHandler.getScaledYPos(mc.window).toFloat()
@@ -63,12 +95,13 @@ object DynamicIsland {
 
         startPolling()
         mediaPresent = bgTitle != null
+        val hasBossbar = bossbarTitle != null
 
         prevState = state
         state = when {
-            !mediaPresent -> State.IDLE
-            mx >= pillRect[0] && mx < pillRect[0] + pillRect[2] && my >= pillRect[1] && my < pillRect[1] + pillRect[3] -> State.CONTROLS
-            else -> State.MEDIA
+            mediaPresent -> State.MEDIA
+            hasBossbar -> State.BOSSBAR
+            else -> State.IDLE
         }
         animProgress = when {
             state == prevState && animProgress < 1f -> (animProgress + 0.08f).coerceAtMost(1f)
@@ -76,80 +109,75 @@ object DynamicIsland {
             else -> animProgress
         }
 
-        val wTime = r.getTextWidth("regular", time, 9f) + 12
-        val baseW = 100f
-        val wMedia = if (mediaPresent) min(r.getTextWidth("regular", bgTitle ?: "", 9f), 130f) else 0f
-        val mediaW = if (mediaPresent) 18f + wMedia else 0f
-        val controlsW = 44f
-        val wTarget = when (state) {
-            State.IDLE -> baseW
-            State.MEDIA -> baseW + mediaW
-            State.CONTROLS -> baseW + mediaW + controlsW
-        }
-        val pillW = (baseW + ((wTarget - baseW) * animProgress)).toInt().coerceAtLeast(1)
+        val pillW = STATIC_PILL_W
         val cx = (sw - pillW) / 2f
-        val bgColor = if (state == State.CONTROLS) colorUtil.rgba(30, 40, 50, 240) else colorUtil.rgba(12, 18, 22, 220)
-        val radius = 10f
-        pillRect = floatArrayOf(cx, y, pillW.toFloat(), 20f)
+        val bgColor = when (state) {
+            State.MEDIA -> colorUtil.rgba(12, 18, 22, 220)
+            State.BOSSBAR -> colorUtil.rgba(20, 28, 38, 220)
+            State.IDLE -> colorUtil.rgba(12, 18, 22, 220)
+        }
+        pillRect = floatArrayOf(cx, y, pillW, PILL_H)
 
+        val wTime = r.getTextWidth("regular", time, 9f) + 12
         val lx = cx - 4 - wTime
-        if (blur) r.drawRectBlurred(lx, y, wTime, 20f, radius, colorUtil.rgba(12, 18, 22, 220))
-        else r.drawRect(lx, y, wTime, 20f, radius, colorUtil.rgba(12, 18, 22, 220))
+        if (blur) r.drawRectBlurred(lx, y, wTime, PILL_H, PILL_RADIUS, colorUtil.rgba(12, 18, 22, 220))
+        else r.drawRect(lx, y, wTime, PILL_H, PILL_RADIUS, colorUtil.rgba(12, 18, 22, 220))
         r.drawText("regular", time, lx + 6, y + 5.5f, 9f, colorUtil.rgba(180, 180, 180, 255))
 
-        if (blur) r.drawRectBlurred(cx, y, pillW.toFloat(), 20f, radius, bgColor)
-        else r.drawRect(cx, y, pillW.toFloat(), 20f, radius, bgColor)
+        if (blur) r.drawRectBlurred(cx, y, pillW, PILL_H, PILL_RADIUS, bgColor)
+        else r.drawRect(cx, y, pillW, PILL_H, PILL_RADIUS, bgColor)
 
         val ax = cx + 6
         val ay = y + 3f
         renderAvatar(r, ax, ay, 14, mc, mode, blur)
 
         var textX = ax + 18f
-        r.drawText("bold", name, textX, y + 5.5f, 9f, colorUtil.rgba(255, 255, 255, 255))
-        textX += r.getTextWidth("bold", name, 9f) + 4
 
-        if (mediaPresent) {
-            updateArtTexture()
-            if (mArtId != null) {
-                r.drawImage(textX, y + 3f, 14f, 14f, mArtId!!, 7f)
-            } else {
-                r.drawRect(textX, y + 3f, 14f, 14f, 7f, colorUtil.rgba(180, 180, 180, 255))
+        when (state) {
+            State.IDLE -> {
+                r.drawText("bold", name, textX, y + 5.5f, 9f, colorUtil.rgba(255, 255, 255, 255))
             }
-            textX += 18f
+            State.MEDIA -> {
+                updateArtTexture()
+                if (mArtId != null) {
+                    r.drawImage(textX, y + 3f, 14f, 14f, mArtId!!, 7f)
+                } else {
+                    r.drawRect(textX, y + 3f, 14f, 14f, 7f, colorUtil.rgba(180, 180, 180, 255))
+                }
+                textX += 18f
 
-            val title = bgTitle ?: ""
-            if (title != prevAnimTitle) { typeAnim.setTarget(title); prevAnimTitle = title }
-            val display = typeAnim.update()
-            val typing = typeAnim.isRunning()
+                val title = bgTitle ?: ""
+                if (title != prevAnimTitle) { typeAnim.setTarget(title); prevAnimTitle = title }
+                val display = typeAnim.update()
+                val typing = typeAnim.isRunning()
 
-            if (typing) {
-                r.drawText("regular", display, textX, y + 5.5f, 9f, colorUtil.rgba(180, 180, 180, 255))
-            } else {
-                val fullW = r.getTextWidth("regular", title, 9f)
-                val visibleW = (cx + pillW - 6 - textX).coerceAtLeast(0f)
-                var titleX = textX
-                if (fullW > visibleW) {
-                    if (title != marqueeTitle) { marqueeTitle = title; marqueeStart = System.currentTimeMillis() }
-                    val now = System.currentTimeMillis()
-                    val scrollDist = fullW - visibleW + 8f
-                    val scrollMs = (scrollDist / 22f * 1000f).toLong()
-                    val pauseMs = 1500L; val cycleMs = pauseMs * 2 + scrollMs * 2
-                    val phase = (now - marqueeStart) % cycleMs
-                    titleX -= when {
-                        phase < pauseMs -> 0f
-                        phase < pauseMs + scrollMs -> (phase - pauseMs).toFloat() / scrollMs * scrollDist
-                        phase < pauseMs * 2 + scrollMs -> scrollDist
-                        else -> scrollDist - (phase - pauseMs * 2 - scrollMs).toFloat() / scrollMs * scrollDist
-                    }
-                    scissorClip(mc, textX, y, visibleW, 20f) {
+                if (typing) {
+                    r.drawText("regular", display, textX, y + 5.5f, 9f, colorUtil.rgba(180, 180, 180, 255))
+                } else {
+                    val fullW = r.getTextWidth("regular", title, 9f)
+                    val visibleW = (cx + pillW - 6 - textX).coerceAtLeast(0f)
+                    var titleX = textX
+                    if (fullW > visibleW) {
+                        if (title != marqueeTitle) { marqueeTitle = title; marqueeStart = System.currentTimeMillis() }
+                        val now = System.currentTimeMillis()
+                        val scrollDist = fullW - visibleW + 8f
+                        val scrollMs = (scrollDist / 22f * 1000f).toLong()
+                        val pauseMs = 1500L; val cycleMs = pauseMs * 2 + scrollMs * 2
+                        val phase = (now - marqueeStart) % cycleMs
+                        titleX -= when {
+                            phase < pauseMs -> 0f
+                            phase < pauseMs + scrollMs -> (phase - pauseMs).toFloat() / scrollMs * scrollDist
+                            phase < pauseMs * 2 + scrollMs -> scrollDist
+                            else -> scrollDist - (phase - pauseMs * 2 - scrollMs).toFloat() / scrollMs * scrollDist
+                        }
+                        scissorClip(mc, textX, y, visibleW, PILL_H) {
+                            r.drawText("regular", title, titleX, y + 5.5f, 9f, colorUtil.rgba(180, 180, 180, 255))
+                        }
+                    } else {
                         r.drawText("regular", title, titleX, y + 5.5f, 9f, colorUtil.rgba(180, 180, 180, 255))
                     }
-                } else {
-                    r.drawText("regular", title, titleX, y + 5.5f, 9f, colorUtil.rgba(180, 180, 180, 255))
                 }
-            }
 
-            if (state == State.CONTROLS) {
                 val ctrlX = cx + pillW - 50f
                 val ctrlY = y + 6f
                 val prevX = ctrlX; val playX = ctrlX + 18f; val nextX = ctrlX + 36f
@@ -167,12 +195,50 @@ object DynamicIsland {
                 }
                 r.drawTriangle(nextX, ctrlY, nextX + 8f, ctrlY + 4f, nextX, ctrlY + 8f, if (hoverNext) -1 else colorUtil.rgba(180, 180, 180, 255))
             }
+            State.BOSSBAR -> {
+                val bbTitle = bossbarTitle ?: ""
+                if (bbTitle != prevAnimTitle) { bossbarTypeAnim.setTarget(bbTitle); prevAnimTitle = bbTitle }
+                val display = bossbarTypeAnim.update()
+                val typing = bossbarTypeAnim.isRunning()
+
+                val fullW = r.getTextWidth("regular", display, 9f)
+                val visibleW = (cx + pillW - 6 - textX).coerceAtLeast(0f)
+                var titleX = textX
+
+                if (typing) {
+                    r.drawText("regular", display, textX, y + 5.5f, 9f, colorUtil.rgba(200, 180, 100, 255))
+                } else if (fullW > visibleW) {
+                    if (bbTitle != marqueeTitle) { marqueeTitle = bbTitle; marqueeStart = System.currentTimeMillis() }
+                    val now = System.currentTimeMillis()
+                    val scrollDist = fullW - visibleW + 8f
+                    val scrollMs = (scrollDist / 22f * 1000f).toLong()
+                    val pauseMs = 1500L; val cycleMs = pauseMs * 2 + scrollMs * 2
+                    val phase = (now - marqueeStart) % cycleMs
+                    titleX -= when {
+                        phase < pauseMs -> 0f
+                        phase < pauseMs + scrollMs -> (phase - pauseMs).toFloat() / scrollMs * scrollDist
+                        phase < pauseMs * 2 + scrollMs -> scrollDist
+                        else -> scrollDist - (phase - pauseMs * 2 - scrollMs).toFloat() / scrollMs * scrollDist
+                    }
+                    scissorClip(mc, textX, y, visibleW, PILL_H) {
+                        r.drawText("regular", bbTitle, titleX, y + 5.5f, 9f, colorUtil.rgba(200, 180, 100, 255))
+                    }
+                } else {
+                    r.drawText("regular", bbTitle, textX, y + 5.5f, 9f, colorUtil.rgba(200, 180, 100, 255))
+                }
+
+                val barX = cx + 6f
+                val barY = y + PILL_H - 5f
+                val barW = pillW - 12f
+                r.drawRect(barX, barY, barW, 2f, 1f, colorUtil.rgba(255, 255, 255, 30))
+                r.drawRect(barX, barY, barW * bossbarProgress, 2f, 1f, colorUtil.rgba(200, 180, 100, 255))
+            }
         }
     }
 
     @JvmStatic
     fun handleMediaClick(x: Double, y: Double, button: Int): Boolean {
-        if (!mediaPresent || state != State.CONTROLS) return false
+        if (state != State.MEDIA) return false
         val cx = pillRect[0]; val cy = pillRect[1]; val cw = pillRect[2]
         val ctrlX = cx + cw - 50f
         val ctrlY = cy + 6f

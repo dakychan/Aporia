@@ -14,6 +14,7 @@ import so.aporia.utils.events.impl.TickEvent
 import net.minecraft.client.Minecraft
 import so.aporia.utils.imports.*
 import so.aporia.utils.user.player.inventory.InventoryUtil
+import so.aporia.utils.user.render.ui.clickgui.QuestManager
 
 @Obfuscate
 class AutoGapple : Module("AutoGapple", Category.COMBAT) {
@@ -125,6 +126,8 @@ class AutoGapple : Module("AutoGapple", Category.COMBAT) {
             hasEaten = true
             eatQueued = false
             waitTicks = 0
+            // Квест: учёт поедания еды (золотое яблоко).
+            QuestManager.notifyAte()
         }
     }
 }

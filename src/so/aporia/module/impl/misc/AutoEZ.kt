@@ -9,6 +9,7 @@ import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.ChatMessageEvent
 import so.aporia.utils.events.impl.PlayerDeathEvent
 import so.aporia.utils.events.impl.TickEvent
+import so.aporia.utils.user.render.ui.clickgui.QuestManager
 import java.util.regex.Pattern
 
 @Obfuscate
@@ -73,7 +74,10 @@ class AutoEZ : Module("AutoEZ", Category.MISC) {
     private fun sendEz(target: String) {
         val player = mc.player ?: return
         val msg = message.get().replace("{player}", target)
-        player.connection?.sendChat(if (msg.isEmpty()) "ez" else msg)
+        val text = if (msg.isEmpty()) "ez" else msg
+        player.connection?.sendChat(text)
+        // Квест: учёт отправленного сообщения.
+        QuestManager.notifyChatSent()
     }
 
     companion object {

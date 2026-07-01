@@ -10,6 +10,7 @@ import so.aporia.module.impl.render.Hud
 import so.aporia.utils.events.impl.RenderHudEvent
 import so.aporia.utils.user.input.KeybindManager
 import so.aporia.utils.user.friend.FriendManager
+import so.aporia.utils.user.render.ui.clickgui.QuestManager
 import so.aporia.utils.user.render.core.DefaultLibraries
 import so.aporia.utils.user.render.core.DefaultSnippets
 import so.aporia.utils.user.render.core.DrawBatch
@@ -38,6 +39,7 @@ class Aporia private constructor() : ResourceManagerReloadListener {
         locale.init()
         FriendManager.init()
         ThemeManager.INSTANCE.init()
+        QuestManager.init()
         initializeDiscordRPC()
         loadFontMode()
         logger.success("Aporia initialized")

@@ -125,10 +125,6 @@ echo        Packing files via Java JAR tool...
 jar --create --file "%SBORKA%\Aporia.zip" -C "%SBORKA%\_to_zip" .
 for %%f in ("%SBORKA%\Aporia.zip") do echo        Aporia.zip — %%~zf bytes
 
-
-:: Выдаем ахуенное уведомление на рабочий стол
-powershell -NoProfile -Command "$w=(New-Object -ComObject WScript.Shell); $w.Popup('Ночной билд Апории успешно собран!',4,'Aporia Client',64)" >nul
-
 echo ============================================
 echo   BUILD COMPLETE -> sborka\Aporia.zip
 echo ============================================
