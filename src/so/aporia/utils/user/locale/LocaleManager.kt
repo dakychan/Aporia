@@ -5,7 +5,6 @@
  */
 
 package so.aporia.utils.user.locale
-
 import com.chaos.annotation.Obfuscate
 import so.aporia.utils.files.FilesManager
 import so.aporia.utils.user.logger.Logger
@@ -14,8 +13,9 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class LocaleManager private constructor() {
     private val locales: MutableMap<String, MutableMap<String, String>> = HashMap()
     private var currentLang: String? = null
@@ -240,6 +240,11 @@ class LocaleManager private constructor() {
                 map["gui.tab.settings"] = "Settings"
                 map["gui.on"] = "ON"
                 map["gui.off"] = "OFF"
+                map["gui.bindprompt"] = "Press any key..."
+                map["gui.other"] = "Other"
+                map["gui.other.title"] = "Other Modules"
+                map["gui.quests.title"] = "Daily Quests"
+                map["gui.info.title"] = "Info"
                 map["category.combat"] = "Combat"
                 map["category.move"] = "Movement"
                 map["category.visual"] = "Visual"
@@ -307,6 +312,11 @@ class LocaleManager private constructor() {
                 map["gui.tab.settings"] = "НАСТРОЙКИ"
                 map["gui.on"] = "ВКЛ"
                 map["gui.off"] = "ВЫКЛ"
+                map["gui.bindprompt"] = "Нажми любую клавишу..."
+                map["gui.other"] = "Остальное"
+                map["gui.other.title"] = "Остальные модули"
+                map["gui.quests.title"] = "Ежедневные квесты"
+                map["gui.info.title"] = "Инфо"
                 map["category.combat"] = "Бой"
                 map["category.move"] = "Движение"
                 map["category.visual"] = "Визуал"
@@ -374,6 +384,11 @@ class LocaleManager private constructor() {
                 map["gui.tab.settings"] = "设置"
                 map["gui.on"] = "开"
                 map["gui.off"] = "关"
+                map["gui.bindprompt"] = "按任意键..."
+                map["gui.other"] = "其他"
+                map["gui.other.title"] = "其他模块"
+                map["gui.quests.title"] = "每日任务"
+                map["gui.info.title"] = "信息"
                 map["category.combat"] = "战斗"
                 map["category.move"] = "移动"
                 map["category.visual"] = "视觉"
@@ -416,6 +431,11 @@ class LocaleManager private constructor() {
                 map["gui.tab.settings"] = "Settings"
                 map["gui.on"] = "ON"
                 map["gui.off"] = "OFF"
+                map["gui.bindprompt"] = "Press any key..."
+                map["gui.other"] = "Other"
+                map["gui.other.title"] = "Other Modules"
+                map["gui.quests.title"] = "Daily Quests"
+                map["gui.info.title"] = "Info"
                 map["category.combat"] = "Combat"
                 map["category.move"] = "Movement"
                 map["category.visual"] = "Visual"

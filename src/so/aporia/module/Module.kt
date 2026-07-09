@@ -1,5 +1,7 @@
 package so.aporia.module
-
+import so.aporia.module.settings.Setting
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 abstract class Module @JvmOverloads constructor(
     val name: String,
     val category: Category,
@@ -32,4 +34,6 @@ abstract class Module @JvmOverloads constructor(
 
     fun name(): String = name
     fun keybind(): Int = keybind
+
+    abstract val settings: List<Setting<*>>
 }

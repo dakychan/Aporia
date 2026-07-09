@@ -318,6 +318,7 @@ public class ItemInHandRenderer {
     }
 
     public void renderHandsWithItems(float p_109315_, PoseStack p_109316_, SubmitNodeCollector p_424174_, LocalPlayer p_109318_, int p_109319_) {
+        if (so.aporia.module.impl.render.NoRender.hideHeldItem) return;
         float f = p_109318_.getAttackAnim(p_109315_);
         InteractionHand interactionhand = MoreObjects.firstNonNull(p_109318_.swingingArm, InteractionHand.MAIN_HAND);
         float f1 = p_109318_.getXRot(p_109315_);

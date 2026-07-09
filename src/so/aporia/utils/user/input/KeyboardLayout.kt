@@ -1,10 +1,10 @@
 package so.aporia.utils.user.input
 
 import com.chaos.annotation.Obfuscate
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object KeyboardLayout {
-
     private const val EN = "qwertyuiop[]asdfghjkl;'zxcvbnm,." +
                            "QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>"
     private const val RU = "йцукенгшщзхъфывапролджэячсмитьбю" +

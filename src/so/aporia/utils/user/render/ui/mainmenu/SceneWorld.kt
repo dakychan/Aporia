@@ -42,11 +42,11 @@ import net.minecraft.world.level.storage.ValueOutput
 import java.util.function.BooleanSupplier
 import java.util.UUID
 import so.aporia.utils.imports.*
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class SceneWorld {
     lateinit var level: ClientLevel
     lateinit var cameraEntity: Entity
-
     var camX = 0.0; var camY = 4.0; var camZ = -8.0
     var camYaw = 25f; var camPitch = -15f
 

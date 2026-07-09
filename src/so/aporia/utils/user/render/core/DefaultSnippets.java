@@ -5,6 +5,8 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.resources.Identifier;
 
+import com.chaos.annotation.ChaosNative;
+
 /**
  * Pre-built pipeline snippets for common rendering operations.
  */

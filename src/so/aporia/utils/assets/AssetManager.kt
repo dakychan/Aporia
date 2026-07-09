@@ -9,14 +9,16 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object AssetManager {
 
     private const val ASSETS_URL = "https://gitlab.com/protect3ed/files-for-aporia/-/raw/main/aporia.apr"
@@ -61,7 +63,7 @@ object AssetManager {
                     // НЕ ТРОГАЙ ИМЯ! Оно уже нормальное!
                     val entryPath = targetDir.resolve(entry!!.name)
 
-                    if (entry!!.isDirectory) {
+                    if (entry.isDirectory) {
                         Files.createDirectories(entryPath)
                     } else {
                         Files.createDirectories(entryPath.parent)
@@ -75,7 +77,7 @@ object AssetManager {
 
     @Throws(Exception::class)
     private fun downloadFile(urlStr: String): ByteArray? {
-        val url = URL(urlStr)
+        val url = URI(urlStr).toURL()
         val conn = url.openConnection() as HttpURLConnection
         conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
         conn.setRequestProperty("Accept-Encoding", "identity")

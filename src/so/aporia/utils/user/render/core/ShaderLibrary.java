@@ -2,6 +2,8 @@ package so.aporia.utils.user.render.core;
 
 import java.util.*;
 
+import com.chaos.annotation.ChaosNative;
+
 /**
  * Reusable GLSL code fragment that can be #included into shaders.
  * Acts as a shader "plugin" — register once, use in many shaders.
@@ -24,6 +26,7 @@ import java.util.*;
  *   // Include in shader source
  *   String fragmentSource = blurLib.include() + myFragmentCode;
  */
+@ChaosNative
 public class ShaderLibrary {
 
     private String name;

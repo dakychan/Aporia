@@ -14,10 +14,13 @@ layout(std140) uniform ModelViewProj {
 };
 
 void main() {
-    mat4 mvp = uProj * uView * uModel;
-    gl_Position = mvp * vec4(Position, 1.0);
-    vNormal = normalize(mat3(uModel) * Normal);
-    vViewPos = vec3(uModel * vec4(Position, 1.0));
+    mat4 mvMat = uView * uModel;
+    gl_Position = uProj * mvMat * vec4(Position, 1.0);
+    
+    vNormal = normalize(mat3(mvMat) * Normal);
+    vViewPos = vec3(mvMat * vec4(Position, 1.0));
+    
     vec3 viewDir = normalize(-vViewPos);
     vFresnel = 1.0 - max(dot(vNormal, viewDir), 0.0);
+    vFresnel = pow(vFresnel, 2.0); // Усиливаем края
 }

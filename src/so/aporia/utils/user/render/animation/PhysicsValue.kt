@@ -5,11 +5,10 @@
  */
 
 package so.aporia.utils.user.render.animation
-
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.pow
-
+import com.chaos.annotation.ChaosNative
 /**
  * A single animated float value driven by configurable physics.
  *
@@ -24,6 +23,7 @@ import kotlin.math.pow
  * val a = alpha.get()
  * ```
  */
+@ChaosNative
 class PhysicsValue private constructor(
     private val mode: Mode,
     initial: Float,

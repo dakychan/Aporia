@@ -1,12 +1,12 @@
 package so.aporia.utils.files.impl
-
 import com.chaos.annotation.Obfuscate
 import so.aporia.utils.files.FilesManager
 import so.aporia.utils.user.render.ui.chat.AporiaChatScreen.WinCfg
 import so.aporia.utils.user.render.ui.chat.AporiaChatScreen.WinMgr
 import java.util.ArrayList
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object ChatFile {
 
     private val FILE = FilesManager.ROOT.resolve("chat.apr")

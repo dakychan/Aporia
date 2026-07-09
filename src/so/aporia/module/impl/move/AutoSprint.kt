@@ -1,14 +1,15 @@
 package so.aporia.module.impl.move
-
 import com.chaos.annotation.Obfuscate
+import so.aporia.module.settings.Setting
 import so.aporia.utils.imports.*
 import net.minecraft.client.Minecraft
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.TickEvent
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class AutoSprint : Module("AutoSprint", Category.MOVE) {
     companion object {
         @JvmField val mc = Minecraft.getInstance()
@@ -43,4 +44,6 @@ class AutoSprint : Module("AutoSprint", Category.MOVE) {
     private fun isMovingForward(): Boolean {
         return mc.player!!.zza > 0
     }
+
+    override val settings: List<Setting<*>> = emptyList()
 }

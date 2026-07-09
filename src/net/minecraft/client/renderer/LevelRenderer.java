@@ -37,6 +37,7 @@ import java.util.Locale;
 import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.function.BiConsumer;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Camera;
 import net.minecraft.client.CloudStatus;
@@ -637,7 +638,9 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
                     RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(rendertarget.getColorTexture(), 0, rendertarget.getDepthTexture(), 1.0);
                 }
 
-                PoseStack posestack = new PoseStack();
+                PoseStack posestack = this.renderPoseStack;
+                while (!posestack.isEmpty()) posestack.popPose();
+                posestack.setIdentity();
                 MultiBufferSource.BufferSource multibuffersource$buffersource = this.renderBuffers.bufferSource();
                 MultiBufferSource.BufferSource multibuffersource$buffersource1 = this.renderBuffers.crumblingBufferSource();
                 p_369478_.popPush("submitEntities");
@@ -848,7 +851,9 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
         double d0 = vec3.x();
         double d1 = vec3.y();
         double d2 = vec3.z();
-        PoseStack posestack = new PoseStack();
+        PoseStack posestack = this.blockEntityPoseStack;
+        while (!posestack.isEmpty()) posestack.popPose();
+        posestack.setIdentity();
 
         for (SectionRenderDispatcher.RenderSection sectionrenderdispatcher$rendersection : this.visibleSections) {
             List<BlockEntity> list = sectionrenderdispatcher$rendersection.getSectionMesh().getRenderableBlockEntities();
@@ -1032,6 +1037,8 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
     private final EnumMap<ChunkSectionLayer, List<RenderPass.Draw<GpuBufferSlice[]>>> cachedEnumMap = new EnumMap<>(ChunkSectionLayer.class);
     private final List<DynamicUniforms.ChunkSectionInfo> cachedChunkInfoList = new ArrayList<>();
     private final Matrix4f cachedMatrix4f = new Matrix4f();
+    private final PoseStack renderPoseStack = new PoseStack();
+    private final PoseStack blockEntityPoseStack = new PoseStack();
 
     private ChunkSectionsToRender prepareChunkRenders(Matrix4fc p_407733_, double p_409433_, double p_409487_, double p_408168_) {
         ObjectListIterator<SectionRenderDispatcher.RenderSection> objectlistiterator = this.visibleSections.listIterator(0);
@@ -1058,6 +1065,7 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
             BlockPos blockpos = section.getRenderOrigin();
             long time = Util.getMillis();
             int infoIdx = -1;
+            BiConsumer<GpuBufferSlice[], RenderPass.UniformUploader> uploadCallback = null;
 
             for (ChunkSectionLayer layer : ChunkSectionLayer.values()) {
                 SectionBuffers sectionbuffers = sectionmesh.getBuffers(layer);
@@ -1076,6 +1084,8 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
                                 texH
                             )
                         );
+                        int cbIdx = infoIdx;
+                        uploadCallback = (p_404906_, p_404907_) -> p_404907_.upload("ChunkSection", p_404906_[cbIdx]);
                     }
 
                     GpuBuffer indexBuf;
@@ -1091,7 +1101,6 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
                         indexType = sectionbuffers.getIndexType();
                     }
 
-                    int finalIdx = infoIdx;
                     this.cachedEnumMap.get(layer).add(
                         new RenderPass.Draw<>(
                             0,
@@ -1100,7 +1109,7 @@ public class LevelRenderer implements ResourceManagerReloadListener, AutoCloseab
                             indexType,
                             0,
                             sectionbuffers.getIndexCount(),
-                            (p_404906_, p_404907_) -> p_404907_.upload("ChunkSection", p_404906_[finalIdx])
+                            uploadCallback
                         )
                     );
                 }

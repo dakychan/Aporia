@@ -54,6 +54,8 @@ import org.slf4j.Logger;
 public class Main {
     @DontObfuscate
     public static void main(String[] p_129642_) {
+        try { Class.forName("com.dolbaebsolution.loader.ChaosNativeAdapter"); }
+        catch (Exception chaos_ignored) {}
         OptionParser optionparser = new OptionParser();
         optionparser.allowsUnrecognizedOptions();
         optionparser.accepts("demo");

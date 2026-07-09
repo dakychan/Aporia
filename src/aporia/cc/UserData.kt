@@ -1,11 +1,11 @@
 package aporia.cc
-
 import com.chaos.annotation.Obfuscate
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.Random
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object UserData {
 
     private const val CONFIG_DIR = "sorray"

@@ -1,7 +1,7 @@
 package so.aporia.utils.events.impl
-
 import net.minecraft.network.protocol.Packet
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class PacketEvent(packet: Packet<*>, val direction: Direction) {
 
     enum class Direction { INBOUND, OUTBOUND }

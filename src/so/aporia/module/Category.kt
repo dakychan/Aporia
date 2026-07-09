@@ -1,7 +1,8 @@
 package so.aporia.module
 
 import net.minecraft.resources.Identifier
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 enum class Category(@JvmField val icon: Char, textureName: String) {
     COMBAT('a', "combat.png"),
     MOVE('c', "move.png"),
@@ -10,6 +11,6 @@ enum class Category(@JvmField val icon: Char, textureName: String) {
     WORLD('v', "world.png"),
     MISC('m', "misc.png");
 
-    val texture: Identifier = Identifier.fromNamespaceAndPath("aporia", "texture/$textureName")
+    val texture: Identifier = Identifier.fromNamespaceAndPath("aporia", "texture/gui/$textureName")
     fun icon(): Char = icon
 }

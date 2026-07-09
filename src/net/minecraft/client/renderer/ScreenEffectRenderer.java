@@ -58,7 +58,7 @@ public class ScreenEffectRenderer {
         PoseStack posestack = new PoseStack();
         Player player = this.minecraft.player;
         if (this.minecraft.options.getCameraType().isFirstPerson() && !p_409640_) {
-            if (!player.noPhysics) {
+            if (!player.noPhysics && !so.aporia.module.impl.render.NoRender.hidePumpkin) {
                 BlockState blockstate = getViewBlockingState(player);
                 if (blockstate != null) {
                     renderTex(this.minecraft.getBlockRenderer().getBlockModelShaper().getParticleIcon(blockstate), posestack, this.bufferSource);
@@ -66,11 +66,11 @@ public class ScreenEffectRenderer {
             }
 
             if (!this.minecraft.player.isSpectator()) {
-                if (this.minecraft.player.isEyeInFluid(FluidTags.WATER)) {
+                if (this.minecraft.player.isEyeInFluid(FluidTags.WATER) && !so.aporia.module.impl.render.NoRender.hideWater) {
                     renderWater(this.minecraft, posestack, this.bufferSource);
                 }
 
-                if (this.minecraft.player.isOnFire()) {
+                if (this.minecraft.player.isOnFire() && !so.aporia.module.impl.render.NoRender.hideFire) {
                     TextureAtlasSprite textureatlassprite = this.materials.get(ModelBakery.FIRE_1);
                     renderFire(posestack, this.bufferSource, textureatlassprite);
                 }
@@ -113,6 +113,7 @@ public class ScreenEffectRenderer {
     }
 
     public void displayItemActivation(ItemStack p_407673_, RandomSource p_406761_) {
+        if (so.aporia.module.impl.render.NoRender.hideTotem) { this.itemActivationItem = null; return; }
         this.itemActivationItem = p_407673_;
         this.itemActivationTicks = 40;
         this.itemActivationOffX = p_406761_.nextFloat() * 2.0F - 1.0F;

@@ -1,8 +1,7 @@
 package so.aporia.module.impl.combat
-
 import com.chaos.annotation.Obfuscate
-import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.animal.Animal
 import net.minecraft.world.entity.player.Player
@@ -11,37 +10,43 @@ import so.aporia.module.Module
 import so.aporia.module.ModuleManager
 import so.aporia.module.settings.BooleanSetting
 import so.aporia.module.settings.MultiSelectSetting
-import so.aporia.module.settings.NumberSetting
+import so.aporia.module.settings.SliderSetting
 import so.aporia.module.settings.SelectSetting
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.events.impl.TickEvent
+import net.minecraft.network.protocol.game.ServerboundInteractPacket
+import net.minecraft.world.InteractionHand
 import so.aporia.utils.imports.*
+import so.aporia.utils.math.Angle
+import so.aporia.utils.math.Prediction
 import so.aporia.utils.user.render.ui.clickgui.QuestManager
 import so.aporia.utils.user.locale.LocaleManager
 import so.aporia.utils.user.player.rotation.RotationUtil
 import so.aporia.utils.user.player.rotation.RotationUtil.RotationMode
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class Aura : Module("Aura", Category.COMBAT, -1) {
 
     val combatMode: SelectSetting
-    val range: NumberSetting
+    val range: SliderSetting
     val rotationMode: SelectSetting
-    val rotationSpeed: NumberSetting
-    val fov: NumberSetting
-    val minCps: NumberSetting
-    val maxCps: NumberSetting
+    val rotationSpeed: SliderSetting
+    val fov: SliderSetting
+    val minCps: SliderSetting
+    val maxCps: SliderSetting
     val targets: MultiSelectSetting
     val targetMode: SelectSetting
-    val manualCooldown: NumberSetting
+    val manualCooldown: SliderSetting
 
-    val jitterAmount: NumberSetting
-    val aimOffset: NumberSetting
-    val hitChance: NumberSetting
+    val jitterAmount: SliderSetting
+    val aimOffset: SliderSetting
+    val hitChance: SliderSetting
 
     val autoDisableOnDeath: BooleanSetting
     val tpsSync: BooleanSetting
+    val onlyCriticals: BooleanSetting
 
     private var lastAttackTime = 0L
     private var nextAttackDelay = 0L
@@ -68,21 +73,22 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
             .value("1.8", "1.9+").selected("1.9+")
         rotationMode = SelectSetting("Rotation Mode", "Mode of rotation (Smooth, Snap, HVH, Matrix, Vulcan, Grim, NCP, Intave)")
             .value("Smooth", "Snap", "HVH", "Matrix", "Vulcan", "Grim", "NCP", "Intave").selected("Smooth")
-        rotationSpeed = NumberSetting(lm.get("module.aura.rotation_speed"), lm.get("module.aura.rotation_speed.desc"), 90.0, 5.0, 180.0, 1.0)
-        range = NumberSetting(lm.get("module.aura.range"), lm.get("module.aura.range.desc"), 3.5, 1.0, 6.0, 0.1)
-        fov = NumberSetting(lm.get("module.aura.fov"), lm.get("module.aura.fov.desc"), 180.0, 30.0, 180.0, 5.0)
-        minCps = NumberSetting(lm.get("module.aura.min_cps"), lm.get("module.aura.min_cps.desc"), 8.0, 1.0, 20.0, 1.0)
-        maxCps = NumberSetting(lm.get("module.aura.max_cps"), lm.get("module.aura.max_cps.desc"), 12.0, 1.0, 20.0, 1.0)
-        manualCooldown = NumberSetting("Manual Cooldown", "cooldown for 1.9+ in seconds", 0.85, 0.1, 1.0, 0.01)
+        rotationSpeed = SliderSetting(lm.get("module.aura.rotation_speed"), lm.get("module.aura.rotation_speed.desc"), 90.0, 5.0, 180.0, 1.0)
+        range = SliderSetting(lm.get("module.aura.range"), lm.get("module.aura.range.desc"), 3.5, 1.0, 6.0, 0.1)
+        fov = SliderSetting(lm.get("module.aura.fov"), lm.get("module.aura.fov.desc"), 180.0, 30.0, 180.0, 5.0)
+        minCps = SliderSetting(lm.get("module.aura.min_cps"), lm.get("module.aura.min_cps.desc"), 8.0, 1.0, 20.0, 1.0)
+        maxCps = SliderSetting(lm.get("module.aura.max_cps"), lm.get("module.aura.max_cps.desc"), 12.0, 1.0, 20.0, 1.0)
+        manualCooldown = SliderSetting("Manual Cooldown", "cooldown for 1.9+ in seconds", 0.85, 0.1, 1.0, 0.01)
         targets = MultiSelectSetting(lm.get("module.aura.targets"), lm.get("module.aura.targets.desc")).options("Players", "Mobs", "Animals", "Friends")
         targetMode = SelectSetting(lm.get("module.aura.target_mode"), lm.get("module.aura.target_mode.desc"))
             .value(lm.get("module.aura.target_closest"), lm.get("module.aura.target_health"))
             .selected(lm.get("module.aura.target_closest"))
-        jitterAmount = NumberSetting("Jitter", "Random angle jitter on rotation per tick", 0.0, 0.0, 5.0, 0.1, { rotationMode.get() != "HVH" })
-        aimOffset = NumberSetting("Aim Offset", "Randomized aim position offset", 0.0, 0.0, 5.0, 0.1, { rotationMode.get() != "HVH" })
-        hitChance = NumberSetting("Hit Chance", "Chance to hit (%)", 100.0, 0.0, 100.0, 1.0, { rotationMode.get() != "HVH" })
+        jitterAmount = SliderSetting("Jitter", "Random angle jitter on rotation per tick", 0.0, 0.0, 5.0, 0.1, { rotationMode.get() != "HVH" })
+        aimOffset = SliderSetting("Aim Offset", "Randomized aim position offset", 0.0, 0.0, 5.0, 0.1, { rotationMode.get() != "HVH" })
+        hitChance = SliderSetting("Hit Chance", "Chance to hit (%)", 100.0, 0.0, 100.0, 1.0, { rotationMode.get() != "HVH" })
         autoDisableOnDeath = BooleanSetting("Auto Disable", "Disable module on player death", false)
         tpsSync = BooleanSetting("TPS Sync", "Sync attack timing with server TPS", true)
+        onlyCriticals = BooleanSetting("Only Criticals", "Only attack when a crit is possible", false)
     }
 
     override fun onEnable() {
@@ -166,18 +172,6 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
     }
 
     private fun attackTarget(target: Entity) {
-        if (isCriticalsEnabled()) {
-            doAttack(target)
-            return
-        }
-        if (combatMode.isSelected("1.9+")) {
-            if (!mc.player!!.onGround()) {
-                if (mc.player!!.fallDistance > 0.08f) {
-                    doAttack(target)
-                }
-                return
-            }
-        }
         doAttack(target)
     }
 
@@ -203,12 +197,13 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
     }
 
     private fun doAttack(target: Entity) {
-        mc.player!!.swing(mc.player!!.usedItemHand)
-        mc.gameMode?.attack(mc.player!!, target)
+        val player = mc.player!!
+        player.connection.send(ServerboundInteractPacket.createAttackPacket(target, player.isShiftKeyDown()))
+        player.attack(target)
+        player.swing(InteractionHand.MAIN_HAND)
+        player.resetAttackStrengthTicker()
         lastAttackTime = System.currentTimeMillis()
         nextAttackDelay = getRandomDelay()
-        // Квесты: учёт убийств игроков (синхронно с атакой — параллельно с чат-детектом
-        // в QuestManager.onChat, не страшно, у квеста один счётчик).
         if (target is Player) {
             QuestManager.notifyKill()
         }
@@ -235,6 +230,13 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
             if (!mc.player!!.onGround()) {
                 return weaponCooldown >= 0.95f && mc.player!!.fallDistance > 0.08f
             }
+            return weaponCooldown >= 0.92f
+        }
+        if (onlyCriticals.isEnabled) {
+            val p = mc.player!!
+            if (p.onGround() || p.fallDistance <= 0.0f) return false
+            if (p.isSprinting() || p.onClimbable() || p.isInWater() || p.isMobilityRestricted() || p.isPassenger()) return false
+            if (lockedTarget !is LivingEntity) return false
             return weaponCooldown >= 0.92f
         }
 
@@ -264,12 +266,11 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
 
     private fun isInFov(target: Entity): Boolean {
         if (fov.getFloat() >= 180.0f) return true
-        val eyes = mc.player!!.getEyePosition(1.0f)
-        val targetPos = target.getEyePosition(1.0f)
-        val diff = targetPos.subtract(eyes)
-        val targetYaw = (Math.toDegrees(Math.atan2(diff.z, diff.x)) - 90.0).toFloat()
+        val diff = target.getEyePosition(1.0f).subtract(mc.player!!.getEyePosition(1.0f))
+        val targetYaw = Angle.calculateFromDiff(diff)[0]
         val playerYaw = if (RotationUtil.isActive()) RotationUtil.getServerYaw() else mc.player!!.yRot
-        val yawDiff = Math.abs(Mth.wrapDegrees(targetYaw - playerYaw))
-        return yawDiff <= fov.getFloat() / 2.0f
+        return Angle.diff(targetYaw, playerYaw) <= fov.getFloat() / 2.0f
     }
+
+    override val settings = listOf(combatMode, range, rotationMode, rotationSpeed, fov, minCps, maxCps, targets, targetMode, manualCooldown, jitterAmount, aimOffset, hitChance, autoDisableOnDeath, tpsSync, onlyCriticals)
 }

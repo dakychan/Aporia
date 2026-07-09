@@ -6,7 +6,7 @@ import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import it.unimi.dsi.fastutil.objects.Object2ObjectSortedMaps;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.SequencedMap;
 import net.minecraft.client.renderer.rendertype.RenderType;
@@ -30,7 +30,7 @@ public interface MultiBufferSource {
     public static class BufferSource implements MultiBufferSource {
         protected final ByteBufferBuilder sharedBuffer;
         protected final SequencedMap<RenderType, ByteBufferBuilder> fixedBuffers;
-        protected final Map<RenderType, BufferBuilder> startedBuilders = new HashMap<>();
+        protected final Map<RenderType, BufferBuilder> startedBuilders = new IdentityHashMap<>();
         protected @Nullable RenderType lastSharedType;
 
         protected BufferSource(ByteBufferBuilder p_344223_, SequencedMap<RenderType, ByteBufferBuilder> p_344104_) {

@@ -1105,7 +1105,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
             if (this.level == null) {
                 p_91153_ = new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen();
             } else if (this.player.isDeadOrDying()) {
-                if (this.player.shouldShowDeathScreen()) {
+                if (this.player.shouldShowDeathScreen() && !so.aporia.module.impl.render.NoRender.hideDeathScreen) {
                     p_91153_ = new DeathScreen(null, this.level.getLevelData().isHardcore(), this.player);
                 } else {
                     this.player.respawn();
@@ -1300,6 +1300,12 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
             }
 
             this.window.updateDisplay(this.tracyFrameCapture);
+            if (this.window.contextLost) {
+                LOGGER.error("[Aporia] OpenGL context lost, attempting recovery from game loop...");
+                if (!this.window.tryRecoverContext()) {
+                    this.window.emergencyHalt();
+                }
+            }
             int j = this.framerateLimitTracker.getFramerateLimit();
             if (j < 260) {
                 RenderSystem.limitDisplayFPS(j);

@@ -1,5 +1,6 @@
 package so.aporia.utils.user.render.color
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 object ColorUtil {
 
     private val LEGACY = intArrayOf(

@@ -1,5 +1,4 @@
 package aporia.webview.platform
-
 import aporia.cc.OsManager
 import com.sun.jna.Library
 import com.sun.jna.Native
@@ -9,7 +8,8 @@ import so.aporia.utils.user.logger.Logger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 interface NativeWebviewBindings : Library {
 
     fun webview_create(width: Int, height: Int, url: WString, userDataFolder: String?): Pointer?
@@ -31,6 +31,7 @@ interface NativeWebviewBindings : Library {
     fun webview_send_key_press(handle: Pointer?, vk: Int, scancode: Int, modifiers: Int)
     fun webview_send_key_release(handle: Pointer?, vk: Int, scancode: Int, modifiers: Int)
     fun webview_send_key_char(handle: Pointer?, c: Char)
+    fun webview_get_dpi(handle: Pointer?): Int
 
     companion object {
         const val RUNTIME_DIR = "Microsoft.WebView2.FixedVersionRuntime.148.0.3967.70.x64"

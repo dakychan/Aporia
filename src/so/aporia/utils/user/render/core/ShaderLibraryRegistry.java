@@ -2,10 +2,13 @@ package so.aporia.utils.user.render.core;
 
 import java.util.*;
 
+import com.chaos.annotation.ChaosNative;
+
 /**
  * Registry for shader libraries — reusable GLSL code blocks.
  * Register libraries once, include them in any shader.
  */
+@ChaosNative
 public class ShaderLibraryRegistry {
 
     public static final ShaderLibraryRegistry INSTANCE = new ShaderLibraryRegistry();

@@ -22,6 +22,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.OptionalInt;
 
+import com.chaos.annotation.ChaosNative;
+
 public final class BlurRenderer {
     public static RenderPipeline kawaseDownPipeline;
     public static RenderPipeline kawaseUpPipeline;

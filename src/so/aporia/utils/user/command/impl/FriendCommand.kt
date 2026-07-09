@@ -4,8 +4,9 @@ import com.chaos.annotation.Obfuscate
 import so.aporia.utils.imports.*
 import so.aporia.utils.user.command.Command
 import so.aporia.utils.user.command.CommandManager
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class FriendCommand : Command {
     override fun name() = "friend"
     override fun description() = "Manage friends — .friend add/remove/list"

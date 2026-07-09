@@ -1,5 +1,4 @@
 package so.aporia.utils.imports
-
 import aporia.cc.OsManager
 import net.minecraft.client.Minecraft
 import so.aporia.Aporia
@@ -13,7 +12,7 @@ import so.aporia.utils.user.render.color.ColorUtil
 import so.aporia.utils.user.render.core.AporiaRenderer
 import so.aporia.utils.user.render.font.Fonts
 import so.aporia.utils.user.render.theme.ThemeManager
-
+import com.chaos.annotation.ChaosNative
 val r get() = AporiaRenderer.INSTANCE
 val mc get() = Minecraft.getInstance()
 val logger get() = Logger

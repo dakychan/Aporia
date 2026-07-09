@@ -2,9 +2,10 @@ package so.aporia.module.settings
 
 import so.aporia.utils.user.render.core.AporiaRenderer
 import so.aporia.utils.user.input.KeyCodeMap
-import so.aporia.utils.user.render.color.ColorUtil
+import so.aporia.utils.user.render.theme.ThemeManager.Theme
 import java.util.function.Supplier
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class BindSetting @JvmOverloads constructor(
     name: String,
     description: String,
@@ -19,15 +20,15 @@ class BindSetting @JvmOverloads constructor(
         value = key
     }
 
-    fun render(r: AporiaRenderer, x: Int, y: Int, w: Int, active: Boolean) {
+    override fun draw(r: AporiaRenderer, x: Float, y: Float, w: Float, theme: Theme, mouseX: Float, mouseY: Float, isDropOpen: Boolean) {
         val txt = when {
-            active -> "Bind.."
+            isDropOpen -> "Bind.."
             isBound() -> { val n = KeyCodeMap.getName(value); if (n == "UNKNOWN") "Btn$value" else n }
             else -> "-"
         }
-        val color = if (active) 0xFFFFAA00.toInt() else 0xFFAAAAAA.toInt()
+        val color = if (isDropOpen) 0xFFFFAA00.toInt() else 0xFFAAAAAA.toInt()
         val fs = 10f
         val tw = r.getTextWidth("regular", txt, fs)
-        r.drawText("regular", txt, (x + w - 8 - tw).toFloat(), (y + (14 - fs) / 2f - 1f).toFloat(), fs, color)
+        r.drawText("regular", txt, (x + w - 8f - tw), y + (14f - fs) / 2f - 1f, fs, color)
     }
 }

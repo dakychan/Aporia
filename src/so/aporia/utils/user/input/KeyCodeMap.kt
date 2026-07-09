@@ -1,8 +1,9 @@
 package so.aporia.utils.user.input
 
 import com.chaos.annotation.Obfuscate
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object KeyCodeMap {
 
     private val SCANCODE_TO_NAME = mutableMapOf<Int, String>()

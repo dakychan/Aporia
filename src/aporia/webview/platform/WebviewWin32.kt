@@ -1,5 +1,4 @@
 package aporia.webview.platform
-
 import aporia.webview.Webview
 import aporia.webview.render.WebviewTexture
 import com.mojang.blaze3d.systems.RenderSystem
@@ -11,27 +10,24 @@ import so.aporia.utils.files.FilesManager
 import so.aporia.utils.user.logger.Logger
 import java.nio.ByteBuffer
 import java.nio.file.Files
-
+import com.chaos.annotation.ChaosNative
 /**
  * WebView2-backed off-screen browser.
- * Never creates a visible HWND overlay — renders to a texture via pixel capture.
+ * Uses PrintWindow + DIB section for zero-encoding raw BGRA capture.
  */
+@ChaosNative
 class WebviewWin32(url: String, width: Int, height: Int) : Webview(url, width, height) {
 
     private var handle: Pointer? = null
     private var ready = false
 
-    // Pixel capture state
     private var captureBuf: Memory? = null
     private var capW = 0
     private var capH = 0
 
-    // Texture
     private val texture = WebviewTexture()
 
-    // Throttle capture: don't capture every single frame
-    private var captureInterval = 3 // capture every N render calls
-    private var captureCounter = 0
+    private var dpiScale = 1.0f
 
     override fun init(): Boolean {
         Logger.info("WebView2 texture-mode init: ${width}x${height} url=$url")
@@ -46,7 +42,6 @@ class WebviewWin32(url: String, width: Int, height: Int) : Webview(url, width, h
             return false
         }
 
-        // Immediately hide any native window — we only want off-screen capture
         NativeWebviewBindings.INSTANCE.webview_hide(handle)
 
         Logger.info("Waiting for WebView2 to be ready...")
@@ -55,8 +50,10 @@ class WebviewWin32(url: String, width: Int, height: Int) : Webview(url, width, h
         Logger.info("WebView2 ready: $ready (wait_ready=$result)")
 
         if (ready) {
-            // Ensure HWND stays hidden even after ready
             NativeWebviewBindings.INSTANCE.webview_hide(handle)
+            val dpi = NativeWebviewBindings.INSTANCE.webview_get_dpi(handle)
+            dpiScale = dpi / 96.0f
+            Logger.info("WebView2 DPI: $dpi (scale=$dpiScale)")
         }
 
         initialized = ready
@@ -83,15 +80,21 @@ class WebviewWin32(url: String, width: Int, height: Int) : Webview(url, width, h
     }
 
     override fun sendMouseMove(x: Int, y: Int) {
-        handle?.let { NativeWebviewBindings.INSTANCE.webview_send_mouse_move(it, x, y) }
+        val sx = (x * dpiScale).toInt()
+        val sy = (y * dpiScale).toInt()
+        handle?.let { NativeWebviewBindings.INSTANCE.webview_send_mouse_move(it, sx, sy) }
     }
 
     override fun sendMousePress(x: Int, y: Int, button: Int) {
-        handle?.let { NativeWebviewBindings.INSTANCE.webview_send_mouse_press(it, x, y, button) }
+        val sx = (x * dpiScale).toInt()
+        val sy = (y * dpiScale).toInt()
+        handle?.let { NativeWebviewBindings.INSTANCE.webview_send_mouse_press(it, sx, sy, button) }
     }
 
     override fun sendMouseRelease(x: Int, y: Int, button: Int) {
-        handle?.let { NativeWebviewBindings.INSTANCE.webview_send_mouse_release(it, x, y, button) }
+        val sx = (x * dpiScale).toInt()
+        val sy = (y * dpiScale).toInt()
+        handle?.let { NativeWebviewBindings.INSTANCE.webview_send_mouse_release(it, sx, sy, button) }
     }
 
     override fun sendMouseWheel(delta: Double) {
@@ -111,23 +114,18 @@ class WebviewWin32(url: String, width: Int, height: Int) : Webview(url, width, h
     }
 
     /**
-     * Capture current WebView2 pixels and upload to texture.
-     * Should be called from the render thread.
+     * Capture WebView2 pixels via PrintWindow → raw BGRA → upload to GL texture.
+     * No PNG/JPEG encode or decode — direct pixel copy.
      */
     fun tickCapture() {
         if (!ready || handle == null) return
         if (!RenderSystem.isOnRenderThread()) return
-
-        captureCounter++
-        if (captureCounter < captureInterval) return
-        captureCounter = 0
 
         val w = width
         val h = height
         val needed = w.toLong() * h * 4
         if (needed <= 0) return
 
-        // Ensure capture buffer
         if (captureBuf == null || capW != w || capH != h) {
             capW = w
             capH = h
@@ -139,7 +137,6 @@ class WebviewWin32(url: String, width: Int, height: Int) : Webview(url, width, h
         if (size <= 0) return
 
         val bb = buf.getByteBuffer(0, size.toLong())
-        // Native outputs BGRA (JPEG cap + WIC decode → BGRA), upload via GL_BGRA — no CPU conversion
         texture.updateTexture(bb, w, h)
     }
 
@@ -161,13 +158,9 @@ class WebviewWin32(url: String, width: Int, height: Int) : Webview(url, width, h
     override fun getGlTextureId(): Int = texture.getGlTextureId()
     override fun getNativeHandle(): Int = handle?.hashCode() ?: 0
 
-    override fun show(screenX: Int, screenY: Int, pixelW: Int, pixelH: Int) {
-        // NO-OP: we never show an HWND overlay
-    }
+    override fun show(screenX: Int, screenY: Int, pixelW: Int, pixelH: Int) {}
 
-    override fun hide() {
-        // NO-OP: HWND stays hidden always
-    }
+    override fun hide() {}
 
     override fun close() {
         ready = false

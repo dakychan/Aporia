@@ -1,5 +1,9 @@
 package so.aporia.utils.user.render.core;
 
+
+
+import com.chaos.annotation.ChaosNative;
+
 /**
  * Pre-built shader libraries for common GLSL operations.
  */

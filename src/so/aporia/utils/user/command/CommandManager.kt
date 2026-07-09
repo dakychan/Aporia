@@ -1,12 +1,12 @@
 package so.aporia.utils.user.command
-
 import aporia.cc.PanicSystem
 import com.chaos.annotation.Obfuscate
 import net.minecraft.network.chat.Component
 import so.aporia.utils.imports.*
 import so.aporia.utils.user.command.impl.*
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object CommandManager {
 
     @JvmField

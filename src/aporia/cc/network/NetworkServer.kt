@@ -15,8 +15,9 @@ import so.aporia.utils.user.logger.Logger
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.function.BiConsumer
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class NetworkServer(val port: Int) {
 
     private var serverChannel: Channel? = null
@@ -82,7 +83,9 @@ class NetworkServer(val port: Int) {
         }
 
         try {
+            @Suppress("DEPRECATION")
             bossGroup = NioEventLoopGroup(1)
+            @Suppress("DEPRECATION")
             workerGroup = NioEventLoopGroup()
 
             val bootstrap = ServerBootstrap()

@@ -1,16 +1,16 @@
 package so.aporia.module.impl.move
-
 import so.aporia.utils.imports.*
 import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
 import so.aporia.module.Category
 import so.aporia.module.Module
-import so.aporia.module.settings.NumberSetting
+import so.aporia.module.settings.SliderSetting
 import so.aporia.module.settings.SelectSetting
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.events.impl.TickEvent
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class Speed : Module("Speed", Category.MOVE) {
     companion object {
         @JvmField val mc = Minecraft.getInstance()
@@ -18,8 +18,8 @@ class Speed : Module("Speed", Category.MOVE) {
 
 
     val mode: SelectSetting
-    val boost: NumberSetting
-    val grimDrift: NumberSetting
+    val boost: SliderSetting
+    val grimDrift: SliderSetting
 
     private var lastX = 0.0
     private var lastY = 0.0
@@ -33,12 +33,14 @@ class Speed : Module("Speed", Category.MOVE) {
             .value("Packet", "Grim")
             .selected("Packet")
 
-        boost = NumberSetting("Boost", "Packet position multiplier (Packet mode)", 2.0, 1.0, 5.0, 0.1,
+        boost = SliderSetting("Boost", "Packet position multiplier (Packet mode)", 2.0, 1.0, 5.0, 0.1,
             { mode.isSelected("Packet") })
 
-        grimDrift = NumberSetting("Grim Drift", "Blocks per tick drift (Grim mode)", 0.03, 0.005, 0.1, 0.005,
+        grimDrift = SliderSetting("Grim Drift", "Blocks per tick drift (Grim mode)", 0.03, 0.005, 0.1, 0.005,
             { mode.isSelected("Grim") })
     }
+
+    override val settings = listOf(mode, boost, grimDrift)
 
     override fun onEnable() {
         bus.register(this)

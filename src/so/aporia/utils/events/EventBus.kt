@@ -1,9 +1,9 @@
 package so.aporia.utils.events
-
 import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 object EventBus {
 
     private val listeners = ConcurrentHashMap<Class<*>, MutableList<Listener>>()

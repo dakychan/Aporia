@@ -19,6 +19,8 @@ import so.aporia.module.impl.render.Beautifully;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.chaos.annotation.ChaosNative;
+
 /**
  * HUD-side chat renderer. Draws the main chat window ({@link AporiaChatScreen.WinCfg} index 0)
  * while no chat screen is open. Messages fade out using vanilla timing and slide in via
@@ -39,6 +41,8 @@ public final class HudChatRenderer {
     public static void render(GuiGraphics gfx, Font font, ChatComponent chat, int guiTicks) {
         if (!Beautifully.isCustomChatEnabled()) return;
 
+        gfx.nextStratum();
+
         AporiaChatScreen.WinCfg c = AporiaChatScreen.WinMgr.I.wins.get(0);
         if (c.lines.isEmpty()) return;
 
@@ -50,7 +54,8 @@ public final class HudChatRenderer {
 
         float   maxAlpha = 0f;
         float[] alphas   = new float[count];
-        float[] offsets  = new float[count];
+        float[] offsetsX = new float[count];
+        float[] offsetsY = new float[count];
 
         int i = 0;
         for (GuiMessage.Line line : c.lines) {
@@ -60,7 +65,8 @@ public final class HudChatRenderer {
             anim.setAlphaTarget(vanillaAlpha(line, guiTicks));
             anim.tick();
             alphas[i]  = anim.alpha();
-            offsets[i] = anim.slideX();
+            offsetsX[i] = anim.slideX();
+            offsetsY[i] = anim.slideY();
             if (alphas[i] > maxAlpha) maxAlpha = alphas[i];
             i++;
         }
@@ -84,8 +90,8 @@ public final class HudChatRenderer {
         int textX = c.x + AporiaChatScreen.BOX_PAD;
         for (int j = 0; j < count; j++) {
             if (alphas[j] < 0.01f) continue;
-            int lineY = actualBoxY + AporiaChatScreen.BOX_PAD + (count - 1 - j) * AporiaChatScreen.LINE_H;
-            int tx    = textX + (int) offsets[j];
+            int lineY = actualBoxY + AporiaChatScreen.BOX_PAD + (count - 1 - j) * AporiaChatScreen.LINE_H + (int) offsetsY[j];
+            int tx    = textX + (int) offsetsX[j];
             int col   = ColorUtil.rgba(255, 255, 255, (int)(255 * alphas[j]));
             GuiMessage.Line line = getLine(c, j);
             if (line != null) gfx.drawString(font, line.content(), tx, lineY, col, false);

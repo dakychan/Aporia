@@ -384,6 +384,7 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
     }
 
     private void bobHurt(PoseStack p_109118_, float p_109119_) {
+        if (so.aporia.module.impl.render.NoRender.hideHurtCam) return;
         if (this.minecraft.getCameraEntity() instanceof LivingEntity livingentity) {
             float f2 = livingentity.hurtTime - p_109119_;
             if (livingentity.isDeadOrDying()) {
@@ -523,10 +524,6 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
             }
             // Aporia: чистим depth buffer после 3D, чтобы GUI/HUD не был позади 3D
             RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(rendertarget.getDepthTexture(), 1.0);
-            // Aporia: prepareBlur — только когда нет экрана (нет смысла при оверлее)
-            if (flag && p_109096_ && this.minecraft.level != null && this.minecraft.player != null && this.minecraft.screen == null) {
-                BlurRenderer.prepareBlur(Minecraft.getInstance(), 20f, 0.75f);
-            }
             // Aporia: флаш 2D-фона ДО ванильного GUI
             if (flag && p_109096_ && this.minecraft.level != null && this.minecraft.screen == null) {
                 AporiaRenderer.INSTANCE.flush();
@@ -536,6 +533,10 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
                 this.minecraft.gui.render(guigraphics, p_343467_);
             }
 
+            // Aporia: prepareBlur ДО Aporia HUD — захват 3D + vanilla 2D без HUD-блюра
+            if (flag && p_109096_ && this.minecraft.level != null && this.minecraft.player != null) {
+                BlurRenderer.prepareBlur(Minecraft.getInstance(), 20f, 0.75f);
+            }
             // Aporia HUD: показываем при инвентаре/чате, скрываем при паузе/смерти/дисконнекте
             if (this.minecraft.player != null && (this.minecraft.screen == null || !this.minecraft.screen.isPauseScreen())) {
                 Aporia.INSTANCE.render(guigraphics, p_343467_.getGameTimeDeltaTicks());
@@ -616,10 +617,6 @@ public class GameRenderer implements TrackedWaypoint.Projector, AutoCloseable {
             this.featureRenderDispatcher.endFrame();
             this.resourcePool.endFrame();
 
-            // Aporia: capture main target for GUI blur (1-frame delay, no recursion)
-            if (flag && p_109096_ && this.minecraft.level != null && this.minecraft.player != null) {
-                BlurRenderer.prepareGuiBlur(Minecraft.getInstance(), 20f, 0.75f);
-            }
         }
     }
 

@@ -20,9 +20,10 @@ import so.aporia.utils.user.render.theme.ThemeManager.Theme
 import java.io.File
 import net.minecraft.client.renderer.texture.TextureAtlas
 import kotlin.math.*
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
 @OnlyIn(Dist.CLIENT)
+@ChaosNative
 class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
 
     companion object {
@@ -219,11 +220,13 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
     private fun renderScene3D(r: AporiaRenderer) {
         val atlas: net.minecraft.client.renderer.texture.TextureAtlas
         try {
+            @Suppress("DEPRECATION")
             val tex = mc.textureManager.getTexture(TextureAtlas.LOCATION_BLOCKS)
             atlas = tex as net.minecraft.client.renderer.texture.TextureAtlas
         } catch (_: Exception) {
             return // atlas not ready yet
         }
+        @Suppress("DEPRECATION")
         val atlasId = TextureAtlas.LOCATION_BLOCKS
 
         val yawRad = Math.toRadians(camYaw.toDouble()).toFloat()

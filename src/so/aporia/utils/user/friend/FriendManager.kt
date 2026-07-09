@@ -1,11 +1,11 @@
 package so.aporia.utils.user.friend
-
 import com.chaos.annotation.Obfuscate
 import so.aporia.utils.files.FilesManager
 import so.aporia.utils.user.logger.Logger
 import java.util.concurrent.ConcurrentHashMap
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object FriendManager {
 
     private val FILE = FilesManager.ROOT.resolve("friends.apr")

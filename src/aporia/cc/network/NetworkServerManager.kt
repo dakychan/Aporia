@@ -1,11 +1,11 @@
 package aporia.cc.network
-
 import com.chaos.annotation.Obfuscate
 import so.aporia.utils.user.logger.Logger
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.BiConsumer
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object NetworkServerManager {
 
     private val servers = ConcurrentHashMap<Int, NetworkServer>()

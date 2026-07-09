@@ -36,17 +36,37 @@ void main() {
     float sdfMask = 1.0;
     float sdfVal = 0.0;
     
+    // 1. Считаем базовый SDF в зависимости от режима
     if (mode == 1) {
         sdfVal = circleSDF(fragPos, center, halfSize.x);
-        sdfMask = 1.0 - smoothstep(-smoothing, smoothing, sdfVal);
     } else if (mode == 2) {
         sdfVal = roundedBoxSDF(fragPos, center, halfSize, radius);
+    } else {
+        fragColor = vertColor;
+        return;
+    }
+
+    // 2. Аппаратное сглаживание через экранные градиенты (SDF дельта)
+    // dFdx и dFdy считают изменение расстояния на один пиксель монитора.
+    // Это гарантирует нулевой алиасинг при любом разрешении и зуме.
+    vec2  derivatives = vec2(dFdx(sdfVal), dFdy(sdfVal));
+    float delta = length(derivatives);
+    float finalSmoothing = (delta > 0.0) ? delta * smoothing : smoothing;
+
+    // 3. Логика маскирования и отрисовки контуров
+    if (mode == 1) {
+        sdfMask = 1.0 - smoothstep(-finalSmoothing, finalSmoothing, sdfVal);
+    } else if (mode == 2) {
         if (borderMode == 0) {
-            sdfMask = 1.0 - smoothstep(-smoothing, smoothing, sdfVal);
+            // Обычная сплошная скругленная плашка
+            sdfMask = 1.0 - smoothstep(-finalSmoothing, finalSmoothing, sdfVal);
         } else {
-            float outer  = 1.0 - smoothstep(-smoothing, smoothing, sdfVal);
-            float inner  = 1.0 - smoothstep(-smoothing, smoothing, sdfVal + thickness);
+            // Продвинутый Stroke (Обводка)
+            float outer  = 1.0 - smoothstep(-finalSmoothing, finalSmoothing, sdfVal);
+            float inner  = 1.0 - smoothstep(-finalSmoothing, finalSmoothing, sdfVal + thickness);
             float stroke = outer - inner;
+            
+            // borderMode == 2: Эффект затухания бордера на закруглениях углов
             if (borderMode == 2) {
                 vec2  cornerDist = abs(fragPos - center) - (halfSize - radius);
                 float inCorner   = smoothstep(0.0, radius, max(cornerDist.x, 0.0))
@@ -55,9 +75,8 @@ void main() {
             }
             sdfMask = stroke;
         }
-    } else {
-        sdfMask = vertColor.a;
     }
 
+    // Финальный вывод цвета геометрии с наложением идеальной маски
     fragColor = vec4(vertColor.rgb, vertColor.a * sdfMask);
 }

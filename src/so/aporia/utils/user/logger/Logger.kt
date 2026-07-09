@@ -1,8 +1,8 @@
 package so.aporia.utils.user.logger
-
 import com.chaos.annotation.Obfuscate
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object Logger {
 
     private const val RESET = "\u001B[0m"
@@ -37,7 +37,8 @@ object Logger {
 
     @JvmStatic
     fun debug(message: String) {
-        if (System.getProperty("aporia.debug") == "true") {
+        val dbg = System.getProperty("aporia.debug")
+        if (dbg != null && dbg.equals("true", ignoreCase = true)) {
             println("[DEBUG] " + PREFIX + message)
         }
     }

@@ -1,24 +1,30 @@
 package so.aporia.utils.user.render.core
-
 import net.minecraft.world.entity.Entity
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.function.Predicate
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 object RenderFilter {
 
-    private var entityFilter: Predicate<Entity>? = null
+    private val filters = CopyOnWriteArrayList<Predicate<Entity>>()
 
     @JvmStatic
-    fun setEntityFilter(filter: Predicate<Entity>?) {
-        entityFilter = filter
+    fun addFilter(filter: Predicate<Entity>) {
+        filters.add(filter)
     }
 
     @JvmStatic
-    fun clearEntityFilter() {
-        entityFilter = null
+    fun removeFilter(filter: Predicate<Entity>) {
+        filters.remove(filter)
+    }
+
+    @JvmStatic
+    fun clearFilters() {
+        filters.clear()
     }
 
     @JvmStatic
     fun shouldSkip(entity: Entity): Boolean {
-        return entityFilter?.test(entity) == true
+        return filters.any { it.test(entity) }
     }
 }

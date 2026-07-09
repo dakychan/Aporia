@@ -286,7 +286,7 @@ public abstract class LivingEntityRenderer<T extends LivingEntity, S extends Liv
         p_363057_.isInWater = p_368665_.isInWater();
         p_363057_.isAutoSpinAttack = p_368665_.isAutoSpinAttack();
         p_363057_.ticksSinceKineticHitFeedback = p_368665_.getTicksSinceLastKineticHitFeedback(p_364497_);
-        p_363057_.hasRedOverlay = p_368665_.hurtTime > 0 || p_368665_.deathTime > 0;
+        p_363057_.hasRedOverlay = (p_368665_.hurtTime > 0 || p_368665_.deathTime > 0) && !so.aporia.module.impl.render.NoRender.hideHurt;
         ItemStack itemstack = p_368665_.getItemBySlot(EquipmentSlot.HEAD);
         if (itemstack.getItem() instanceof BlockItem blockitem && blockitem.getBlock() instanceof AbstractSkullBlock abstractskullblock) {
             p_363057_.wornHeadType = abstractskullblock.getType();

@@ -1,5 +1,6 @@
 package so.aporia.utils.events.impl
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class KeyInputEvent(val key: Int, val scancode: Int, val modifiers: Int, val action: Action) {
 
     enum class Action { PRESS, RELEASE, REPEAT }

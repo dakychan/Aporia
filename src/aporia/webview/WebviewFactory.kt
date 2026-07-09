@@ -1,8 +1,8 @@
 package aporia.webview
-
 import aporia.cc.OsManager
 import so.aporia.utils.user.logger.Logger
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 object WebviewFactory {
 
     enum class Backend {

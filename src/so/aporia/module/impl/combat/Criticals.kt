@@ -1,5 +1,4 @@
 package so.aporia.module.impl.combat
-
 import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.game.ServerboundInteractPacket
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
@@ -11,8 +10,8 @@ import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.events.impl.TickEvent
 import so.aporia.utils.imports.*
-
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class Criticals : Module("Criticals", Category.COMBAT) {
     companion object {
         @JvmField val mc = Minecraft.getInstance()
@@ -36,6 +35,8 @@ class Criticals : Module("Criticals", Category.COMBAT) {
         movingBypass = BooleanSetting("MovingBypass", "", false)
         moveFucker = BooleanSetting("MoveFucker", "", false)
     }
+
+    override val settings = listOf(mode, movingBypass, moveFucker)
 
     override fun onEnable() {
         bus.register(this)

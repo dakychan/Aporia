@@ -10,19 +10,27 @@ import net.minecraft.world.phys.Vec3
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
-import so.aporia.module.settings.NumberSetting
+import so.aporia.module.settings.SliderSetting
 import so.aporia.module.settings.SelectSetting
 import so.aporia.utils.events.EventHandler
+import so.aporia.utils.events.StateMachine
+import so.aporia.utils.events.StateMachineEngine
+import so.aporia.utils.events.StateMachineRegister
 import so.aporia.utils.events.impl.TickEvent
-import net.minecraft.client.Minecraft
 import so.aporia.utils.imports.*
+import so.aporia.utils.math.Angle
+import so.aporia.utils.math.Prediction
+import so.aporia.utils.math.Speed
 import so.aporia.utils.user.player.movement.MoveUtil
 import so.aporia.utils.user.player.rotation.RotationUtil
-
+import com.chaos.annotation.ChaosNative
+@StateMachine
+@ChaosNative
 class ElytraTarget : Module("ElytraTarget", Category.COMBAT) {
-    companion object {
-        @JvmField val mc = Minecraft.getInstance()
-    }
+
+    object TargetBackedOff
+    object TargetInRange
+    object AttackExecuted
 
     val mode = SelectSetting("Mode", "Elytra or Fly mode")
         .value("Elytra", "Fly")
@@ -30,35 +38,47 @@ class ElytraTarget : Module("ElytraTarget", Category.COMBAT) {
     val bypass = SelectSetting("Bypass", "Anticheat bypass mode")
         .value("Grim", "Matrix", "Vulcan", "NCP", "Intave", "Smooth")
         .selected("Grim")
-    val range = NumberSetting("Range", "Target search range", 100.0, 1.0, 100.0, 1.0)
-    val backOffDist = NumberSetting("Back Off", "Distance to back off before attack", 9.0, 3.0, 20.0, 1.0)
-    val heightOffset = NumberSetting("Height Offset", "Height above target to fly at", 3.0, -5.0, 10.0, 0.5)
-    val flightSpeed = NumberSetting("Flight Speed", "Speed when flying towards target", 2.0, 0.5, 5.0, 0.25)
-    val minCps = NumberSetting("Min CPS", "Minimum LMB spam CPS", 15.0, 5.0, 20.0, 1.0)
-    val maxCps = NumberSetting("Max CPS", "Maximum LMB spam CPS", 20.0, 5.0, 20.0, 1.0)
+    val range = SliderSetting("Range", "Target search range", 100.0, 1.0, 100.0, 1.0)
+    val backOffDist = SliderSetting("Back Off", "Distance to back off before attack", 9.0, 3.0, 20.0, 1.0)
+    val heightOffset = SliderSetting("Height Offset", "Height above target to fly at", 3.0, -5.0, 10.0, 0.5)
+    val flightSpeed = SliderSetting("Flight Speed", "Speed when flying towards target", 2.0, 0.5, 5.0, 0.25)
+    val minCps = SliderSetting("Min CPS", "Minimum LMB spam CPS", 15.0, 5.0, 20.0, 1.0)
+    val maxCps = SliderSetting("Max CPS", "Maximum LMB spam CPS", 20.0, 5.0, 20.0, 1.0)
     val targets = SelectSetting("Targets", "Target types")
         .value("Players", "Mobs", "Animals", "Friends")
         .selected("Players")
-    val rotationSpeed = NumberSetting("Rotation Speed", "Aim rotation speed (deg/s)", 360.0, 10.0, 360.0, 5.0)
+    val rotationSpeed = SliderSetting("Rotation Speed", "Aim rotation speed (deg/s)", 360.0, 10.0, 360.0, 5.0)
     val requireMace = BooleanSetting("Require Mace", "Only work when holding a mace", true)
 
     private enum class Phase { IDLE, BACKING_OFF, ACCELERATING, ATTACKING }
-    private var phase = Phase.IDLE
+    private val sm = StateMachineEngine(this, Phase::class, Phase.IDLE)
     private var lockedTarget: Entity? = null
     private var lastLmbTime = 0L
     private var nextLmbDelay = 0L
-    private var lastRmbTime = 0L
     private var tickCounter = 0
     private var currentBypass = ""
 
+    @StateMachineRegister(from = "IDLE", to = "BACKING_OFF", on = TickEvent::class)
+    fun onIdleTick() {}
+
+    @StateMachineRegister(from = "BACKING_OFF", to = "ACCELERATING", on = TargetBackedOff::class)
+    fun onBackOffDone() {}
+
+    @StateMachineRegister(from = "ACCELERATING", to = "ATTACKING", on = TargetInRange::class)
+    fun onAccelerateDone() {}
+
+    @StateMachineRegister(from = "ATTACKING", to = "IDLE", on = AttackExecuted::class)
+    fun onAttackDone() {}
+
     override fun onEnable() {
         bus.register(this)
+        Speed.reset()
     }
 
     override fun onDisable() {
         bus.unregister(this)
         RotationUtil.reset()
-        phase = Phase.IDLE
+        while (sm.state() != Phase.IDLE) sm.transition(AttackExecuted)
         lockedTarget = null
     }
 
@@ -78,20 +98,19 @@ class ElytraTarget : Module("ElytraTarget", Category.COMBAT) {
     }
 
     private fun canActivate(): Boolean {
-        val player = mc.player ?: return false
+        val p = mc.player ?: return false
         return when (mode.get()) {
-            "Elytra" -> player.isFallFlying()
-            "Fly" -> !player.onGround() && !player.isFallFlying()
+            "Elytra" -> p.isFallFlying()
+            "Fly" -> !p.onGround() && !p.isFallFlying()
             else -> false
         }
     }
 
     private fun hasMace(): Boolean {
         if (!requireMace.isEnabled) return true
-        val player = mc.player ?: return false
-        val main = player.getItemBySlot(EquipmentSlot.MAINHAND)
-        val off = player.getItemBySlot(EquipmentSlot.OFFHAND)
-        return main.item is MaceItem || off.item is MaceItem
+        val p = mc.player ?: return false
+        return p.getItemBySlot(EquipmentSlot.MAINHAND).item is MaceItem
+            || p.getItemBySlot(EquipmentSlot.OFFHAND).item is MaceItem
     }
 
     @EventHandler
@@ -99,71 +118,69 @@ class ElytraTarget : Module("ElytraTarget", Category.COMBAT) {
         if (mc.player == null || mc.level == null) return
         applyBypassMode()
         if (!canActivate() || !hasMace()) {
-            phase = Phase.IDLE
-            lockedTarget = null
-            return
+            while (sm.state() != Phase.IDLE) sm.transition(AttackExecuted)
+            lockedTarget = null; return
         }
 
+        Speed.update()
         tickCounter++
+
+        // Авто-переход: IDLE → BACKING_OFF по первому тику
+        sm.transition(event)
 
         val target = findTarget()
         if (target == null) {
-            phase = Phase.IDLE
-            lockedTarget = null
-            RotationUtil.deactivate()
-            return
+            while (sm.state() != Phase.IDLE) sm.transition(AttackExecuted)
+            lockedTarget = null; RotationUtil.deactivate(); return
         }
         lockedTarget = target
-
         RotationUtil.update(target, rotationSpeed.getFloat())
 
-        when (phase) {
-            Phase.IDLE -> startBackOff(target)
+        when (sm.state()) {
+            Phase.IDLE -> {}
             Phase.BACKING_OFF -> updateBackOff(target)
             Phase.ACCELERATING -> updateAccelerate(target)
             Phase.ATTACKING -> updateAttack(target)
         }
     }
 
-    private fun startBackOff(target: Entity) { phase = Phase.BACKING_OFF }
-
     private fun updateBackOff(target: Entity) {
-        val player = mc.player ?: return
-        val dist = player.distanceTo(target)
-        if (dist >= backOffDist.getFloat()) { phase = Phase.ACCELERATING; return }
-        val away = player.position().subtract(target.position()).normalize().scale(flightSpeed.getFloat() * 1.5)
-        player.setDeltaMovement(Vec3(away.x, 0.0, away.z))
+        val p = mc.player ?: return
+        val dist = p.distanceTo(target)
+        if (dist >= backOffDist.getFloat()) { sm.transition(TargetBackedOff); return }
+        val away = p.position().subtract(target.position()).normalize().scale(flightSpeed.getFloat() * 1.5)
+        p.setDeltaMovement(Vec3(away.x, 0.0, away.z))
     }
 
     private fun updateAccelerate(target: Entity) {
-        val player = mc.player ?: return
-        val dist = player.distanceTo(target)
-        if (dist <= 2.0) { phase = Phase.ATTACKING; return }
+        val p = mc.player ?: return
+        val dist = p.distanceTo(target)
+        if (dist <= 2.0) { sm.transition(TargetInRange); return }
 
-        val targetCenter = target.boundingBox.center
-        val targetHeight = targetCenter.y + heightOffset.getFloat()
-
-        MoveUtil.flyTowards(targetCenter, flightSpeed.getFloat().toDouble(), targetHeight)
+        MoveUtil.flyTowards(
+            target.boundingBox.center,
+            flightSpeed.getFloat().toDouble(),
+            target.boundingBox.center.y + heightOffset.getFloat()
+        )
 
         val now = System.currentTimeMillis()
         if (now - lastLmbTime >= nextLmbDelay) {
-            player.swing(net.minecraft.world.InteractionHand.MAIN_HAND)
-            player.connection.send(net.minecraft.network.protocol.game.ServerboundSwingPacket(net.minecraft.world.InteractionHand.MAIN_HAND))
+            p.swing(net.minecraft.world.InteractionHand.MAIN_HAND)
+            p.connection.send(net.minecraft.network.protocol.game.ServerboundSwingPacket(net.minecraft.world.InteractionHand.MAIN_HAND))
             lastLmbTime = now
             nextLmbDelay = getRandomCpsDelay()
         }
     }
 
     private fun updateAttack(target: Entity) {
-        val player = mc.player ?: return
-        val dist = player.distanceTo(target)
-        if (dist > 4.0) { phase = Phase.ACCELERATING; return }
+        val p = mc.player ?: return
+        val dist = p.distanceTo(target)
+        if (dist > 4.0) { sm.transition(TargetInRange); return }
 
-        player.connection.send(net.minecraft.network.protocol.game.ServerboundInteractPacket.createAttackPacket(target, false))
-        player.swing(net.minecraft.world.InteractionHand.MAIN_HAND)
-        mc.gameMode?.attack(player, target)
-
-        phase = Phase.IDLE
+        p.connection.send(net.minecraft.network.protocol.game.ServerboundInteractPacket.createAttackPacket(target, false))
+        p.swing(net.minecraft.world.InteractionHand.MAIN_HAND)
+        mc.gameMode?.attack(p, target)
+        sm.transition(AttackExecuted)
     }
 
     private fun findTarget(): Entity? {
@@ -177,8 +194,7 @@ class ElytraTarget : Module("ElytraTarget", Category.COMBAT) {
             if (!isValidTarget(entity)) continue
             val dist = mc.player!!.distanceTo(entity).toDouble()
             if (dist <= range.getFloat().toDouble() && dist < bestDist) {
-                bestDist = dist
-                best = entity
+                bestDist = dist; best = entity
             }
         }
         return best
@@ -197,10 +213,10 @@ class ElytraTarget : Module("ElytraTarget", Category.COMBAT) {
     }
 
     private fun getRandomCpsDelay(): Long {
-        var min = minCps.getFloat()
-        var max = maxCps.getFloat()
-        if (min <= 0) min = 1f
-        if (max <= 0) max = 1f
-        return (1000.0 / (min + Math.random().toFloat() * (max - min))).toLong()
+        val mn = minCps.getFloat().coerceAtLeast(1f)
+        val mx = maxCps.getFloat().coerceAtLeast(mn)
+        return (1000.0 / (mn + Math.random().toFloat() * (mx - mn))).toLong()
     }
+
+    override val settings = listOf(mode, bypass, range, backOffDist, heightOffset, flightSpeed, minCps, maxCps, targets, rotationSpeed, requireMace)
 }

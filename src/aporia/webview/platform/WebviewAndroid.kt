@@ -2,8 +2,9 @@ package aporia.webview.platform
 
 import aporia.webview.Webview
 import java.nio.ByteBuffer
-
+import com.chaos.annotation.ChaosNative
 /** Android (Pojav) WebView stub — replace with android.webkit.WebView bridge when available. */
+@ChaosNative
 class WebviewAndroid(url: String, width: Int, height: Int) : Webview(url, width, height) {
 
     private var buf: ByteBuffer? = null

@@ -7,7 +7,7 @@
 package so.aporia.utils.user.render.animation
 
 import java.util.function.Function
-
+import com.chaos.annotation.ChaosNative
 /**
  * Time-based animator — drives a value from 0→1 over a duration using any easing.
  *
@@ -20,6 +20,7 @@ import java.util.function.Function
  * val v = anim.value // 0→1
  * ```
  */
+@ChaosNative
 class Animator(private val durationMs: Long, private val easing: Function<Float, Float>) {
 
     enum class Direction { FORWARD, BACKWARD }
@@ -70,7 +71,6 @@ class Animator(private val durationMs: Long, private val easing: Function<Float,
     fun state(): State = state
     fun isPlaying(): Boolean = state == State.PLAYING
     fun isFinished(): Boolean = state == State.FINISHED
-
     fun reset() { state = State.IDLE; currentValue = 0f }
 
     fun snapTo(v: Float) { currentValue = v; state = State.IDLE }

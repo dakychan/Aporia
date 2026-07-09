@@ -1,10 +1,10 @@
 package so.aporia.utils.math
-
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.phys.Vec3
 import so.aporia.utils.imports.*
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 object Angle {
 
     fun calculate(entity: Entity): FloatArray {

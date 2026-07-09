@@ -751,6 +751,7 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
 
     @Override
     public void addParticle(ParticleOptions p_104706_, double p_104707_, double p_104708_, double p_104709_, double p_104710_, double p_104711_, double p_104712_) {
+        if (so.aporia.module.impl.render.NoRender.hidePotionParticles && p_104706_.getType() == net.minecraft.core.particles.ParticleTypes.EFFECT) return;
         this.doAddParticle(p_104706_, p_104706_.getType().getOverrideLimiter(), false, p_104707_, p_104708_, p_104709_, p_104710_, p_104711_, p_104712_);
     }
 
@@ -766,11 +767,13 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
         double p_104720_,
         double p_104721_
     ) {
+        if (so.aporia.module.impl.render.NoRender.hidePotionParticles && p_104714_.getType() == net.minecraft.core.particles.ParticleTypes.EFFECT) return;
         this.doAddParticle(p_104714_, p_104714_.getType().getOverrideLimiter() || p_104715_, p_376911_, p_104716_, p_104717_, p_104718_, p_104719_, p_104720_, p_104721_);
     }
 
     @Override
     public void addAlwaysVisibleParticle(ParticleOptions p_104766_, double p_104767_, double p_104768_, double p_104769_, double p_104770_, double p_104771_, double p_104772_) {
+        if (so.aporia.module.impl.render.NoRender.hidePotionParticles && p_104766_.getType() == net.minecraft.core.particles.ParticleTypes.EFFECT) return;
         this.doAddParticle(p_104766_, false, true, p_104767_, p_104768_, p_104769_, p_104770_, p_104771_, p_104772_);
     }
 
@@ -785,6 +788,7 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
         double p_104780_,
         double p_104781_
     ) {
+        if (so.aporia.module.impl.render.NoRender.hidePotionParticles && p_104774_.getType() == net.minecraft.core.particles.ParticleTypes.EFFECT) return;
         this.doAddParticle(p_104774_, p_104774_.getType().getOverrideLimiter() || p_104775_, true, p_104776_, p_104777_, p_104778_, p_104779_, p_104780_, p_104781_);
     }
 

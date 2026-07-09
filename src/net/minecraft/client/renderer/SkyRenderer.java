@@ -417,6 +417,9 @@ public class SkyRenderer implements AutoCloseable {
     }
 
     private void renderStars(float p_361462_, PoseStack p_364130_) {
+        if (so.aporia.module.impl.render.WorldRenderer.starDensityOverride >= 0f) {
+            p_361462_ = p_361462_ * so.aporia.module.impl.render.WorldRenderer.starDensityOverride;
+        }
         Matrix4fStack matrix4fstack = RenderSystem.getModelViewStack();
         matrix4fstack.pushMatrix();
         matrix4fstack.mul(p_364130_.last().pose());

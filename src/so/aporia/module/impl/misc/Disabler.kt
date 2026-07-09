@@ -12,8 +12,9 @@ import so.aporia.module.settings.BooleanSetting
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.imports.*
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class Disabler : Module("Disabler", Category.MISC) {
 
     val noRotation = BooleanSetting("NoRotation", "Не сбрасывать ротацию/позицию при респавне", true)
@@ -21,6 +22,8 @@ class Disabler : Module("Disabler", Category.MISC) {
     val noSmallMove = BooleanSetting("NoSmallMove", "Отменять микро-телепорты игрока (<0.03 блока)", false)
     val noPlayerMove = BooleanSetting("NoPlayerMove", "Не давать серверу двигать игрока через пакеты энтити", false)
     val noEntityMove = BooleanSetting("NoEntityMove", "Блокировать любое движение энтити от сервера", false)
+
+    override val settings = listOf(noRotation, noVelocityReset, noSmallMove, noPlayerMove, noEntityMove)
 
     override fun onEnable() { bus.register(this) }
     override fun onDisable() { bus.unregister(this) }

@@ -1,5 +1,4 @@
 package so.aporia.module.impl.render.hud
-
 import so.aporia.utils.imports.*
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.world.entity.Entity
@@ -9,8 +8,8 @@ import so.aporia.module.ModuleManager
 import so.aporia.module.impl.combat.Aura
 import so.aporia.module.impl.combat.TPAura
 import so.aporia.module.impl.render.Beautifully
-
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 object TargetHud {
 
     const val W = 160f
@@ -20,6 +19,8 @@ object TargetHud {
     const val FS = 12f
     const val HEALTH_FS = 16f
     const val RADIUS = 8f
+    @JvmField var posX = MARGIN
+    @JvmField var posY = 56f
     val C_BG = colorUtil.rgba(12, 18, 22, 200)
     val C_ACCENT = colorUtil.rgba(80, 200, 200, 255)
     val C_NAME = colorUtil.rgba(255, 255, 255, 255)
@@ -35,10 +36,10 @@ object TargetHud {
 
         val target = resolveTarget() ?: return
         if (target.isDeadOrDying) return
-        val blur = Beautifully.isBlurEnabled()
+        val blur = Beautifully.isBlurEnabled() && Beautifully.isFeatureEnabled("Target HUD Blur")
 
-        val x = MARGIN
-        val y = 56f
+        val x = posX
+        val y = posY
 
         if (blur) r.drawRectBlurred(x, y, W, H, RADIUS, C_BG)
         else r.drawRect(x, y, W, H, RADIUS, C_BG)

@@ -14,8 +14,8 @@ import so.aporia.utils.events.impl.KeyInputEvent
 import so.aporia.utils.events.impl.KeyInputEvent.Action
 import net.minecraft.client.Minecraft
 import so.aporia.utils.imports.*
-
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class ElytraHelper : Module("ElytraHelper", Category.PLAYER) {
     companion object {
         @JvmField val mc = Minecraft.getInstance()
@@ -28,6 +28,8 @@ class ElytraHelper : Module("ElytraHelper", Category.PLAYER) {
     private var fireworkSlot = -1
     private var oldSlot = -1
     private var waitTicks = 0
+
+    override val settings = listOf(elytraSwapBind, fireworkBind)
 
     override fun onEnable() {
         bus.register(this)

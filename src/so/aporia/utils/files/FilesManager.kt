@@ -17,8 +17,9 @@ import java.util.stream.Collectors
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object FilesManager {
 
     enum class FileType {
@@ -64,7 +65,6 @@ object FilesManager {
             }
         }
         ChatFile.load()
-        ConfigFile.load()
     }
 
     private fun hideWindowsDirectory(path: Path) {

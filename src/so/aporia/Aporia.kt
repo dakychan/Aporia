@@ -1,5 +1,4 @@
 package so.aporia
-
 import so.aporia.utils.imports.*
 import com.chaos.annotation.Obfuscate
 import net.minecraft.client.gui.GuiGraphics
@@ -8,6 +7,7 @@ import net.minecraft.server.packs.resources.ResourceManagerReloadListener
 import so.aporia.module.impl.render.Beautifully
 import so.aporia.module.impl.render.Hud
 import so.aporia.utils.events.impl.RenderHudEvent
+import so.aporia.utils.files.impl.ConfigFile
 import so.aporia.utils.user.input.KeybindManager
 import so.aporia.utils.user.friend.FriendManager
 import so.aporia.utils.user.render.ui.clickgui.QuestManager
@@ -18,9 +18,11 @@ import so.aporia.utils.user.render.theme.ThemeManager
 import so.aporia.utils.user.render.font.FontRenderer
 import so.aporia.utils.user.render.font.Fonts
 import so.aporia.utils.user.render.render3d.AporiaRenderer3D
-
-
+import so.aporia.utils.user.render.ui.chat.HudChatRenderer
+import net.minecraft.client.Minecraft
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class Aporia private constructor() : ResourceManagerReloadListener {
 
     @JvmField
@@ -36,6 +38,7 @@ class Aporia private constructor() : ResourceManagerReloadListener {
         }
         KeybindManager.toString()
         mm.toString()
+        ConfigFile.load()
         locale.init()
         FriendManager.init()
         ThemeManager.INSTANCE.init()
@@ -55,9 +58,16 @@ class Aporia private constructor() : ResourceManagerReloadListener {
                 2 -> so.aporia.utils.user.render.font.FontMode.OTF
                 else -> so.aporia.utils.user.render.font.FontMode.MSDF
             }
+            val avail = fonts.availableFamilies()
             val famIdx = clickGui.fontFamily.getSelectedIndex()
-            fonts.currentFamily = if (famIdx == 1) "Inter" else "Default"
+            fonts.currentFamily = if (famIdx in avail.indices) avail[famIdx] else "Default"
         }
+    }
+
+    fun updateFontFamilyOptions() {
+        val clickGui = mm.get("ClickGui") as? so.aporia.module.impl.misc.ClickGui ?: return
+        val avail = fonts.availableFamilies()
+        clickGui.fontFamily.value(*avail.toTypedArray()).selected(avail.firstOrNull() ?: "Default")
     }
 
     private fun initializeDiscordRPC() {
@@ -88,6 +98,12 @@ class Aporia private constructor() : ResourceManagerReloadListener {
             DrawBatch.INSTANCE.flush()
             r.flush()
 
+            // Aporia Chat HUD (когда чат не в фокусе — иначе AporiaChatScreen открыт)
+            val mc = Minecraft.getInstance()
+            if (!mc.gui.chat.isChatFocused()) {
+                HudChatRenderer.render(gfx, mc.font, mc.gui.chat, mc.gui.guiTicks)
+            }
+
             val hud = mm.get("HUD") as? Hud
             if (hud != null && hud.isEnabled) {
                 hud.render(gfx, 0, 0, partialTick)
@@ -116,6 +132,9 @@ class Aporia private constructor() : ResourceManagerReloadListener {
         DefaultSnippets.registerAll()
         DefaultLibraries.registerAll()
         Fonts.register(fonts)
+        fonts.initialize()
+        updateFontFamilyOptions()
+        loadFontMode()
     }
 
     companion object {

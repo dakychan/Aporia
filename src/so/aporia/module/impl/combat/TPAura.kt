@@ -11,24 +11,32 @@ import net.minecraft.sounds.SoundEvents
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
-import so.aporia.module.settings.NumberSetting
+import so.aporia.module.settings.SliderSetting
 import so.aporia.module.settings.SelectSetting
+import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
+import so.aporia.utils.events.StateMachine
+import so.aporia.utils.events.StateMachineEngine
+import so.aporia.utils.events.StateMachineRegister
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.events.impl.TickEvent
-import net.minecraft.client.Minecraft
 import so.aporia.utils.imports.*
+import so.aporia.utils.math.Angle
+import so.aporia.utils.math.Prediction
 import so.aporia.utils.user.player.rotation.RotationUtil
 import java.util.ArrayDeque
 import java.util.UUID
 import kotlin.math.ceil
-
+import com.chaos.annotation.ChaosNative
+@StateMachine
+@ChaosNative
 class TPAura : Module("TPAura", Category.COMBAT) {
 
-    companion object {
-        @JvmField
-        val mc = Minecraft.getInstance()
-    }
+    // ─── Events for state machine ────────────────────────
+    object StepFinished
+    object BlinkFinished
+    object AttackDone
+    object BackDone
 
     // Настройки
     val mode = SelectSetting("Mode", "TP Aura mode")
@@ -39,29 +47,33 @@ class TPAura : Module("TPAura", Category.COMBAT) {
         .value("Grim", "Matrix", "Vulcan", "NCP", "Intave", "Smooth")
         .selected("Grim")
 
-    val range = NumberSetting("Range", "Target search range", 100.0, 1.0, 100.0, 1.0)
-    val tpRange = NumberSetting("TP Range", "Distance to teleport near target", 1.5, 0.5, 4.0, 0.1)
-    val blinkTicks = NumberSetting("Blink Ticks", "Ticks to cache packets (Blink)", 5.0, 1.0, 20.0, 1.0)
+    val range = SliderSetting("Range", "Target search range", 100.0, 1.0, 100.0, 1.0)
+    val tpRange = SliderSetting("TP Range", "Distance to teleport near target", 1.5, 0.5, 4.0, 0.1)
+    val blinkTicks = SliderSetting("Blink Ticks", "Ticks to cache packets (Blink)", 5.0, 1.0, 20.0, 1.0)
     { mode.isSelected("Blink") }
 
-    val minCps = NumberSetting("Min CPS", "Minimum attacks per second", 6.0, 1.0, 20.0, 1.0)
-    val maxCps = NumberSetting("Max CPS", "Maximum attacks per second", 10.0, 1.0, 20.0, 1.0)
+    val minCps = SliderSetting("Min CPS", "Minimum attacks per second", 6.0, 1.0, 20.0, 1.0)
+    val maxCps = SliderSetting("Max CPS", "Maximum attacks per second", 10.0, 1.0, 20.0, 1.0)
 
     val targets = SelectSetting("Targets", "Target types")
         .value("Players", "Mobs", "Animals", "Friends")
         .selected("Players")
 
-    val rotationSpeed = NumberSetting("Rotation Speed", "Aim rotation speed (deg/s)", 360.0, 10.0, 360.0, 5.0)
+    val rotationSpeed = SliderSetting("Rotation Speed", "Aim rotation speed (deg/s)", 360.0, 10.0, 360.0, 5.0)
     val tpBack = BooleanSetting("TP Back", "Teleport back after attack", true)
 
     val maceExploit = BooleanSetting("Mace Exploit", "Use Mace packet exploit", true)
     val maceMode = SelectSetting("Mace Mode", "Mace exploit mode")
         .value("Default", "New")
         .selected("Default")
-    val maceHeight = NumberSetting("Mace Height", "Fall height for exploit", 10.0, 5.0, 50.0, 1.0)
+    val maceHeight = SliderSetting("Mace Height", "Fall height for exploit", 10.0, 5.0, 50.0, 1.0)
     { maceExploit.isEnabled }
-    val maceDelay = NumberSetting("Mace Delay", "Delay before attack (ms)", 50.0, 0.0, 200.0, 10.0)
+    val maceDelay = SliderSetting("Mace Delay", "Delay before attack (ms)", 50.0, 0.0, 200.0, 10.0)
     { maceExploit.isEnabled }
+
+    // ─── State machine engine ────────────────────────────
+    private enum class State { IDLE, TP_TO, ATTACK, TP_BACK, STEP_TO, STEP_BACK, MACE_EXPLOIT }
+    private val sm = StateMachineEngine(this, State::class, State.IDLE)
 
     // Состояние
     private var lockedTarget: Entity? = null
@@ -75,11 +87,6 @@ class TPAura : Module("TPAura", Category.COMBAT) {
     private var backtrackYaw = 0f
     private var backtrackPitch = 0f
 
-    private enum class State {
-        IDLE, TP_TO, ATTACK, TP_BACK, STEP_TO, STEP_BACK, MACE_EXPLOIT
-    }
-
-    private var state = State.IDLE
     private val steps = ArrayDeque<Vec3>()
     private var blinkActive = false
     private var blinkTimer = 0
@@ -107,36 +114,18 @@ class TPAura : Module("TPAura", Category.COMBAT) {
         currentBypass = mode
         RotationUtil.sync()
         when (mode) {
-            "Grim" -> {
-                RotationUtil.setMode(RotationUtil.RotationMode.GRIM)
-                rotationSpeed.setValue(180.0)
-            }
-            "Matrix" -> {
-                RotationUtil.setMode(RotationUtil.RotationMode.MATRIX)
-                rotationSpeed.setValue(220.0)
-            }
-            "Vulcan" -> {
-                RotationUtil.setMode(RotationUtil.RotationMode.VULCAN)
-                rotationSpeed.setValue(200.0)
-            }
-            "NCP" -> {
-                RotationUtil.setMode(RotationUtil.RotationMode.NCP)
-                rotationSpeed.setValue(360.0)
-            }
-            "Intave" -> {
-                RotationUtil.setMode(RotationUtil.RotationMode.INTAVE)
-                rotationSpeed.setValue(120.0)
-            }
-            else -> {
-                RotationUtil.setMode(RotationUtil.RotationMode.SMOOTH)
-                rotationSpeed.setValue(360.0)
-            }
+            "Grim" -> { RotationUtil.setMode(RotationUtil.RotationMode.GRIM); rotationSpeed.setValue(180.0) }
+            "Matrix" -> { RotationUtil.setMode(RotationUtil.RotationMode.MATRIX); rotationSpeed.setValue(220.0) }
+            "Vulcan" -> { RotationUtil.setMode(RotationUtil.RotationMode.VULCAN); rotationSpeed.setValue(200.0) }
+            "NCP" -> { RotationUtil.setMode(RotationUtil.RotationMode.NCP); rotationSpeed.setValue(360.0) }
+            "Intave" -> { RotationUtil.setMode(RotationUtil.RotationMode.INTAVE); rotationSpeed.setValue(120.0) }
+            else -> { RotationUtil.setMode(RotationUtil.RotationMode.SMOOTH); rotationSpeed.setValue(360.0) }
         }
     }
 
     private fun resetState() {
         lockedTarget = null
-        state = State.IDLE
+        while (sm.state() != State.IDLE) sm.transition(BackDone)
         steps.clear()
         blinkActive = false
         blinkTimer = 0
@@ -146,6 +135,39 @@ class TPAura : Module("TPAura", Category.COMBAT) {
         targetPosHistory.clear()
     }
 
+    // ─── State → event mapping ───────────────────────────
+    @StateMachineRegister(from = "STEP_TO", to = "STEP_BACK", on = StepFinished::class)
+    fun onStepToFinished() {
+        val t = lockedTarget ?: return
+        doPacketAttack(t)
+        lastAttackTime = System.currentTimeMillis()
+        nextAttackDelay = getRandomDelay()
+    }
+
+    @StateMachineRegister(from = "STEP_TO", to = "IDLE", on = BackDone::class)
+    fun onStepToAborted() {}
+
+    @StateMachineRegister(from = "STEP_BACK", to = "IDLE", on = BackDone::class)
+    fun onStepBackFinished() {}
+
+    @StateMachineRegister(from = "TP_TO", to = "TP_BACK", on = StepFinished::class)
+    fun onTpToFinished() {
+        val t = lockedTarget ?: return
+        doPacketAttack(t)
+        lastAttackTime = System.currentTimeMillis()
+        nextAttackDelay = getRandomDelay()
+    }
+
+    @StateMachineRegister(from = "TP_TO", to = "IDLE", on = BackDone::class)
+    fun onTpToNoBack() {}
+
+    @StateMachineRegister(from = "TP_BACK", to = "IDLE", on = BackDone::class)
+    fun onTpBackFinished() {}
+
+    @StateMachineRegister(from = "MACE_EXPLOIT", to = "IDLE", on = AttackDone::class)
+    fun onMaceDone() {}
+
+    // ─── onTick ───────────────────────────────────────────
     @EventHandler
     fun onTick(event: TickEvent) {
         if (mc.player == null || mc.level == null) return
@@ -158,39 +180,34 @@ class TPAura : Module("TPAura", Category.COMBAT) {
             recordTargetPosition(target)
             val btPos = backtrackedPos(target)
             if (btPos != null) {
-                val (y, p) = calcRot(mc.player!!.getEyePosition(1f), btPos)
-                backtrackYaw = y
-                backtrackPitch = p
+                val angles = Angle.calculateFromDiff(btPos.subtract(mc.player!!.getEyePosition(1f)))
+                backtrackYaw = angles[0]
+                backtrackPitch = angles[1].coerceIn(-90f, 90f)
             }
             RotationUtil.update(target, rotationSpeed.getFloat())
         } else {
             lockedTarget = null
         }
 
-        handleStateMachine()
-
-        if (state != State.IDLE) return
+        if (sm.state() != State.IDLE) {
+            tickStateMachine()
+            return
+        }
         if (target == null) return
 
         val hand = InteractionHand.MAIN_HAND
         val item = mc.player!!.getItemInHand(hand)
         if (item.isEmpty) return
-
         if (!canAttack()) return
 
         originalPos = mc.player!!.position()
         targetPos = findTpPosition(target) ?: return
 
-        val isMace = item.item == net.minecraft.world.item.Items.MACE
-
         when {
-            isMace && maceExploit.isEnabled -> {
-                state = State.MACE_EXPLOIT
+            item.item == net.minecraft.world.item.Items.MACE && maceExploit.isEnabled -> {
                 performMaceExploit()
             }
-            else -> {
-                performNormalAttack(target)
-            }
+            else -> performNormalAttack(target)
         }
     }
 
@@ -220,13 +237,11 @@ class TPAura : Module("TPAura", Category.COMBAT) {
             }
             "Step" -> {
                 buildSteps(originalPos!!, targetPos!!, 0.5).let { steps.clear(); steps.addAll(it) }
-                state = State.STEP_TO
             }
             "Blink" -> {
                 blinkActive = true
                 blinkTimer = 0
                 blinkDuration = blinkTicks.getFloat().toInt()
-                state = State.TP_TO
             }
         }
     }
@@ -235,47 +250,28 @@ class TPAura : Module("TPAura", Category.COMBAT) {
         val player = mc.player!!
         val height = maceHeight.getFloat()
         val mode = maceMode.get()
-        val tpPos = targetPos ?: run { state = State.IDLE; return }
-        val target = lockedTarget ?: run { state = State.IDLE; return }
+        val tpPos = targetPos ?: run { sm.transition(AttackDone); return }
+        val target = lockedTarget ?: run { sm.transition(AttackDone); return }
 
         val exploitBase = player.position()
 
         // Шаг 1: Фейк высоты
-        if (tpPos.distanceToSqr(exploitBase) > 0.01) {
-            when (mode) {
-                "New" -> {
-                    val steps = ceil(height / 10.0).toInt()
-                    for (i in 0..steps) {
-                        val t = i.toDouble() / steps
-                        sendPosRot(Vec3(tpPos.x, tpPos.y + height * t, tpPos.z), player.yRot, player.xRot, false)
-                    }
-                    for (i in steps downTo 0) {
-                        val t = i.toDouble() / steps
-                        sendPosRot(Vec3(tpPos.x, tpPos.y + height * t, tpPos.z), player.yRot, player.xRot, false)
-                    }
+        val base = if (tpPos.distanceToSqr(exploitBase) > 0.01) tpPos else exploitBase
+        when (mode) {
+            "New" -> {
+                val stepsCount = ceil(height / 10.0).toInt()
+                for (i in 0..stepsCount) {
+                    val t = i.toDouble() / stepsCount
+                    sendPosRot(Vec3(base.x, base.y + height * t, base.z), player.yRot, player.xRot, false)
                 }
-                else -> {
-                    sendPosRot(Vec3(tpPos.x, tpPos.y + height, tpPos.z), player.yRot, player.xRot, false)
-                    sendPosRot(tpPos, player.yRot, player.xRot, false)
+                for (i in stepsCount downTo 0) {
+                    val t = i.toDouble() / stepsCount
+                    sendPosRot(Vec3(base.x, base.y + height * t, base.z), player.yRot, player.xRot, false)
                 }
             }
-        } else {
-            when (mode) {
-                "New" -> {
-                    val steps = ceil(height / 10.0).toInt()
-                    for (i in 0..steps) {
-                        val t = i.toDouble() / steps
-                        sendPosRot(Vec3(exploitBase.x, exploitBase.y + height * t, exploitBase.z), player.yRot, player.xRot, false)
-                    }
-                    for (i in steps downTo 0) {
-                        val t = i.toDouble() / steps
-                        sendPosRot(Vec3(exploitBase.x, exploitBase.y + height * t, exploitBase.z), player.yRot, player.xRot, false)
-                    }
-                }
-                else -> {
-                    sendPosRot(Vec3(exploitBase.x, exploitBase.y + height, exploitBase.z), player.yRot, player.xRot, false)
-                    sendPosRot(exploitBase, player.yRot, player.xRot, false)
-                }
+            else -> {
+                sendPosRot(Vec3(base.x, base.y + height, base.z), player.yRot, player.xRot, false)
+                sendPosRot(base, player.yRot, player.xRot, false)
             }
         }
 
@@ -296,27 +292,19 @@ class TPAura : Module("TPAura", Category.COMBAT) {
             sendPosRot(originalPos!!, player.yRot, player.xRot, true)
         }
 
-        state = State.IDLE
+        sm.transition(AttackDone)
     }
 
-    private fun handleStateMachine() {
-        if (state == State.IDLE) return
-
-        when (state) {
+    private fun tickStateMachine() {
+        when (sm.state()) {
             State.STEP_TO -> {
                 if (steps.isEmpty()) {
-                    if (lockedTarget != null) {
-                        doPacketAttack(lockedTarget!!)
-                        lastAttackTime = System.currentTimeMillis()
-                        nextAttackDelay = getRandomDelay()
-                        if (tpBack.isEnabled && originalPos != null) {
-                            buildSteps(targetPos!!, originalPos!!, 0.5).let { steps.clear(); steps.addAll(it) }
-                            state = State.STEP_BACK
-                        } else {
-                            state = State.IDLE
-                        }
+                    val hasBack = tpBack.isEnabled && originalPos != null
+                    if (hasBack) {
+                        buildSteps(targetPos!!, originalPos!!, 0.5).let { steps.clear(); steps.addAll(it) }
+                        sm.transition(StepFinished)
                     } else {
-                        state = State.IDLE
+                        sm.transition(BackDone)
                     }
                     return
                 }
@@ -325,10 +313,7 @@ class TPAura : Module("TPAura", Category.COMBAT) {
                 }
             }
             State.STEP_BACK -> {
-                if (steps.isEmpty()) {
-                    state = State.IDLE
-                    return
-                }
+                if (steps.isEmpty()) { sm.transition(BackDone); return }
                 steps.poll()?.let {
                     sendPosRot(it, mc.player!!.yRot, mc.player!!.xRot, mc.player!!.onGround())
                 }
@@ -339,14 +324,8 @@ class TPAura : Module("TPAura", Category.COMBAT) {
                     targetPos?.let {
                         sendPosRot(it, backtrackYaw, backtrackPitch, false)
                     }
-                    if (lockedTarget != null) {
-                        doPacketAttack(lockedTarget!!)
-                        lastAttackTime = System.currentTimeMillis()
-                        nextAttackDelay = getRandomDelay()
-                        state = if (tpBack.isEnabled && originalPos != null) State.TP_BACK else State.IDLE
-                    } else {
-                        state = State.IDLE
-                    }
+                    val hasBack = tpBack.isEnabled && originalPos != null
+                    sm.transition(if (hasBack) StepFinished else BackDone)
                     blinkTimer = 0
                     return
                 }
@@ -354,7 +333,7 @@ class TPAura : Module("TPAura", Category.COMBAT) {
             }
             State.TP_BACK -> {
                 sendPosRot(originalPos!!, mc.player!!.yRot, mc.player!!.xRot, mc.player!!.onGround())
-                state = State.IDLE
+                sm.transition(BackDone)
             }
             else -> {}
         }
@@ -456,25 +435,19 @@ class TPAura : Module("TPAura", Category.COMBAT) {
     // ============ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ============
 
     private fun buildSteps(from: Vec3, to: Vec3, maxStep: Double = 0.5): List<Vec3> {
-        val result = ArrayList<Vec3>()
         val dist = from.distanceTo(to)
         val count = maxOf(1, ceil(dist / maxStep).toInt())
-        for (i in 1..count) {
+        return (1..count).map { i ->
             val t = i.toDouble() / count
-            result.add(Vec3(
-                lerp(t, from.x, to.x),
-                lerp(t, from.y, to.y),
-                lerp(t, from.z, to.z)
-            ))
+            Vec3(
+                Prediction.lerp(t, from.x, to.x),
+                Prediction.lerp(t, from.y, to.y),
+                Prediction.lerp(t, from.z, to.z)
+            )
         }
-        return result
     }
 
-    private fun lerp(t: Double, a: Double, b: Double): Double = a + t * (b - a)
-
-    private fun findTpPosition(target: Entity): Vec3? {
-        return target.boundingBox.getCenter()
-    }
+    private fun findTpPosition(target: Entity): Vec3? = target.boundingBox.center
 
     private fun findTarget(): Entity? {
         val currentRange = range.getFloat()
@@ -529,13 +502,6 @@ class TPAura : Module("TPAura", Category.COMBAT) {
         return queue.elementAtOrNull(idx)
     }
 
-    private fun calcRot(from: Vec3, to: Vec3): Pair<Float, Float> {
-        val diff = to.subtract(from).normalize()
-        val yaw = (Math.toDegrees(Math.atan2(diff.z, diff.x)) - 90.0).toFloat()
-        val pitch = (-Math.toDegrees(Math.atan2(diff.y, Math.hypot(diff.x, diff.z)))).toFloat()
-        return yaw to pitch.coerceIn(-90f, 90f)
-    }
-
     private fun canAttack(): Boolean {
         val now = System.currentTimeMillis()
         val elapsed = now - lastAttackTime
@@ -558,4 +524,6 @@ class TPAura : Module("TPAura", Category.COMBAT) {
             event.cancel()
         }
     }
+
+    override val settings = listOf(mode, bypass, range, tpRange, blinkTicks, minCps, maxCps, targets, rotationSpeed, tpBack, maceExploit, maceMode, maceHeight, maceDelay)
 }

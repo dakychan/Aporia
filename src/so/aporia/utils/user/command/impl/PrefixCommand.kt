@@ -1,10 +1,10 @@
 package so.aporia.utils.user.command.impl
-
 import com.chaos.annotation.Obfuscate
 import so.aporia.utils.user.command.Command
 import so.aporia.utils.user.command.CommandManager
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class PrefixCommand : Command {
     override fun name() = "prefix"
     override fun description() = "Changes the command prefix. Usage: prefix <new>"

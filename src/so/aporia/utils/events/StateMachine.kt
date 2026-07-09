@@ -1,21 +1,21 @@
 package so.aporia.utils.events
-
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberFunctions
-
+import com.chaos.annotation.ChaosNative
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class StateMachine
 
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
+@kotlin.annotation.Repeatable
 annotation class StateMachineRegister(
     val from: String = "",
     val to: String = "",
     val on: KClass<*> = Any::class
 )
-
+@ChaosNative
 class StateMachineEngine<S : Enum<S>>(
     @PublishedApi internal val owner: Any,
     private val stateClass: KClass<S>,
@@ -31,12 +31,13 @@ class StateMachineEngine<S : Enum<S>>(
     private fun registerAnnotated() {
         val methods = owner::class.memberFunctions
         for (method in methods) {
-            val ann = method.findAnnotation<StateMachineRegister>() ?: continue
-            if (ann.from.isNotEmpty() && ann.to.isNotEmpty()) {
-                val fromState = parseState(ann.from) ?: continue
-                val toState = parseState(ann.to) ?: continue
-                val eventType = ann.on
-                transitions[fromState to eventType] = toState
+            for (ann in method.annotations.filterIsInstance<StateMachineRegister>()) {
+                if (ann.from.isNotEmpty() && ann.to.isNotEmpty()) {
+                    val fromState = parseState(ann.from) ?: continue
+                    val toState = parseState(ann.to) ?: continue
+                    val eventType = ann.on
+                    transitions[fromState to eventType] = toState
+                }
             }
         }
     }

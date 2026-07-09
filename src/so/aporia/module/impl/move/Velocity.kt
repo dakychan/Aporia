@@ -1,16 +1,16 @@
 package so.aporia.module.impl.move
-
 import so.aporia.utils.imports.*
 import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
 import net.minecraft.world.phys.Vec3
 import so.aporia.module.Category
 import so.aporia.module.Module
-import so.aporia.module.settings.NumberSetting
+import so.aporia.module.settings.SliderSetting
 import so.aporia.module.settings.SelectSetting
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class Velocity : Module("Velocity", Category.MOVE) {
     companion object {
         @JvmField val mc = Minecraft.getInstance()
@@ -18,18 +18,20 @@ class Velocity : Module("Velocity", Category.MOVE) {
 
 
     val mode: SelectSetting
-    val factor: NumberSetting
+    val factor: SliderSetting
 
     init {
         mode = SelectSetting("Mode", "Velocity mode")
             .value("Cancel", "Reduce", "Vertical")
             .selected("Cancel")
 
-        factor = NumberSetting(
+        factor = SliderSetting(
             "Factor", "Knockback reduction factor (0-100%)",
             0.0, 0.0, 100.0, 1.0,
             { mode.isSelected("Reduce") })
     }
+
+    override val settings = listOf(mode, factor)
 
     override fun onEnable() {
         bus.register(this)

@@ -1,5 +1,4 @@
 package aporia.cc.network
-
 import com.chaos.annotation.Obfuscate
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.FullHttpRequest
@@ -11,8 +10,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.BiConsumer
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object EthernetUtils {
 
     private const val DEFAULT_PORT = 61033

@@ -24,6 +24,7 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
+import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 import so.aporia.Aporia;
@@ -48,6 +49,9 @@ import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
+import com.chaos.annotation.ChaosNative;
+
+@ChaosNative
 public class AporiaRenderer {
     public static final AporiaRenderer INSTANCE = new AporiaRenderer();
     public static final int MODE_FILL         = 0;
@@ -87,6 +91,7 @@ public class AporiaRenderer {
     private RenderPipeline postPipeline;
     private RenderPipeline mainmenuPipeline;
     private RenderPipeline entityGlowPipeline;
+    private RenderPipeline logoPipeline;
     private GpuBuffer entityGlowIBO;
 
     private ByteBuffer cachedMainmenuBB;
@@ -116,6 +121,8 @@ public class AporiaRenderer {
     private GpuBuffer mainmenuUbo;
     /** UBO для post-process (16 байт) / UBO for post-process (16 bytes). */
     private GpuBuffer postUbo;
+    /** UBO для logo шейдера (16 байт) / UBO for logo shader (16 bytes). */
+    private GpuBuffer logoUbo;
 
     /** VBO для entity glow / VBO for entity glow. */
     private GpuBuffer entityGlowVBO;
@@ -224,6 +231,21 @@ public class AporiaRenderer {
                 .withCull(false)
                 .build();
 
+        logoPipeline = RenderPipeline.builder()
+                .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/logo"))
+                .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/logo"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/logo"))
+                .withUniform("Projection", UniformType.UNIFORM_BUFFER)
+                .withUniform("LogoData", UniformType.UNIFORM_BUFFER)
+                .withUniform("u_time", UniformType.UNIFORM_BUFFER)
+                .withSampler("LogoTextureSampler")
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.TRIANGLES)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false)
+                .build();
+
         var device = RenderSystem.getDevice();
         BlurRenderer.init(device);
         /** Кэшированные буферы: VBO на 6 вершин (позиция, uv, цвет) — 6 * 36 = 216 байт, округлим до 256.
@@ -250,6 +272,9 @@ public class AporiaRenderer {
         /** UBO для post-process (saturation = 16 байт).
          *  UBO for post-process (saturation = 16 bytes). */
         postUbo = device.createBuffer(() -> "aporia:post_ubo",
+                GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 16L);
+
+        logoUbo = device.createBuffer(() -> "aporia:logo_ubo",
                 GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 16L);
 
         /** VBO для entity glow (достаточно для ~4000 вершин).
@@ -633,6 +658,69 @@ public class AporiaRenderer {
         }
     }
 
+    public void drawLogo(float x, float y, float w, float h, Identifier textureId, long time) {
+        if (textureId == null) return;
+        AbstractTexture tex = Minecraft.getInstance().getTextureManager().getTexture(textureId);
+        if (tex != null) drawLogo(x, y, w, h, tex.getTextureView(), time);
+    }
+
+    public void drawLogo(float x, float y, float w, float h, GpuTextureView view, long time) {
+        if (view == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        var colorView = mc.getMainRenderTarget().getColorTextureView();
+        if (colorView == null) return;
+
+        if (cachedImageBB == null) cachedImageBB = ByteBuffer.allocateDirect(128).order(ByteOrder.nativeOrder());
+        cachedImageBB.clear();
+        cachedImageBB.putFloat(x); cachedImageBB.putFloat(y); cachedImageBB.putFloat(w); cachedImageBB.putFloat(h);
+        cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f);
+        cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f);
+        cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f);
+        cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f);
+        cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f);
+        cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f);
+        cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f); cachedImageBB.putFloat(0f);
+        cachedImageBB.flip();
+
+        float sw = mc.getWindow().getGuiScaledWidth();
+        float sh = mc.getWindow().getGuiScaledHeight();
+        float nx0 = -1f + 2f * x / sw;
+        float ny0 =  1f - 2f * (y + h) / sh;
+        float nx1 = -1f + 2f * (x + w) / sw;
+        float ny1 =  1f - 2f * y / sh;
+        var tess = Tesselator.getInstance();
+        var buf = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR);
+        buf.addVertex(nx0, ny0, 0f).setUv(0f, 1f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(nx1, ny0, 0f).setUv(1f, 1f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(nx1, ny1, 0f).setUv(1f, 0f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(nx0, ny0, 0f).setUv(0f, 1f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(nx1, ny1, 0f).setUv(1f, 0f).setColor(1f, 1f, 1f, 1f);
+        buf.addVertex(nx0, ny1, 0f).setUv(0f, 0f).setColor(1f, 1f, 1f, 1f);
+        var mesh = buf.buildOrThrow();
+        var device  = RenderSystem.getDevice();
+        var encoder = device.createCommandEncoder();
+        encoder.writeToBuffer(cachedImageVertexBuffer.slice(), mesh.vertexBuffer());
+        encoder.writeToBuffer(cachedImageShapeBuffer.slice(), cachedImageBB);
+        mesh.close();
+        var indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES);
+        var logoTimeBB = ByteBuffer.allocateDirect(16).order(ByteOrder.nativeOrder());
+        logoTimeBB.clear();
+        logoTimeBB.putFloat((time % 1000000L) / 1000f);
+        logoTimeBB.flip();
+        encoder.writeToBuffer(logoUbo.slice(), logoTimeBB);
+        try (var pass = encoder.createRenderPass(() -> "aporia:logo_pass", colorView, OptionalInt.empty())) {
+            pass.setPipeline(logoPipeline);
+            RenderSystem.bindDefaultUniforms(pass);
+            pass.setUniform("u_time", logoUbo.slice());
+            pass.setUniform("LogoData", cachedImageShapeBuffer.slice());
+            pass.bindTexture("LogoTextureSampler", view,
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.setVertexBuffer(0, cachedImageVertexBuffer);
+            pass.setIndexBuffer(indexBuf.getBuffer(6), indexBuf.type());
+            pass.drawIndexed(0, 0, 6, 0);
+        }
+    }
+
     public void drawTexture(float x, float y, float w, float h, GpuTextureView view) {
         if (view == null) return;
         Minecraft mc = Minecraft.getInstance();
@@ -671,7 +759,10 @@ public class AporiaRenderer {
         if (id == null) return;
         Minecraft mc = Minecraft.getInstance();
         var tex = mc.getTextureManager().getTexture(id);
-        if (tex == null || tex.getTextureView() == null) return;
+        if (tex == null) return;
+        try {
+            if (tex.getTextureView() == null) return;
+        } catch (Exception ignored) { return; }
         var colorView = mc.getMainRenderTarget().getColorTextureView();
         if (colorView == null) return;
 

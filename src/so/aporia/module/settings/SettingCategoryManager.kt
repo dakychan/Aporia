@@ -1,5 +1,6 @@
 package so.aporia.module.settings
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 object SettingCategoryManager {
     private val current = ThreadLocal<Pair<String, Int>?>()
 

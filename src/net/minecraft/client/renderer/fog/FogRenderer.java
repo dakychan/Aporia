@@ -151,6 +151,16 @@ public class FogRenderer implements AutoCloseable {
                 f2 = Mth.lerp(f6, f2, f2 * f7);
             }
 
+            // Aporia: custom fog color override
+            if (so.aporia.module.impl.render.WorldRenderer.customFogActive) {
+                return new Vector4f(
+                    so.aporia.module.impl.render.WorldRenderer.fogColorR / 255f,
+                    so.aporia.module.impl.render.WorldRenderer.fogColorG / 255f,
+                    so.aporia.module.impl.render.WorldRenderer.fogColorB / 255f,
+                    1.0F
+                );
+            }
+
             return new Vector4f(f5, f1, f2, 1.0F);
         }
     }
@@ -177,6 +187,13 @@ public class FogRenderer implements AutoCloseable {
         float f2 = Mth.clamp(f1 / 10.0F, 4.0F, 64.0F);
         fogdata.renderDistanceStart = f1 - f2;
         fogdata.renderDistanceEnd = f1;
+
+        // Aporia: custom fog override
+        if (so.aporia.module.impl.render.WorldRenderer.customFogActive) {
+            fogdata.environmentalStart = so.aporia.module.impl.render.WorldRenderer.fogStartDist * f1;
+            fogdata.environmentalEnd = so.aporia.module.impl.render.WorldRenderer.fogEndDist * f1;
+            fogdata.renderDistanceEnd /= so.aporia.module.impl.render.WorldRenderer.fogDensityMod;
+        }
 
         try (GpuBuffer.MappedView gpubuffer$mappedview = RenderSystem.getDevice().createCommandEncoder().mapBuffer(this.regularBuffer.currentBuffer(), false, true)) {
             this.updateBuffer(

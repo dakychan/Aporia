@@ -1,10 +1,10 @@
 package so.aporia.utils.user.command.impl
-
 import com.chaos.annotation.Obfuscate
 import so.aporia.utils.user.command.Command
 import so.aporia.utils.user.command.CommandManager
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class HelpCommand : Command {
     override fun name() = "help"
     override fun description() = "Lists all available commands"

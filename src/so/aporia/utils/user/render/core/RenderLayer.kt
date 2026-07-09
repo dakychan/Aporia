@@ -1,5 +1,6 @@
 package so.aporia.utils.user.render.core
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 enum class RenderLayer(val priority: Int) {
     WORLD(0),
     GUI(1),

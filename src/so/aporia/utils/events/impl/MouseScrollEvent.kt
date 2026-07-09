@@ -1,5 +1,6 @@
 package so.aporia.utils.events.impl
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class MouseScrollEvent(val x: Double, val y: Double, val deltaX: Double, val deltaY: Double) {
 
     var cancelled = false

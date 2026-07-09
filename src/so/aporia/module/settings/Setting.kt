@@ -1,7 +1,10 @@
 package so.aporia.module.settings
 
+import so.aporia.utils.user.render.core.AporiaRenderer
+import so.aporia.utils.user.render.theme.ThemeManager.Theme
 import java.util.function.Supplier
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 abstract class Setting<T>(
     val name: String,
     val description: String,
@@ -25,4 +28,8 @@ abstract class Setting<T>(
 
     open fun isVisible(): Boolean = visible?.get() ?: true
     fun name(): String = name
+
+    open fun displayHeight(dropOpen: Boolean): Float = 14f
+
+    open fun draw(r: AporiaRenderer, x: Float, y: Float, w: Float, theme: Theme, mouseX: Float, mouseY: Float, isDropOpen: Boolean) {}
 }

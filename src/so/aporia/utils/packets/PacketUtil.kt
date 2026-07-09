@@ -1,9 +1,9 @@
 package so.aporia.utils.packets
-
 import com.chaos.annotation.Obfuscate
 import so.aporia.utils.imports.*
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object PacketUtil {
 
     @JvmStatic

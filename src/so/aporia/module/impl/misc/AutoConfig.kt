@@ -8,11 +8,14 @@ import so.aporia.module.settings.*
 import so.aporia.utils.files.FilesManager
 import so.aporia.utils.user.logger.Logger
 import java.io.IOException
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class AutoConfig : Module("AutoConfig", Category.MISC) {
 
     val autoSave = BooleanSetting("AutoSave", "Автосохранение при изменении", true)
+
+    override val settings = listOf(autoSave)
 
     override fun onEnable() {
         load()

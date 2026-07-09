@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalInt;
 
+import com.chaos.annotation.ChaosNative;
+
 /**
  * Batch renderer — accumulates draw tasks and flushes them in a single draw call.
  * Reduces GPU state changes and encoder overhead.
@@ -25,6 +27,7 @@ import java.util.OptionalInt;
  *   batch.drawRect(x2, y2, w2, h2, radius2, color2);
  *   batch.flush(); // single draw call
  */
+@ChaosNative
 public class DrawBatch {
 
     public static final DrawBatch INSTANCE = new DrawBatch();

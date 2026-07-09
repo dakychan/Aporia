@@ -13,7 +13,7 @@ import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.files.FilesManager
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
-
+import com.chaos.annotation.ChaosNative
 /**
  * QuestManager — игровая система квестов внутри ClickGui.
  *
@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * Создан как singleton (object).
  */
 @Obfuscate
+@ChaosNative
 object QuestManager {
 
     /* ============ Типы и модели ============ */
@@ -324,7 +325,7 @@ object QuestManager {
     @EventHandler
     fun onChat(e: ChatMessageEvent) {
         if (mc.player == null) return
-        val text = e.plainText ?: return
+        val text = e.plainText
         val m = KILL_CHAT_RU.find(text) ?: KILL_CHAT_EN.find(text) ?: return
         // Если в чате про нас (нас убили) — пропускаем, нас интересуют только наши киллы.
         // Регэксп и так матчит "X killed Y" где X — игрок, отправляющий действие. Поскольку

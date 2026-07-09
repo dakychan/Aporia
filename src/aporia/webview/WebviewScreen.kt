@@ -14,7 +14,8 @@ import net.minecraft.resources.Identifier
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class WebviewScreen(url: String) : Screen(Component.literal("Webview")) {
 
     companion object {
@@ -44,7 +45,6 @@ class WebviewScreen(url: String) : Screen(Component.literal("Webview")) {
     private var blinkTicker = 0
     private val tabs = mutableListOf(Tab(url, ""))
     private var currentTab = 0
-
     private var homeBtn = Rect(); private var urlBar = Rect()
     private var bookmarksBtn = Rect(); private var addTabBtn = Rect(); private var closeBtn = Rect()
 
@@ -114,7 +114,7 @@ class WebviewScreen(url: String) : Screen(Component.literal("Webview")) {
 
         // ── Web content via GuiGraphics.blit (MCEF-compatible path) ──
         if (webviewReady && webview is WebviewWin32) {
-            val win = webview as WebviewWin32
+            val win = webview
             win.tickCapture()
             if (win.isTextureReady()) {
                 val tex = win.getTexture()
@@ -125,7 +125,7 @@ class WebviewScreen(url: String) : Screen(Component.literal("Webview")) {
                     val texH = tex.getHeight()
                     if (texW > 0 && texH > 0) {
                         graphics.blit(RenderPipelines.GUI_TEXTURED, WEBVIEW_TEX_ID,
-                            0, toolbarH, 0f, 0f, width, height - toolbarH, texW, texH)
+                            0, toolbarH, 0f, 0f, texW, texH, texW, texH)
                     }
                 }
             }

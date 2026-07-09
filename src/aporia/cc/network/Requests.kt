@@ -1,18 +1,19 @@
 package aporia.cc.network
-
 import com.chaos.annotation.Obfuscate
 import so.aporia.utils.user.logger.Logger
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.GZIPInputStream
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object Requests {
 
     enum class Method {
@@ -76,7 +77,7 @@ object Requests {
         val startTime = System.currentTimeMillis()
 
         return try {
-            val url = URL(data.url)
+            val url = URI(data.url).toURL()
             val connection = url.openConnection() as HttpURLConnection
 
             connection.requestMethod = data.method.name
@@ -149,7 +150,7 @@ object Requests {
     @JvmStatic
     fun isUrlAvailable(url: String, timeout: Int): Boolean {
         return try {
-            val connection = URL(url).openConnection() as HttpURLConnection
+            val connection = URI(url).toURL().openConnection() as HttpURLConnection
             connection.requestMethod = "HEAD"
             connection.connectTimeout = timeout
             connection.readTimeout = timeout

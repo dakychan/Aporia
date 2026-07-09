@@ -16,16 +16,17 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import kotlin.math.min
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 enum class FontMode { MSDF, TTF, OTF }
-
+@ChaosNative
 class FontRenderer {
 
     private val pipeline = FontPipeline()
     private val fonts: MutableMap<String, FontAtlas> = HashMap()
     private var initialized = false
 
-    @Volatile var currentMode = FontMode.MSDF
+    @Volatile var currentMode = FontMode.TTF
     @Volatile var currentFamily = "Default"
 
     private val customFonts = mutableMapOf<String, java.awt.Font>()
@@ -63,9 +64,29 @@ class FontRenderer {
         LOGGER.info("Initializing {} fonts...", fonts.size)
         val t = System.currentTimeMillis()
         fonts.values.forEach { it.ensureLoaded() }
-        loadInter()
+        loadTTFsFromDir()
+        if (customFonts.isEmpty()) loadInter()
         initialized = true
         LOGGER.info("Fonts ready in {}ms", System.currentTimeMillis() - t)
+    }
+
+    private fun loadTTFsFromDir() {
+        val dir: Path = files.ROOT.resolve(".assets/aporia/fonts")
+        if (!dir.toFile().exists()) {
+            LOGGER.info("TTF dir not found, skipping: {}", dir)
+            return
+        }
+        try {
+            dir.toFile().listFiles()?.filter { it.name.lowercase().endsWith(".ttf") }?.forEach { ttf ->
+                val name = ttf.name.removeSuffix(".ttf")
+                if (loadCustomTTF(name, ttf.toPath()) && customFonts.size == 1) {
+                    currentFamily = name
+                }
+            }
+            LOGGER.info("Loaded {} custom TTF(s) from {}", customFonts.size, dir)
+        } catch (e: Exception) {
+            LOGGER.error("Failed to scan TTF dir {}", dir, e)
+        }
     }
 
     private fun loadInter() {
@@ -113,6 +134,8 @@ class FontRenderer {
         clearCache()
         LOGGER.info("Font family changed to: {}", family)
     }
+
+    fun availableFamilies(): List<String> = customFonts.keys.toList() + if (interAwt != null) listOf("Inter") else emptyList()
 
     fun drawText(fontName: String, text: String, x: Float, y: Float, size: Float, color: Int) {
         if (currentMode != FontMode.MSDF) {
@@ -258,7 +281,7 @@ class FontRenderer {
 
     private fun renderVanillaFallback(text: String, x: Float, y: Float, size: Float, color: Int) {
         
-        val font = mc.font ?: return
+        val font = mc.font
         val scale = size / font.lineHeight.toFloat()
         val pose = PoseStack()
         pose.translate(x.toDouble(), y.toDouble(), 0.0)

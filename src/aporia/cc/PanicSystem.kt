@@ -1,10 +1,10 @@
 package aporia.cc
-
 import com.chaos.annotation.Obfuscate
 import net.minecraft.network.chat.Component
 import so.aporia.utils.imports.*
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class PanicSystem private constructor() {
 
     var isPanicked: Boolean = false

@@ -1,5 +1,4 @@
 package aporia.webview.render
-
 import com.mojang.blaze3d.opengl.GlStateManager
 import com.mojang.blaze3d.opengl.GlTexture
 import com.mojang.blaze3d.systems.RenderSystem
@@ -9,7 +8,8 @@ import com.mojang.blaze3d.textures.TextureFormat
 import java.nio.ByteBuffer
 import org.lwjgl.opengl.GL11.*
 import org.lwjgl.opengl.GL12.*
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class WebviewTexture : AutoCloseable {
 
     private var texture: GpuTexture? = null

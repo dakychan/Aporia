@@ -1,5 +1,4 @@
 package so.aporia.module.impl.move
-
 import so.aporia.utils.imports.*
 import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
@@ -10,11 +9,12 @@ import net.minecraft.world.item.MaceItem
 import net.minecraft.world.phys.Vec3
 import so.aporia.module.Category
 import so.aporia.module.Module
-import so.aporia.module.settings.NumberSetting
+import so.aporia.module.settings.SliderSetting
 import so.aporia.module.settings.SelectSetting
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.TickEvent
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class Flight : Module("Flight", Category.MOVE) {
     companion object {
         @JvmField val mc = Minecraft.getInstance()
@@ -23,11 +23,13 @@ class Flight : Module("Flight", Category.MOVE) {
     val mode = SelectSetting("Mode", "Flight mode")
         .value("Default", "Spear", "DragonFly")
         .selected("Default")
-    val xzSpeed = NumberSetting("XZ Speed", "Horizontal acceleration speed", 0.5, 0.05, 5.0, 0.05)
-    val ySpeed = NumberSetting("Y Speed", "Vertical speed", 0.5, 0.05, 5.0, 0.05)
+    val xzSpeed = SliderSetting("XZ Speed", "Horizontal acceleration speed", 0.5, 0.05, 5.0, 0.05)
+    val ySpeed = SliderSetting("Y Speed", "Vertical speed", 0.5, 0.05, 5.0, 0.05)
 
     private var lastAttackTime = 0L
     private var attackDelay = 50L
+
+    override val settings = listOf(mode, xzSpeed, ySpeed)
 
     override fun onEnable() {
         bus.register(this)

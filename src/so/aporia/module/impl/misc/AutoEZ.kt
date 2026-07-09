@@ -11,8 +11,9 @@ import so.aporia.utils.events.impl.PlayerDeathEvent
 import so.aporia.utils.events.impl.TickEvent
 import so.aporia.utils.user.render.ui.clickgui.QuestManager
 import java.util.regex.Pattern
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class AutoEZ : Module("AutoEZ", Category.MISC) {
 
     val chatMode = BooleanSetting("Chat Detect", "", true)
@@ -22,6 +23,8 @@ class AutoEZ : Module("AutoEZ", Category.MISC) {
     private val killedPlayers = mutableSetOf<String>()
     private var lastKilledName: String? = null
     private var delayTicks = 0
+
+    override val settings = listOf(chatMode, eventMode, message)
 
     override fun onEnable() {
         bus.register(this)
@@ -68,14 +71,14 @@ class AutoEZ : Module("AutoEZ", Category.MISC) {
         if (name.isEmpty() || killedPlayers.contains(name)) return
         killedPlayers.add(name)
         lastKilledName = name
-        delayTicks = (message.get().length * 20).toInt()
+        delayTicks = message.get().length * 20
     }
 
     private fun sendEz(target: String) {
         val player = mc.player ?: return
         val msg = message.get().replace("{player}", target)
         val text = if (msg.isEmpty()) "ez" else msg
-        player.connection?.sendChat(text)
+        player.connection.sendChat(text)
         // Квест: учёт отправленного сообщения.
         QuestManager.notifyChatSent()
     }

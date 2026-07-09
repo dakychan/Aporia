@@ -1,12 +1,12 @@
 package aporia.cc
-
 import com.chaos.annotation.Obfuscate
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.security.MessageDigest
 import java.util.Random
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object UserGenerator {
 
     private val PREFIXES = listOf(
@@ -133,9 +133,9 @@ object UserGenerator {
             val runtime = Runtime.getRuntime()
             val os = OsManager.osName.lowercase()
             val process = when {
-                os.contains("win") -> runtime.exec("wmic csproduct get uuid")
-                os.contains("linux") -> runtime.exec("cat /etc/machine-id")
-                os.contains("mac") -> runtime.exec("ioreg -rd1 -c IOPlatformExpertDevice")
+                os.contains("win") -> runtime.exec(arrayOf("wmic", "csproduct", "get", "uuid"))
+                os.contains("linux") -> runtime.exec(arrayOf("cat", "/etc/machine-id"))
+                os.contains("mac") -> runtime.exec(arrayOf("ioreg", "-rd1", "-c", "IOPlatformExpertDevice"))
                 else -> null
             }
 

@@ -7,7 +7,7 @@
 package so.aporia.utils.user.render.animation
 
 import kotlin.math.abs
-
+import com.chaos.annotation.ChaosNative
 /**
  * Real-time spring physics simulator.
  *
@@ -24,6 +24,7 @@ import kotlin.math.abs
  * val x = spring.value
  * ```
  */
+@ChaosNative
 class SpringSimulator(
     private var stiffness: Float,
     private var damping: Float,

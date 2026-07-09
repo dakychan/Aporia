@@ -1,11 +1,11 @@
 package aporia.cc.network
-
 import com.chaos.annotation.Obfuscate
 import so.aporia.utils.user.logger.Logger
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object ThreadManager {
 
     private const val CORE_POOL_SIZE = 2

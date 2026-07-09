@@ -230,6 +230,7 @@ public class Gui {
     }
 
     private void renderBossOverlay(GuiGraphics p_407400_, DeltaTracker p_407876_) {
+        if (so.aporia.module.impl.render.NoRender.hideBossBar) return;
         this.bossOverlay.render(p_407400_);
     }
 
@@ -284,9 +285,9 @@ public class Gui {
         float f1 = p_344236_.getGameTimeDeltaPartialTick(false);
         float f2 = Mth.lerp(f1, localplayer.oPortalEffectIntensity, localplayer.portalEffectIntensity);
         float f3 = localplayer.getEffectBlendFactor(MobEffects.NAUSEA, f1);
-        if (f2 > 0.0F) {
+        if (f2 > 0.0F && !so.aporia.module.impl.render.NoRender.hidePortal) {
             this.renderPortalOverlay(p_333627_, f2);
-        } else if (f3 > 0.0F) {
+        } else if (f3 > 0.0F && !so.aporia.module.impl.render.NoRender.hideBlindness) {
             float f4 = this.minecraft.options.screenEffectScale().get().floatValue();
             if (f4 < 1.0F) {
                 float f5 = f3 * (1.0F - f4);
@@ -383,12 +384,11 @@ public class Gui {
     }
 
     private void renderChat(GuiGraphics p_329202_, DeltaTracker p_342328_) {
-        if (!this.chat.isChatFocused()) {
-            HudChatRenderer.render(p_329202_, this.getFont(), this.chat, this.tickCount);
-        }
+        // Отдано Aporia — HudChatRenderer вызывается из Aporia.kt render()
     }
 
     private void renderScoreboardSidebar(GuiGraphics p_332744_, DeltaTracker p_344235_) {
+        if (so.aporia.module.impl.render.NoRender.hideScoreboard) return;
         Scoreboard scoreboard = this.minecraft.level.getScoreboard();
         Objective objective = null;
         PlayerTeam playerteam = scoreboard.getPlayersTeam(this.minecraft.player.getScoreboardName());
@@ -467,6 +467,7 @@ public class Gui {
     }
 
     private void renderEffects(GuiGraphics p_282812_, DeltaTracker p_343719_) {
+        if (so.aporia.module.impl.render.NoRender.hidePotionHud) return;
         Collection<MobEffectInstance> collection = this.minecraft.player.getActiveEffects();
         if (!collection.isEmpty() && (this.minecraft.screen == null || !this.minecraft.screen.showsActiveEffects())) {
             int i = 0;

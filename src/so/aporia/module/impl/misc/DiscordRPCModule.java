@@ -17,6 +17,8 @@ import so.aporia.utils.user.logger.Logger;
 import so.aporia.utils.user.render.core.AporiaRenderer;
 import com.ferra13671.discordipc.activity.ActivityInfo;
 
+import com.chaos.annotation.ChaosNative;
+
 @Obfuscate
 public final class DiscordRPCModule extends Module {
     private static final long APP_ID = 1471901603287142421L;
@@ -102,5 +104,10 @@ public final class DiscordRPCModule extends Module {
 
     public DiscordIPC getIPC() {
         return ipc;
+    }
+
+    @Override
+    public java.util.List<so.aporia.module.settings.Setting<?>> getSettings() {
+        return java.util.Collections.emptyList();
     }
 }

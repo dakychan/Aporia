@@ -1,13 +1,13 @@
 package so.aporia.utils.packets
-
 import com.chaos.annotation.Obfuscate
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
 import net.minecraft.util.Mth
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.imports.*
 import so.aporia.utils.user.player.rotation.RotationUtil
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object PacketInterceptor {
     private var lastSentX = 0.0
     private var lastSentY = 0.0

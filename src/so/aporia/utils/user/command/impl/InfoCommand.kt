@@ -1,11 +1,11 @@
 package so.aporia.utils.user.command.impl
-
 import com.chaos.annotation.Obfuscate
 import so.aporia.utils.user.command.Command
 import so.aporia.utils.user.command.CommandManager
 import so.aporia.utils.imports.*
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class InfoCommand : Command {
     override fun name() = "info"
     override fun description() = "Shows mod and player info"

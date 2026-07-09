@@ -19,6 +19,8 @@ import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.*;
 
+import com.chaos.annotation.ChaosNative;
+
 /**
  * ConfigFile — сохранение/загрузка конфигов всех модулей в config.apr.
  * <p>
@@ -72,8 +74,6 @@ public final class ConfigFile {
             AprParser.ConfigFile cf = new AprParser.ConfigFile();
 
             for (Module mod : ModuleManager.INSTANCE.getAll()) {
-                if (!activatedModules.contains(mod.name())) continue;
-
                 AprParser.ModuleConfig mc = new AprParser.ModuleConfig(mod.name());
                 mc.bind = mod.keybind();
                 mc.active = mod.isEnabled();
@@ -119,10 +119,7 @@ public final class ConfigFile {
                         mod.setKeybind(mc.bind);
                     }
 
-                    if (mc.active) {
-                        mod.enable();
-                    }
-
+                    // Apply settings BEFORE enabling module
                     for (Field f : mod.getClass().getDeclaredFields()) {
                         if (!Setting.class.isAssignableFrom(f.getType())) continue;
                         f.setAccessible(true);
@@ -134,12 +131,31 @@ public final class ConfigFile {
                             }
                         } catch (IllegalAccessException ignored) {}
                     }
+
+                    // Sync module.keybind from BindSetting (in case bind= was missing in config)
+                    for (Field f : mod.getClass().getDeclaredFields()) {
+                        if (!Setting.class.isAssignableFrom(f.getType())) continue;
+                        f.setAccessible(true);
+                        try {
+                            Setting<?> s = (Setting<?>) f.get(mod);
+                            if (s instanceof BindSetting) {
+                                int bk = ((BindSetting) s).getKey();
+                                if (bk >= 0 && bk != mod.keybind()) {
+                                    mod.setKeybind(bk);
+                                }
+                            }
+                        } catch (IllegalAccessException ignored) {}
+                    }
+
+                    if (mc.active) {
+                        mod.enable();
+                    }
                 }
 
                 Logger.success("Config loaded");
             }
             startAutoSave();
-        } catch (IOException e) {
+        } catch (Exception e) {
             Logger.error("Failed to load config: " + e.getMessage());
         }
     }
@@ -157,10 +173,8 @@ public final class ConfigFile {
     private static String settingToString(Setting<?> s) {
         if (s instanceof BooleanSetting bs) {
             return bs.isEnabled() ? "T" : "F";
-        } else if (s instanceof NumberSetting ns) {
-            return String.valueOf(ns.get());
-        } else if (s instanceof RangeSetting rs) {
-            return String.valueOf(rs.get());
+        } else if (s instanceof SliderSetting ss) {
+            return String.valueOf(ss.get());
         } else if (s instanceof TextSetting ts) {
             return "'" + ts.get().replace("'", "\\'") + "'";
         } else if (s instanceof SelectSetting ss) {
@@ -179,13 +193,9 @@ public final class ConfigFile {
     private static void applySetting(Setting<?> s, String val) {
         if (s instanceof BooleanSetting bs) {
             bs.set(val.equalsIgnoreCase("T") || val.equalsIgnoreCase("true"));
-        } else if (s instanceof NumberSetting ns) {
+        } else if (s instanceof SliderSetting ss) {
             try {
-                ns.setValue(Double.parseDouble(val));
-            } catch (NumberFormatException ignored) {}
-        } else if (s instanceof RangeSetting rs) {
-            try {
-                rs.setValue(Float.parseFloat(val));
+                ss.setValue(Double.parseDouble(val));
             } catch (NumberFormatException ignored) {}
         } else if (s instanceof TextSetting ts) {
             ts.set(stripQuotes(val));
@@ -216,7 +226,7 @@ public final class ConfigFile {
     }
 
     private static String stripQuotes(String s) {
-        if (s.startsWith("'") && s.endsWith("'")) {
+        if (s.length() >= 2 && s.startsWith("'") && s.endsWith("'")) {
             return s.substring(1, s.length() - 1).replace("\\'", "'");
         }
         return s;

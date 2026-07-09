@@ -1,5 +1,4 @@
 package so.aporia.module.impl.world
-
 import com.chaos.annotation.Obfuscate
 import net.minecraft.client.Minecraft
 import net.minecraft.util.Mth
@@ -20,14 +19,17 @@ import so.aporia.utils.events.impl.RenderHudEvent
 import so.aporia.utils.user.render.font.Fonts
 import so.aporia.utils.imports.*
 import java.util.HashMap
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class MiddleClick : Module("MiddleClick", Category.WORLD) {
 
     val autoFriend = BooleanSetting("AutoFriend",
         "Middle click on a player nametag to add/remove friend", true)
 
     private val projectedPositions = HashMap<Player, FloatArray>()
+
+    override val settings = listOf(autoFriend)
 
     override fun onEnable() {
         bus.register(this)
@@ -86,7 +88,7 @@ class MiddleClick : Module("MiddleClick", Category.WORLD) {
             val px = Mth.lerp(pt.toDouble(), entity.xo, entity.x).toFloat() - camPos.x.toFloat()
             val py = Mth.lerp(pt.toDouble(), entity.yo, entity.y).toFloat() - camPos.y.toFloat()
             val pz = Mth.lerp(pt.toDouble(), entity.zo, entity.z).toFloat() - camPos.z.toFloat()
-            val headY = py + entity.bbHeight.toFloat() + 0.35f
+            val headY = py + entity.bbHeight + 0.35f
 
             val scrX = projectX(vp, px, headY, pz, mc)
             val scrY = projectY(vp, px, headY, pz, mc)

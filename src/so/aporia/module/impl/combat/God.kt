@@ -5,15 +5,15 @@ import net.minecraft.world.phys.Vec3
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
-import so.aporia.module.settings.NumberSetting
+import so.aporia.module.settings.SliderSetting
 import so.aporia.module.settings.SelectSetting
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.events.impl.TickEvent
 import net.minecraft.client.Minecraft
 import so.aporia.utils.imports.*
-
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class God : Module("God", Category.COMBAT) {
     companion object {
         @JvmField val mc = Minecraft.getInstance()
@@ -23,13 +23,15 @@ class God : Module("God", Category.COMBAT) {
         .value("Sustain", "Clip", "Auto")
         .selected("Auto")
     
-    val minHealth = NumberSetting("Min Health", "Trigger Clip/Desync HP", 6.0, 1.0, 19.0, 1.0)
+    val minHealth = SliderSetting("Min Health", "Trigger Clip/Desync HP", 6.0, 1.0, 19.0, 1.0)
     val antiDeath = BooleanSetting("Anti Death", "Force restore HP on 0", true)
     val antiKnockback = BooleanSetting("Anti Knockback", "Cancel velocity on damage", true)
 
     private var spoofHealth = -1f
     private var tickCounter = 0
     private var clipCooldown = 0
+
+    override val settings = listOf(mode, minHealth, antiDeath, antiKnockback)
 
     override fun onEnable() {
         bus.register(this)
@@ -131,29 +133,31 @@ class God : Module("God", Category.COMBAT) {
     }
 
     private fun clip(offset: Double) {
-        if (mc.player == null || mc.player!!.connection == null) return
+        if (mc.player == null) return
+        val p = mc.player!!
 
-        val x = mc.player!!.x
-        val y = mc.player!!.y
-        val z = mc.player!!.z
+        val x = p.x
+        val y = p.y
+        val z = p.z
 
         // Быстрый спам в текущую позицию, чтобы сервер её зафиксировал
         for (i in 0 until 5) {
-            mc.player!!.connection.send(ServerboundMovePlayerPacket.Pos(x, y, z, false, false))
+            p.connection.send(ServerboundMovePlayerPacket.Pos(x, y, z, false, false))
         }
 
         // Резкий клип вниз
         for (i in 0 until 5) {
-            mc.player!!.connection.send(ServerboundMovePlayerPacket.Pos(x, y + offset, z, false, false))
+            p.connection.send(ServerboundMovePlayerPacket.Pos(x, y + offset, z, false, false))
         }
 
-        mc.player!!.setPos(x, y + offset, z)
+        p.setPos(x, y + offset, z)
     }
 
     private fun sendDesync() {
-        if (mc.player == null || mc.player!!.connection == null) return
+        if (mc.player == null) return
+        val p = mc.player!!
         // Спамим инвертированным состоянием onGround. 
-        // Это заставляет античит думать, что мы летим/прыгаем, сбивая точность хитбоков.
-        mc.player!!.connection.send(ServerboundMovePlayerPacket.StatusOnly(!mc.player!!.onGround(), false))
+        // Это заставляет античит думать, что мы летим/прыгаем, сбивая точность хитбоксов.
+        p.connection.send(ServerboundMovePlayerPacket.StatusOnly(!p.onGround(), false))
     }
 }

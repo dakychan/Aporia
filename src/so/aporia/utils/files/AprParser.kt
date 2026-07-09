@@ -1,11 +1,11 @@
 package so.aporia.utils.files
-
 import com.chaos.annotation.Obfuscate
 import so.aporia.utils.user.input.KeyCodeMap
 import java.util.LinkedHashMap
 import java.util.regex.Pattern
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object AprParser {
 
     class ModuleConfig(@JvmField val name: String) {

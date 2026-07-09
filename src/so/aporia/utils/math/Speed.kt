@@ -1,8 +1,8 @@
 package so.aporia.utils.math
-
 import net.minecraft.world.entity.Entity
 import so.aporia.utils.imports.*
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 object Speed {
     private var prevX = 0.0
     private var prevZ = 0.0

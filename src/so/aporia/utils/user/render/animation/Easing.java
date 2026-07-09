@@ -6,6 +6,10 @@
 
 package so.aporia.utils.user.render.animation;
 
+
+
+import com.chaos.annotation.ChaosNative;
+
 /**
  * Easing functions — all take {@code t} in [0,1] and return a value in ~[0,1].
  * <p>

@@ -12,8 +12,9 @@ import so.aporia.utils.events.impl.ChatHideEvent
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.events.impl.TickEvent
 import java.util.regex.Pattern
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class ServerHelper : Module("ServerHelper", Category.MISC) {
 
     val autoFlyMe = BooleanSetting("AutoFlyMe", "Автоматически активирует /flyme при падении", true)
@@ -80,7 +81,7 @@ class ServerHelper : Module("ServerHelper", Category.MISC) {
             if (!isFalling) { isFalling = true; ticksSinceLastCommand = COMMAND_COOLDOWN }
         }
         if (isFalling && ticksSinceLastCommand >= COMMAND_COOLDOWN) {
-            player.connection?.sendCommand("flyme")
+            player.connection.sendCommand("flyme")
             ticksSinceLastCommand = 0
         }
     }
@@ -99,14 +100,12 @@ class ServerHelper : Module("ServerHelper", Category.MISC) {
         }
         try {
             val answer = Math.round(evalExpression(expr))
-            if (player.connection != null) {
-                player.connection.sendChat(answer.toString())
-                captchaSolvedByUs = true
-                val durationNanos = System.nanoTime() - startTime
-                mc.execute {
-                    val msg = "§6Aporia.cc §f→ §a${player.name.string} решил капчу за §e${durationNanos} ns§a! (Унижен в нули)"
-                    player.displayClientMessage(Component.literal(msg), false)
-                }
+            player.connection.sendChat(answer.toString())
+            captchaSolvedByUs = true
+            val durationNanos = System.nanoTime() - startTime
+            mc.execute {
+                val msg = "§6Aporia.cc §f→ §a${player.name.string} решил капчу за §e${durationNanos} ns§a! (Унижен в нули)"
+                player.displayClientMessage(Component.literal(msg), false)
             }
         } catch (_: Exception) {
         }
@@ -161,4 +160,6 @@ class ServerHelper : Module("ServerHelper", Category.MISC) {
         private val COMPLEX_MATH = Pattern.compile(".*Решите\\s*:?\\s*([\\d+\\-*/()\\s]+).*")
         private val CAPTCHA_SOLVED = Pattern.compile("(\\w+)\\s+первым\\s+решил\\s+пример\\s+и\\s+победил")
     }
+
+    override val settings = listOf(autoFlyMe, mathResolver, hideFlyMessages, hideCaptcha)
 }

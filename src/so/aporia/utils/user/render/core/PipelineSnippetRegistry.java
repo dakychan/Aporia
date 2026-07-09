@@ -6,10 +6,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import com.chaos.annotation.ChaosNative;
+
 /**
  * Registry for pipeline snippets — reusable shader/pipeline configurations.
  * Register snippets once, apply them anywhere.
  */
+@ChaosNative
 public class PipelineSnippetRegistry {
 
     public static final PipelineSnippetRegistry INSTANCE = new PipelineSnippetRegistry();

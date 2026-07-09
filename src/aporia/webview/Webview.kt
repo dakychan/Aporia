@@ -1,7 +1,7 @@
 package aporia.webview
-
 import java.nio.ByteBuffer
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 abstract class Webview(
     var url: String,
     var width: Int,

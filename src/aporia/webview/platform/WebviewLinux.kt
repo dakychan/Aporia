@@ -2,8 +2,9 @@ package aporia.webview.platform
 
 import aporia.webview.Webview
 import java.nio.ByteBuffer
-
+import com.chaos.annotation.ChaosNative
 /** Linux WebView stub — replace with WebKitGTK JNA bindings when available. */
+@ChaosNative
 class WebviewLinux(url: String, width: Int, height: Int) : Webview(url, width, height) {
 
     private var buf: ByteBuffer? = null

@@ -1,11 +1,11 @@
 package aporia.cc
-
 import com.chaos.annotation.Obfuscate
 import com.google.gson.JsonParser
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -16,8 +16,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
-
-@Obfuscate
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 object OsManager {
 
     enum class Platform {
@@ -723,7 +723,7 @@ object OsManager {
         }
 
         return try {
-            val url = URL("http://ipwho.is/json")
+            val url = URI("http://ipwho.is/json").toURL()
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.connectTimeout = 5000
@@ -762,7 +762,7 @@ object OsManager {
         }
 
         return try {
-            val url = URL("http://wttr.in/?format=j1")
+            val url = URI("http://wttr.in/?format=j1").toURL()
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.connectTimeout = 5000
@@ -800,7 +800,7 @@ object OsManager {
 
         return try {
             val encodedCity = URLEncoder.encode(city, "UTF-8")
-            val url = URL("http://wttr.in/$encodedCity?format=j1")
+            val url = URI("http://wttr.in/$encodedCity?format=j1").toURL()
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.connectTimeout = 5000

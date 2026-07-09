@@ -1,9 +1,9 @@
 package so.aporia.utils.user.player.movement
-
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
 import so.aporia.utils.imports.*
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 object MoveUtil {
     private fun player(): Player? = mc.player
 

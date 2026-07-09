@@ -9,6 +9,8 @@ import net.minecraft.resources.Identifier;
 
 import java.util.*;
 
+import com.chaos.annotation.ChaosNative;
+
 /**
  * Reusable shader fragment / pipeline configuration snippet.
  * Attach to pipeline builders to avoid repeating common settings.
@@ -25,6 +27,7 @@ import java.util.*;
  *   // Apply to pipeline
  *   pipelineBuilder = snippet.applyTo(RenderPipeline.builder());
  */
+@ChaosNative
 public class PipelineSnippet {
 
     private String name;

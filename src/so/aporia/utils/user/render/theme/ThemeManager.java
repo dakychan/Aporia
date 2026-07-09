@@ -16,6 +16,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
+import com.chaos.annotation.ChaosNative;
+
 @Obfuscate
 public final class ThemeManager {
 
@@ -70,7 +72,7 @@ public final class ThemeManager {
         t.guiDisabledDot = 0xFF505050;
         t.guiHoverBg = 0x18FFFFFF;
         t.guiSeparator = 0x18FFFFFF;
-        t.guiSettingText = 0xFFB4B4C8;
+        t.guiSettingText = 0xFFFFFFFF;
         t.guiSettingValue = 0xFFDCDCFF;
         t.espPlayer = 0xFFFF5555;
         t.espFriend = 0xFF55FF55;
@@ -209,7 +211,7 @@ public final class ThemeManager {
             t.guiDisabledDot = intOr(mc.settings.get("guiDisabledDot"), 0xFF505050);
             t.guiHoverBg = intOr(mc.settings.get("guiHoverBg"), 0x18FFFFFF);
             t.guiSeparator = intOr(mc.settings.get("guiSeparator"), 0x18FFFFFF);
-            t.guiSettingText = intOr(mc.settings.get("guiSettingText"), 0xFFB4B4C8);
+            t.guiSettingText = intOr(mc.settings.get("guiSettingText"), 0xFFFFFFFF);
             t.guiSettingValue = intOr(mc.settings.get("guiSettingValue"), 0xFFDCDCFF);
             t.espPlayer = intOr(mc.settings.get("espPlayer"), 0xFFFF5555);
             t.espFriend = intOr(mc.settings.get("espFriend"), 0xFF55FF55);
@@ -272,7 +274,7 @@ public final class ThemeManager {
         t.guiDisabledDot = 0xFF505050;
         t.guiHoverBg = 0x18FFFFFF;
         t.guiSeparator = 0x18FFFFFF;
-        t.guiSettingText = 0xFFB4B4C8;
+        t.guiSettingText = 0xFFFFFFFF;
         t.guiSettingValue = 0xFFDCDCFF;
         t.espPlayer = 0xFFFF5555;
         t.espFriend = 0xFF55FF55;

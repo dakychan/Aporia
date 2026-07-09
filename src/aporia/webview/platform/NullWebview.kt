@@ -1,8 +1,8 @@
 package aporia.webview.platform
-
 import aporia.webview.Webview
 import java.nio.ByteBuffer
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class NullWebview(url: String, width: Int, height: Int) : Webview(url, width, height) {
 
     private var ready = false

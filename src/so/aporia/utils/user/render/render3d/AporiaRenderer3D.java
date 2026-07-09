@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
+import com.chaos.annotation.ChaosNative;
+
 /**
  * 3D-рендерер Aporia — рисует примитивы в мировых координатах.
  * <p>
@@ -49,6 +51,7 @@ import java.util.OptionalInt;
  *   <li>Lines, grids, coordinate axes / Линии, сетки, оси координат</li>
  * </ul>
  */
+@ChaosNative
 public class AporiaRenderer3D {
 
     /** Синглтон / Singleton. */
@@ -56,7 +59,8 @@ public class AporiaRenderer3D {
 
     /** Тип зоны для drawNear.
      *  Zone shape type for drawNear. */
-    public enum ZoneShape {
+    @ChaosNative
+public enum ZoneShape {
         /** Сфера вокруг игрока / Sphere around player. */
         SPHERE,
         /** Куб (AABB) вокруг игрока / Cube (AABB) around player. */

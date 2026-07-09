@@ -103,9 +103,10 @@ public class Camera implements TrackedWaypoint.Camera {
         if (so.aporia.utils.user.player.rotation.RotationUtil.isActive()) {
             so.aporia.utils.user.player.rotation.RotationUtil.onCameraSetup(this.detached);
             if (this.detached) {
+                // F5: lock camera to entity rotation instead of allowing orbit
                 this.setRotation(
-                    this.yRot + so.aporia.utils.user.player.rotation.RotationUtil.getF5OrbitYaw(),
-                    Mth.clamp(this.xRot + so.aporia.utils.user.player.rotation.RotationUtil.getF5OrbitPitch(), -90.0F, 90.0F)
+                    this.yRot,
+                    Mth.clamp(this.xRot, -90.0F, 90.0F)
                 );
             } else {
                 this.setRotation(

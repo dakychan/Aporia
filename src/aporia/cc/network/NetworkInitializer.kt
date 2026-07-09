@@ -1,11 +1,11 @@
 package aporia.cc.network
-
 import com.chaos.annotation.Obfuscate
 import io.netty.handler.codec.http.HttpResponseStatus
 import so.aporia.utils.user.logger.Logger
 import java.nio.file.Files
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object NetworkInitializer {
 
     @JvmStatic

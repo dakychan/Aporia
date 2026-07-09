@@ -1,8 +1,6 @@
 package so.aporia.module.impl.render
-
 import so.aporia.utils.imports.*
 import net.minecraft.world.entity.Entity
-import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.decoration.ArmorStand
 import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.ExperienceOrb
@@ -12,8 +10,11 @@ import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
 import so.aporia.module.settings.MultiSelectSetting
 import so.aporia.utils.events.EventHandler
-import so.aporia.utils.events.impl.LivingEntityRenderEvent
-
+import so.aporia.utils.events.impl.TickEvent
+import so.aporia.utils.user.render.core.RenderFilter
+import java.util.function.Predicate
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class NoRender : Module("NoRender", Category.VISUAL) {
 
     val entities = MultiSelectSetting("Entities", "Hide entity types")
@@ -35,27 +36,29 @@ class NoRender : Module("NoRender", Category.VISUAL) {
 
     val deathScreen = BooleanSetting("Death Screen", "Hide death screen overlay", false)
 
+    override val settings = listOf(entities, overlays, effects, armor, totemAnimation, hurtAnimation, hurtCam, deathScreen)
+
+    private val entityFilter = Predicate<Entity> { entity ->
+        shouldSkipEntity(entity)
+    }
+
     override fun onEnable() {
         bus.register(this)
-        logger.info("NoRender enabled")
         pushState()
+        RenderFilter.addFilter(entityFilter)
+        logger.info("NoRender enabled")
     }
 
     override fun onDisable() {
         bus.unregister(this)
-        logger.info("NoRender disabled")
+        RenderFilter.removeFilter(entityFilter)
         pushState()
+        logger.info("NoRender disabled")
     }
 
     @EventHandler
-    fun onEntityRender(e: LivingEntityRenderEvent) {
-        val entity = e.entity
-        if (entities.isSelected("ArmorStands") && entity is ArmorStand) { e.cancel(); return }
-        if (hideArmor && entity is Player && entity != mc.player) {
-            for (slot in listOf(EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET)) {
-                entity.setItemSlot(slot, net.minecraft.world.item.ItemStack.EMPTY)
-            }
-        }
+    fun onTick(e: TickEvent) {
+        pushState()
     }
 
     companion object {
@@ -81,9 +84,9 @@ class NoRender : Module("NoRender", Category.VISUAL) {
 
         fun shouldSkipEntity(entity: Entity): Boolean {
             if (!active) return false
-            if (hideArmor && entity is ArmorStand) return true
             if (hideItems && entity is ItemEntity) return true
             if (hideExperienceOrbs && entity is ExperienceOrb) return true
+            if (hideArmor && entity is ArmorStand) return true
             return false
         }
 

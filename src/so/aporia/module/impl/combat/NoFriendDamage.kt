@@ -1,15 +1,15 @@
 package so.aporia.module.impl.combat
-
 import net.minecraft.network.protocol.game.ServerboundInteractPacket
 import net.minecraft.world.entity.player.Player
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
+import so.aporia.module.settings.Setting
 import so.aporia.utils.imports.*
 import net.minecraft.client.Minecraft
-
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class NoFriendDamage : Module("NoFriendDamage", Category.COMBAT) {
     companion object {
         @JvmField val mc = Minecraft.getInstance()
@@ -42,4 +42,6 @@ class NoFriendDamage : Module("NoFriendDamage", Category.COMBAT) {
             }
         }
     }
+
+    override val settings: List<Setting<*>> = emptyList()
 }

@@ -15,7 +15,8 @@ import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
 import java.util.HashMap
 import java.util.concurrent.atomic.AtomicBoolean
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class FontAtlas(private val jsonId: Identifier, private val textureId: Identifier) {
 
     private val glyphs: MutableMap<Int, Glyph> = HashMap()
@@ -61,14 +62,9 @@ class FontAtlas(private val jsonId: Identifier, private val textureId: Identifie
     private fun loadFromAssetManager() {
         try {
             val json = so.aporia.utils.assets.AssetManager.getResourceString(jsonId)
-
-            if (json != null) {
-                parseJson(JsonParser.parseString(json).asJsonObject)
-                loaded.set(true)
-                LOGGER.info("Loaded font from AssetManager: {} ({} glyphs)", jsonId, glyphs.size)
-            } else {
-                throw Exception("AssetManager returned null (file not found)")
-            }
+            parseJson(JsonParser.parseString(json).asJsonObject)
+            loaded.set(true)
+            LOGGER.info("Loaded font from AssetManager: {} ({} glyphs)", jsonId, glyphs.size)
         } catch (e: Exception) {
             LOGGER.error("Failed to load font from AssetManager: {}", jsonId, e)
             loaded.set(true)
@@ -112,7 +108,6 @@ class FontAtlas(private val jsonId: Identifier, private val textureId: Identifie
 
         var advance = getFloat(g, "advance", 0f) * fontSize
         if (advance == 0f) advance = getFloat(g, "xadvance", 0f)
-
         var x = 0f; var y = 0f; var w = 0f; var h = 0f; var xOff = 0f; var yOff = 0f
 
         if (g.has("atlasBounds")) {

@@ -1,5 +1,6 @@
 package so.aporia.module
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 object ModuleManager {
 
     private val modules = mutableListOf<Module>()
@@ -8,7 +9,7 @@ object ModuleManager {
         registerAll(
             so.aporia.module.impl.render.Hud(),
             so.aporia.module.impl.render.Beautifully(),
-            so.aporia.module.impl.render.PlayerESP(),
+
             so.aporia.module.impl.render.NameTags(),
             so.aporia.module.impl.misc.ClickGui(),
             so.aporia.module.impl.misc.ServerHelper(),
@@ -35,7 +36,7 @@ object ModuleManager {
             so.aporia.module.impl.combat.NoFriendDamage(),
             so.aporia.module.impl.combat.ElytraTarget(),
             so.aporia.module.impl.render.NoRender(),
-            so.aporia.module.impl.render.PlayerBlur(),
+            so.aporia.module.impl.render.PlayerESP(),
             so.aporia.module.impl.render.WorldRenderer()
         )
     }

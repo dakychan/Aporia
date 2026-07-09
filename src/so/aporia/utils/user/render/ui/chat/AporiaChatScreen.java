@@ -34,9 +34,13 @@ import so.aporia.utils.events.impl.MouseScrollEvent;
 import aporia.cc.PanicSystem;
 import so.aporia.utils.user.command.CommandManager;
 import so.aporia.module.impl.render.Beautifully;
+import so.aporia.module.settings.*;
+import so.aporia.utils.user.render.theme.ThemeManager;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import com.chaos.annotation.ChaosNative;
 
 /**
  * Custom chat screen replacing vanilla ChatScreen.
@@ -44,6 +48,7 @@ import java.util.List;
  * search, resize/drag, context menu and inline settings panel.
  */
 @OnlyIn(Dist.CLIENT)
+@ChaosNative
 public class AporiaChatScreen extends ChatScreen {
 
     static final int LEFT       = 2;
@@ -104,9 +109,48 @@ public class AporiaChatScreen extends ChatScreen {
         /** Анимация переключения окна / Window switch animation. */
         public final Animator switchAnim = new Animator(300, Easing::cubicOut);
 
+        /** Настройки окна через module/settings API */
+        public transient final List<Setting<?>> editSettings = new ArrayList<>();
+
+        void syncFromWinCfg() {
+            ((TextSetting)editSettings.get(0)).set(name);
+            ((TextSetting)editSettings.get(1)).set(msgPrefix);
+            ((BooleanSetting)editSettings.get(2)).set(prefixEnabled);
+            ((TextSetting)editSettings.get(3)).set(prefixTriggers);
+            ((TextSetting)editSettings.get(4)).set(msgSuffix);
+            ((TextSetting)editSettings.get(5)).set(filterWords);
+            ((BooleanSetting)editSettings.get(6)).set(showOnlyFilter);
+            ((BooleanSetting)editSettings.get(7)).set(searchOnOpen);
+            ((BooleanSetting)editSettings.get(8)).set(showOnlyServer);
+            ((ColorSetting)editSettings.get(9)).set(selfColor);
+        }
+
+        void syncToWinCfg() {
+            name = ((TextSetting)editSettings.get(0)).get();
+            msgPrefix = ((TextSetting)editSettings.get(1)).get();
+            prefixEnabled = ((BooleanSetting)editSettings.get(2)).isEnabled();
+            prefixTriggers = ((TextSetting)editSettings.get(3)).get();
+            msgSuffix = ((TextSetting)editSettings.get(4)).get();
+            filterWords = ((TextSetting)editSettings.get(5)).get();
+            showOnlyFilter = ((BooleanSetting)editSettings.get(6)).isEnabled();
+            searchOnOpen = ((BooleanSetting)editSettings.get(7)).isEnabled();
+            showOnlyServer = ((BooleanSetting)editSettings.get(8)).isEnabled();
+            selfColor = ((ColorSetting)editSettings.get(9)).get();
+        }
+
         public WinCfg(String name, int x, int bottomY, int w, int h, boolean draggable) {
             this.name=name; this.x=x; this.bottomY=bottomY; this.w=w; this.h=h; this.draggable=draggable;
             this.nameAnim.snap(name);
+            editSettings.add(new TextSetting("Name", "Window name", name));
+            editSettings.add(new TextSetting("Prefix", "Message prefix", msgPrefix));
+            editSettings.add(new BooleanSetting("Prefix enabled", "Enable prefix", prefixEnabled));
+            editSettings.add(new TextSetting("Prefix triggers", "Trigger chars", prefixTriggers));
+            editSettings.add(new TextSetting("Suffix", "Message suffix", msgSuffix));
+            editSettings.add(new TextSetting("Filter words", "Keyword filter", filterWords));
+            editSettings.add(new BooleanSetting("Filter only", "Show filtered only", showOnlyFilter));
+            editSettings.add(new BooleanSetting("Search on open", "Search when opened", searchOnOpen));
+            editSettings.add(new BooleanSetting("Only server", "Server messages only", showOnlyServer));
+            editSettings.add(new ColorSetting("Self color", "Own message color", selfColor));
         }
 
         int maxLines() { return Math.max(1, (h - BOX_PAD*2) / LINE_H); }
@@ -302,25 +346,16 @@ public class AporiaChatScreen extends ChatScreen {
         int bx, by, bw, bh;
         int scrollOffset = 0;
         int selectedField = -1;
-        Animator underlineAnim = new Animator(250, Easing::cubicOut);
-        
-        /** Анимации для булевых переключателей / Boolean toggle animations. */
-        final java.util.Map<Integer, Animator> boolAnims = new java.util.HashMap<>();
 
         static final int ITEM   = 16;
         static final int PAD    = 6;
         static final int HDR_H  = ITEM + PAD;
-        static final int FIELDS = 10;
 
         private static final int C_BG      = ColorUtil.rgba(10,  10,  24,  220);
         private static final int C_HDR     = ColorUtil.rgba(40,  40,  80,  240);
-        private static final int C_LBL     = ColorUtil.rgba(150, 150, 200, 220);
-        private static final int C_VAL     = ColorUtil.rgba(255, 255, 255, 240);
-        private static final int C_ROW_ALT = ColorUtil.rgba(255, 255, 255,   6);
         private static final int C_SEP     = ColorUtil.rgba(255, 255, 255,  20);
         private static final int C_SCROLL  = ColorUtil.rgba(255, 255, 255,  30);
         private static final int C_THUMB   = ColorUtil.rgba(255, 255, 255, 100);
-        private static final int C_UNDERLINE = ColorUtil.rgba(100, 200, 200, 180);
 
         void open()  { visible = true; scrollOffset = 0; selectedField = -1; }
         void close() { visible = false; }
@@ -328,108 +363,61 @@ public class AporiaChatScreen extends ChatScreen {
 
         int visibleRows() { return Math.max(1, (bh - HDR_H - PAD) / ITEM); }
 
-        void scroll(int delta) {
-            int maxS = Math.max(0, FIELDS - visibleRows());
+        void scroll(int delta, int fieldCount) {
+            int maxS = Math.max(0, fieldCount - visibleRows());
             scrollOffset = Math.max(0, Math.min(scrollOffset + delta, maxS));
         }
 
-        void render(GuiGraphics gfx, net.minecraft.client.gui.Font font, WinCfg c) {
+        void render(GuiGraphics gfx, net.minecraft.client.gui.Font font, WinCfg c, int mouseX, int mouseY) {
             if (!visible) return;
             AporiaRenderer r = AporiaRenderer.INSTANCE;
-            r.drawRect(bx, by, bw, bh, RADIUS, C_BG);
+            var theme = ThemeManager.INSTANCE.active();
+            gfx.nextStratum();
+            if (Beautifully.isBlurEnabled()) {
+                r.drawRectBlurred(bx, by, bw, bh, RADIUS, C_BG);
+            } else {
+                r.drawRect(bx, by, bw, bh, RADIUS, C_BG);
+            }
             r.drawRect(bx, by, bw, HDR_H, RADIUS, C_HDR);
-            r.drawText("bold", "§fSettings — §7" + c.nameAnim.update(), bx+PAD, by+PAD/2+3, 11f, C_VAL);
+            r.drawText("bold", "§fSettings — §7" + c.nameAnim.update(), bx+PAD, by+PAD/2+3, 11f, -0x1);
             String esc = "§7[Esc]";
-            r.drawText("regular", esc, bx+bw-r.getTextWidth("regular", esc, 9f)-PAD, by+PAD/2+3, 9f, C_VAL);
+            r.drawText("regular", esc, bx+bw-r.getTextWidth("regular", esc, 9f)-PAD, by+PAD/2+3, 9f, -0x1);
             int contentY = by + HDR_H;
             r.drawRect(bx+PAD, contentY, bw-PAD*2, 1, 0, C_SEP);
             contentY += 1;
-            String[] labels = {"Name","Prefix","Prefix enabled","Prefix triggers","Suffix",
-                               "Filter words","Filter only","Search on open","Only server","Self color"};
-            int[] toggleFields = {2, 6, 7, 8};
+            int fieldCount = c.editSettings.size();
             int rows = visibleRows();
-            int maxS = Math.max(0, FIELDS - rows);
+            int maxS = Math.max(0, fieldCount - rows);
             scrollOffset = Math.max(0, Math.min(scrollOffset, maxS));
             gfx.enableScissor(bx, contentY, bx+bw, by+bh);
-            for (int i = 0; i < rows && (i + scrollOffset) < FIELDS; i++) {
+            for (int i = 0; i < rows && (i + scrollOffset) < fieldCount; i++) {
                 int fi = i + scrollOffset;
-                int ry = contentY + PAD/2 + i * ITEM;
-                if (fi % 2 == 0) r.drawRect(bx+2, ry, bw-4, ITEM, 0, C_ROW_ALT);
-                r.drawText("regular", "§7" + labels[fi], bx+PAD, ry+4, 9f, C_LBL);
-                
-                boolean isToggle = java.util.Arrays.stream(toggleFields).anyMatch(f -> f == fi);
-                if (isToggle) {
-                    boolean enabled = switch(fi) {
-                        case 2 -> c.prefixEnabled;
-                        case 6 -> c.showOnlyFilter;
-                        case 7 -> c.searchOnOpen;
-                        case 8 -> c.showOnlyServer;
-                        default -> false;
-                    };
-                    
-                    /** Анимация булевого переключателя / Boolean toggle animation. */
-                    Animator anim = boolAnims.computeIfAbsent(fi, k -> new Animator(500, Easing::elasticOut));
-                    anim.update();
-                    float animProg = anim.value();
-                    
-                    int toggleW = 22;
-                    int toggleH = 10;
-                    int toggleX = bx + bw - toggleW - PAD - 2;
-                    int toggleY = ry + (ITEM - toggleH) / 2 + 1;
-                    int bgColor = enabled ? ColorUtil.rgba(100, 200, 100, 150) : ColorUtil.rgba(100, 100, 100, 80);
-                    r.drawRect(toggleX, toggleY, toggleW, toggleH, toggleH / 2, bgColor);
-                    int dotSize = 13;
-                    int dotX = enabled ? toggleX + toggleW - dotSize / 2 - 1 : toggleX - dotSize / 2 + 1;
-                    int dotY = toggleY + toggleH / 2 - dotSize / 2;
-                    int animDotX = (int)(dotX + (animProg - 0.5f) * 4f);
-                    r.drawRect(animDotX, dotY, dotSize, dotSize, dotSize / 2, ColorUtil.rgba(255, 255, 255, 240));
-                } else {
-                    String value = switch(fi) {
-                        case 0 -> c.name;
-                        case 1 -> c.msgPrefix;
-                        case 3 -> c.prefixTriggers.isEmpty() ? "§7(always)" : c.prefixTriggers;
-                        case 4 -> c.msgSuffix;
-                        case 5 -> c.filterWords;
-                        case 9 -> String.format("#%06X", c.selfColor & 0xFFFFFF);
-                        default -> "";
-                    };
-                    r.drawText("regular", value, bx+PAD+100, ry+4, 9f, C_VAL);
-                }
-                
-                /** Подчёркивание для выбранного поля с fade на концах.
-                 *  Underline for the selected field with fade on edges. */
-                if (fi == selectedField) {
-                    underlineAnim.play();
-                    underlineAnim.update();
-                    float prog = underlineAnim.value();
-                    float centerX = bx + bw / 2f;
-                    float halfLen = (bw - PAD*2 - 4) / 2f;
-                    r.drawFadeHLine(centerX, ry+ITEM-2, halfLen * prog, 2f, prog, C_UNDERLINE);
-                }
+                float ry = contentY + PAD/2f + i * ITEM;
+                c.editSettings.get(fi).draw(r, bx + 4f, ry, bw - 8f, theme, mouseX, mouseY, false);
             }
             gfx.disableScissor();
             if (maxS > 0) {
                 int barH   = bh - HDR_H - PAD;
-                int thumbH = Math.max(10, barH * rows / FIELDS);
+                int thumbH = Math.max(10, barH * rows / fieldCount);
                 int thumbY = contentY + PAD/2 + (barH - thumbH) * scrollOffset / maxS;
                 r.drawRect(bx+bw-3, contentY+PAD/2, 2, barH, 0, C_SCROLL);
                 r.drawRect(bx+bw-3, thumbY, 2, thumbH, 0, C_THUMB);
             }
         }
 
-        int fieldAt(double px, double py) {
+        int fieldAt(double px, double py, int fieldCount) {
             if (!visible) return -1;
             int contentY = by + HDR_H + 1 + PAD/2;
             if (px<bx||px>bx+bw||py<contentY||py>by+bh) return -1;
             int rel = (int)(py - contentY);
             int row = rel / ITEM;
             int fi  = row + scrollOffset;
-            return (fi >= 0 && fi < FIELDS) ? fi : -1;
+            return (fi >= 0 && fi < fieldCount) ? fi : -1;
         }
 
-        boolean onScroll(double px, double py, double dy) {
+        boolean onScroll(double px, double py, double dy, int fieldCount) {
             if (!visible || px<bx||px>bx+bw||py<by||py>by+bh) return false;
-            scroll(dy > 0 ? -1 : 1);
+            scroll(dy > 0 ? -1 : 1, fieldCount);
             return true;
         }
     }
@@ -577,6 +565,7 @@ public class AporiaChatScreen extends ChatScreen {
 
     @Override
     public void render(GuiGraphics gfx, int mouseX, int mouseY, float delta) {
+        gfx.nextStratum();
         AporiaRenderer r = AporiaRenderer.INSTANCE;
         int active = WinMgr.I.active;
         for (int i = 0; i < WinMgr.I.wins.size(); i++) {
@@ -608,12 +597,12 @@ public class AporiaChatScreen extends ChatScreen {
         gfx.nextStratum();
         
         if (ctx.visible) {
-            gfx.fill(0, 0, this.width, this.height, ColorUtil.rgba(0, 0, 0, 100));
+            r.drawRect(0, 0, this.width, this.height, 0, ColorUtil.rgba(0, 0, 0, 100));
             ctx.render(gfx, this.font, WinMgr.I.wins.size());
         }
         
         if (edit.visible) {
-            edit.render(gfx, this.font, cfg());
+            edit.render(gfx, this.font, cfg(), mouseX, mouseY);
             if (editingField >= 0) renderFieldEditor(gfx, r, edit.bx, edit.by, edit.bw);
         }
     }
@@ -676,10 +665,10 @@ public class AporiaChatScreen extends ChatScreen {
             if (i >= c.scrollOffset + count) break;
             if (i < c.scrollOffset) { i++; continue; }
             int visIdx = i - c.scrollOffset;
-            int lineY  = bottomY - visIdx * LINE_H;
             long key   = lineKey(line);
             MessageAnim anim = HudChatRenderer.anims.computeIfAbsent(key, k -> new MessageAnim(0f));
             anim.setAlphaTarget(1f); anim.tick();
+            int lineY  = bottomY - visIdx * LINE_H + (int) anim.slideY();
             int tx = textX + (int) anim.slideX();
             if (doSearch && matchesQuery(plainText(line.content()), searchQuery))
                 AporiaRenderer.INSTANCE.drawRect(c.x+1, lineY-1, c.w-2, LINE_H, 2, C_SEARCH_HL);
@@ -806,48 +795,19 @@ public class AporiaChatScreen extends ChatScreen {
         if (editingField >= 0) { commitFieldEdit(); return true; }
 
         if (edit.visible) {
-            int f = edit.fieldAt(mx, my);
+            WinCfg c = cfg();
+            int f = edit.fieldAt(mx, my, c.editSettings.size());
             if (f >= 0) {
-                edit.selectedField = f;
-                if (f == 2) { 
-                    cfg().prefixEnabled = !cfg().prefixEnabled;
-                    Animator anim = edit.boolAnims.get(f);
-                    if (anim != null) {
-                        anim.reset();
-                        anim.play();
-                    }
-                    return true; 
+                Setting<?> s = c.editSettings.get(f);
+                if (s instanceof BooleanSetting bs) {
+                    bs.toggle();
+                    c.syncToWinCfg();
+                    if (f == 6 || f == 8) WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font);
+                } else if (s instanceof ColorSetting) {
+                    // TODO: expand color picker when supported
+                } else {
+                    startFieldEdit(f);
                 }
-                if (f == 6) { 
-                    cfg().showOnlyFilter = !cfg().showOnlyFilter; 
-                    Animator anim = edit.boolAnims.get(f);
-                    if (anim != null) {
-                        anim.reset();
-                        anim.play();
-                    }
-                    WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font); 
-                    return true; 
-                }
-                if (f == 7) { 
-                    cfg().searchOnOpen = !cfg().searchOnOpen;
-                    Animator anim = edit.boolAnims.get(f);
-                    if (anim != null) {
-                        anim.reset();
-                        anim.play();
-                    }
-                    return true; 
-                }
-                if (f == 8) { 
-                    cfg().showOnlyServer = !cfg().showOnlyServer;
-                    Animator anim = edit.boolAnims.get(f);
-                    if (anim != null) {
-                        anim.reset();
-                        anim.play();
-                    }
-                    WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font); 
-                    return true; 
-                }
-                startFieldEdit(f);
                 return true;
             }
             edit.close();
@@ -969,7 +929,7 @@ public class AporiaChatScreen extends ChatScreen {
     @Override
     public boolean mouseScrolled(double mx, double my, double dx, double dy) {
         EventBus.INSTANCE.post(new MouseScrollEvent(mx, my, dx, dy));
-        if (edit.onScroll(mx, my, dy)) return true;
+        if (edit.onScroll(mx, my, dy, cfg().editSettings.size())) return true;
         if (commandSuggestions.mouseScrolled(dy)) return true;
 
         /** Проверяем скролл для активного окна.
@@ -1086,28 +1046,28 @@ public class AporiaChatScreen extends ChatScreen {
     private void startFieldEdit(int field) {
         editingField = field;
         WinCfg c = cfg();
-        String cur = switch (field) {
-            case 0 -> c.name;
-            case 1 -> c.msgPrefix;
-            case 3 -> c.prefixTriggers;
-            case 4 -> c.msgSuffix;
-            case 5 -> c.filterWords;
-            case 9 -> String.format("#%06X", c.selfColor & 0xFFFFFF);
-            default -> "";
-        };
+        Setting<?> s = c.editSettings.get(field);
+        String cur;
+        if (s instanceof TextSetting ts) {
+            cur = ts.get();
+        } else if (s instanceof ColorSetting cs) {
+            cur = String.format("#%06X", cs.get() & 0xFFFFFF);
+        } else {
+            cur = "";
+        }
         fieldBox.setValue(cur); fieldBox.setFocused(true); this.setFocused(fieldBox);
     }
 
     private void commitFieldEdit() {
         String v = fieldBox.getValue().trim(); WinCfg c = cfg();
-        switch (editingField) {
-            case 0 -> c.name = v;
-            case 1 -> c.msgPrefix = v;
-            case 3 -> c.prefixTriggers = v;
-            case 4 -> c.msgSuffix = v;
-            case 5 -> { c.filterWords = v; WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font); }
-            case 9 -> { try { c.selfColor = (int)(Long.parseLong(v.replace("#",""), 16)) | 0xFF000000; } catch (Exception ignored) {} }
+        Setting<?> s = c.editSettings.get(editingField);
+        if (s instanceof TextSetting ts) {
+            ts.set(v);
+            if (editingField == 5) WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font);
+        } else if (s instanceof ColorSetting cs) {
+            try { cs.set((int)(Long.parseLong(v.replace("#",""), 16)) | 0xFF000000); } catch (Exception ignored) {}
         }
+        c.syncToWinCfg();
         cancelFieldEdit();
         trySave();
     }

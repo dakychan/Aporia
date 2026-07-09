@@ -1,5 +1,4 @@
 package so.aporia.utils.user.command.impl
-
 import com.chaos.annotation.Obfuscate
 import so.aporia.module.ModuleManager
 import so.aporia.module.impl.misc.PacketDebug
@@ -9,8 +8,9 @@ import so.aporia.utils.user.command.CommandManager
 import java.nio.file.Files
 import java.util.*
 import java.util.stream.Collectors
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 class PacketCommand : Command {
     override fun name() = "packet"
     override fun description() = "Packet debug: .packet log | .packet save"

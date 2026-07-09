@@ -5,7 +5,8 @@
  */
 
 package so.aporia.utils.user.render.font
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class Glyph(
     @JvmField val id: Int,
     @JvmField val x: Float,

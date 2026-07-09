@@ -92,13 +92,27 @@ public class MouseHandler {
                 double d3 = this.getScaledYPos(window);
                 MouseButtonEvent mousebuttonevent = new MouseButtonEvent(d2, d3, mousebuttoninfo);
 
+                int mouseBtn = mousebuttoninfo.button();
+
                 // Post MouseClickEvent to EventBus (screen + in-world)
                 so.aporia.utils.events.EventBus.INSTANCE.post(
                     new so.aporia.utils.events.impl.MouseClickEvent(
-                        d2, d3, mousebuttoninfo.button(),
+                        d2, d3, mouseBtn,
                         flag ? so.aporia.utils.events.impl.MouseClickEvent.Action.PRESS : so.aporia.utils.events.impl.MouseClickEvent.Action.RELEASE
                     )
                 );
+
+                // Side buttons (3+) fire ONLY as virtual keybinds (like keyboard keys)
+                if (mouseBtn >= 3) {
+                    so.aporia.utils.events.EventBus.INSTANCE.post(
+                        new so.aporia.utils.events.impl.KeyInputEvent(
+                            -1,
+                            500 + mouseBtn,
+                            0,
+                            flag ? so.aporia.utils.events.impl.KeyInputEvent.Action.PRESS : so.aporia.utils.events.impl.KeyInputEvent.Action.RELEASE
+                        )
+                    );
+                }
 
                 if (this.minecraft.screen == null) {
                     if (!this.mouseGrabbed && flag) {

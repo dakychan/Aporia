@@ -32,6 +32,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalInt;
 
+import com.chaos.annotation.ChaosNative;
+
 /**
  * Low-level GPU pipeline for batched MSDF glyph rendering.
  * <p>
@@ -39,6 +41,7 @@ import java.util.OptionalInt;
  * with one instanced {@code draw()} call using a geometry-shader-free
  * approach: the vertex shader generates quad vertices from instance index.
  */
+@ChaosNative
 public class FontPipeline {
 
     private static final int MAX_CHARS   = 256;

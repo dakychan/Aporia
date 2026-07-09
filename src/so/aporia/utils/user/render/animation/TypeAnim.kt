@@ -5,9 +5,8 @@
  */
 
 package so.aporia.utils.user.render.animation
-
 import java.util.Random
-
+import com.chaos.annotation.ChaosNative
 /**
  * TypeAnim — анимация "взлома сейфа" для текста.
  *
@@ -25,6 +24,7 @@ import java.util.Random
  * renderer.drawText(font, display, x, y, size, color)
  * ```
  */
+@ChaosNative
 class TypeAnim(private val msPerChar: Long, private val shuffleMs: Long) {
 
     private var current = ""

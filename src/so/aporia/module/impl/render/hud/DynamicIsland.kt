@@ -1,4 +1,4 @@
-﻿package so.aporia.module.impl.render.hud
+package so.aporia.module.impl.render.hud
 
 import so.aporia.utils.imports.*
 import dev.redstones.mediaplayerinfo.IMediaSession
@@ -9,24 +9,27 @@ import org.lwjgl.opengl.GL11
 import so.aporia.module.ModuleManager
 import so.aporia.module.impl.misc.DiscordRPCModule
 import so.aporia.module.impl.render.Beautifully
+import so.aporia.module.impl.render.NoRender
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.TickEvent
+import so.aporia.utils.user.render.animation.Animator
+import so.aporia.utils.user.render.animation.Easing
+import so.aporia.utils.user.render.animation.SpringSimulator
 import so.aporia.utils.user.render.animation.TypeAnim
 import so.aporia.utils.user.render.core.AporiaRenderer
 import java.io.ByteArrayInputStream
 import java.util.Arrays
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import kotlin.math.min
-
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 object DynamicIsland {
 
     enum class State { IDLE, MEDIA, BOSSBAR }
     enum class Mode { AUTO, LOGO, AVATAR, SKIN }
 
+    @JvmField var posX = 0f
+    @JvmField var posY = 4f
+
     private var state = State.IDLE
-    private var prevState = State.IDLE
-    private var animProgress = 0f
 
     @Volatile private var bgSession: IMediaSession? = null
     @Volatile private var bgTitle: String? = null
@@ -40,24 +43,29 @@ object DynamicIsland {
     private var marqueeTitle: String? = null
     private var marqueeStart = 0L
 
-    private val mediaPoller = Executors.newSingleThreadScheduledExecutor { r ->
-        Thread(r, "Aporia-MediaPoller").apply { isDaemon = true }
-    }
-    private var mediaPollStarted = false
+    @Volatile private var pollerRunning = false
+    private var pollerThread: Thread? = null
     private var mediaPresent = false
+    private var lastLevel: Any? = null
 
     private var hoverPrev = false
     private var hoverPlay = false
     private var hoverNext = false
     private var pillRect = floatArrayOf(0f, 0f, 0f, 0f)
 
-    private const val STATIC_PILL_W = 100f
+    private const val COLLAPSED_W = 100f
+    private const val EXPANDED_W = 220f
     private const val PILL_H = 20f
+    private const val MEDIA_EXPANDED_H = 52f
     private const val PILL_RADIUS = 10f
 
     private var bossbarTitle: String? = null
     private var bossbarProgress = 0f
     private val bossbarTypeAnim = TypeAnim(60, 120)
+
+    private val expandSpring = SpringSimulator(180f, 16f, 0f)
+    private var isExpanded = false
+    private var expandStart = 0L
 
     init {
         bus.register(this)
@@ -68,14 +76,18 @@ object DynamicIsland {
         if (mc.player == null) return
         bossbarTitle = null
         try {
-            val overlay = mc.gui?.bossOverlay ?: return
+            val overlay = mc.gui.bossOverlay ?: return
             val eventsField = overlay.javaClass.getDeclaredField("events")
             eventsField.isAccessible = true
             @Suppress("UNCHECKED_CAST")
             val events = eventsField.get(overlay) as? Map<*, *> ?: return
             val bb = events.values.firstOrNull() ?: return
-            bossbarTitle = bb.javaClass.getMethod("getName").invoke(bb)?.toString()
-            bossbarProgress = bb.javaClass.getMethod("getProgress").invoke(bb) as? Float ?: 0f
+            val nameField = bb.javaClass.getDeclaredField("name")
+            nameField.isAccessible = true
+            bossbarTitle = nameField.get(bb)?.toString()
+            val progressField = bb.javaClass.getDeclaredField("progress")
+            progressField.isAccessible = true
+            bossbarProgress = progressField.get(bb) as? Float ?: 0f
         } catch (_: Exception) {
             bossbarTitle = null
         }
@@ -85,66 +97,100 @@ object DynamicIsland {
     fun render(r: AporiaRenderer, mode: Mode) {
         if (mc.player == null) return
 
-        val blur = Beautifully.isBlurEnabled()
+        val blur = Beautifully.isBlurEnabled() && Beautifully.isFeatureEnabled("Dynamic Island Blur")
         val sw = mc.window.guiScaledWidth.toFloat()
-        val name = locale.get("watermark.name") ?: "Aporia.cc"
+        val name = locale.get("watermark.name")
         val time = aporia.cc.OsManager.getTimeFormatted("HH:mm")
         val mx = mc.mouseHandler.getScaledXPos(mc.window).toFloat()
         val my = mc.mouseHandler.getScaledYPos(mc.window).toFloat()
-        val y = 4f
+        val y = posY
 
-        startPolling()
+        val level = mc.level
+        if (level !== lastLevel) {
+            lastLevel = level
+            resetMediaPoller()
+        }
+        ensurePoller()
         mediaPresent = bgTitle != null
         val hasBossbar = bossbarTitle != null
 
-        prevState = state
         state = when {
             mediaPresent -> State.MEDIA
-            hasBossbar -> State.BOSSBAR
+            hasBossbar && !NoRender.hideBossBar -> State.BOSSBAR
             else -> State.IDLE
         }
-        animProgress = when {
-            state == prevState && animProgress < 1f -> (animProgress + 0.08f).coerceAtMost(1f)
-            state != prevState -> 0f
-            else -> animProgress
+
+        val isMedia = state == State.MEDIA
+        val overPill = if (isMedia) {
+            mx >= (sw - COLLAPSED_W) / 2f && mx < (sw + COLLAPSED_W) / 2f && my >= y && my < y + MEDIA_EXPANDED_H
+        } else {
+            mx >= (sw - COLLAPSED_W) / 2f && mx < (sw + COLLAPSED_W) / 2f && my >= y && my < y + PILL_H
+        }
+        if (overPill && !isExpanded) {
+            isExpanded = true
+            expandStart = System.currentTimeMillis()
+        } else if (!overPill && isExpanded && System.currentTimeMillis() - expandStart > 500) {
+            isExpanded = false
         }
 
-        val pillW = STATIC_PILL_W
-        val cx = (sw - pillW) / 2f
+        expandSpring.setTarget(if (isExpanded) 1f else 0f)
+        val now = System.currentTimeMillis()
+        expandSpring.update(0.016f)
+        val expandFrac = expandSpring.value()
+        val ctrlReserved = expandFrac * 50f
+
+        val (pillW, pillH, cx) = if (isMedia) {
+            val h = PILL_H + (MEDIA_EXPANDED_H - PILL_H) * expandFrac
+            Triple(COLLAPSED_W, h, (sw - COLLAPSED_W) / 2f)
+        } else {
+            val w = COLLAPSED_W + (EXPANDED_W - COLLAPSED_W) * expandFrac
+            Triple(w, PILL_H, (sw - w) / 2f)
+        }
         val bgColor = when (state) {
             State.MEDIA -> colorUtil.rgba(12, 18, 22, 220)
             State.BOSSBAR -> colorUtil.rgba(20, 28, 38, 220)
             State.IDLE -> colorUtil.rgba(12, 18, 22, 220)
         }
-        pillRect = floatArrayOf(cx, y, pillW, PILL_H)
+        pillRect = floatArrayOf(cx, y, pillW, pillH)
 
+        // Time pill - slides left when expanded (only for non-media)
+        val timeOpacity = if (isMedia) 0f else (1f - expandFrac).coerceIn(0f, 1f)
+        val timeSlide = -expandFrac * 60f
         val wTime = r.getTextWidth("regular", time, 9f) + 12
-        val lx = cx - 4 - wTime
-        if (blur) r.drawRectBlurred(lx, y, wTime, PILL_H, PILL_RADIUS, colorUtil.rgba(12, 18, 22, 220))
-        else r.drawRect(lx, y, wTime, PILL_H, PILL_RADIUS, colorUtil.rgba(12, 18, 22, 220))
-        r.drawText("regular", time, lx + 6, y + 5.5f, 9f, colorUtil.rgba(180, 180, 180, 255))
+        val lx = cx - 4 - wTime + timeSlide
+        if (timeOpacity > 0.01f) {
+            val timeColor = colorUtil.rgba(12, 18, 22, (220 * timeOpacity).toInt())
+            if (blur) r.drawRectBlurred(lx, y, wTime, PILL_H, PILL_RADIUS, timeColor)
+            else r.drawRect(lx, y, wTime, PILL_H, PILL_RADIUS, timeColor)
+            val textColor = colorUtil.rgba(180, 180, 180, (255 * timeOpacity).toInt())
+            r.drawText("regular", time, lx + 6, y + 5.5f, 9f, textColor)
+        }
 
-        if (blur) r.drawRectBlurred(cx, y, pillW, PILL_H, PILL_RADIUS, bgColor)
-        else r.drawRect(cx, y, pillW, PILL_H, PILL_RADIUS, bgColor)
+        // Main pill
+        if (blur) r.drawRectBlurred(cx, y, pillW, pillH, PILL_RADIUS, bgColor)
+        else r.drawRect(cx, y, pillW, pillH, PILL_RADIUS, bgColor)
 
         val ax = cx + 6
         val ay = y + 3f
-        renderAvatar(r, ax, ay, 14, mc, mode, blur)
-
         var textX = ax + 18f
+
+        // Controls on right when collapsed/partial, move to bottom when fully expanded vertical
+        if (state == State.MEDIA && expandFrac > 0.01f && expandFrac < 0.5f) {
+            textX += ctrlReserved
+        }
 
         when (state) {
             State.IDLE -> {
+                renderAvatar(r, ax, ay, 14, mc, mode, blur)
                 r.drawText("bold", name, textX, y + 5.5f, 9f, colorUtil.rgba(255, 255, 255, 255))
             }
             State.MEDIA -> {
                 updateArtTexture()
                 if (mArtId != null) {
-                    r.drawImage(textX, y + 3f, 14f, 14f, mArtId!!, 7f)
+                    r.drawImage(ax, ay, 14f, 14f, mArtId!!, 7f)
                 } else {
-                    r.drawRect(textX, y + 3f, 14f, 14f, 7f, colorUtil.rgba(180, 180, 180, 255))
+                    renderAvatar(r, ax, ay, 14, mc, mode, blur)
                 }
-                textX += 18f
 
                 val title = bgTitle ?: ""
                 if (title != prevAnimTitle) { typeAnim.setTarget(title); prevAnimTitle = title }
@@ -159,7 +205,6 @@ object DynamicIsland {
                     var titleX = textX
                     if (fullW > visibleW) {
                         if (title != marqueeTitle) { marqueeTitle = title; marqueeStart = System.currentTimeMillis() }
-                        val now = System.currentTimeMillis()
                         val scrollDist = fullW - visibleW + 8f
                         val scrollMs = (scrollDist / 22f * 1000f).toLong()
                         val pauseMs = 1500L; val cycleMs = pauseMs * 2 + scrollMs * 2
@@ -178,24 +223,41 @@ object DynamicIsland {
                     }
                 }
 
-                val ctrlX = cx + pillW - 50f
-                val ctrlY = y + 6f
-                val prevX = ctrlX; val playX = ctrlX + 18f; val nextX = ctrlX + 36f
-
-                hoverPrev = mx >= prevX && mx < prevX + 8f && my >= ctrlY && my < ctrlY + 8f
-                hoverPlay = mx >= playX && mx < playX + 8f && my >= ctrlY && my < ctrlY + 8f
-                hoverNext = mx >= nextX && mx < nextX + 8f && my >= ctrlY && my < ctrlY + 8f
-
-                r.drawTriangle(prevX + 8f, ctrlY, prevX, ctrlY + 4f, prevX + 8f, ctrlY + 8f, if (hoverPrev) -1 else colorUtil.rgba(180, 180, 180, 255))
-                if (bgPlaying) {
-                    r.drawRect(playX, ctrlY, 3f, 8f, 0f, if (hoverPlay) -1 else colorUtil.rgba(180, 180, 180, 255))
-                    r.drawRect(playX + 5f, ctrlY, 3f, 8f, 0f, if (hoverPlay) -1 else colorUtil.rgba(180, 180, 180, 255))
+                // Media controls
+                val ctrlAlpha = if (isMedia) {
+                    (if (expandFrac > 0.01f) expandFrac else 0f)
                 } else {
-                    r.drawTriangle(playX, ctrlY, playX, ctrlY + 8f, playX + 8f, ctrlY + 4f, if (hoverPlay) -1 else colorUtil.rgba(180, 180, 180, 255))
+                    (if (expandFrac > 0.01f) expandFrac else 0f)
                 }
-                r.drawTriangle(nextX, ctrlY, nextX + 8f, ctrlY + 4f, nextX, ctrlY + 8f, if (hoverNext) -1 else colorUtil.rgba(180, 180, 180, 255))
+                if (ctrlAlpha > 0.01f) {
+                    val aMul = (ctrlAlpha * 255).toInt().coerceIn(0, 255)
+                    val white = colorUtil.rgba(255, 255, 255, aMul)
+                    val gray = colorUtil.rgba(180, 180, 180, aMul)
+
+                    val (ctrlX, ctrlY) = if (isMedia && expandFrac > 0.5f) {
+                        Pair(cx + 6f, y + 14f + (pillH - 14f - 8f) * ((expandFrac - 0.5f) / 0.5f))
+                    } else {
+                        Pair(cx + pillW - 50f, y + 6f)
+                    }
+                    val prevX = ctrlX; val playX = ctrlX + 18f; val nextX = ctrlX + 36f
+
+                    hoverPrev = mx >= prevX && mx < prevX + 8f && my >= ctrlY && my < ctrlY + 8f
+                    hoverPlay = mx >= playX && mx < playX + 8f && my >= ctrlY && my < ctrlY + 8f
+                    hoverNext = mx >= nextX && mx < nextX + 8f && my >= ctrlY && my < ctrlY + 8f
+
+                    r.drawTriangle(prevX + 8f, ctrlY, prevX, ctrlY + 4f, prevX + 8f, ctrlY + 8f, if (hoverPrev) white else gray)
+                    if (bgPlaying) {
+                        r.drawRect(playX, ctrlY, 3f, 8f, 0f, if (hoverPlay) white else gray)
+                        r.drawRect(playX + 5f, ctrlY, 3f, 8f, 0f, if (hoverPlay) white else gray)
+                    } else {
+                        r.drawTriangle(playX, ctrlY, playX, ctrlY + 8f, playX + 8f, ctrlY + 4f, if (hoverPlay) white else gray)
+                    }
+                    r.drawTriangle(nextX, ctrlY, nextX + 8f, ctrlY + 4f, nextX, ctrlY + 8f, if (hoverNext) white else gray)
+                }
             }
             State.BOSSBAR -> {
+                renderAvatar(r, ax, ay, 14, mc, mode, blur)
+
                 val bbTitle = bossbarTitle ?: ""
                 if (bbTitle != prevAnimTitle) { bossbarTypeAnim.setTarget(bbTitle); prevAnimTitle = bbTitle }
                 val display = bossbarTypeAnim.update()
@@ -209,7 +271,6 @@ object DynamicIsland {
                     r.drawText("regular", display, textX, y + 5.5f, 9f, colorUtil.rgba(200, 180, 100, 255))
                 } else if (fullW > visibleW) {
                     if (bbTitle != marqueeTitle) { marqueeTitle = bbTitle; marqueeStart = System.currentTimeMillis() }
-                    val now = System.currentTimeMillis()
                     val scrollDist = fullW - visibleW + 8f
                     val scrollMs = (scrollDist / 22f * 1000f).toLong()
                     val pauseMs = 1500L; val cycleMs = pauseMs * 2 + scrollMs * 2
@@ -239,17 +300,23 @@ object DynamicIsland {
     @JvmStatic
     fun handleMediaClick(x: Double, y: Double, button: Int): Boolean {
         if (state != State.MEDIA) return false
-        val cx = pillRect[0]; val cy = pillRect[1]; val cw = pillRect[2]
-        val ctrlX = cx + cw - 50f
-        val ctrlY = cy + 6f
+        if (button != 0) return false
+        val cx = pillRect[0]; val cy = pillRect[1]; val cw = pillRect[2]; val ch = pillRect[3]
+        val isExpandedLocal = ch > PILL_H + 2f
+        val (ctrlX, ctrlY) = if (isExpandedLocal) {
+            Pair(cx + 6f, cy + 14f + (ch - 14f - 8f))
+        } else {
+            Pair(cx + cw - 50f, cy + 6f)
+        }
         val relX = (x - ctrlX).toFloat()
         val relY = (y - ctrlY).toFloat()
         if (relY < 0 || relY > 8f || relX < 0 || relX > 44f) return false
-        if (button != 0) return true
         try {
             when {
                 relX < 8f -> bgSession?.previous()
+                relX < 18f -> return false
                 relX < 26f -> if (bgPlaying) bgSession?.pause() else bgSession?.play()
+                relX < 36f -> return false
                 else -> bgSession?.next()
             }
         } catch (_: Exception) {}
@@ -263,36 +330,47 @@ object DynamicIsland {
     fun getPillRect(): FloatArray = pillRect
 
     fun resetMediaPoller() {
-        mediaPollStarted = false
+        pollerRunning = false
+        pollerThread?.interrupt()
+        pollerThread = null
         bgSession = null; bgTitle = null; bgArtBytes = null
         mArtId = null; mPrevArtHash = 0
     }
 
-    private fun startPolling() {
-        if (mediaPollStarted) return
-        mediaPollStarted = true
-        mediaPoller.scheduleWithFixedDelay({
-            try {
-                val sessions = MediaPlayerInfo.INSTANCE.mediaSessions
-                if (sessions == null || sessions.isEmpty()) {
-                    if (bgSession != null) { bgSession = null; bgTitle = null }
-                    return@scheduleWithFixedDelay
+    private fun ensurePoller() {
+        if (pollerRunning) return
+        pollerRunning = true
+        pollerThread = Thread({
+            while (pollerRunning) {
+                try {
+                    val sessions = MediaPlayerInfo.INSTANCE.mediaSessions
+                    if (sessions == null || sessions.isEmpty()) {
+                        if (bgSession != null) { bgSession = null; bgTitle = null }
+                    } else {
+                        val s = sessions.firstOrNull { ses ->
+                            val m = ses.media; m != null && !m.title.isNullOrEmpty() && m.isPlaying
+                        } ?: sessions.firstOrNull { ses ->
+                            val m = ses.media; m != null && !m.title.isNullOrEmpty()
+                        }
+                        if (s != null) {
+                            val info = s.media
+                            if (info != null) {
+                                bgSession = s
+                                bgTitle = if (!info.title.isNullOrBlank()) info.title else info.artist
+                                bgPlaying = info.isPlaying
+                                bgArtBytes = info.artworkPng
+                            }
+                        } else {
+                            bgSession = null; bgTitle = null
+                        }
+                    }
+                } catch (_: Exception) {
+                    bgSession = null; bgTitle = null
                 }
-                val s = sessions.firstOrNull { ses ->
-                    val m = ses.media; m != null && !m.title.isNullOrEmpty() && m.isPlaying
-                } ?: sessions.firstOrNull { ses ->
-                    val m = ses.media; m != null && !m.title.isNullOrEmpty()
-                }
-                if (s == null) { bgSession = null; bgTitle = null; return@scheduleWithFixedDelay }
-                val info = s.media ?: run { bgSession = null; bgTitle = null; return@scheduleWithFixedDelay }
-                bgSession = s
-                bgTitle = if (!info.title.isNullOrBlank()) info.title else info.artist
-                bgPlaying = info.isPlaying
-                bgArtBytes = info.artworkPng
-            } catch (_: Exception) {
-                bgSession = null; bgTitle = null
+                try { Thread.sleep(1000) } catch (_: InterruptedException) { break }
             }
-        }, 2, 1, TimeUnit.SECONDS)
+        }, "Aporia-MediaPoller").apply { isDaemon = true }
+        pollerThread!!.start()
     }
 
     private fun updateArtTexture() {
@@ -332,7 +410,7 @@ object DynamicIsland {
 
     private fun renderSkin(r: AporiaRenderer, x: Float, y: Float, size: Int, mc: Minecraft, blur: Boolean) {
         if (mc.player == null) return
-        val skinId = mc.player!!.skin.body.texturePath() ?: return
+        val skinId = mc.player!!.skin.body.texturePath()
         val radius = size / 2f
         if (blur) r.drawRectBlurred(x, y, size.toFloat(), size.toFloat(), radius, colorUtil.rgba(12, 18, 22, 220))
         else r.drawRect(x, y, size.toFloat(), size.toFloat(), radius, colorUtil.rgba(12, 18, 22, 220))

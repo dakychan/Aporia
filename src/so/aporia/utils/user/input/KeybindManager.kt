@@ -1,5 +1,4 @@
 package so.aporia.utils.user.input
-
 import com.chaos.annotation.Obfuscate
 import so.aporia.module.ModuleManager
 import so.aporia.module.impl.misc.ClickGui
@@ -8,8 +7,9 @@ import so.aporia.utils.events.impl.KeyInputEvent
 import so.aporia.utils.events.impl.MouseClickEvent
 import so.aporia.utils.imports.*
 import so.aporia.utils.user.render.ui.clickgui.ClickGuiScreen
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object KeybindManager {
 
     @JvmField
@@ -47,14 +47,17 @@ object KeybindManager {
     @EventHandler
     fun onMouseClick(e: MouseClickEvent) {
         if (e.action() != MouseClickEvent.Action.PRESS) return
-
         val screen = mc.screen
-
         if (screen == null) {
-            val virtualKey = if (e.button() in 0..7) 500 + e.button() else e.button()
-            for (m in ModuleManager.getAll()) {
-                if (m.keybind != -1 && m.keybind == virtualKey) {
-                    m.toggle()
+            val raw = e.button()
+            // Buttons 0-2 (left/right/middle) go through mouse event
+            // Buttons 3+ (side) go through KeyInputEvent posted from MouseHandler
+            if (raw in 0..2) {
+                val virtualKey = 500 + raw
+                for (m in ModuleManager.getAll()) {
+                    if (m.keybind != -1 && m.keybind == virtualKey) {
+                        m.toggle()
+                    }
                 }
             }
         }

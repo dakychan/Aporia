@@ -13,14 +13,18 @@ import org.joml.Vector4f
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.settings.BooleanSetting
-import so.aporia.module.settings.NumberSetting
+import so.aporia.module.settings.SliderSetting
 import so.aporia.module.settings.SelectSetting
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.RenderHudEvent
 import so.aporia.utils.events.impl.TickEvent
+import so.aporia.utils.user.render.animation.SpringSimulator
 import so.aporia.utils.user.render.font.Fonts
 import java.util.UUID
-
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.data.AtlasIds
+import com.chaos.annotation.ChaosNative
+@ChaosNative
 class NameTags : Module("NameTags", Category.VISUAL) {
 
     companion object {
@@ -29,6 +33,7 @@ class NameTags : Module("NameTags", Category.VISUAL) {
 
     private val flashMap = mutableMapOf<UUID, FlashState>()
     private val prevHealthMap = mutableMapOf<UUID, Float>()
+    private val smoothPositions = mutableMapOf<UUID, SmoothPos>()
 
     val showSelf = BooleanSetting("Self", "Show own name tag", false)
     val showEnchants = BooleanSetting("Enchantments", "Show key enchantments", true)
@@ -37,7 +42,9 @@ class NameTags : Module("NameTags", Category.VISUAL) {
     val showItem = SelectSetting("HandItem", "Show held item icons")
         .value("Both", "Main Hand", "Off Hand", "None")
         .selected("Both")
-    val scale = NumberSetting("Scale", "Tag scale", 1.0, 0.3, 2.0, 0.1)
+    val scale = SliderSetting("Scale", "Tag scale", 1.0, 0.3, 2.0, 0.1)
+
+    override val settings = listOf(showSelf, showEnchants, showHealth, showArmor, showItem, scale)
 
     override fun onEnable() {
         active = true
@@ -49,6 +56,7 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         bus.unregister(this)
         flashMap.clear()
         prevHealthMap.clear()
+        smoothPositions.clear()
     }
 
     @EventHandler
@@ -80,9 +88,15 @@ class NameTags : Module("NameTags", Category.VISUAL) {
     private val vp = Matrix4f()
     private val clip = Vector4f()
 
-    private fun shouldRender(entity: Player, camera: net.minecraft.world.entity.Entity): Boolean {
+    private fun shouldRender(entity: Player): Boolean {
         if (entity.name.string.isBlank()) return false
-        if (entity == camera) return showSelf.isEnabled
+        if (fonts.getTextWidth(Fonts.BOLD, entity.name.string, 16f) < 1f) return false
+        return true
+    }
+
+    private fun shouldRenderAny(entity: Player, camera: net.minecraft.world.entity.Entity): Boolean {
+        if (!shouldRender(entity)) return false
+        if (entity == camera && mc.options.cameraType.isFirstPerson()) return showSelf.isEnabled
         return true
     }
 
@@ -103,12 +117,20 @@ class NameTags : Module("NameTags", Category.VISUAL) {
 
         val renderable = level.entitiesForRendering()
             .filterIsInstance<Player>()
-            .filter { shouldRender(it, camera) }
+            .filter { shouldRenderAny(it, camera) }
             .filter { camera.distanceTo(it) <= 64.0 }
+            .mapNotNull { entity ->
+                val layout = computeLayout(entity, camPos, pt, sw, sh)
+                if (layout != null) entity to layout else null
+            }
+
+        gfx.nextStratum()
+        val pose = gfx.pose()
+        pose.pushMatrix()
 
         // Phase 1: blurred backgrounds
-        for (entity in renderable) {
-            val (s, left, top, totalW, totalH) = computeLayout(entity, camPos, pt, sw, sh) ?: continue
+        for ((entity, layout) in renderable) {
+            val (s, left, top, totalW, totalH) = layout
 
             if (showHealth.isEnabled) {
                 val hbW = s * 32; val hbH = s * 22
@@ -122,11 +144,18 @@ class NameTags : Module("NameTags", Category.VISUAL) {
             val nbY = top + totalH - nbH - s * 4f
             r.drawRectBlurred(nbX, nbY, nameBubbleW, nbH, s * 6f, colorUtil.rgba(25, 25, 35, 200), 3f, 15)
 
-            if (showItem.isSelected("Both") || showItem.isSelected("Main Hand")) {
-                val hand = entity.mainHandItem
-                if (!hand.isEmpty) {
+            val mainHand = if (showItem.isSelected("Both") || showItem.isSelected("Main Hand")) entity.mainHandItem else null
+            val offHand = if (showItem.isSelected("Both") || showItem.isSelected("Off Hand")) entity.offhandItem else null
+            if (mainHand != null || offHand != null) {
+                var itemOffset = 0f
+                if (mainHand != null && !mainHand.isEmpty) {
                     val ibW = s * 22f; val ibH = s * 22f
-                    r.drawRectBlurred(nbX + nameBubbleW + s * 4f, top + totalH - ibH - s * 4f, ibW, ibH, s * 6f, colorUtil.rgba(25, 25, 35, 200), 3f, 15)
+                    r.drawRectBlurred(nbX + nameBubbleW + s * 4f + itemOffset, top + totalH - ibH - s * 4f, ibW, ibH, s * 6f, colorUtil.rgba(25, 25, 35, 200), 3f, 15)
+                    itemOffset += ibW + s * 4f
+                }
+                if (offHand != null && !offHand.isEmpty) {
+                    val ibW = s * 22f; val ibH = s * 22f
+                    r.drawRectBlurred(nbX + nameBubbleW + s * 4f + itemOffset, top + totalH - ibH - s * 4f, ibW, ibH, s * 6f, colorUtil.rgba(25, 25, 35, 200), 3f, 15)
                 }
             }
         }
@@ -134,25 +163,36 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         r.flush()
 
         // Phase 2: item icons
-        for (entity in renderable) {
-            val (s, left, top, totalW, totalH) = computeLayout(entity, camPos, pt, sw, sh) ?: continue
+        for ((entity, layout) in renderable) {
+            val (s, left, top, totalW, totalH) = layout
 
-            if (showArmor.isEnabled) renderArmorItems(gfx, entity, left, top, totalW, s)
+            if (showArmor.isEnabled) renderArmorItems(entity, left, top, totalW, s)
 
-            if (showItem.isSelected("Both") || showItem.isSelected("Main Hand")) {
-                val hand = entity.mainHandItem
-                if (!hand.isEmpty) {
+            val mainHand = if (showItem.isSelected("Both") || showItem.isSelected("Main Hand")) entity.mainHandItem else null
+            val offHand = if (showItem.isSelected("Both") || showItem.isSelected("Off Hand")) entity.offhandItem else null
+            if (mainHand != null || offHand != null) {
+                var itemOffset = 0f
+                if (mainHand != null && !mainHand.isEmpty) {
                     val itemBubbleW = s * 22f
-                    val ix = left + s * 4f + (if (showHealth.isEnabled) s * 32f + s * 4f else 0f) + getCenterNameWidth(entity, s) + s * 4f + (itemBubbleW - s * 16f) / 2f
+                    val ix = left + s * 4f + (if (showHealth.isEnabled) s * 32f + s * 4f else 0f) + getCenterNameWidth(entity, s) + s * 4f + itemOffset + (itemBubbleW - s * 16f) / 2f
                     val iy = top + totalH - s * 4f - s * 22f + (s * 22f - s * 16f) / 2f
-                    renderItemIcon(gfx, hand, ix.toInt(), iy.toInt(), (s * 16f).toInt())
+                    renderItemIcon(mainHand, ix.toInt(), iy.toInt(), (s * 16f).toInt())
+                    itemOffset += itemBubbleW + s * 4f
+                }
+                if (offHand != null && !offHand.isEmpty) {
+                    val itemBubbleW = s * 22f
+                    val ix = left + s * 4f + (if (showHealth.isEnabled) s * 32f + s * 4f else 0f) + getCenterNameWidth(entity, s) + s * 4f + itemOffset + (itemBubbleW - s * 16f) / 2f
+                    val iy = top + totalH - s * 4f - s * 22f + (s * 22f - s * 16f) / 2f
+                    renderItemIcon(offHand, ix.toInt(), iy.toInt(), (s * 16f).toInt())
                 }
             }
         }
 
+        gfx.nextStratum()
+
         // Phase 3: text
-        for (entity in renderable) {
-            val (s, left, top, _, totalH) = computeLayout(entity, camPos, pt, sw, sh) ?: continue
+        for ((entity, layout) in renderable) {
+            val (s, left, top, _, totalH) = layout
 
             val nameW = fonts.getTextWidth(Fonts.BOLD, entity.name.string, s * 16f)
             val nbX = if (showHealth.isEnabled) left + s * 4f + s * 32f + s * 4f else left + s * 4f
@@ -176,11 +216,12 @@ class NameTags : Module("NameTags", Category.VISUAL) {
                 if (hurtFlash > 0.01f) heartColor = colorUtil.lerp(heartColor, -0xCCCD, hurtFlash)
                 else if (healFlash > 0.01f) heartColor = colorUtil.lerp(heartColor, -0x22CD, healFlash)
                 val hbX = left + s * 4f; val hbY = top + totalH - s * 4f - s * 22f
-                val hpText = "%.0f".format(health)
+                val hpText = java.lang.String.format("%.0f", health)
                 val hpW = fonts.getTextWidth(Fonts.BOLD, hpText, s * 14f)
                 fonts.drawText(Fonts.BOLD, hpText, hbX + (s * 32f - hpW) / 2f, hbY + (s * 22f - s * 14f) / 2f - 1f, s * 14f, heartColor)
             }
         }
+        pose.popMatrix()
     }
 
     private fun computeLayout(entity: Player, camPos: net.minecraft.world.phys.Vec3, pt: Float, sw: Int, sh: Int): FiveFold? {
@@ -195,13 +236,47 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         val sy = projectY(vp, px, headY, pz, mc)
         if (sx.isNaN() || sy.isNaN()) return null
         if (sx < -300 || sx > sw + 300 || sy < -300 || sy > sh + 300) return null
+
+        // Smooth position using spring
+        val uuid = entity.uuid
+        val smooth = smoothPositions.getOrPut(uuid) { SmoothPos(sx, sy) }
+        smooth.update(sx, sy)
+
         val totalW = getTotalWidth(entity, s); val totalH = getTotalHeight(entity, s)
-        return FiveFold(s, sx - totalW / 2f, sy - totalH, totalW, totalH)
+        return FiveFold(s, smooth.sx - totalW / 2f, smooth.sy - totalH, totalW, totalH)
     }
 
     private data class FiveFold(val s: Float, val left: Float, val top: Float, val totalW: Float, val totalH: Float)
 
-    private fun renderArmorItems(gfx: GuiGraphics, player: Player, left: Float, top: Float, totalW: Float, s: Float) {
+    private class SmoothPos {
+        var sx: Float
+        var sy: Float
+        private val springX = SpringSimulator(80f, 12f, 0f)
+        private val springY = SpringSimulator(80f, 12f, 0f)
+        private var lastUpdate = System.currentTimeMillis()
+
+        constructor(x: Float, y: Float) {
+            sx = x; sy = y
+            springX.snap(x); springY.snap(y)
+        }
+
+        fun update(targetX: Float, targetY: Float) {
+            val now = System.currentTimeMillis()
+            val dt = (now - lastUpdate).coerceIn(1L, 50L) / 1000f
+            lastUpdate = now
+            springX.setTarget(targetX)
+            springY.setTarget(targetY)
+            springX.update(dt)
+            springY.update(dt)
+            sx = springX.value()
+            sy = springY.value()
+            val maxDev = 40f
+            sx = sx.coerceIn(targetX - maxDev, targetX + maxDev)
+            sy = sy.coerceIn(targetY - maxDev, targetY + maxDev)
+        }
+    }
+
+    private fun renderArmorItems(player: Player, left: Float, top: Float, totalW: Float, s: Float) {
         val slots = listOf(EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET)
         val count = slots.count { !player.getItemBySlot(it).isEmpty }
         if (count == 0) return
@@ -218,20 +293,20 @@ class NameTags : Module("NameTags", Category.VISUAL) {
             if (armor.isEmpty) continue
             val ax = armorStartX + idx * (s * 14f + s * 3f)
             val ay = armorY + s * 2f
-            renderItemIcon(gfx, armor, ax.toInt(), ay.toInt(), (s * 14f).toInt())
+            renderItemIcon(armor, ax.toInt(), ay.toInt(), (s * 14f).toInt())
             idx++
         }
     }
 
-    private fun renderItemIcon(gfx: GuiGraphics, stack: ItemStack, x: Int, y: Int, size: Int) {
+    private fun renderItemIcon(stack: ItemStack, x: Int, y: Int, size: Int) {
         if (stack.isEmpty) return
-        val pose = gfx.pose()
-        pose.pushMatrix()
-        val sc = size / 16f
-        pose.translate(x.toFloat(), y.toFloat())
-        pose.scale(sc, sc)
-        gfx.renderItem(stack, 0, 0)
-        pose.popMatrix()
+        val itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()) ?: return
+        val spriteId = itemId.withPrefix("item/")
+        val atlas = try { mc.atlasManager.getAtlasOrThrow(AtlasIds.ITEMS) } catch (e: Exception) { return }
+        val sprite = atlas.getSprite(spriteId)
+        if (sprite === atlas.missingSprite()) return
+        r.drawImageCropped(x.toFloat(), y.toFloat(), size.toFloat(), size.toFloat(),
+            sprite.atlasLocation(), 0f, sprite.u0, sprite.v0, sprite.u1, sprite.v1)
     }
 
     private fun getCenterNameWidth(player: Player, s: Float): Float {
@@ -243,8 +318,10 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         if (showHealth.isEnabled) w += s * 32f + s * 4f
         w += getCenterNameWidth(player, s)
         if (showItem.isSelected("Both") || showItem.isSelected("Main Hand")) {
-            val hand = player.mainHandItem
-            if (!hand.isEmpty) w += s * 22f + s * 4f
+            if (!player.mainHandItem.isEmpty) w += s * 22f + s * 4f
+        }
+        if (showItem.isSelected("Both") || showItem.isSelected("Off Hand")) {
+            if (!player.offhandItem.isEmpty) w += s * 22f + s * 4f
         }
         return w
     }

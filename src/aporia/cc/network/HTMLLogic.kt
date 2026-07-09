@@ -8,8 +8,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.regex.Matcher
 import java.util.regex.Pattern
-
+import com.chaos.annotation.ChaosNative
 @Obfuscate
+@ChaosNative
 object HTMLLogic {
 
     @JvmStatic
