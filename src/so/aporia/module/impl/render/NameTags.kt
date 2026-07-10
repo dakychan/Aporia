@@ -20,10 +20,12 @@ import so.aporia.utils.events.impl.RenderHudEvent
 import so.aporia.utils.events.impl.TickEvent
 import so.aporia.utils.user.render.animation.SpringSimulator
 import so.aporia.utils.user.render.font.Fonts
+import so.aporia.utils.user.whois.WhoIs
 import java.util.UUID
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.data.AtlasIds
 import com.chaos.annotation.ChaosNative
+
 @ChaosNative
 class NameTags : Module("NameTags", Category.VISUAL) {
 
@@ -100,6 +102,14 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         return true
     }
 
+    private fun hasArmor(player: Player): Boolean {
+        if (!showArmor.isEnabled) return false
+        for (slot in listOf(EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET)) {
+            if (!player.getItemBySlot(slot).isEmpty) return true
+        }
+        return false
+    }
+
     @EventHandler
     fun onRenderHud(e: RenderHudEvent) {
         val camera = mc.cameraEntity ?: return
@@ -143,6 +153,20 @@ class NameTags : Module("NameTags", Category.VISUAL) {
             val nbX = if (showHealth.isEnabled) left + s * 4f + s * 32f + s * 4f else left + s * 4f
             val nbY = top + totalH - nbH - s * 4f
             r.drawRectBlurred(nbX, nbY, nameBubbleW, nbH, s * 6f, colorUtil.rgba(25, 25, 35, 200), 3f, 15)
+
+            // Aporia badge background
+            if (WhoIs.isAperiaUser(entity.uuid)) {
+                val badgeText = "Aporia.cc user"
+                val badgeW = fonts.getTextWidth(Fonts.REGULAR, badgeText, s * 10f) + s * 8f
+                val badgeH = s * 14f
+                val badgeX = nbX + (nameBubbleW - badgeW) / 2f
+                val badgeY = if (hasArmor(entity)) {
+                    top - s * 4f
+                } else {
+                    nbY - badgeH - s * 2f
+                }
+                r.drawRectBlurred(badgeX, badgeY, badgeW, badgeH, s * 4f, colorUtil.rgba(128, 0, 255, 200), 3f, 10)
+            }
 
             val mainHand = if (showItem.isSelected("Both") || showItem.isSelected("Main Hand")) entity.mainHandItem else null
             val offHand = if (showItem.isSelected("Both") || showItem.isSelected("Off Hand")) entity.offhandItem else null
@@ -200,6 +224,19 @@ class NameTags : Module("NameTags", Category.VISUAL) {
             fonts.drawText(Fonts.BOLD, entity.name.string,
                 nbX + (getCenterNameWidth(entity, s) - nameW) / 2f,
                 nbY + (s * 22f - s * 16f) / 2f - 1f, s * 16f, -0x1)
+
+            // Aporia badge text
+            if (WhoIs.isAperiaUser(entity.uuid)) {
+                val badgeText = "Aporia.cc user"
+                val badgeW = fonts.getTextWidth(Fonts.REGULAR, badgeText, s * 10f)
+                val badgeX = nbX + (getCenterNameWidth(entity, s) - badgeW) / 2f
+                val badgeY = if (hasArmor(entity)) {
+                    top + s * 2f
+                } else {
+                    nbY - s * 12f
+                }
+                fonts.drawText(Fonts.REGULAR, badgeText, badgeX, badgeY, s * 10f, 0xFF00FF.toInt())
+            }
 
             if (showHealth.isEnabled) {
                 val health = entity.health + entity.absorptionAmount
@@ -331,13 +368,7 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         h += s * 22f
         h += s * 4f
 
-        var hasArmor = false
-        if (showArmor.isEnabled) {
-            for (slot in listOf(EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET)) {
-                if (!player.getItemBySlot(slot).isEmpty) { hasArmor = true; break }
-            }
-        }
-        if (hasArmor) h += s * 6f + s * 18f + s * 4f
+        if (hasArmor(player)) h += s * 6f + s * 18f + s * 4f
 
         return h
     }

@@ -1,6 +1,6 @@
 package so.aporia.module.settings
 import so.aporia.utils.user.render.core.AporiaRenderer
-import so.aporia.utils.user.render.theme.ThemeManager.Theme
+import so.aporia.module.impl.render.clickgui.ThemeManagerModule.Theme
 import java.util.function.Supplier
 import com.chaos.annotation.ChaosNative
 /**

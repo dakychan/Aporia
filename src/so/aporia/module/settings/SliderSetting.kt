@@ -1,7 +1,8 @@
 package so.aporia.module.settings
 import so.aporia.utils.user.render.animation.SpringSimulator
 import so.aporia.utils.user.render.core.AporiaRenderer
-import so.aporia.utils.user.render.theme.ThemeManager.Theme
+import so.aporia.module.impl.render.clickgui.ThemeManagerModule.Theme
+import java.util.Locale
 import java.util.function.Supplier
 import kotlin.math.roundToInt
 import com.chaos.annotation.ChaosNative
@@ -47,7 +48,8 @@ class SliderSetting @JvmOverloads constructor(
 
         r.drawText("regular", name, x + 8f, y + 1f, 9f, theme.guiSettingText)
 
-        val txt = if (editing) editBuffer ?: "%.1f".format(get()) else "%.1f".format(get())
+        fun fmt(v: Double) = java.lang.String.format(Locale.US, "%.1f", v)
+        val txt = if (editing) editBuffer ?: fmt(get()) else fmt(get())
         val fs = 8f
         val tw = r.getTextWidth("regular", txt, fs)
         val valX = x + w - 8f - tw - 8f

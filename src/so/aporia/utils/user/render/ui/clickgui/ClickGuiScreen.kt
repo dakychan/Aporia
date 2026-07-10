@@ -12,6 +12,7 @@ import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import net.minecraftforge.api.distmarker.Dist
 import net.minecraftforge.api.distmarker.OnlyIn
+import java.util.Locale
 import so.aporia.module.Category
 import so.aporia.utils.assets.AssetManager
 import so.aporia.module.Module
@@ -24,8 +25,8 @@ import so.aporia.utils.user.render.animation.Easing
 import so.aporia.utils.user.render.animation.SpringSimulator
 import so.aporia.utils.user.render.animation.TypeAnim
 import so.aporia.utils.user.render.font.Fonts
-import so.aporia.utils.user.render.theme.ThemeManager
-import so.aporia.utils.user.render.theme.ThemeManager.Theme
+import so.aporia.module.impl.render.clickgui.ThemeManagerModule
+import so.aporia.module.impl.render.clickgui.ThemeManagerModule.Theme
 import org.lwjgl.glfw.GLFW
 import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.impl.KeyInputEvent
@@ -257,7 +258,7 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
         val by = py
         val bw = panelW
 
-        r.drawRect(bx, by, bw, TOP_BAR_H, CORNER_RADIUS, colorUtil.rgba(0, 0, 0, 60))
+        r.drawRect(bx, by, bw, TOP_BAR_H, CORNER_RADIUS, colorUtil.rgba(0, 0, 0, 60), cornerMask = 3)
         r.drawRect(bx, by + TOP_BAR_H - 1f, bw, 1f, 0f, th.guiSeparator)
 
         val logoSize = 16f
@@ -347,8 +348,8 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
         val categories = Category.values().toList()
         val now = System.currentTimeMillis()
 
-        val catLeft = px + PAD - 2f
-        var catY = cy + 10f
+        val catLeft = px + PAD - 2f - 9f
+        var catY = cy + 10f + 2f
         for ((i, cat) in categories.withIndex()) {
             val ta = catTypeAnims[cat] ?: continue
             val started = catAnimStarted[cat] ?: false
@@ -418,7 +419,22 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
     private fun drawOtherPanel(r: AporiaRenderer, th: Theme, mx: Float, my: Float) {
         val cy = contentY
         val label = locale.get("gui.other.title")
-        r.drawText(Fonts.BOLD, label, px + PAD, cy, 14f, 0xFFFFFFFF.toInt())
+        r.drawText(Fonts.BOLD, label, px + PAD, cy, 12f, 0xFFFFFFFF.toInt())
+        val scriptMods = ModuleManager.getScriptModules()
+        var my2 = cy + 16f
+        for (mod in scriptMods) {
+            if (my2 + MOD_H < cy || my2 > py + panelH - PAD) { my2 += MOD_H; continue }
+            val over = mx >= px + PAD && mx < px + PAD + catW && my >= my2 && my < my2 + MOD_H
+            val en = mod.isEnabled
+            r.drawBg(px + PAD, my2, catW, MOD_H, 2f, colorUtil.rgba(0, 0, 0, if (en) 70 else 40))
+            if (over || en) {
+                val hl = th.guiTitleBg
+                r.drawBg(px + PAD, my2, catW, MOD_H, 2f, hl)
+            }
+            r.drawText(Fonts.REGULAR, mod.name, px + PAD + 4f, my2 + (MOD_H - 10f) / 2f - 1f, 10f,
+                if (en) 0xFFFFFFFF.toInt() else th.guiDisabledDot)
+            my2 += MOD_H
+        }
     }
 
     private fun drawModuleList(r: AporiaRenderer, th: Theme, mx: Float, my: Float, cy: Float, categories: List<Category>) {
@@ -645,10 +661,8 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
             val parsed = if (raw != null) raw.toDoubleOrNull() else null
             if (parsed != null) {
                 val clamped = parsed.coerceIn(slider.min, slider.max)
-                slider.setValue(clamped)
-                if (Math.abs(parsed - clamped) > 0.0001) {
-                    slider.editBuffer = java.lang.String.format("%.1f", clamped)
-                }
+                val stepped = kotlin.math.round(clamped / slider.step) * slider.step
+                slider.setValue(stepped.coerceIn(slider.min, slider.max))
             }
             slider.editing = false
         }
@@ -751,8 +765,8 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
 
     private fun handleAvatarClick(mx: Float, my: Float, btn: Int = 0): Boolean {
         val cy = contentY
-        val catLeft = px + PAD - 2f
-        var catY = cy + 10f
+        val catLeft = px + PAD - 2f - 9f
+        var catY = cy + 10f + 2f
         val categories = Category.values().toList()
         for ((i, _) in categories.withIndex()) {
             if (mx >= catLeft && mx < catLeft + catW && my >= catY && my < catY + CAT_H) {
@@ -837,11 +851,15 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
                 val vb = s.valueBounds
                 if (mx >= vb[0] && mx < vb[0] + vb[2] && my >= vb[1] && my < vb[1] + vb[3]) {
                     s.editing = true
-                    s.editBuffer = java.lang.String.format("%.1f", s.get())
+                    s.editBuffer = java.lang.String.format(Locale.US, "%.1f", s.get())
                     editingSlider = s
                 } else {
                     val mod = if (activeTab == Tab.SETTINGS) clickGui else selectedModule
                     val sets = if (activeTab == Tab.SETTINGS) clickGui.settings else selectedModule!!.settings
+                    val frac = ((mx - sLeft - 10f) / (sWidth - 14f)).coerceIn(0f, 1f)
+                    val v = s.min + (s.max - s.min) * frac
+                    val stepped = kotlin.math.round(v / s.step) * s.step
+                    s.setValue(stepped.coerceIn(s.min, s.max))
                     dragSlider = DragInfo(mod!!, sets.indexOf(s))
                 }
             }
@@ -977,8 +995,9 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
         if (s !is SliderSetting) { dragSlider = null; return true }
         val sLeft = if (activeTab == Tab.SETTINGS) px + PAD else px + catW + modW
         val sWidth = if (activeTab == Tab.SETTINGS) panelW - PAD * 2 else setW - PAD
-        val frac = ((mx - sLeft - 10f) / (sWidth - 20f)).coerceIn(0f, 1f)
-        s.setValue(s.min + (s.max - s.min) * frac)
+        val frac = ((mx - sLeft - 10f) / (sWidth - 14f)).coerceIn(0f, 1f)
+        val v = s.min + (s.max - s.min) * frac
+        s.setValue((kotlin.math.round(v / s.step) * s.step).coerceIn(s.min, s.max))
         return true
     }
 
@@ -1015,17 +1034,15 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
 
         if (editingSlider != null) {
             val s = editingSlider ?: return true
-            val orig = java.lang.String.format("%.1f", s.get())
+            val orig = java.lang.String.format(Locale.US, "%.1f", s.get())
             when (e.key()) {
                 GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> {
                     val buf = s.editBuffer ?: return true
                     val parsed = buf.toDoubleOrNull()
                     if (parsed != null) {
                         val clamped = parsed.coerceIn(s.min, s.max)
-                        s.setValue(clamped)
-                        if (Math.abs(parsed - clamped) > 0.0001) {
-                            s.editBuffer = java.lang.String.format("%.1f", clamped)
-                        }
+                        val stepped = kotlin.math.round(clamped / s.step) * s.step
+                        s.setValue(stepped.coerceIn(s.min, s.max))
                     }
                     s.editing = false; editingSlider = null
                 }
@@ -1083,7 +1100,7 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
     }
 
     private fun onCloseReal() {
-        ThemeManager.INSTANCE.saveAll()
+        ThemeManagerModule.instance?.saveAll()
         clickGui.savedCategory.setValue(selCategory.toDouble())
         clickGui.savedScroll.setValue(scrollY.toDouble())
         clickGui.savedSettingsScroll.setValue(settingsScrollY.toDouble())

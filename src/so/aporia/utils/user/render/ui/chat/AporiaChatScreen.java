@@ -35,7 +35,7 @@ import aporia.cc.PanicSystem;
 import so.aporia.utils.user.command.CommandManager;
 import so.aporia.module.impl.render.Beautifully;
 import so.aporia.module.settings.*;
-import so.aporia.utils.user.render.theme.ThemeManager;
+import so.aporia.module.impl.render.clickgui.ThemeManagerModule;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -371,7 +371,7 @@ public class AporiaChatScreen extends ChatScreen {
         void render(GuiGraphics gfx, net.minecraft.client.gui.Font font, WinCfg c, int mouseX, int mouseY) {
             if (!visible) return;
             AporiaRenderer r = AporiaRenderer.INSTANCE;
-            var theme = ThemeManager.INSTANCE.active();
+            var theme = ThemeManagerModule.activeTheme();
             gfx.nextStratum();
             if (Beautifully.isBlurEnabled()) {
                 r.drawRectBlurred(bx, by, bw, bh, RADIUS, C_BG);

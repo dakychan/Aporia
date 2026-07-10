@@ -16,7 +16,7 @@ import so.aporia.utils.user.render.animation.Animator
 import so.aporia.utils.user.render.animation.Easing
 import so.aporia.utils.user.render.core.AporiaRenderer
 import so.aporia.utils.user.render.core.BlurRenderer
-import so.aporia.utils.user.render.theme.ThemeManager.Theme
+import so.aporia.module.impl.render.clickgui.ThemeManagerModule.Theme
 import java.io.File
 import net.minecraft.client.renderer.texture.TextureAtlas
 import kotlin.math.*

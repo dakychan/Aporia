@@ -11,14 +11,14 @@ import so.aporia.utils.user.logger.Logger
 import so.aporia.utils.user.render.color.ColorUtil
 import so.aporia.utils.user.render.core.AporiaRenderer
 import so.aporia.utils.user.render.font.Fonts
-import so.aporia.utils.user.render.theme.ThemeManager
+import so.aporia.module.impl.render.clickgui.ThemeManagerModule
 import com.chaos.annotation.ChaosNative
-val r get() = AporiaRenderer.INSTANCE
+val r get() = AporiaRenderer
 val mc get() = Minecraft.getInstance()
 val logger get() = Logger
 val fonts get() = Aporia.FONTS
 val locale get() = LocaleManager.INSTANCE
-val theme get() = ThemeManager.INSTANCE.active()
+val theme get() = ThemeManagerModule.activeTheme()
 val files get() = FilesManager
 val os get() = OsManager
 val bus get() = EventBus

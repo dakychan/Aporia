@@ -11,10 +11,6 @@ import so.aporia.utils.files.impl.ConfigFile
 import so.aporia.utils.user.input.KeybindManager
 import so.aporia.utils.user.friend.FriendManager
 import so.aporia.utils.user.render.ui.clickgui.QuestManager
-import so.aporia.utils.user.render.core.DefaultLibraries
-import so.aporia.utils.user.render.core.DefaultSnippets
-import so.aporia.utils.user.render.core.DrawBatch
-import so.aporia.utils.user.render.theme.ThemeManager
 import so.aporia.utils.user.render.font.FontRenderer
 import so.aporia.utils.user.render.font.Fonts
 import so.aporia.utils.user.render.render3d.AporiaRenderer3D
@@ -41,7 +37,6 @@ class Aporia private constructor() : ResourceManagerReloadListener {
         ConfigFile.load()
         locale.init()
         FriendManager.init()
-        ThemeManager.INSTANCE.init()
         QuestManager.init()
         initializeDiscordRPC()
         loadFontMode()
@@ -95,7 +90,6 @@ class Aporia private constructor() : ResourceManagerReloadListener {
             }
 
             bus.post(RenderHudEvent(gfx, partialTick))
-            DrawBatch.INSTANCE.flush()
             r.flush()
 
             // Aporia Chat HUD (когда чат не в фокусе — иначе AporiaChatScreen открыт)
@@ -109,7 +103,6 @@ class Aporia private constructor() : ResourceManagerReloadListener {
                 hud.render(gfx, 0, 0, partialTick)
             }
 
-            DrawBatch.INSTANCE.flush()
             r.flush()
             renderErrorCount = 0
         } catch (e: OutOfMemoryError) {
@@ -129,8 +122,6 @@ class Aporia private constructor() : ResourceManagerReloadListener {
     override fun onResourceManagerReload(resourceManager: ResourceManager) {
         r.init()
         AporiaRenderer3D.INSTANCE.init()
-        DefaultSnippets.registerAll()
-        DefaultLibraries.registerAll()
         Fonts.register(fonts)
         fonts.initialize()
         updateFontFamilyOptions()

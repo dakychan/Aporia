@@ -4,8 +4,14 @@ import com.chaos.annotation.ChaosNative
 object ModuleManager {
 
     private val modules = mutableListOf<Module>()
+    private val scriptModules = mutableListOf<Module>()
 
     init {
+        registerAllDefaultModules()
+        registerScriptModules()
+    }
+
+    private fun registerAllDefaultModules() {
         registerAll(
             so.aporia.module.impl.render.Hud(),
             so.aporia.module.impl.render.Beautifully(),
@@ -41,6 +47,10 @@ object ModuleManager {
         )
     }
 
+    private fun registerScriptModules() {
+        registerScript(so.aporia.module.impl.render.clickgui.ThemeManagerModule())
+    }
+
     @JvmStatic
     fun register(module: Module) {
         modules.add(module)
@@ -52,11 +62,20 @@ object ModuleManager {
     }
 
     @JvmStatic
+    fun registerScript(module: Module) {
+        modules.add(module)
+        scriptModules.add(module)
+    }
+
+    @JvmStatic
     fun getAll(): List<Module> = modules.toList()
 
     @JvmStatic
+    fun getScriptModules(): List<Module> = scriptModules.toList()
+
+    @JvmStatic
     fun getByCategory(category: Category): List<Module> {
-        return modules.filter { it.category == category }
+        return modules.filter { it.category == category && it !in scriptModules }
     }
 
     @JvmStatic
