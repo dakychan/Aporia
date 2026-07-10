@@ -14,7 +14,7 @@ class DebugEntryVersion implements DebugScreenEntry {
     @Override
     public void display(DebugScreenDisplayer p_429141_, @Nullable Level p_424693_, @Nullable LevelChunk p_428094_, @Nullable LevelChunk p_428934_) {
         p_429141_.addPriorityLine(
-            "Minecraft "
+            "Aporia "
                 + SharedConstants.getCurrentVersion().name()
                 + " ("
                 + Minecraft.getInstance().getLaunchedVersion()
