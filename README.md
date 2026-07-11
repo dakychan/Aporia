@@ -1,374 +1,154 @@
 # Aporia Client
 
-**Aporia** — современный чит-клиент для Minecraft 1.21.11+ с модульной архитектурой, GPU-ускоренным рендерингом и интеграцией Discord.
+**Aporia** — modern cheat client for Minecraft 1.21.11+ with modular architecture, GPU-accelerated rendering, Discord integration, and webview support.
 
 ---
 
-## 🇷🇺 Русский
+## Branches
 
-### 📋 Описание
+| Branch | Description | Repository |
+|--------|-------------|------------|
+| **MCP** | Main branch — MCP/vanilla launcher with direct `javac` build | [MCP](https://gitlab.com/protect3ed/aporia-client) |
+| **Fabric** | Fabric port (experimental, development halted) | [Fabric](https://gitlab.com/protect3ed/aporia-client/-/tree/fabric?ref_type=heads) |
 
-Aporia — это продвинутый клиент для Minecraft, созданный на базе официального лаунчера с полным доступом к исходному коду игры. Клиент использует современные возможности GPU (Mojang Blaze3D API) для создания красивого интерфейса, расширенного визуала и оптимизированных механик.
+```bash
+# Switch to MCP
+git checkout mcp
 
-**Основные особенности:**
-- Модульная система с управлением жизненным циклом
-- GPU-ускоренный рендеринг через Blaze3D (SDF-шейдеры, размытие, хроматическая аберрация)
-- Система событий с автоматическим обнаружением обработчиков
-- Серверная ротация (Smooth, HVH, Matrix, Vulcan, Grim режимы)
-- Настраиваемая тема оформления (10+ тем на выбор)
-- Полная мультиязычность (EN/RU/CN)
+# Switch to Fabric
+git checkout fabric
+```
 
-### 🎮 Возможности
+---
 
-#### Combat (Бой)
-- **Aura** — урон по всей доступной области с интеллектуальной системой ротации
-  - Режимы 1.8/1.9+ (поддержка cps и cooldown)
-  - Мульти-таргеты (игроки, мобы, животные)
-  - Ротации: Smooth, Snap, HVH, Matrix, Vulcan, Grim
-  - Настройки: Jitter, Aim Offset, Hit Chance
-  - Auto Crit с прыжком (1.9+ режим)
-  - TPS Sync синхронизация с тиковыми циклами сервера
+## Features
 
-- **TPAura** — мгновенный урон с телепортацией к цели
-- **AutoGapple** — автоматическое использование золотых яблок
-- **AutoTotem** — автоматическая смена тотема при получении урона
-- **Criticals** — автоматические критические удары
-- **God** — защита от урона (проверка, не включена ли на сервере)
+### Combat
+- **Aura** — multi-target with rotation modes (Smooth, Snap, HVH, Matrix, Vulcan, Grim), 1.8/1.9+ cooldown, jitter, hit chance, TPS sync
+- **TPAura**, **AutoGapple**, **AutoTotem**, **Criticals**, **God**, **ElytraTarget**, **NoFriendDamage**, **SpearTarget**
 
-#### Move (Перемещение)
-- **Speed** — увеличение скорости движения
-  - Packet режим — мультипликатор позиции
-  - Grim режим — дрейф позиции на каждом пакете
-- **AutoSprint** — автоматический спринт при движении
-- **Velocity** — игнорирование knockback от мобов и игроков
+### Movement
+- **Speed** — Packet and Grim modes
+- **AutoSprint**, **Velocity**, **Flight**
 
-#### Render (Визуал)
-- **HUD** — отображение статуса, времени, Discord аватара, UUID
-- **Beautifully** — основной модуль визуала
-  - Размытие (Kawase blur, 4 прохода)
-  - Собственный чат
-  - Пост-обработка (насыщенность, аберрация)
-- **PlayerESP** — обводка игроков (цвет friends, enemies, animals)
-- **EntityESP** — обводка всех сущностей
-- **NameTags** — расширенные имена с HP, дистанцией, пингом
+### Render
+- **HUD** — status, time, Discord avatar, UUID
+- **Beautifully** — Kawase blur (4-pass), custom chat, post-processing (saturation, chromatic aberration)
+- **PlayerESP** / **EntityESP** — glow outlines with friend/enemy colors
+- **NameTags** — extended nametags with HP, distance, ping
+- **DynamicIsland** — media player island with seekbar, module info, bossbar
+- **TargetHud**, **WorldRenderer**, **NoRender**
 
-#### Player (Игрок)
-- **NoPush** — отключение отталкивания от других игроков
+### Player
+- **NoPush**, **ElytraHelper**
 
-#### World (Мир)
-- **MiddleClick** — удаление блоков и копирование данных через среднюю кнопку мыши
+### World
+- **MiddleClick**
 
-#### Misc (Разное)
-- **ClickGui** — современный интерфейс настроек
-- **Discord RPC** — статус и аватар в Discord
-- **ServerHelper** — помощь на сервере
-- **AutoConfig** — автоматическое переключение конфигураций
-- **AutoEZ** — автоматическое сообщение о победе
+### Misc
+- **ClickGui** — modern settings UI with 10+ themes
+- **Discord RPC** — status + avatar in Discord
+- **ServerHelper**, **AutoConfig**, **AutoEZ**, **PacketDebug**, **Disabler**, **TestModule**
 
-### ⚙️ Техническая архитектура
+---
+
+## Architecture
 
 ```
 src/so/aporia/
-├── Aporia.java                  # Главный класс, точка входа
+├── Aporia.kt                          # Main entry point
 ├── module/
-│   ├── Module.java              # Базовый класс модулей
-│   ├── ModuleManager.java       # Реестр всех модулей
-│   ├── Category.java            # Категории (COMBAT, MOVE, VISUAL, PLAYER, WORLD, MISC)
-│   └── impl/
-│       ├── combat/              # Модули боя
-│       ├── move/                # Модули движения
-│       ├── render/              # Модули рендеринга
-│       ├── player/              # Модули игрока
-│       ├── world/               # Модули мира
-│       └── misc/                # Разные модули
-└── utils/
-    ├── events/                  # Система событий
-    │   ├── Event.java
-    │   ├── EventBus.java        # Центральная шина событий
-    │   ├── EventHandler.java    # Аннотация обработчиков
-    │   └── impl/                # Конкретные события (TickEvent, PacketEvent, RenderHudEvent)
-    ├── packets/                 # Перехват пакетов
-    │   └── PacketInterceptor.java
-    ├── files/                   # Управление файлами
-    │   ├── FilesManager.java    # Основной менеджер файлов
-    │   ├── AprParser.java       # Парсер .apr/.zip архивов
-    │   └── impl/                # ConfigFile, ChatFile и т.д.
-    └── user/                    # Пользовательские системы
-        ├── locale/              # Мультиязычность (LocaleManager)
-        ├── rotation/            # Серверная ротация (RotationUtil)
-        │   └── RotationUtil.java (Smooth, HVH, Matrix, Vulcan, Grim)
-        ├── render/              # GPU рендеринг
-        │   ├── core/            # AporiaRenderer (SDF, blur, shaders)
-        │   ├── font/            # FontRenderer, FontAtlas, FontPipeline
-        │   ├── animation/       # TypeAnim (анимация текста)
-        │   ├── color/           # ColorUtil (RGB/RGBA/HEX генераторы)
-        │   ├── theme/           # ThemeManager (10+ тем)
-        │   └── ui/              # UI компоненты (ClickGuiScreen)
-        ├── input/               # KeybindManager (управление клавишами)
-        ├── inventory/           # InventoryManager
-        ├── friend/              # FriendManager
-        └── logger/              # Logger (INFO/WARN/ERROR/SUCCESS)
+│   ├── Module.kt                      # Base module class
+│   ├── ModuleManager.kt               # Module registry (~31 modules)
+│   ├── Category.kt                    # COMBAT/MOVE/VISUAL/PLAYER/WORLD/MISC
+│   ├── settings/                      # 12 setting types
+│   └── impl/{combat,move,render,player,world,misc}/
+├── utils/
+│   ├── events/                        # EventBus + 11 event types
+│   ├── files/                         # FilesManager, AprParser, ConfigFile
+│   ├── packets/                       # Packet interceptor
+│   ├── imports/QuickImports.kt        # Global aliases (r, mc, bus, mm, etc.)
+│   └── user/
+│       ├── locale/                    # EN/RU/CN
+│       ├── rotation/                  # 6 rotation modes
+│       ├── render/                    # GPU renderer, fonts, animations, themes, UI
+│       ├── input/                     # Keybind manager
+│       ├── command/                   # Command system
+│       ├── friend/                    # Friend manager
+│       └── logger/                    # Logger
+shaders/core/                          # 31 GLSL shaders
+libs/                                  # 109 dependencies
 ```
 
-### 🔧 Требования
+### Render Pipeline
+- **AporiaRenderer** (2D) — SDF rounded rects, MSDF text, images, Kawase blur, post-processing
+- **AporiaRenderer3D** (3D) — lines, cubes, spheres, tessellator, perspective projection
+- Blaze3D API (OpenGL 4.5+), 31 custom shaders
+
+### Rotation Modes
+- **Smooth** — GCD-fixed smooth rotation
+- **Snap** — instant with speed check
+- **HVH** — PvP mode (no GCD fix)
+- **Matrix / Vulcan / Grim** — anticheat-specific simulation
+
+### Shaders
+- `aporia.fsh` — main SDF rounded box + blur sampling
+- `kawase_{down,up}.fsh` — Kawase blur (4-pass)
+- `msdf.fsh` — MSDF font rendering with outline
+- `rounded_rect.fsh` — per-corner rounded rect SDF
+- `entity_glow.fsh` — Fresnel glow outline
+- `postprocess.fsh` — saturation control
+- `render3d_mega.fsh` — SDF primitives, glow, rim, Fresnel
+
+---
+
+## Requirements
 
 - **Java**: 26+
-- **Minecraft**: 1.21.11+
-- **GPU**: Поддержка OpenGL 4.5+ (для GPU-рендеринга)
-- **Сборка**: `javac` напрямую (без Gradle/Maven)
+- **Minecraft**: 1.21.11 (Mojang mappings)
+- **GPU**: OpenGL 4.5+
 
-### 🛠️ Сборка
+## Build
 
 ```bash
-# Клонирование репозитория
-git clone <repo>
-cd Aporia
-
-# Использование build.bat (рекомендуется)
-build.bat
-
-# Или вручную
+# MCP branch — direct javac
 javac -d build -sourcepath src --release 26 -encoding UTF-8 -cp "libs/*.jar" \
   -processorpath "libs/lombok.jar" \
   -J-Xmx4g $(find src -name "*.java")
 ```
 
-**Результат сборки:**
-- `sborka/Aporia.jar` — обфусцированный jar-файл
-- `sborka/Aporia.zip` — архив с jar и JSON-файлом версии
+**Output:** `sborka/Aporia.jar` (obfuscated), `sborka/Aporia.zip`
 
-### 📁 Структура файлов
+## Configuration
 
-```
-Aporia/
-├── src/                         # Исходный код
-│   ├── so/aporia/               # Основной код клиента
-│   ├── aporia/cc/               # OS Manager, Auth, UserData
-│   ├── assets/                  # Ресурсы (шрифты, текстуры, шейдеры)
-│   ├── data/                    # Данные Minecraft
-│   └── META-INF/MANIFEST.MF     # Манифест
-├── libs/                        # Зависимости (90+ jar-файлов)
-│   ├── lwjgl-*.jar              # LWJGL 3.3.3 (GPU рендеринг)
-│   ├── asm-*.jar                # ASM 9.2 (трансформации)
-│   ├── forge/*.jar              # Forge API
-│   └── ...                      # Прочие зависимости
-├── sborka/                      # Сборочные артефакты
-│   ├── classes/                 # Скомпилированные классы
-│   ├── merge/                   # Слияние jar-файлов
-│   └── ChaosObfuscator.jar      # Обфускатор
-└── build.bat                    # Скрипт сборки
-```
+- **Config file:** `~/.apr/config.apr` (auto-save every 30s)
+- **Themes:** `~/.apr/themes/*.apr` (10+ built-in, save/load)
+- **Locale:** `~/.apr/.assets/aporia/locale/{en_EU,ru_RU,ch_CH}.json`
 
-### 🎨 Система рендеринга
+## Localization
 
-Aporia использует современный GPU-рендеринг через **Blaze3D API**:
+- `en_EU` — English
+- `ru_RU` — Russian
+- `ch_CH` — Chinese (中文)
 
-**AporiaRenderer (2D):**
-- Прямоугольники (fill, circle, rounded rect)
-- Текст (bold, regular с MSDF шрифтами)
-- Изображения (загрузка из InputStream)
-- Kawase blur (4-pass down/up sample)
-- Post-processing (насыщенность, хроматическая аберрация)
+## Themes
 
-**AporiaRenderer3D (3D):**
-- 3D-линии, кубы, сферы
-- Tesselator для сложной геометрии
-- Перспективная проекция
+DefaultAporia, Amethyst, Synthwave, Matrix, Ocean, Blood, Midnight, Forest, Sunrise, Cyberpunk
 
-**Шейдеры (GLSL):**
-- `core/aporia` — основной шейдер (SDF, shapes, blur)
-- `core/image` — рендеринг текстур
-- `pipeline/aporia` — рендер пайплайн
+## Security
 
-### 🔄 Система событий
+- ChaosObfuscator (`@Obfuscate`, `@ChaosNative`)
+- Hidden config directory (`attrib +s +h` on Windows)
+- Panic system
+- No personal data collection
 
-```java
-// Регистрация обработчиков
-@EventHandler
-public void onTick(TickEvent event) {
-    // Код при каждом тике
-}
-
-// Отправка событий
-EventBus.INSTANCE.post(new TickEvent());
-```
-
-**Основные события:**
-- `TickEvent` — тик игры (20 тиков/сек)
-- `PacketEvent` — отправка/получение пакетов
-- `RenderHudEvent` — рендер HUD
-- `MouseMoveEvent`, `KeyChangeEvent`, `MouseClickEvent`
-
-### 🎯 Система ротации
-
-**Режимы ротации (RotationUtil):**
-- **Smooth** — плавное вращение с GCD-фиксом
-- **Snap** — мгновенный поворот (с проверкой скорости)
-- **HVH** — режим для PvP (без GCD фикса)
-- **Matrix** — имитация Matrix чита
-- **Vulcan** — имитация Vulcan чита
-- **Grim** — имитация Grim чита
-
-**Глобальная синхронизация:**
-```java
-RotationUtil.sync();          // Синхронизация с клиентом
-RotationUtil.update(target, speed);  // Обновление до цели
-RotationUtil.getServerYaw();  // Получение server-side yaw
-RotationUtil.getServerPitch(); // Получение server-side pitch
-```
-
-### 🌐 Мультиязычность
-
-**Поддерживаемые языки:**
-- `en_EU` — английский (EU)
-- `ru_RU` — русский
-- `ch_CH` — китайский
-
-**Использование:**
-```java
-LocaleManager lm = LocaleManager.getInstance();
-lm.get("module.aura.range"); // Вернет локализованную строку
-```
-
-**Файлы локализации:**
-- `~/.apr/.assets/aporia/locale/en_EU.json`
-- `~/.apr/.assets/aporia/locale/ru_RU.json`
-- `~/.apr/.assets/aporia/locale/ch_CH.json`
-
-### 🎨 Система тем
-
-**Встроенные темы:**
-1. DefaultAporia — классический дизайн
-2. Amethyst — фиолетовый
-3. Synthwave — ретро-футуризм
-4. Matrix — зеленый терминал
-5. Ocean — синий океан
-6. Blood — красный кровавый
-7. Midnight — темно-синий
-8. Forest — зеленый лес
-9. Sunrise — оранжевый рассвет
-10. Cyberpunk — неоновый киберпанк
-
-**Файлы тем:**
-- `~/.apr/themes/DefaultAporia.apr`
-- `~/.apr/themes/_selected.apr`
-
-### 📝 Настройки модулей
-
-**Типы настроек:**
-- `BooleanSetting` — чекбокс (true/false)
-- `SelectSetting` — выпадающий список (один выбор)
-- `MultiSelectSetting` — множественный выбор
-- `NumberSetting` — число (min/max/step)
-- `RangeSetting` — диапазон
-- `TextSetting` — текст
-- `ButtonSetting` — кнопка
-- `BindSetting` — привязка клавиши
-
-**Пример:**
-```java
-public NumberSetting range = new NumberSetting(
-    "Range", "Диапазон урона",
-    3.5, 1.0, 6.0, 0.1
-);
-```
-
-### 🔐 Безопасность
-
-- Обфускация через ChaosObfuscator
-- Скрытые файлы на Windows (attrib +s +h для ~/.apr)
-- Встроенная система паника (PanicSystem)
-- Отсутствие сбора персональных данных
-
-### 📄 Лицензия
-
-Aporia.cc Software License Agreement v1.0 — проприетарное ПО.
-
-**Разрешено:**
-- Установка и использование на одном устройстве
-- Обучение (просмотр исходного кода)
-- Создание модификаций для личного использования
-
-**Запрещено:**
-- Распространение (distribution)
-- Коммерческое использование
-- Создание конкурентов (reverse engineering)
-- Удаление уведомлений об авторских правах
-
----
-
-### 🔗 Ресурсы
-
-- **Версия**: 1.0-dev
-- **Minecraft**: 1.21.11
-- **Java**: 26+
-- **Статус**: Active development
-
----
-
-## 🇬🇧 English
-
-### Description
-
-Aporia — a modern cheat client for Minecraft 1.21.11+ with modular architecture, GPU-accelerated rendering, and Discord integration.
-
-### Features
-
-See the Russian section for detailed features.
-
-### Technical Architecture
-
-Same structure as Russian version (see above).
-
-### Requirements
-
-- **Java**: 26+
-- **Minecraft**: 1.21.11+
-- **GPU**: OpenGL 4.5+ support
-- **Build**: Direct `javac` (no Gradle/Maven)
-
-### Build
-
-See the Russian section for build instructions.
-
-### License
+## License
 
 Aporia.cc Software License Agreement v1.0 — proprietary software.
 
----
+## Links
 
-## 🇨🇳 中文
-
-### 描述
-
-Aporia — 面向 Minecraft 1.21.11+ 的现代作弊客户端，具有模块化架构、GPU 加速渲染和 Discord 集成。
-
-### 功能
-
-见俄语部分的详细功能。
-
-### 技术架构
-
-与俄语部分相同（参见上文）。
-
-### 要求
-
-- **Java**: 26+
-- **Minecraft**: 1.21.11+
-- **GPU**: OpenGL 4.5+ 支持
-- **构建**: 直接使用 `javac`（无需 Gradle/Maven）
-
-### 构建
-
-见俄语部分的构建说明。
-
-### 许可证
-
-Aporia.cc 软件许可协议 v1.0 — 专有软件。
-
----
-
-**Version**: 1.0-dev  
-**Minecraft**: 1.21.11  
-**Java**: 26+  
-**Status**: Active development
+- **MCP**: https://gitlab.com/protect3ed/aporia-client
+- **Fabric**: https://gitlab.com/protect3ed/aporia-client/-/tree/fabric?ref_type=heads
+- **Version**: 1.0-dev
+- **Status**: Active development
