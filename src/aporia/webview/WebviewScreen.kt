@@ -112,7 +112,7 @@ class WebviewScreen(url: String) : Screen(Component.literal("Webview")) {
         // ── Background ──
         r.drawRectBlurred(0f, 0f, width.toFloat(), height.toFloat(), 0f, 0x88000000.toInt(), 1f)
 
-        // ── Web content via GuiGraphics.blit (MCEF-compatible path) ──
+        // ── Web content via GuiGraphics.blit (MCEF-compatible path, with native bounds re-sync to reduce drift) ──
         if (webviewReady && webview is WebviewWin32) {
             val win = webview
             win.tickCapture()
@@ -278,7 +278,8 @@ class WebviewScreen(url: String) : Screen(Component.literal("Webview")) {
     override fun tick() { super.tick(); blinkTicker++ }
 
     override fun removed() {
-        webview.close(); super.removed()
+        webview.close()
+        super.removed()
     }
 
     override fun onClose() {

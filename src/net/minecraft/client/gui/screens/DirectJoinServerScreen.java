@@ -1,5 +1,7 @@
 package net.minecraft.client.gui.screens;
 
+import com.viaversion.viafabricplus.screen.impl.ProtocolSelectionScreen;
+import com.viaversion.viafabricplus.settings.impl.GeneralSettings;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -12,7 +14,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
+
 public class DirectJoinServerScreen extends Screen {
     private static final Component ENTER_IP_LABEL = Component.translatable("manageServer.enterIp");
     private Button selectButton;
@@ -56,6 +58,14 @@ public class DirectJoinServerScreen extends Screen {
                 .build()
         );
         this.updateSelectButtonStatus();
+        final int buttonPosition = GeneralSettings.INSTANCE.directConnectScreenButtonOrientation.getIndex();
+        if (buttonPosition == 0) { // Off
+            return;
+        }
+
+        final Button.Builder builder = Button.builder(Component.nullToEmpty("ViaFabricPlus"), button -> ProtocolSelectionScreen.INSTANCE.open(this)).size(98, 20);
+        GeneralSettings.setOrientation(builder::pos, buttonPosition, width, height);
+        this.addRenderableWidget(builder.build());
     }
 
     @Override

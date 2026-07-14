@@ -2,6 +2,9 @@ package net.minecraft.client.multiplayer;
 
 import com.google.common.collect.Lists;
 import com.mojang.logging.LogUtils;
+import com.viaversion.viafabricplus.injection.access.base.ILocalSampleLogger;
+import com.viaversion.viafabricplus.injection.access.base.IServerData;
+import com.viaversion.viafabricplus.settings.impl.BedrockSettings;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -34,24 +37,37 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.EventLoopGroupHolder;
 import net.minecraft.server.players.NameAndId;
 import net.minecraft.util.Util;
+import net.minecraft.util.debugchart.LocalSampleLogger;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class ServerStatusPinger {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Component CANT_CONNECT_MESSAGE = Component.translatable("multiplayer.status.cannot_connect").withColor(-65536);
     private final List<Connection> connections = Collections.synchronizedList(Lists.newArrayList());
 
     public void pingServer(final ServerData p_105460_, final Runnable p_105461_, final Runnable p_335024_, final EventLoopGroupHolder p_453907_) throws UnknownHostException {
-        final ServerAddress serveraddress = ServerAddress.parseString(p_105460_.ip);
+        final ServerAddress serveraddress = ServerAddress.parseString(
+                BedrockSettings.replaceDefaultPort(p_105460_.ip, ((IServerData) p_105460_).viaFabricPlus$forcedVersion())
+        );
         Optional<InetSocketAddress> optional = ServerNameResolver.DEFAULT.resolveAddress(serveraddress).map(ResolvedServerAddress::asInetSocketAddress);
         if (optional.isEmpty()) {
             this.onPingFailed(ConnectScreen.UNKNOWN_HOST_MESSAGE, p_105460_);
         } else {
             final InetSocketAddress inetsocketaddress = optional.get();
-            final Connection connection = Connection.connectToServer(inetsocketaddress, p_453907_, null);
+
+            LocalSampleLogger forcedVersionLogger = null;
+            final IServerData mixinServerInfo = p_105460_;
+
+            if (mixinServerInfo.viaFabricPlus$forcedVersion() != null && !mixinServerInfo.viaFabricPlus$passedDirectConnectScreen()) {
+                forcedVersionLogger = new LocalSampleLogger(1);
+                forcedVersionLogger.viaFabricPlus$setForcedVersion(mixinServerInfo.viaFabricPlus$forcedVersion());
+                mixinServerInfo.viaFabricPlus$passDirectConnectScreen(false);
+            }
+
+            final Connection connection = Connection.connectToServer(inetsocketaddress, p_453907_, forcedVersionLogger);
             this.connections.add(connection);
             p_105460_.motd = Component.translatable("multiplayer.status.pinging");
             p_105460_.playerList = Collections.emptyList();
@@ -62,6 +78,9 @@ public class ServerStatusPinger {
 
                 @Override
                 public void handleStatusResponse(ClientboundStatusResponsePacket p_105489_) {
+
+                    p_105460_.viaFabricPlus$setTranslatingVersion(connection.viaFabricPlus$getTargetVersion());
+
                     if (this.receivedPing) {
                         connection.disconnect(Component.translatable("multiplayer.status.unrequested"));
                     } else {
@@ -107,8 +126,15 @@ public class ServerStatusPinger {
                                 p_105461_.run();
                             }
                         });
+
                         this.pingStart = Util.getMillis();
                         connection.send(new ServerboundPingRequestPacket(this.pingStart));
+
+                        final com.viaversion.viaversion.api.protocol.version.ProtocolVersion vfpVersion = connection.viaFabricPlus$getTargetVersion();
+                        if (vfpVersion != null && vfpVersion.getVersion() == p_105460_.protocol) {
+                            p_105460_.protocol = net.minecraft.SharedConstants.getProtocolVersion();
+                        }
+
                         this.success = true;
                     }
                 }
@@ -151,24 +177,28 @@ public class ServerStatusPinger {
         p_171816_.status = CommonComponents.EMPTY;
     }
 
+    /**
+     * @author RK_01
+     * @reason Remove legacy ping which didn't even work
+     */
     void pingLegacyServer(InetSocketAddress p_171812_, final ServerAddress p_300887_, final ServerData p_171813_, EventLoopGroupHolder p_457463_) {
-        new Bootstrap().group(p_457463_.eventLoopGroup()).handler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel p_105498_) {
-                try {
-                    p_105498_.config().setOption(ChannelOption.TCP_NODELAY, true);
-                } catch (ChannelException channelexception) {
-                }
-
-                p_105498_.pipeline().addLast(new LegacyServerPinger(p_300887_, (p_325482_, p_325483_, p_325484_, p_325485_, p_325486_) -> {
-                    p_171813_.setState(ServerData.State.INCOMPATIBLE);
-                    p_171813_.version = Component.literal(p_325483_);
-                    p_171813_.motd = Component.literal(p_325484_);
-                    p_171813_.status = ServerStatusPinger.formatPlayerCount(p_325485_, p_325486_);
-                    p_171813_.players = new ServerStatus.Players(p_325486_, p_325485_, List.of());
-                }));
-            }
-        }).channel(p_457463_.channelCls()).connect(p_171812_.getAddress(), p_171812_.getPort());
+//        new Bootstrap().group(p_457463_.eventLoopGroup()).handler(new ChannelInitializer<Channel>() {
+//            @Override
+//            protected void initChannel(Channel p_105498_) {
+//                try {
+//                    p_105498_.config().setOption(ChannelOption.TCP_NODELAY, true);
+//                } catch (ChannelException channelexception) {
+//                }
+//
+//                p_105498_.pipeline().addLast(new LegacyServerPinger(p_300887_, (p_325482_, p_325483_, p_325484_, p_325485_, p_325486_) -> {
+//                    p_171813_.setState(ServerData.State.INCOMPATIBLE);
+//                    p_171813_.version = Component.literal(p_325483_);
+//                    p_171813_.motd = Component.literal(p_325484_);
+//                    p_171813_.status = ServerStatusPinger.formatPlayerCount(p_325485_, p_325486_);
+//                    p_171813_.players = new ServerStatus.Players(p_325486_, p_325485_, List.of());
+//                }));
+//            }
+//        }).channel(p_457463_.channelCls()).connect(p_171812_.getAddress(), p_171812_.getPort());
     }
 
     public static Component formatPlayerCount(int p_105467_, int p_105468_) {

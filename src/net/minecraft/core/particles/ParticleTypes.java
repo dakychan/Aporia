@@ -73,6 +73,7 @@ public class ParticleTypes {
     public static final SimpleParticleType HAPPY_VILLAGER = register("happy_villager", false);
     public static final SimpleParticleType COMPOSTER = register("composter", false);
     public static final SimpleParticleType HEART = register("heart", false);
+    public static final SimpleParticleType FOOTSTEP = register("footstep", false);
     public static final ParticleType<SpellParticleOption> INSTANT_EFFECT = register(
         "instant_effect", false, SpellParticleOption::codec, SpellParticleOption::streamCodec
     );

@@ -1,0 +1,11 @@
+{
+  "pack": {
+    "min_format": [65, 0],
+    "max_format": [999, 0],
+    "description": {
+      "type": "translatable",
+      "translate": "resourcepack.voicechat.black_icons.description",
+      "color": "gray"
+    }
+  }
+}

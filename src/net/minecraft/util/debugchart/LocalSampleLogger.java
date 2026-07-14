@@ -1,10 +1,14 @@
 package net.minecraft.util.debugchart;
 
-public class LocalSampleLogger extends AbstractSampleLogger implements SampleStorage {
+import com.viaversion.viafabricplus.injection.access.base.ILocalSampleLogger;
+import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
+
+public class LocalSampleLogger extends AbstractSampleLogger implements SampleStorage, ILocalSampleLogger {
     public static final int CAPACITY = 240;
     private final long[][] samples;
     private int start;
     private int size;
+    private ProtocolVersion viaFabricPlus$forcedVersion;
 
     public LocalSampleLogger(int p_334158_) {
         this(p_334158_, new long[p_334158_]);
@@ -24,6 +28,16 @@ public class LocalSampleLogger extends AbstractSampleLogger implements SampleSto
         } else {
             this.start = this.wrapIndex(this.start + 1);
         }
+    }
+
+    @Override
+    public ProtocolVersion viaFabricPlus$getForcedVersion() {
+        return this.viaFabricPlus$forcedVersion;
+    }
+
+    @Override
+    public void viaFabricPlus$setForcedVersion(ProtocolVersion version) {
+        this.viaFabricPlus$forcedVersion = version;
     }
 
     @Override

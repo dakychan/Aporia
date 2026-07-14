@@ -433,7 +433,7 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
         return Mth.lengthSquared(d0, d2) < Mth.square(p_216994_) && Mth.square(d1) < Mth.square(p_216995_);
     }
 
-    protected void setRot(float p_19916_, float p_19917_) {
+    public void setRot(float p_19916_, float p_19917_) {
         this.setYRot(p_19916_ % 360.0F);
         this.setXRot(p_19917_ % 360.0F);
     }

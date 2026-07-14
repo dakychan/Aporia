@@ -500,7 +500,7 @@ public class Camel extends AbstractHorse {
         return this.isBaby() ? 0.45F : 1.0F;
     }
 
-    private double getBodyAnchorAnimationYOffset(boolean p_249228_, float p_251763_, EntityDimensions p_301064_, float p_299749_) {
+    public double getBodyAnchorAnimationYOffset(boolean p_249228_, float p_251763_, EntityDimensions p_301064_, float p_299749_) {
         double d0 = p_301064_.height() - 0.375F * p_299749_;
         float f = p_299749_ * 1.43F;
         float f1 = f - p_299749_ * 0.2F;

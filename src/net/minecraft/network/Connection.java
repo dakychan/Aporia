@@ -57,10 +57,12 @@ import org.slf4j.MarkerFactory;
 import so.aporia.utils.events.EventBus;
 import so.aporia.utils.events.impl.PacketEvent;
 import com.viaversion.viaversion.api.connection.UserConnection;
+import com.viaversion.viaversion.api.connection.UserConnection;
+import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.viaversion.viaversion.connection.UserConnectionImpl;
 import de.florianmichael.viamcp.MCPVLBPipeline;
 
-public class Connection extends SimpleChannelInboundHandler<Packet<?>> {
+public class Connection extends SimpleChannelInboundHandler<Packet<?>> implements com.viaversion.viafabricplus.injection.access.base.IConnection {
     private static final float AVERAGE_PACKETS_SMOOTHING = 0.75F;
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final Marker ROOT_MARKER = MarkerFactory.getMarker("NETWORK");
@@ -87,6 +89,8 @@ public class Connection extends SimpleChannelInboundHandler<Packet<?>> {
     private volatile @Nullable DisconnectionDetails delayedDisconnect;
     @Nullable BandwidthDebugMonitor bandwidthDebugMonitor;
     private UserConnection viaConnection;
+    private ProtocolVersion viaFabricPlus$serverVersion;
+    private javax.crypto.Cipher viaFabricPlus$decryptionCipher;
 
     public Connection(PacketFlow p_129482_) {
         this.receiving = p_129482_;
@@ -625,5 +629,34 @@ public class Connection extends SimpleChannelInboundHandler<Packet<?>> {
 
     public void setViaConnection(UserConnection viaConnection) {
         this.viaConnection = viaConnection;
+    }
+
+    @Override
+    public void viaFabricPlus$setupPreNettyDecryption() {
+        if (this.viaFabricPlus$decryptionCipher == null) {
+            throw new IllegalStateException("Decryption cipher is null");
+        }
+        this.encrypted = true;
+        this.channel.pipeline().addBefore("prep", "decrypt", new net.minecraft.network.CipherDecoder(this.viaFabricPlus$decryptionCipher));
+    }
+
+    @Override
+    public UserConnection viaFabricPlus$getUserConnection() {
+        return this.viaConnection;
+    }
+
+    @Override
+    public void viaFabricPlus$setUserConnection(UserConnection connection) {
+        this.viaConnection = connection;
+    }
+
+    @Override
+    public ProtocolVersion viaFabricPlus$getTargetVersion() {
+        return this.viaFabricPlus$serverVersion;
+    }
+
+    @Override
+    public void viaFabricPlus$setTargetVersion(final ProtocolVersion serverVersion) {
+        this.viaFabricPlus$serverVersion = serverVersion;
     }
 }

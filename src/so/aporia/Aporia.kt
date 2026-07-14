@@ -24,6 +24,8 @@ class Aporia private constructor() : ResourceManagerReloadListener {
     @JvmField
     val fonts: FontRenderer = FontRenderer()
 
+    private var configLoadDeferred = false
+
     init {
         logger.info("Starting Aporia...")
         try {
@@ -34,7 +36,11 @@ class Aporia private constructor() : ResourceManagerReloadListener {
         }
         KeybindManager.toString()
         mm.toString()
-        ConfigFile.load()
+        if (mc.getNarrator() != null) {
+            ConfigFile.load()
+        } else {
+            configLoadDeferred = true
+        }
         locale.init()
         FriendManager.init()
         QuestManager.init()
@@ -78,6 +84,10 @@ class Aporia private constructor() : ResourceManagerReloadListener {
     private var renderErrorCount = 0
 
     fun render(gfx: GuiGraphics, partialTick: Float) {
+        if (configLoadDeferred && mc.getNarrator() != null) {
+            configLoadDeferred = false
+            ConfigFile.load()
+        }
         val mem = Runtime.getRuntime()
         if (mem.freeMemory() < 32L * 1024L * 1024L) {
             System.gc()

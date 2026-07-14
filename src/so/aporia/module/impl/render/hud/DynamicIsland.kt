@@ -275,8 +275,8 @@ object DynamicIsland {
                     val ctrlXFrom = cx + pillW - 50f
                     val ctrlXTo = cx + pillW / 2f - 22f
                     val ctrlX = ctrlXFrom + (ctrlXTo - ctrlXFrom) * ctrlFrac
-                    val ctrlYFrom = y + 6f
-                    val ctrlYTo = y + pillH / 2f + 2f
+                    val ctrlYFrom = y + 9f
+                    val ctrlYTo = y + pillH / 2f + 5f
                     val ctrlY = ctrlYFrom + (ctrlYTo - ctrlYFrom) * ctrlFrac
                     val prevX = ctrlX; val playX = ctrlX + 18f; val nextX = ctrlX + 36f
 
@@ -294,18 +294,18 @@ object DynamicIsland {
                     r.drawTriangle(nextX, ctrlY, nextX + 8f, ctrlY + 4f, nextX, ctrlY + 8f, if (hoverNext) cHover else cWhite)
                 }
 
-                // Seekbar when expanded
+                // Seekbar above media controls
                 if (expandFrac > 0.5f && bgDuration > 0) {
                     val seekFrac = (bgPosition.toFloat() / bgDuration.toFloat()).coerceIn(0f, 1f)
                     val seekBarX = cx + 6f
-                    val seekBarY = y + pillH - 4f
                     val seekBarW = pillW - 12f
+                    val seekBarY = y + pillH / 2f - 3f
                     r.drawRect(seekBarX, seekBarY, seekBarW, 2f, 1f, colorUtil.rgba(255, 255, 255, 40))
                     r.drawRect(seekBarX, seekBarY, seekBarW * seekFrac, 2f, 1f, colorUtil.rgba(255, 255, 255, 200))
 
-                    val timeStr = "${formatTime(bgPosition)} / ${formatTime(bgDuration)}"
-                    val timeW = r.getTextWidth("regular", timeStr, 7f)
-                    r.drawText("regular", timeStr, cx + (pillW - timeW) / 2f, y + pillH - 17f, 7f, colorUtil.rgba(200, 200, 200, 255))
+                    val timeStr = "${formatTime(bgPosition)}/${formatTime(bgDuration)}"
+                    val timeW = r.getTextWidth("regular", timeStr, 6f)
+                    r.drawText("regular", timeStr, cx + pillW - timeW - 6f, seekBarY - 8f, 6f, colorUtil.rgba(200, 200, 200, 255))
                 }
             }
             State.BOSSBAR -> {
@@ -367,11 +367,15 @@ object DynamicIsland {
         }
     }
 
-    private fun formatTime(millis: Long): String {
-        val totalSec = millis / 1000
-        val min = totalSec / 60
-        val sec = totalSec % 60
-        return "${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}"
+    private fun formatTime(t: Long): String {
+        if (t <= 0) return "0:00"
+        val sec = when {
+            t > 100000000L -> t / 10000000   // 100ns ticks
+            else -> t / 1000                  // millis
+        }
+        val min = sec / 60
+        val s = sec % 60
+        return "${min}:${s.toString().padStart(2, '0')}"
     }
 
     @JvmStatic

@@ -10,7 +10,7 @@ public class EnvironmentAttribute<Value> {
     private final AttributeType<Value> type;
     private final Value defaultValue;
     private final AttributeRange<Value> valueRange;
-    private final boolean isSyncable;
+    public boolean isSyncable;
     private final boolean isPositional;
     private final boolean isSpatiallyInterpolated;
 

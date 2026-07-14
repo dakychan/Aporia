@@ -9,7 +9,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.server.packs.PackResources;
@@ -18,12 +17,12 @@ import net.minecraft.world.flag.FeatureFlagSet;
 import org.jspecify.annotations.Nullable;
 
 public class PackRepository {
-    private final Set<RepositorySource> sources;
+    private final List<RepositorySource> sources;
     private Map<String, Pack> available = ImmutableMap.of();
     private List<Pack> selected = ImmutableList.of();
 
     public PackRepository(RepositorySource... p_251886_) {
-        this.sources = ImmutableSet.copyOf(p_251886_);
+        this.sources = Lists.newArrayList(p_251886_);
     }
 
     public static String displayPackList(Collection<Pack> p_331712_) {
@@ -127,5 +126,9 @@ public class PackRepository {
 
     public List<PackResources> openAllSelected() {
         return this.selected.stream().map(Pack::open).collect(ImmutableList.toImmutableList());
+    }
+
+    public void addSource(RepositorySource source) {
+        this.sources.add(source);
     }
 }

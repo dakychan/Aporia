@@ -135,13 +135,19 @@ class NetworkServer(val port: Int) {
     }
 
     fun shutdown() {
-        serverChannel?.close()?.syncUninterruptibly()
+        try {
+            serverChannel?.close()?.await(5, TimeUnit.SECONDS)
+        } catch (_: Exception) {}
         serverChannel = null
 
-        bossGroup?.shutdownGracefully()?.syncUninterruptibly()
+        try {
+            bossGroup?.shutdownGracefully()?.await(5, TimeUnit.SECONDS)
+        } catch (_: Exception) {}
         bossGroup = null
 
-        workerGroup?.shutdownGracefully()?.syncUninterruptibly()
+        try {
+            workerGroup?.shutdownGracefully()?.await(5, TimeUnit.SECONDS)
+        } catch (_: Exception) {}
         workerGroup = null
 
         endpointHandlers.clear()

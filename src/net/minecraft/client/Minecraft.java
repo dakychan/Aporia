@@ -83,6 +83,7 @@ import net.minecraft.client.gui.font.FontManager;
 import net.minecraft.client.gui.font.providers.FreeTypeUtil;
 import net.minecraft.client.gui.screens.*;
 import net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
+import so.aporia.utils.user.render.animation.TypeAnim;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
@@ -244,6 +245,11 @@ import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 import org.slf4j.Logger;
+import de.maxhenkel.voicechat.FabricVoicechatMod;
+import de.maxhenkel.voicechat.VoicechatClient;
+import de.maxhenkel.voicechat.events.ClientWorldEvents;
+import de.maxhenkel.voicechat.events.InputEvents;
+import de.maxhenkel.voicechat.intercompatibility.FabricClientCompatibilityManager;
 import so.aporia.Aporia;
 import so.aporia.utils.events.EventBus;
 import so.aporia.utils.events.impl.TickEvent;
@@ -263,6 +269,15 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
     private static final Component SOCIAL_INTERACTIONS_NOT_AVAILABLE = Component.translatable("multiplayer.socialInteractions.not_available");
     private static final Component SAVING_LEVEL = Component.translatable("menu.savingLevel");
     public static final String UPDATE_DRIVERS_ADVICE = "Please make sure you have up-to-date drivers (see aka.ms/mcdriver for instructions).";
+    private static final TypeAnim APORIA_TITLE_ANIM = new TypeAnim(80, 100);
+    private static final String[] APORIA_TITLES = {
+        "Aporia v1.0, myb release?",
+        "Minecraft 1.21.11 with Aporia",
+        "OPENSOURCE???",
+        "а где мой релиззз"
+    };
+    private static int aperiaTitleIndex = 0;
+    private static long aperiaTitleLastSwitch = 0;
     private final long canary = Double.doubleToLongBits(Math.PI);
     private final Path resourcePackDirectory;
     private final CompletableFuture<@Nullable ProfileResult> profileFuture;
@@ -310,7 +325,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
     private final @Nullable TracyFrameCapture tracyFrameCapture;
     private final SoundManager soundManager;
     private final MusicManager musicManager;
-    private final FontManager fontManager;
+    public final FontManager fontManager;
     private final SplashManager splashManager;
     private final GpuWarnlistManager gpuWarnlistManager;
     private final PeriodicNotificationManager regionalCompliancies = new PeriodicNotificationManager(REGIONAL_COMPLIANCIES, Minecraft::countryEqualsISO3);
@@ -426,6 +441,8 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
         this.fixerUpper = DataFixers.getDataFixer();
         this.gameThread = Thread.currentThread();
         this.options = new Options(this, this.gameDirectory);
+        FabricVoicechatMod.init();
+        VoicechatClient.initializeClient();
         this.debugEntries = new DebugScreenEntryList(this.gameDirectory);
         this.toastManager = new ToastManager(this, this.options);
         boolean flag = this.options.startedCleanly;
@@ -758,34 +775,27 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
         }
     }
 
+    private String lastWindowTitle = "";
+
     public void updateTitle() {
-        this.window.setTitle(this.createTitle());
+        String t = this.createTitle();
+        if (!t.equals(lastWindowTitle)) {
+            lastWindowTitle = t;
+            this.window.setTitle(t);
+        }
     }
 
     private String createTitle() {
-        StringBuilder stringbuilder = new StringBuilder("Minecraft");
-        if (checkModStatus().shouldReportAsModified()) {
-            stringbuilder.append("*");
+        long now = System.currentTimeMillis();
+        if (now - aperiaTitleLastSwitch > 5000) {
+            aperiaTitleLastSwitch = now;
+            aperiaTitleIndex = (aperiaTitleIndex + 1) % APORIA_TITLES.length;
+            APORIA_TITLE_ANIM.setTarget(APORIA_TITLES[aperiaTitleIndex]);
         }
-
-        stringbuilder.append(" ");
-        stringbuilder.append(SharedConstants.getCurrentVersion().name());
-        ClientPacketListener clientpacketlistener = this.getConnection();
-        if (clientpacketlistener != null && clientpacketlistener.getConnection().isConnected()) {
-            stringbuilder.append(" - ");
-            ServerData serverdata = this.getCurrentServer();
-            if (this.singleplayerServer != null && !this.singleplayerServer.isPublished()) {
-                stringbuilder.append(I18n.get("title.singleplayer"));
-            } else if (serverdata != null && serverdata.isRealm()) {
-                stringbuilder.append(I18n.get("title.multiplayer.realms"));
-            } else if (this.singleplayerServer == null && (serverdata == null || !serverdata.isLan())) {
-                stringbuilder.append(I18n.get("title.multiplayer.other"));
-            } else {
-                stringbuilder.append(I18n.get("title.multiplayer.lan"));
-            }
+        if (APORIA_TITLE_ANIM.getTarget().isEmpty()) {
+            APORIA_TITLE_ANIM.snap(APORIA_TITLES[0]);
         }
-
-        return stringbuilder.toString();
+        return APORIA_TITLE_ANIM.update();
     }
 
     private UserApiService createUserApiService(YggdrasilAuthenticationService p_193586_, GameConfig p_193587_) {
@@ -1152,22 +1162,34 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
             try {
                 if (this.level != null) {
+                    LOGGER.info("[destroy] disconnecting level...");
                     this.level.disconnect(ClientLevel.DEFAULT_QUIT_MESSAGE);
+                    LOGGER.info("[destroy] level disconnected");
                 }
 
+                LOGGER.info("[destroy] disconnectWithProgressScreen...");
                 this.disconnectWithProgressScreen();
+                LOGGER.info("[destroy] disconnectWithProgressScreen done");
             } catch (Throwable throwable) {
+                LOGGER.info("[destroy] disconnect caught: {}", throwable.getMessage());
             }
 
             if (this.screen != null) {
                 this.screen.removed();
             }
 
+            LOGGER.info("[destroy] close...");
             this.close();
+            LOGGER.info("[destroy] close done");
         } finally {
             Util.timeSource = System::nanoTime;
             if (this.delayedCrash == null) {
-                System.exit(0);
+                try {
+                    Runtime.getRuntime().exec("taskkill /F /PID " + ProcessHandle.current().pid());
+                } catch (Exception ignored) {}
+                try { Thread.sleep(3000L); } catch (InterruptedException ignored) {}
+                Runtime.getRuntime().halt(1);
+                System.exit(1);
             }
         }
     }
@@ -1722,8 +1744,11 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
     public void tick() {
         this.clientTickCount++;
-        
+        FabricClientCompatibilityManager.fireClientTick();
+
         EventBus.INSTANCE.post(new TickEvent());
+
+        this.updateTitle();
         
         if (this.level != null && !this.pause) {
             this.level.tickRateManager().tick();
@@ -1863,6 +1888,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
     }
 
     private void handleKeybinds() {
+        InputEvents.HANDLE_KEYBINDS.invoker().run();
         while (this.options.keyTogglePerspective.consumeClick()) {
             CameraType cameratype = this.options.getCameraType();
             this.options.setCameraType(this.options.getCameraType().cycle());
@@ -2115,6 +2141,9 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
     }
 
     public void disconnect(Screen p_457642_, boolean p_451618_, boolean p_453114_) {
+        if (level != null) {
+            ClientWorldEvents.DISCONNECT.invoker().run();
+        }
         ClientPacketListener clientpacketlistener = this.getConnection();
         if (clientpacketlistener != null) {
             this.dropAllTasks();

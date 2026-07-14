@@ -1,6 +1,8 @@
 package net.minecraft.client.multiplayer;
 
 import com.google.common.collect.Lists;
+import com.viaversion.viafabricplus.protocoltranslator.ProtocolTranslator;
+import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.hash.HashCode;
@@ -47,6 +49,7 @@ import net.minecraft.client.gui.screens.DemoIntroScreen;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.GenericMessageScreen;
 import net.minecraft.client.gui.screens.WinScreen;
 import net.minecraft.client.gui.screens.achievement.StatsScreen;
 import net.minecraft.client.gui.screens.dialog.DialogConnectionAccess;
@@ -965,7 +968,9 @@ public class ClientPacketListener extends ClientCommonPacketListenerImpl impleme
     public void handleConfigurationStart(ClientboundStartConfigurationPacket p_298839_) {
         PacketUtils.ensureRunningOnSameThread(p_298839_, this, this.minecraft.packetProcessor());
         this.minecraft.getChatListener().flushQueue();
-        this.sendChatAcknowledgement();
+        if (ProtocolTranslator.getTargetVersion().newerThanOrEqualTo(ProtocolVersion.v1_20_5)) {
+            this.sendChatAcknowledgement();
+        }
         ChatComponent.State chatcomponent$state = this.minecraft.gui.getChat().storeState();
         this.minecraft.clearClientLevel(new ServerReconfigScreen(RECONFIGURE_SCREEN_MESSAGE, this.connection));
         this.connection
@@ -1570,10 +1575,22 @@ public class ClientPacketListener extends ClientCommonPacketListenerImpl impleme
         } else if (clientboundgameeventpacket$type == ClientboundGameEventPacket.CHANGE_GAME_MODE) {
             this.minecraft.gameMode.setLocalMode(GameType.byId(i));
         } else if (clientboundgameeventpacket$type == ClientboundGameEventPacket.WIN_GAME) {
-            this.minecraft.setScreen(new WinScreen(true, () -> {
-                this.minecraft.player.connection.send(new ServerboundClientCommandPacket(ServerboundClientCommandPacket.Action.PERFORM_RESPAWN));
-                this.minecraft.setScreen(null);
-            }));
+            if (ProtocolTranslator.getTargetVersion().olderThanOrEqualTo(ProtocolVersion.v1_20_5)) {
+                if (i == 0) {
+                    this.minecraft.player.connection.send(new ServerboundClientCommandPacket(ServerboundClientCommandPacket.Action.PERFORM_RESPAWN));
+                    this.minecraft.setScreen(new GenericMessageScreen(Component.translatable("multiplayer.downloadingTerrain")));
+                } else if (i == 1) {
+                    this.minecraft.setScreen(new WinScreen(true, () -> {
+                        this.minecraft.player.connection.send(new ServerboundClientCommandPacket(ServerboundClientCommandPacket.Action.PERFORM_RESPAWN));
+                        this.minecraft.setScreen(null);
+                    }));
+                }
+            } else {
+                this.minecraft.setScreen(new WinScreen(true, () -> {
+                    this.minecraft.player.connection.send(new ServerboundClientCommandPacket(ServerboundClientCommandPacket.Action.PERFORM_RESPAWN));
+                    this.minecraft.setScreen(null);
+                }));
+            }
         } else if (clientboundgameeventpacket$type == ClientboundGameEventPacket.DEMO_EVENT) {
             Options options = this.minecraft.options;
             Component component = null;
@@ -2158,6 +2175,9 @@ public class ClientPacketListener extends ClientCommonPacketListenerImpl impleme
     public void handleOpenBook(ClientboundOpenBookPacket p_105040_) {
         PacketUtils.ensureRunningOnSameThread(p_105040_, this, this.minecraft.packetProcessor());
         ItemStack itemstack = this.minecraft.player.getItemInHand(p_105040_.getHand());
+        if (ProtocolTranslator.getTargetVersion().olderThanOrEqualTo(ProtocolVersion.v1_20_5) && !itemstack.is(Items.WRITABLE_BOOK)) {
+            return;
+        }
         BookViewScreen.BookAccess bookviewscreen$bookaccess = BookViewScreen.BookAccess.fromItem(itemstack);
         if (bookviewscreen$bookaccess != null) {
             this.minecraft.setScreen(new BookViewScreen(bookviewscreen$bookaccess));

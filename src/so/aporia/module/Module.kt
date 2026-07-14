@@ -18,7 +18,13 @@ abstract class Module @JvmOverloads constructor(
         isEnabled = true
         so.aporia.utils.files.impl.ConfigFile.markModuleActivated(this)
         so.aporia.utils.files.impl.ConfigFile.markDirty()
-        onEnable()
+        try {
+            onEnable()
+        } catch (e: Exception) {
+            isEnabled = false
+            so.aporia.utils.files.impl.ConfigFile.markDirty()
+            throw e
+        }
     }
 
     fun disable() {

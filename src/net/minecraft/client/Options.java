@@ -646,7 +646,7 @@ public class Options {
         this.keyDebugFpsCharts,
         this.keyDebugNetworkCharts
     };
-    public final KeyMapping[] keyMappings = Stream.of(
+    public KeyMapping[] keyMappings = Stream.of(
             new KeyMapping[]{
                 this.keyAttack,
                 this.keyUse,

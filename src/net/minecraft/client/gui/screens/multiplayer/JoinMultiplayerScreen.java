@@ -1,10 +1,17 @@
 package net.minecraft.client.gui.screens.multiplayer;
 
 import com.mojang.logging.LogUtils;
+
 import java.util.List;
-import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.events.GuiEventListener;
+
+import com.viaversion.viafabricplus.injection.access.base.IServerData;
+import com.viaversion.viafabricplus.protocoltranslator.ProtocolTranslator;
+import com.viaversion.viafabricplus.screen.impl.ProtocolSelectionScreen;
+import com.viaversion.viafabricplus.settings.impl.BedrockSettings;
+import com.viaversion.viafabricplus.settings.impl.GeneralSettings;
+import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
+import net.minecraft.client.gui.components.*;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.ConfirmScreen;
@@ -22,12 +29,10 @@ import net.minecraft.client.server.LanServer;
 import net.minecraft.client.server.LanServerDetection;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
+
 public class JoinMultiplayerScreen extends Screen {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final int TOP_ROW_BUTTON_WIDTH = 100;
@@ -51,6 +56,7 @@ public class JoinMultiplayerScreen extends Screen {
 
     @Override
     protected void init() {
+
         this.layout.addTitleHeader(this.title, this.font);
         this.servers = new ServerList(this.minecraft);
         this.servers.load();
@@ -107,7 +113,6 @@ public class JoinMultiplayerScreen extends Screen {
             }
         }).width(74).build());
         linearlayout2.addChild(Button.builder(Component.translatable("selectServer.refresh"), p_99706_ -> this.refreshServerList()).width(74).build());
-        linearlayout2.addChild(Button.builder(Component.literal("ViaVersion"), p_99706_ -> this.minecraft.setScreen(new de.florianmichael.viamcp.gui.GuiProtocolSelector(this))).width(74).build());
         linearlayout2.addChild(Button.builder(CommonComponents.GUI_BACK, p_325384_ -> this.onClose()).width(74).build());
         this.layout.visitWidgets(p_420761_ -> {
             AbstractWidget abstractwidget = this.addRenderableWidget(p_420761_);
@@ -115,6 +120,7 @@ public class JoinMultiplayerScreen extends Screen {
         this.repositionElements();
         this.onSelectedChange();
     }
+    private Button viaFabricPlus$button;
 
     @Override
     protected void repositionElements() {
@@ -122,6 +128,19 @@ public class JoinMultiplayerScreen extends Screen {
         if (this.serverSelectionList != null) {
             this.serverSelectionList.updateSize(this.width, this.layout);
         }
+        final int buttonPosition = GeneralSettings.INSTANCE.multiplayerScreenButtonOrientation.getIndex();
+        if (buttonPosition == 0) { // Off
+            return;
+        }
+
+        if (viaFabricPlus$button == null) {
+            viaFabricPlus$button = Button
+                    .builder(Component.nullToEmpty("ViaFabricPlus"), button -> ProtocolSelectionScreen.INSTANCE.open(this))
+                    .size(98, 20)
+                    .build();
+            this.addRenderableWidget(viaFabricPlus$button);
+        }
+        GeneralSettings.setOrientation(viaFabricPlus$button::setPosition, buttonPosition, width, height);
     }
 
     @Override
@@ -160,7 +179,7 @@ public class JoinMultiplayerScreen extends Screen {
         if (p_99712_ && serverselectionlist$entry instanceof ServerSelectionList.OnlineServerEntry) {
             this.servers.remove(((ServerSelectionList.OnlineServerEntry)serverselectionlist$entry).getServerData());
             this.servers.save();
-            this.serverSelectionList.setSelected(null);
+            this.serverSelectionList.setSelected((ServerSelectionList.Entry)null);
             this.serverSelectionList.updateOnlineServers(this.servers);
         }
 
@@ -192,7 +211,7 @@ public class JoinMultiplayerScreen extends Screen {
                 this.servers.save();
             }
 
-            this.serverSelectionList.setSelected(null);
+            this.serverSelectionList.setSelected((ServerSelectionList.Entry)null);
             this.serverSelectionList.updateOnlineServers(this.servers);
         }
 
@@ -205,8 +224,10 @@ public class JoinMultiplayerScreen extends Screen {
             if (serverdata == null) {
                 this.servers.add(this.editingServer, true);
                 this.servers.save();
+                ((IServerData) this.editingServer).viaFabricPlus$passDirectConnectScreen(true);
                 this.join(this.editingServer);
             } else {
+                ((IServerData) serverdata).viaFabricPlus$passDirectConnectScreen(true);
                 this.join(serverdata);
             }
         } else {
@@ -227,7 +248,16 @@ public class JoinMultiplayerScreen extends Screen {
     }
 
     public void join(ServerData p_99703_) {
-        ConnectScreen.startConnecting(this, this.minecraft, ServerAddress.parseString(p_99703_.ip), p_99703_, false, null);
+        final IServerData mixinServerInfo = (IServerData) p_99703_;
+        ProtocolVersion version;
+        if (mixinServerInfo.viaFabricPlus$passedDirectConnectScreen()) {
+            version = ProtocolTranslator.getTargetVersion();
+        } else {
+            version = mixinServerInfo.viaFabricPlus$forcedVersion();
+        }
+        ServerAddress serverAddress = ServerAddress.parseString(BedrockSettings.replaceDefaultPort(p_99703_.ip, version));
+
+        ConnectScreen.startConnecting(this, this.minecraft, serverAddress, p_99703_, false, null);
     }
 
     protected void onSelectedChange() {
@@ -250,5 +280,10 @@ public class JoinMultiplayerScreen extends Screen {
 
     public ServerList getServers() {
         return this.servers;
+    }
+
+    @Override
+    public void render(GuiGraphics p_282860_, int p_281753_, int p_283539_, float p_282628_) {
+        super.render(p_282860_, p_281753_, p_283539_, p_282628_);
     }
 }

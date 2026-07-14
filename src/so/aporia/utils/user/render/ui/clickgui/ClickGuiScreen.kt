@@ -23,11 +23,13 @@ import so.aporia.module.settings.*
 import so.aporia.utils.user.render.animation.Animator
 import so.aporia.utils.user.render.animation.Easing
 import so.aporia.utils.user.render.animation.SpringSimulator
+import so.aporia.utils.user.render.animation.FluidAnim
 import so.aporia.utils.user.render.animation.TypeAnim
 import so.aporia.utils.user.render.font.Fonts
 import so.aporia.module.impl.render.clickgui.ThemeManagerModule
 import so.aporia.module.impl.render.clickgui.ThemeManagerModule.Theme
 import org.lwjgl.glfw.GLFW
+import org.lwjgl.opengl.GL11
 import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.impl.KeyInputEvent
 import so.aporia.utils.events.impl.MouseClickEvent
@@ -50,7 +52,9 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
     private var selCategory = 0
     private var selectedModule: Module? = null
     private var scrollY = 0f
+    private var scrollVelocity = 0f
     private var settingsScrollY = 0f
+    private var settingsScrollVelocity = 0f
     private var bindSet: BindSetting? = null
     private var bindMod: Module? = null
     private var dragSlider: DragInfo? = null
@@ -61,11 +65,12 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
     private var dragColorAlpha = false
     private var dragColorSV = false
     private var dragColorSettingRef: ColorSetting? = null
-    private val bindTypeAnim = TypeAnim(60, 120)
+    private val bindTypeAnim = TypeAnim(35, 60)
 
     private var minimized = false
     private var maximized = false
     private var showOtherPanel = false
+    private val otherPanelSpring = SpringSimulator.snappy(0f)
     private var windowX = 0f
     private var windowY = 0f
     private var windowDragX = 0f
@@ -89,18 +94,19 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
     private val hoverSprings = mutableMapOf<Int, SpringSimulator>()
     private val selectionSpring = SpringSimulator(200f, 18f, 0f)
     private var lastSelCategory = 0
+    private val catFluid = FluidAnim.suck()
 
     private var logoTextureView: Any? = null
     private var logoId: Identifier? = null
     private val categoryIcons = mutableMapOf<Category, Identifier?>()
-    private val catTypeAnims = Category.values().associateWith { TypeAnim(60, 120) }.toMutableMap()
+    private val catTypeAnims = Category.values().associateWith { TypeAnim(35, 60) }.toMutableMap()
     private val catAnimStarted = Category.values().associateWith { false }.toMutableMap()
     private val moduleTypeAnims = mutableMapOf<String, TypeAnim>()
     private val moduleAnimStarted = mutableMapOf<String, Boolean>()
     private val settingTypeAnims = mutableMapOf<String, TypeAnim>()
     private val settingAnimStarted = mutableMapOf<String, Boolean>()
     private var waveStartMs = 0L
-    private val waveDelayPerItem = 200L
+    private val waveDelayPerItem = 120L
 
     init {
         openAnim.snapTo(1f)
@@ -215,6 +221,27 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
         categoryAnim.update()
         selectionSpring.update(0.016f)
         selectionSpring.setTarget(selCategory.toFloat())
+
+        otherPanelSpring.update(0.016f)
+
+        if (kotlin.math.abs(scrollVelocity) > 0.1f) {
+            scrollVelocity *= 0.85f
+            scrollY += scrollVelocity
+            if (scrollY > 0f) { scrollY = 0f; scrollVelocity = 0f }
+        } else { scrollVelocity = 0f }
+
+        if (kotlin.math.abs(settingsScrollVelocity) > 0.1f) {
+            settingsScrollVelocity *= 0.85f
+            settingsScrollY += settingsScrollVelocity
+            val sMod = selectedModule
+            if (sMod != null) {
+                val totalH = getTotalSettingsHeight(sMod)
+                val visibleH = panelH - TOP_BAR_H - MOD_H - PAD * 3
+                val maxScroll = -(totalH - visibleH).coerceAtLeast(0f)
+                if (settingsScrollY > 0f) { settingsScrollY = 0f; settingsScrollVelocity = 0f }
+                if (settingsScrollY < maxScroll) { settingsScrollY = maxScroll; settingsScrollVelocity = 0f }
+            }
+        } else { settingsScrollVelocity = 0f }
 
         if (closing && openAnim.isFinished()) {
             onCloseReal()
@@ -347,9 +374,18 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
         val cy = contentY
         val categories = Category.values().toList()
         val now = System.currentTimeMillis()
+        val otherFrac = otherPanelSpring.value()
 
         val catLeft = px + PAD - 2f - 9f
         var catY = cy + 10f + 2f
+
+        val catClipH = py + panelH - PAD - cy
+        GL11.glEnable(GL11.GL_SCISSOR_TEST)
+        val scScale = mc.window.guiScale.toFloat()
+        val scClipY = ((mc.window.guiScaledHeight - (py + panelH - PAD)) * scScale).toInt()
+        GL11.glScissor((px * scScale).toInt(), scClipY,
+            (catW * scScale).toInt().coerceAtLeast(0),
+            (catClipH * scScale).toInt().coerceAtLeast(0))
         for ((i, cat) in categories.withIndex()) {
             val ta = catTypeAnims[cat] ?: continue
             val started = catAnimStarted[cat] ?: false
@@ -393,7 +429,7 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
             }
             val labelX = catCenterX + iconSize / 2f + 4f
             r.drawText(Fonts.REGULAR, label, labelX, catY + (CAT_H - 10f) / 2f - 1f, 10f,
-                if (sel) 0xFFFFFFFF.toInt() else colorUtil.lerp(theme.guiSettingValue, 0xFFFFFFFF.toInt(), hoverFrac))
+                if (sel) 0xFFFFFFFF.toInt() else th.guiDisabledDot)
             catY += CAT_H
         }
 
@@ -401,50 +437,25 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
         val btnH = AVATAR_SIZE + 4f
         val btnX = catLeft
         val btnY = py + panelH - PAD - btnH
-        val overBtn = mx >= btnX && mx < btnX + btnW && my >= btnY && my < btnY + btnH
-        r.drawBg(btnX, btnY, btnW, btnH, 4f,
-            if (overBtn) th.guiTitleBg else colorUtil.rgba(0, 0, 0, 100))
         r.drawText(Fonts.BOLD, locale.get("gui.other"),
-            btnX + 8f, btnY + (btnH - 11f) / 2f - 1f, 11f, 0xFFFFFFFF.toInt())
-        r.drawText(Fonts.REGULAR, "\u25B6", btnX + btnW - 16f, btnY + (btnH - 10f) / 2f - 1f, 10f, th.guiSettingValue)
+            btnX + 8f, btnY + (btnH - 11f) / 2f - 1f, 11f, 0xFFAAAAAA.toInt())
+        GL11.glDisable(GL11.GL_SCISSOR_TEST)
 
-        if (showOtherPanel) {
-            drawOtherPanel(r, th, mx, my)
-        } else {
-            drawModuleList(r, th, mx, my, cy, categories)
+        if (otherFrac < 0.01f || otherPanelSpring.getTarget() > 0.5f) {
+            if (showOtherPanel) {
+                drawScriptModuleList(r, th, mx, my, cy, categories)
+            } else {
+                drawModuleList(r, th, mx, my, cy, categories)
+            }
             drawSettingsPanel(r, th, mx, my, cy)
         }
     }
 
-    private fun drawOtherPanel(r: AporiaRenderer, th: Theme, mx: Float, my: Float) {
-        val cy = contentY
-        val label = locale.get("gui.other.title")
-        r.drawText(Fonts.BOLD, label, px + PAD, cy, 12f, 0xFFFFFFFF.toInt())
-        val scriptMods = ModuleManager.getScriptModules()
-        var my2 = cy + 16f
-        for (mod in scriptMods) {
-            if (my2 + MOD_H < cy || my2 > py + panelH - PAD) { my2 += MOD_H; continue }
-            val over = mx >= px + PAD && mx < px + PAD + catW && my >= my2 && my < my2 + MOD_H
-            val en = mod.isEnabled
-            r.drawBg(px + PAD, my2, catW, MOD_H, 2f, colorUtil.rgba(0, 0, 0, if (en) 70 else 40))
-            if (over || en) {
-                val hl = th.guiTitleBg
-                r.drawBg(px + PAD, my2, catW, MOD_H, 2f, hl)
-            }
-            r.drawText(Fonts.REGULAR, mod.name, px + PAD + 4f, my2 + (MOD_H - 10f) / 2f - 1f, 10f,
-                if (en) 0xFFFFFFFF.toInt() else th.guiDisabledDot)
-            my2 += MOD_H
-        }
-    }
-
-    private fun drawModuleList(r: AporiaRenderer, th: Theme, mx: Float, my: Float, cy: Float, categories: List<Category>) {
+    private fun drawScriptModuleList(r: AporiaRenderer, th: Theme, mx: Float, my: Float, cy: Float, categories: List<Category>) {
         val mLeft = px + catW
         val mTop = cy
-        val catAnim = categoryAnim.value()
-        val slideOff = (1f - catAnim) * 16f
+        val mods = ModuleManager.getScriptModules().filter { it.category == categories[selCategory] }
         var my2 = mTop + scrollY
-        val mods = ModuleManager.getByCategory(categories[selCategory])
-        val altDown = org.lwjgl.glfw.GLFW.glfwGetKey(mc.window.handle(), org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_ALT) == 1
         val now = System.currentTimeMillis()
         for ((mi, mod) in mods.withIndex()) {
             if (my2 + MOD_H < mTop || my2 > py + panelH - PAD) { my2 += MOD_H; continue }
@@ -452,15 +463,73 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
             val en = mod.isEnabled
             val selMod = mod === selectedModule
 
-            // Module hover spring
-            val springKey = 3000 + mods.indexOf(mod)
+            val springKey = 5000 + mods.indexOf(mod)
+            val spring = hoverSprings.getOrPut(springKey) { SpringSimulator(200f, 16f, 0f) }
+            spring.setTarget(if (over || selMod) 1f else 0f)
+            spring.update(0.016f)
+            val hoverFrac = spring.value()
+
+            r.drawBg(mLeft, my2, modW, MOD_H, 2f, colorUtil.rgba(0, 0, 0, if (en) 90 else 55))
+            if (selMod) {
+                r.drawBg(mLeft, my2, modW, MOD_H, 2f, th.guiTitleBg)
+            } else if (over || hoverFrac > 0.01f) {
+                val hlAlpha = ((12 * hoverFrac).toInt().coerceIn(0, 255))
+                r.drawBg(mLeft, my2, modW, MOD_H, 2f, colorUtil.rgba(255, 255, 255, hlAlpha))
+            }
+            if (en) r.drawBg(mLeft + 2f, my2 + 2f, 2f, MOD_H - 4f, 1f, th.guiEnabledDot)
+            r.drawText(Fonts.REGULAR, mod.name, mLeft + 8f, my2 + (MOD_H - 10f) / 2f - 1f, 10f,
+                if (en) 0xFFFFFFFF.toInt() else th.guiDisabledDot)
+            if (selMod) r.drawText(Fonts.REGULAR, "\u25C0", mLeft + modW - 12f, my2 + (MOD_H - 9f) / 2f - 1f, 9f, colorUtil.rgba(180, 180, 200, 200))
+            my2 += MOD_H
+        }
+    }
+
+    private fun drawModuleList(r: AporiaRenderer, th: Theme, mx: Float, my: Float, cy: Float, categories: List<Category>) {
+        catFluid.update(0.016f)
+        val fluidRunning = catFluid.isRunning()
+        val mLeft = px + catW
+        val mTop = cy
+        val mWidth = modW
+        val catAnim = categoryAnim.value()
+        val slideOff = (1f - catAnim) * 16f
+        val mods = ModuleManager.getByCategory(categories[selCategory])
+
+        val modClipH = py + panelH - PAD - cy
+        GL11.glEnable(GL11.GL_SCISSOR_TEST)
+        val scScale = mc.window.guiScale.toFloat()
+        val scModClipY = ((mc.window.guiScaledHeight - (py + panelH - PAD)) * scScale).toInt()
+        GL11.glScissor((mLeft * scScale).toInt(), scModClipY,
+            (mWidth * scScale).toInt().coerceAtLeast(0),
+            (modClipH * scScale).toInt().coerceAtLeast(0))
+        val altDown = org.lwjgl.glfw.GLFW.glfwGetKey(mc.window.handle(), org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_ALT) == 1
+        val now = System.currentTimeMillis()
+
+        val dstBaseX = mLeft
+        val dstBaseY = cy + scrollY
+
+        for ((mi, mod) in mods.withIndex()) {
+            val dstX = dstBaseX
+            val dstY = dstBaseY + mi * MOD_H
+
+            val pos = if (fluidRunning) catFluid.getPos(mi, dstX, dstY) else floatArrayOf(dstX, dstY)
+            val drawX = pos[0] + slideOff
+            val drawY = pos[1]
+            val sc = if (fluidRunning) catFluid.getScale(mi) else 1f
+
+            if (drawY + MOD_H * sc < cy || drawY > py + panelH - PAD) continue
+
+            val over = mx >= mLeft && mx < mLeft + mWidth && my >= drawY && my < drawY + MOD_H
+            val en = mod.isEnabled
+            val selMod = mod === selectedModule
+
+            val springKey = 3000 + mi
             val spring = hoverSprings.getOrPut(springKey) { SpringSimulator(200f, 16f, 0f) }
             spring.setTarget(if (over || selMod) 1f else 0f)
             spring.update(0.016f)
             val hoverFrac = spring.value()
 
             val modKey = "module:${mod.name}"
-            val modAnim = moduleTypeAnims.getOrPut(modKey) { TypeAnim(60, 120) }
+            val modAnim = moduleTypeAnims.getOrPut(modKey) { TypeAnim(35, 60) }
             val modStarted = moduleAnimStarted.getOrPut(modKey) { false }
             val modElapsed = now - waveStartMs
             val modDelay = (categories.size + mi) * waveDelayPerItem
@@ -472,24 +541,37 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
                 modAnim.update()
             } else modAnim.update()
 
-            r.drawBg(mLeft + slideOff, my2, modW, MOD_H, 2f, colorUtil.rgba(0, 0, 0, if (en) 70 else 40))
+            if (sc < 0.999f) {
+                GL11.glPushMatrix()
+                val cx = drawX + mWidth / 2f
+                val cy2 = drawY + MOD_H / 2f
+                GL11.glTranslatef(cx, cy2, 0f)
+                GL11.glScalef(sc, sc, 1f)
+                GL11.glTranslatef(-cx, -cy2, 0f)
+            }
+
+            r.drawBg(drawX, drawY, mWidth, MOD_H, 2f, colorUtil.rgba(0, 0, 0, if (en) 90 else 55))
             if (selMod) {
-                r.drawBg(mLeft + slideOff, my2, modW, MOD_H, 2f, th.guiTitleBg)
+                r.drawBg(drawX, drawY, mWidth, MOD_H, 2f, th.guiTitleBg)
             } else if (over || hoverFrac > 0.01f) {
                 val hlAlpha = ((12 * hoverFrac).toInt().coerceIn(0, 255))
-                r.drawBg(mLeft + slideOff, my2, modW, MOD_H, 2f, colorUtil.rgba(255, 255, 255, hlAlpha))
+                r.drawBg(drawX, drawY, mWidth, MOD_H, 2f, colorUtil.rgba(255, 255, 255, hlAlpha))
             }
-            if (en) r.drawBg(mLeft + slideOff + 2f, my2 + 2f, 2f, MOD_H - 4f, 1f, th.guiEnabledDot)
-            r.drawText(Fonts.REGULAR, modName, mLeft + 8f + slideOff, my2 + (MOD_H - 10f) / 2f - 1f, 10f,
+            if (en) r.drawBg(drawX + 2f, drawY + 2f, 2f, MOD_H - 4f, 1f, th.guiEnabledDot)
+            r.drawText(Fonts.REGULAR, modName, drawX + 8f, drawY + (MOD_H - 10f) / 2f - 1f, 10f,
                 if (en) 0xFFFFFFFF.toInt() else theme.guiDisabledDot)
             if (altDown && mod.keybind != -1) {
                 val keyName = so.aporia.utils.user.input.KeyCodeMap.getName(mod.keybind)
                 val kw = r.getTextWidth(Fonts.REGULAR, keyName, 7f)
-                r.drawText(Fonts.REGULAR, keyName, mLeft + modW - kw - 4f + slideOff, my2 + (MOD_H - 7f) / 2f, 7f, 0xFFAAAAAA.toInt())
+                r.drawText(Fonts.REGULAR, keyName, drawX + mWidth - kw - 4f, drawY + (MOD_H - 7f) / 2f, 7f, 0xFFAAAAAA.toInt())
             }
-            if (selMod) r.drawText(Fonts.REGULAR, "\u25C0", mLeft + modW - 12f + slideOff, my2 + (MOD_H - 9f) / 2f - 1f, 9f, colorUtil.rgba(180, 180, 200, 200))
-            my2 += MOD_H
+            if (selMod) r.drawText(Fonts.REGULAR, "\u25C0", drawX + mWidth - 12f, drawY + (MOD_H - 9f) / 2f - 1f, 9f, colorUtil.rgba(180, 180, 200, 200))
+
+            if (sc < 0.999f) {
+                GL11.glPopMatrix()
+            }
         }
+        GL11.glDisable(GL11.GL_SCISSOR_TEST)
     }
 
     private fun drawSettingsPanel(r: AporiaRenderer, th: Theme, mx: Float, my: Float, cy: Float) {
@@ -504,7 +586,7 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
         val setNow = System.currentTimeMillis()
         val stDelay = (Category.values().size + ModuleManager.getByCategory(Category.values()[selCategory]).size) * waveDelayPerItem
         val stKey = "setting_title:${selMod.name}"
-        val stAnim = settingTypeAnims.getOrPut(stKey) { TypeAnim(60, 120) }
+        val stAnim = settingTypeAnims.getOrPut(stKey) { TypeAnim(35, 60) }
         val stStarted = settingAnimStarted.getOrPut(stKey) { false }
         val stElapsed = setNow - waveStartMs
         val modTitle = if (!stStarted) {
@@ -775,6 +857,9 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
                     lastSelCategory = i
                     categoryAnim.reset(); categoryAnim.play()
                     selectionSpring.snap(i.toFloat())
+                    catFluid.setSource(catLeft + (catW - PAD * 2) / 2f, catY + CAT_H / 2f)
+                    catFluid.reset()
+                    catFluid.trigger()
                 }
                 selectedModule = null; scrollY = 0f; dropSetting = null; settingsScrollY = 0f; return true
             }
@@ -787,14 +872,16 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
         val btnY2 = py + panelH - PAD - btnH2
         if (mx >= btnX2 && mx < btnX2 + btnW2 && my >= btnY2 && my < btnY2 + btnH2) {
             showOtherPanel = !showOtherPanel
+            otherPanelSpring.setTarget(if (showOtherPanel) 1f else 0f)
             return true
         }
 
-        if (showOtherPanel) return false
-
         val mLeft = px + catW; val mTop = cy
         var my2 = mTop + scrollY
-        val mods = ModuleManager.getByCategory(categories[selCategory])
+        val mods = if (showOtherPanel)
+            ModuleManager.getScriptModules().filter { it.category == categories[selCategory] }
+        else
+            ModuleManager.getByCategory(categories[selCategory])
         for (mod in mods) {
             if (my2 + MOD_H < mTop || my2 > py + panelH - PAD) { my2 += MOD_H; continue }
             if (mx >= mLeft && mx < mLeft + modW && my >= my2 && my < my2 + MOD_H) {
@@ -1005,15 +1092,13 @@ class ClickGuiScreen(private val clickGui: ClickGui) : Screen(Component.literal(
         val mLeft = px + catW
         val sLeft = px + catW + modW; val sWidth = setW - PAD
         if (mx >= mLeft && mx < mLeft + modW && my >= py && my < py + panelH) {
-            scrollY = minOf(scrollY + (dY * 30).toFloat(), 0f); return true
+            scrollVelocity += (dY * 30).toFloat()
+            return true
         }
         if (mx >= sLeft && mx < sLeft + sWidth && my >= py && my < py + panelH) {
             val selMod = selectedModule
             if (selMod != null) {
-                val totalH = getTotalSettingsHeight(selMod)
-                val visibleH = panelH - TOP_BAR_H - MOD_H - PAD * 3
-                val maxScroll = -(totalH - visibleH).coerceAtLeast(0f)
-                settingsScrollY = (settingsScrollY + (dY * 30).toFloat()).coerceIn(maxScroll, 0f)
+                settingsScrollVelocity += (dY * 30).toFloat()
             }
             return true
         }

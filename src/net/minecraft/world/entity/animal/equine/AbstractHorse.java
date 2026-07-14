@@ -114,7 +114,7 @@ public abstract class AbstractHorse extends Animal implements HasCustomInventory
     private float eatAnim;
     private float eatAnimO;
     private float standAnim;
-    private float standAnimO;
+    public float standAnimO;
     private float mouthAnim;
     private float mouthAnimO;
     protected boolean canGallop = true;

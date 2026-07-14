@@ -16,7 +16,7 @@ import java.nio.file.Path
 class ThemeManagerModule : Module("Theme Manager", Category.VISUAL) {
 
     data class Theme(val name: String) {
-        var guiBackground: Int = 0xA0000000.toInt(); var guiTitleBg: Int = 0xC81E1E28.toInt(); var guiTitleText: Int = 0xFFDCDCFF.toInt()
+        var guiBackground: Int = 0xCC0A0A14.toInt(); var guiTitleBg: Int = 0xC81E1E28.toInt(); var guiTitleText: Int = 0xFFDCDCFF.toInt()
         var guiModuleText: Int = 0xFFFFFFFF.toInt(); var guiEnabledDot: Int = 0xFF64FF64.toInt(); var guiDisabledDot: Int = 0xFF505050.toInt()
         var guiHoverBg: Int = 0x18FFFFFF.toInt(); var guiSeparator: Int = 0x18FFFFFF.toInt(); var guiSettingText: Int = 0xFFFFFFFF.toInt()
         var guiSettingValue: Int = 0xFFDCDCFF.toInt(); var espPlayer: Int = 0xFFFF5555.toInt(); var espFriend: Int = 0xFF55FF55.toInt()

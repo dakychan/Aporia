@@ -39,6 +39,7 @@ import so.aporia.module.impl.render.clickgui.ThemeManagerModule;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.gui.components.ChatComponent;
 
 import com.chaos.annotation.ChaosNative;
 
@@ -100,6 +101,9 @@ public class AporiaChatScreen extends ChatScreen {
         
         public int     selfColor      = 0xFFADD8E6;
         public int     scrollOffset   = 0;
+        
+        public boolean customTextEnabled = false;
+        public String  customTextPrefix  = "";
 
         public final java.util.ArrayDeque<GuiMessage.Line> lines = new java.util.ArrayDeque<>(100);
         private static final int MAX_STORED = 200;
@@ -123,6 +127,8 @@ public class AporiaChatScreen extends ChatScreen {
             ((BooleanSetting)editSettings.get(7)).set(searchOnOpen);
             ((BooleanSetting)editSettings.get(8)).set(showOnlyServer);
             ((ColorSetting)editSettings.get(9)).set(selfColor);
+            ((BooleanSetting)editSettings.get(10)).set(customTextEnabled);
+            ((TextSetting)editSettings.get(11)).set(customTextPrefix);
         }
 
         void syncToWinCfg() {
@@ -136,6 +142,8 @@ public class AporiaChatScreen extends ChatScreen {
             searchOnOpen = ((BooleanSetting)editSettings.get(7)).isEnabled();
             showOnlyServer = ((BooleanSetting)editSettings.get(8)).isEnabled();
             selfColor = ((ColorSetting)editSettings.get(9)).get();
+            customTextEnabled = ((BooleanSetting)editSettings.get(10)).isEnabled();
+            customTextPrefix = ((TextSetting)editSettings.get(11)).get();
         }
 
         public WinCfg(String name, int x, int bottomY, int w, int h, boolean draggable) {
@@ -151,6 +159,8 @@ public class AporiaChatScreen extends ChatScreen {
             editSettings.add(new BooleanSetting("Search on open", "Search when opened", searchOnOpen));
             editSettings.add(new BooleanSetting("Only server", "Server messages only", showOnlyServer));
             editSettings.add(new ColorSetting("Self color", "Own message color", selfColor));
+            editSettings.add(new BooleanSetting("CustomText", "Rewrite name prefix", customTextEnabled));
+            editSettings.add(new TextSetting("Custom prefix", "Custom text before name", customTextPrefix));
         }
 
         int maxLines() { return Math.max(1, (h - BOX_PAD*2) / LINE_H); }
@@ -234,16 +244,33 @@ public class AporiaChatScreen extends ChatScreen {
             }
         }
          private void addMsgToWin(WinCfg w, GuiMessage msg, net.minecraft.client.gui.Font font) {
-             Component content = msg.content();
-             
-             int splitW = Math.max(10, w.w - BOX_PAD*2 - TEXT_PAD);
-             GuiMessage modifiedMsg = new GuiMessage(msg.addedTime(), content, msg.signature(), msg.tag());
-             List<net.minecraft.util.FormattedCharSequence> parts = modifiedMsg.splitLines(font, splitW);
-             
-             for (int i = 0; i < parts.size(); i++) {
-                 w.addLine(new GuiMessage.Line(msg.addedTime(), parts.get(i), msg.tag(), i == parts.size()-1));
-             }
-         }
+              Component content = msg.content();
+              
+              if (w.customTextEnabled && !w.customTextPrefix.isEmpty()) {
+                  net.minecraft.client.player.LocalPlayer p = net.minecraft.client.Minecraft.getInstance().player;
+                  if (p != null) content = transformCustomText(content, w.customTextPrefix, p.getName().getString());
+              }
+              
+              int splitW = Math.max(10, w.w - BOX_PAD*2 - TEXT_PAD);
+              GuiMessage modifiedMsg = new GuiMessage(msg.addedTime(), content, msg.signature(), msg.tag());
+              List<net.minecraft.util.FormattedCharSequence> parts = modifiedMsg.splitLines(font, splitW);
+              
+              for (int i = 0; i < parts.size(); i++) {
+                  w.addLine(new GuiMessage.Line(msg.addedTime(), parts.get(i), msg.tag(), i == parts.size()-1));
+              }
+          }
+
+          private Component transformCustomText(Component content, String customPrefix, String playerName) {
+              String plain = content.getString();
+              int nameIdx = plain.toLowerCase().indexOf(playerName.toLowerCase());
+              if (nameIdx <= 0) return content;
+              int sepIdx = plain.indexOf('>', nameIdx + playerName.length());
+              if (sepIdx < 0) sepIdx = plain.indexOf(':', nameIdx + playerName.length());
+              if (sepIdx < 0) sepIdx = nameIdx + playerName.length();
+              String after = plain.substring(sepIdx + 1);
+              String result = customPrefix + playerName + ">" + after;
+              return net.minecraft.network.chat.Component.literal(result);
+          }
 
         /** Clears all windows and rebuilds their line stores from the full chat history. */
         public void rebuild(net.minecraft.client.gui.components.ChatComponent chat,
@@ -442,6 +469,14 @@ public class AporiaChatScreen extends ChatScreen {
     private net.minecraft.network.chat.Style hoveredStyle   = null;
     private int                              hoveredLineIdx  = -1;
 
+    private enum ChatState { IDLE, SELECTING, SELECTED }
+    private ChatState chatState = ChatState.IDLE;
+    private int     selAnchorLine = -1;
+    private int     selActiveLine = -1;
+    private float   selAnchorX;
+    private float   selActiveX;
+    private String  localPlayerName = "";
+
     public AporiaChatScreen(String initial, boolean isDraft) { 
         /** Если initial содержит только одну букву (например "T" от нажатия клавиши), очищаем его.
          *  If initial contains only one letter (e.g. "T" from keypress), clear it. */
@@ -587,11 +622,16 @@ public class AporiaChatScreen extends ChatScreen {
 
         this.commandSuggestions.render(gfx, mouseX, mouseY);
 
-        if (hoveredStyle != null && hoveredStyle.getClickEvent() instanceof net.minecraft.network.chat.ClickEvent.OpenUrl url) {
-            gfx.setTooltipForNextFrame(this.font,
-                java.util.List.of(net.minecraft.util.FormattedCharSequence.forward(
-                    url.uri().toString(), net.minecraft.network.chat.Style.EMPTY)),
-                mouseX, mouseY);
+        if (hoveredStyle != null) {
+            if (hoveredStyle.getHoverEvent() instanceof net.minecraft.network.chat.HoverEvent.ShowText showText) {
+                gfx.setTooltipForNextFrame(this.font, this.font.split(showText.value(), Math.min(this.width, 320)), mouseX, mouseY);
+            }
+            if (hoveredStyle.getClickEvent() instanceof net.minecraft.network.chat.ClickEvent.OpenUrl url) {
+                gfx.setTooltipForNextFrame(this.font,
+                    java.util.List.of(net.minecraft.util.FormattedCharSequence.forward(
+                        url.uri().toString(), net.minecraft.network.chat.Style.EMPTY)),
+                    mouseX, mouseY);
+            }
         }
 
         gfx.nextStratum();
@@ -632,8 +672,13 @@ public class AporiaChatScreen extends ChatScreen {
         }
         
         gfx.enableScissor(bx, actualBy, bx+bw, by+bh);
-        if (isActive) renderMessages(gfx, c, by+BOX_PAD, bx+BOX_PAD);
-        else          renderMessagesPassive(gfx, c, by+BOX_PAD, bx+BOX_PAD);
+        if (isActive && edit.visible) {
+            // settings panel open — no message rendering
+        } else if (isActive) {
+            renderMessages(gfx, c, by+BOX_PAD, bx+BOX_PAD);
+        } else {
+            renderMessagesPassive(gfx, c, by+BOX_PAD, bx+BOX_PAD);
+        }
         gfx.disableScissor();
         
         renderScrollBar(gfx, c, bx, by, bw, bh);
@@ -660,6 +705,9 @@ public class AporiaChatScreen extends ChatScreen {
         int count   = Math.min(maxL, total - c.scrollOffset);
         int bottomY = boxTopY + maxL * LINE_H - LINE_H;
         boolean doSearch = searchMode && !searchQuery.isEmpty();
+        int[] selRange = selectedLineRange();
+        if (localPlayerName.isEmpty() && minecraft.player != null)
+            localPlayerName = minecraft.player.getName().getString().toLowerCase();
         int i = 0;
         for (GuiMessage.Line line : c.lines) {
             if (i >= c.scrollOffset + count) break;
@@ -672,11 +720,17 @@ public class AporiaChatScreen extends ChatScreen {
             int tx = textX + (int) anim.slideX();
             if (doSearch && matchesQuery(plainText(line.content()), searchQuery))
                 AporiaRenderer.INSTANCE.drawRect(c.x+1, lineY-1, c.w-2, LINE_H, 2, C_SEARCH_HL);
-            
-            /** Используем vanilla шрифт для обычного чата.
-             *  Use vanilla font for regular chat. */
-            gfx.drawString(this.font, line.content(), tx, lineY,
-                ColorUtil.rgba(255, 255, 255, (int)(255 * anim.alpha())), false);
+            if (i >= selRange[0] && i <= selRange[1]) {
+                float lineW = this.font.width(line.content());
+                float hlStart = (i == selRange[0]) ? selStartX() : 0;
+                float hlEnd   = (i == selRange[1]) ? selEndX() : lineW;
+                if (hlEnd > hlStart)
+                    AporiaRenderer.INSTANCE.drawRect(c.x + 2 + (int)hlStart, lineY-1, (int)(hlEnd - hlStart), LINE_H, 2, ColorUtil.rgba(70, 130, 180, 120));
+            }
+            int textColor = ColorUtil.rgba(255, 255, 255, (int)(255 * anim.alpha()));
+            if (!localPlayerName.isEmpty() && plainText(line.content()).toLowerCase().contains(localPlayerName))
+                textColor = c.selfColor;
+            gfx.drawString(this.font, line.content(), tx, lineY, textColor, false);
             i++;
         }
     }
@@ -762,6 +816,7 @@ public class AporiaChatScreen extends ChatScreen {
 
     /** Recomputes the hovered message style from the active window's line list. */
     private void updateHover(double mx, double my) {
+        if (chatState != ChatState.IDLE) { hoveredStyle = null; hoveredLineIdx = -1; return; }
         WinCfg c  = cfg();
         int bx = boxX(), by = boxY(), bw = boxW(), bh = boxH();
         if (mx < bx || mx > bx+bw || my < by || my > by+bh) {
@@ -802,14 +857,15 @@ public class AporiaChatScreen extends ChatScreen {
                 if (s instanceof BooleanSetting bs) {
                     bs.toggle();
                     c.syncToWinCfg();
-                    if (f == 6 || f == 8) WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font);
+                    if (f == 6 || f == 8 || f == 10) WinMgr.I.rebuild(this.minecraft.gui.getChat(), this.font);
                 } else if (s instanceof ColorSetting) {
-                    // TODO: expand color picker when supported
+                    startFieldEdit(f);
                 } else {
                     startFieldEdit(f);
                 }
                 return true;
             }
+            cfg().syncToWinCfg();
             edit.close();
             return true;
         }
@@ -878,7 +934,52 @@ public class AporiaChatScreen extends ChatScreen {
                 return true;
             }
         }
+        if (btn == 0) {
+            HitResult hr = hitLineChar(mx, my);
+            if (hr != null) {
+                selAnchorLine = hr.line;
+                selAnchorX = hr.x;
+                selActiveLine = hr.line;
+                selActiveX = hr.x;
+                chatState = ChatState.SELECTING;
+                return true;
+            } else {
+                selAnchorLine = -1; selActiveLine = -1;
+                chatState = ChatState.IDLE;
+            }
+        }
         return super.mouseClicked(e, b);
+    }
+
+    private static class HitResult {
+        int line; float x;
+        HitResult(int l, float x) { this.line = l; this.x = x; }
+    }
+
+    private HitResult hitLineChar(double mx, double my) {
+        WinCfg c = cfg();
+        int bx = boxX(), by = boxY(), bw = boxW(), bh = boxH();
+        if (mx < bx || mx > bx+bw || my < by || my > by+bh) return null;
+        int total = c.lines.size();
+        int maxL = c.maxLines();
+        int count = Math.min(maxL, total - c.scrollOffset);
+        int bottomY = by + BOX_PAD + maxL * LINE_H - LINE_H;
+        int i = 0;
+        for (GuiMessage.Line line : c.lines) {
+            if (i >= c.scrollOffset + count) break;
+            if (i < c.scrollOffset) { i++; continue; }
+            int visIdx = i - c.scrollOffset;
+            int lineY = bottomY - visIdx * LINE_H;
+            if (my >= lineY && my < lineY + LINE_H) {
+                int textX = boxX() + 2;
+                float relX = Math.max(0, (float)(mx - textX));
+                float lineW = this.font.width(line.content());
+                float clampedX = Math.min(relX, lineW);
+                return new HitResult(i, clampedX);
+            }
+            i++;
+        }
+        return null;
     }
 
     @Override
@@ -916,6 +1017,11 @@ public class AporiaChatScreen extends ChatScreen {
             }
             return true;
         }
+        if (chatState == ChatState.SELECTING && e.button() == 0) {
+            HitResult hr = hitLineChar(e.x(), e.y());
+            if (hr != null) { selActiveLine = hr.line; selActiveX = hr.x; }
+            return true;
+        }
         return super.mouseDragged(e, dx, dy);
     }
 
@@ -923,6 +1029,20 @@ public class AporiaChatScreen extends ChatScreen {
     public boolean mouseReleased(MouseButtonEvent e) {
         if (dragging != Handle.NONE) { dragging = Handle.NONE; return true; }
         if (scrollDragging) { scrollDragging = false; return true; }
+        if (chatState == ChatState.SELECTING && e.button() == 0) {
+            HitResult hr = hitLineChar(e.x(), e.y());
+            if (hr != null) { selActiveLine = hr.line; selActiveX = hr.x; }
+            boolean hasSel = selAnchorLine >= 0
+                && (selAnchorLine != selActiveLine || selAnchorX != selActiveX);
+            chatState = hasSel ? ChatState.SELECTED : ChatState.IDLE;
+            if (chatState == ChatState.IDLE) { selAnchorLine = -1; selActiveLine = -1; }
+            return true;
+        }
+        if (chatState == ChatState.SELECTED && e.button() == 0) {
+            selAnchorLine = -1; selActiveLine = -1;
+            chatState = ChatState.IDLE;
+            return true;
+        }
         return super.mouseReleased(e);
     }
 
@@ -972,7 +1092,28 @@ public class AporiaChatScreen extends ChatScreen {
         if (e.key() == 70 && (e.modifiers() & 2) != 0) { searchMode = !searchMode; return true; }
         if (searchMode && e.key() == 256) { searchMode = false; return true; }
         if (searchMode) return searchBox.keyPressed(e);
+        boolean ctrl = (e.modifiers() & 2) != 0;
+        if (ctrl && e.key() == 67) { copySelection(); return true; }
+        if (ctrl && e.key() == 88) { cutSelection(); return true; }
         return super.keyPressed(e);
+    }
+
+    private void copySelection() {
+        WinCfg c = cfg();
+        String text = getSelectedText(c);
+        if (text.isEmpty()) return;
+        this.minecraft.keyboardHandler.setClipboard(text);
+    }
+
+    private void cutSelection() {
+        WinCfg c = cfg();
+        String text = getSelectedText(c);
+        if (text.isEmpty()) return;
+        copySelection();
+        int[] r = selectedLineRange();
+        if (r[0] >= 0) deleteLines(c, r[0], r[1]);
+        selAnchorLine = -1; selActiveLine = -1;
+        chatState = ChatState.IDLE;
     }
 
     @Override
@@ -1092,6 +1233,73 @@ public class AporiaChatScreen extends ChatScreen {
     /** Stable key for a message line used to track animation state across frames. */
     static long lineKey(GuiMessage.Line line) {
         return ((long) line.addedTime() << 32) | (line.content().hashCode() & 0xFFFFFFFFL);
+    }
+
+    private int[] selectedLineRange() {
+        if (selAnchorLine < 0) return new int[]{-1, -1};
+        int a = Math.min(selAnchorLine, selActiveLine);
+        int b = Math.max(selAnchorLine, selActiveLine);
+        return new int[]{a, b};
+    }
+
+    private String getSelectedText(WinCfg c) {
+        int[] r = selectedLineRange();
+        if (r[0] < 0) return "";
+        StringBuilder sb = new StringBuilder();
+        int idx = 0;
+        for (GuiMessage.Line line : c.lines) {
+            if (idx > r[1]) break;
+            if (idx >= r[0]) {
+                if (sb.length() > 0) sb.append("\n");
+                float lineW = this.font.width(line.content());
+                float selStart = (idx == r[0]) ? selStartX() : 0;
+                float selEnd   = (idx == r[1]) ? selEndX() : lineW;
+                StringBuilder lineText = new StringBuilder();
+                float[] acc = {0f};
+                line.content().accept((i, style, cp) -> {
+                    float cw = font.width(net.minecraft.util.FormattedCharSequence.forward(new String(Character.toChars(cp)), style));
+                    float rightEdge = acc[0] + cw;
+                    if (rightEdge > selStart && acc[0] < selEnd)
+                        lineText.appendCodePoint(cp);
+                    acc[0] = rightEdge;
+                    return true;
+                });
+                sb.append(lineText);
+            }
+            idx++;
+        }
+        return sb.toString();
+    }
+
+    private float selStartX() {
+        if (selAnchorLine < selActiveLine) return selAnchorX;
+        if (selAnchorLine > selActiveLine) return selActiveX;
+        return Math.min(selAnchorX, selActiveX);
+    }
+
+    private float selEndX() {
+        if (selAnchorLine < selActiveLine) return selActiveX;
+        if (selAnchorLine > selActiveLine) return selAnchorX;
+        return Math.max(selAnchorX, selActiveX);
+    }
+
+    private void deleteLines(WinCfg c, int from, int to) {
+        if (from < 0 || to < from) return;
+        java.util.List<GuiMessage.Line> all = new java.util.ArrayList<>(c.lines);
+        int removeCount = Math.min(to - from + 1, all.size() - from);
+        for (int j = 0; j < removeCount; j++)
+            all.remove(from);
+        c.lines.clear();
+        c.lines.addAll(all);
+        c.scrollOffset = Math.max(0, Math.min(c.scrollOffset, c.maxLines()));
+        ChatComponent chat = minecraft.gui.getChat();
+        if (chat != null) {
+            List<GuiMessage> vanilla = chat.getAllMessages();
+            int removeIdx = Math.min(from, vanilla.size() - 1);
+            int removeUpTo = Math.min(to, vanilla.size() - 1);
+            for (int j = removeUpTo; j >= removeIdx; j--)
+                if (j < vanilla.size()) vanilla.remove(j);
+        }
     }
 
     @Override public void renderBackground(GuiGraphics gfx, int mx, int my, float d) {}

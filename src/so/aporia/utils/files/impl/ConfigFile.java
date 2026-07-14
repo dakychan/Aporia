@@ -148,7 +148,11 @@ public final class ConfigFile {
                     }
 
                     if (mc.active) {
-                        mod.enable();
+                        try {
+                            mod.enable();
+                        } catch (Exception e) {
+                            Logger.warn("Deferred enable of " + mod.name() + ": " + e.getMessage());
+                        }
                     }
                 }
 

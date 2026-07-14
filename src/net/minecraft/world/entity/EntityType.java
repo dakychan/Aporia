@@ -974,7 +974,7 @@ public class EntityType<T extends Entity> implements FeatureElement, EntityTypeT
     private final String descriptionId;
     private @Nullable Component description;
     private final Optional<ResourceKey<LootTable>> lootTable;
-    private final EntityDimensions dimensions;
+    public EntityDimensions dimensions;
     private final float spawnDimensionsScale;
     private final FeatureFlagSet requiredFeatures;
     private final boolean allowedInPeaceful;

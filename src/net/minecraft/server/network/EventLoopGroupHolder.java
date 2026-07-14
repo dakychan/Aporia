@@ -1,6 +1,7 @@
 package net.minecraft.server.network;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.viaversion.viafabricplus.injection.access.base.bedrock.IEventLoopGroupHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoHandlerFactory;
@@ -23,7 +24,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import java.util.concurrent.ThreadFactory;
 import org.jspecify.annotations.Nullable;
 
-public abstract class EventLoopGroupHolder {
+public abstract class EventLoopGroupHolder implements IEventLoopGroupHolder {
     private static final EventLoopGroupHolder NIO = new EventLoopGroupHolder("NIO", NioSocketChannel.class, NioServerSocketChannel.class) {
         @Override
         protected IoHandlerFactory ioHandlerFactory() {
@@ -52,6 +53,7 @@ public abstract class EventLoopGroupHolder {
     private final Class<? extends Channel> channelCls;
     private final Class<? extends ServerChannel> serverChannelCls;
     private volatile @Nullable EventLoopGroup group;
+    private boolean viaFabricPlus$connecting = false;
 
     public static EventLoopGroupHolder remote(boolean p_453425_) {
         if (p_453425_) {
@@ -108,5 +110,15 @@ public abstract class EventLoopGroupHolder {
 
     public Class<? extends ServerChannel> serverChannelCls() {
         return this.serverChannelCls;
+    }
+
+    @Override
+    public boolean viaFabricPlus$isConnecting() {
+        return this.viaFabricPlus$connecting;
+    }
+
+    @Override
+    public void viaFabricPlus$setConnecting(final boolean connecting) {
+        this.viaFabricPlus$connecting = connecting;
     }
 }

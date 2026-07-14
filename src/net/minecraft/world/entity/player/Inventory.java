@@ -55,7 +55,7 @@ public class Inventory implements Container, Nameable {
     private final NonNullList<ItemStack> items = NonNullList.withSize(36, ItemStack.EMPTY);
     private int selected;
     public final Player player;
-    private final EntityEquipment equipment;
+    public final EntityEquipment equipment;
     private int timesChanged;
 
     public Inventory(Player p_35983_, EntityEquipment p_392430_) {
